@@ -39,9 +39,9 @@ for (const game of ['jewelria', 'solo-leveling']) {
   });
 }
 
-test('language redirects invoke Functions only on the two game roots', () => {
+test('Functions cover language roots and protect server-only game sources', () => {
   const routes = JSON.parse(read('_routes.json'));
-  assert.deepEqual(routes.include, ['/jewelria', '/jewelria/', '/solo-leveling', '/solo-leveling/']);
+  assert.deepEqual(routes.include, ['/jewelria', '/jewelria/', '/solo-leveling', '/solo-leveling/', '/server', '/server/*']);
   assert.deepEqual(routes.exclude, []);
 });
 

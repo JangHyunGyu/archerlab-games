@@ -94,4 +94,12 @@
     <loc>https://game.archerlab.dev/solo-leveling/index-en</loc>
     <image:image><image:loc>https://game.archerlab.dev/solo-leveling/assets/ui/menu/shadow_gate_backdrop.png</image:loc></image:image>
   </url>
+  <url>
+    <loc>https://game.archerlab.dev/twenty-questions/</loc>
+    <image:image><image:loc>https://game.archerlab.dev/twenty-questions/assets/backgrounds/study.png</image:loc><image:title>Twenty Questions</image:title></image:image>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/twenty-questions/index-en</loc>
+    <image:image><image:loc>https://game.archerlab.dev/twenty-questions/assets/backgrounds/study.png</image:loc><image:title>Twenty Questions</image:title></image:image>
+  </url>
 </urlset>

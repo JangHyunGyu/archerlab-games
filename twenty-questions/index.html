@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#101a20">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <title>스무고개 | 비밀의 서재 - ArcherLab</title>
+  <meta name="description" content="질문을 던져 숨겨진 단어를 맞혀 보세요. 질문과 정답 제출을 합쳐 20번의 기회가 주어져요. 힌트는 없어요.">
+  <link rel="canonical" href="https://game.archerlab.dev/twenty-questions/">
+  <link rel="alternate" hreflang="ko" href="https://game.archerlab.dev/twenty-questions/">
+  <link rel="alternate" hreflang="en" href="https://game.archerlab.dev/twenty-questions/index-en">
+  <link rel="alternate" hreflang="x-default" href="https://game.archerlab.dev/twenty-questions/">
+  <meta property="og:title" content="스무고개 | 비밀의 서재 - ArcherLab">
+  <meta property="og:description" content="질문을 던져 숨겨진 단어를 맞혀 보세요. 질문과 정답 제출을 합쳐 20번의 기회가 주어져요. 힌트는 없어요.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://game.archerlab.dev/twenty-questions/">
+  <meta property="og:image" content="https://game.archerlab.dev/twenty-questions/assets/backgrounds/study.png">
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": [
+    "VideoGame",
+    "WebApplication"
+  ],
+  "name": "스무고개",
+  "description": "질문을 던져 숨겨진 단어를 맞혀 보세요. 질문과 정답 제출을 합쳐 20번의 기회가 주어져요. 힌트는 없어요.",
+  "url": "https://game.archerlab.dev/twenty-questions/",
+  "image": "https://game.archerlab.dev/twenty-questions/assets/backgrounds/study.png",
+  "inLanguage": "ko",
+  "applicationCategory": "GameApplication",
+  "operatingSystem": "Any",
+  "gamePlatform": [
+    "Web Browser",
+    "Mobile Browser"
+  ],
+  "playMode": "SinglePlayer",
+  "isAccessibleForFree": true,
+  "dateModified": "2026-10-28",
+  "author": {
+    "@type": "Organization",
+    "name": "ArcherLab",
+    "url": "https://archerlab.dev"
+  }
+}
+    </script>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css?v=1">
+  <link rel="preload" href="assets/backgrounds/study.webp" as="image" fetchpriority="high">
+  <script type="module" src="js/main.mjs?v=1"></script>
+  <script src="../shared/immersive.js?v=20261028" defer></script>
+
+    <meta name="twitter:title" content="스무고개 | 비밀의 서재 - ArcherLab">
+
+    <meta name="twitter:description" content="질문을 던져 숨겨진 단어를 맞혀 보세요. 질문과 정답 제출을 합쳐 20번의 기회가 주어져요. 힌트는 없어요.">
+
+    <meta name="twitter:image" content="https://game.archerlab.dev/twenty-questions/assets/backgrounds/study.png">
+
+    <meta property="og:image:width" content="1672">
+
+    <meta property="og:image:height" content="941">
+</head>
+<body data-no-fullscreen>
+  <svg class="icon-definitions" aria-hidden="true"><defs>
+    <symbol id="icon-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m16 8-2.5 5.5L8 16l2.5-5.5L16 8ZM12 1v3m0 16v3M1 12h3m16 0h3"/></symbol>
+    <symbol id="icon-sound" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4Zm13-1a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
+    <symbol id="icon-trophy" viewBox="0 0 24 24"><path d="M7 3h10v6a5 5 0 0 1-10 0V3Zm0 2H3v3a4 4 0 0 0 4 4m10-7h4v3a4 4 0 0 1-4 4m-5 2v5m-5 2h10m-8-2h6"/></symbol>
+    <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+    <symbol id="icon-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="icon-book" viewBox="0 0 24 24"><path d="M12 5C9 3 5 3 3 4v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-2-1-6-1-9 1Zm0 0v15"/></symbol>
+  </defs></svg>
+  <div class="study-background" aria-hidden="true"></div>
+  <div class="outer-frame" aria-hidden="true"></div>
+  <header class="site-header">
+    <a class="brand" href="../" aria-label="게임 모음"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-compass"/></svg><span>ArcherLab</span></a>
+    <div class="header-controls">
+      <nav class="languages" aria-label="언어"><a href="./" lang="ko" aria-current="page">한국어</a><span aria-hidden="true">/</span><a href="index-en.html" lang="en" >English</a></nav>
+      <button class="icon-button" id="ranking-open" aria-label="명예의 전당"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-trophy"/></svg></button>
+      <button class="icon-button" id="settings-open" aria-label="설정"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sound"/></svg></button>
+    </div>
+  </header>
+  <main>
+    <section id="title-screen" class="title-screen" aria-labelledby="game-title">
+      <div class="hero-copy">
+        <div class="eyebrow"><span></span>비밀의 서재<span></span></div>
+        <h1 id="game-title">스무고개</h1>
+        <p class="hero-subtitle">TWENTY QUESTIONS</p>
+        <div class="ornament" aria-hidden="true"><i></i>◆<i></i></div>
+        <p class="hero-intro">질문을 던져 숨겨진 단어를 맞혀 보세요.</p>
+        <div class="rule-note"><span class="rule-number">20</span><p>질문과 정답 제출을 합쳐 20번의 기회가 주어져요. 힌트는 없어요.</p></div>
+        <button id="start" class="brass-button hero-start"><span>게임 시작</span><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow"/></svg></button>
+        <button id="resume" class="text-button" hidden>이어 하기 <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow"/></svg></button>
+        <div class="hero-records"><div><span>연속 성공</span><strong id="hero-streak">0</strong></div><i></i><div><span>최고 기록</span><strong id="hero-best">0</strong></div></div>
+      </div>
+      <div class="hero-art-caption" aria-hidden="true"><span>ARCHIVE</span><i></i><span>№ 020</span></div>
+    </section>
+    <section id="game-screen" class="game-screen" hidden aria-label="스무고개">
+      <div class="game-toolbar"><button id="home" class="text-button">← 서재로</button><span class="case-label">봉인된 단어</span><button id="give-up" class="text-button">포기하기</button></div>
+      <div class="case-head"><div><span class="eyebrow">남은 기회</span><div class="turn-number"><strong id="remaining">20</strong><span>/ 20</span></div></div><div class="streak-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-trophy"/></svg><span>연속 성공</span><strong id="game-streak">0</strong></div></div>
+      <div id="turn-marks" class="turn-marks" aria-hidden="true"></div>
+      <div class="case-file">
+        <div class="paper-heading"><span>질문 기록</span><span class="paper-heading-decoration" aria-hidden="true">XX</span></div>
+        <div id="history" class="history" role="log" aria-live="polite" aria-relevant="additions"></div>
+        <div id="empty-history" class="empty-history"><div class="wax-seal" aria-hidden="true">?</div><h2>첫 질문을 남겨 주세요.</h2><p>답변을 모아 숨겨진 단어를 찾아보세요.</p></div>
+      </div>
+      <div class="composer-wrap">
+        <div id="last-turn" class="last-turn" hidden>마지막 기회예요. 정답을 알겠다면 정답 맞히기를 눌러 주세요.</div>
+        <div class="mode-tabs" role="group" aria-label="질문하기"><button id="question-mode" aria-pressed="true">질문하기</button><button id="guess-mode" aria-pressed="false">정답 맞히기</button></div>
+        <form id="question-form" class="composer"><label class="sr-only" id="input-label" for="question-input">질문하기</label><textarea id="question-input" rows="1" maxlength="400" placeholder="예 또는 아니오로 답할 수 있는 질문을 입력해 주세요." autocomplete="off" enterkeyhint="send"></textarea><button id="send" class="brass-button" type="submit"><span>보내기</span><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow"/></svg></button></form>
+        <div class="composer-meta"><span id="pending" hidden>질문을 확인하고 있어요.</span><span id="input-count">0 / 200</span></div>
+        <p class="privacy-note">질문은 판정을 위해 서버로 전송돼요. 개인 정보는 적지 마세요.</p>
+      </div>
+    </section>
+    <section id="result-screen" class="result-screen" hidden aria-labelledby="result-title">
+      <div class="result-card"><div class="result-emblem" aria-hidden="true"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-check"/></svg></div><p id="record-badge" class="record-badge" hidden>개인 최고 기록</p><h2 id="result-title"></h2><div class="ornament" aria-hidden="true"><i></i>◆<i></i></div><p class="answer-caption">정답</p><strong id="result-answer" class="result-answer"></strong><a id="answer-source" class="answer-source" target="_blank" rel="noopener noreferrer" hidden>참고 자료</a><div class="result-stats"><div><span>사용한 기회</span><strong id="result-turns"></strong></div><div><span>연속 성공</span><strong id="result-streak"></strong></div><div><span>최고 기록</span><strong id="result-best"></strong></div></div><p id="result-note"></p><button id="next-game" class="brass-button">다음 단어<svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow"/></svg></button><button id="history-toggle" class="text-button" aria-expanded="false">기록 보기</button><div id="result-history" class="result-history" hidden></div><button id="result-home" class="text-button">서재로</button></div>
+      <div class="success-particles" aria-hidden="true"></div>
+    </section>
+  </main>
+  <div id="notice" class="notice" role="status" hidden></div>
+  <footer class="site-footer"><a href="../">ArcherLab Games</a><span>TWENTY QUESTIONS</span></footer>
+  <dialog id="ranking-dialog" class="game-dialog ranking-dialog" aria-labelledby="ranking-title"><button class="dialog-close icon-button" data-close aria-label="닫기"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-close"/></svg></button><p class="eyebrow">ARCHIVE OF DISTINCTION</p><h2 id="ranking-title">명예의 전당</h2><p class="dialog-intro">최고 연속 성공 순이에요. 동률이면 사용한 기회가 적은 기록이 앞서요.</p><form id="name-form" class="name-form"><label for="player-name">표시 이름</label><div><input id="player-name" minlength="2" maxlength="16" autocomplete="nickname" placeholder="한글·영문·숫자 등 2~16자"><button type="submit" class="small-brass">저장</button></div></form><div id="leaderboard" class="leaderboard"></div><p id="own-rank" class="own-rank"></p></dialog>
+  <dialog id="settings-dialog" class="game-dialog settings-dialog" aria-labelledby="settings-title"><button class="dialog-close icon-button" data-close aria-label="닫기"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-close"/></svg></button><h2 id="settings-title">설정</h2><label class="setting-row" for="sound-enabled"><span>효과음</span><input type="checkbox" id="sound-enabled" checked></label><label class="setting-row" for="sound-volume">효과음 크기</label><input type="range" id="sound-volume" min="0" max="100" value="45"><p class="privacy-note">질문은 판정을 위해 서버로 전송돼요. 개인 정보는 적지 마세요.</p></dialog>
+  <dialog id="give-up-dialog" class="game-dialog confirm-dialog" aria-labelledby="give-up-title"><div class="wax-seal small" aria-hidden="true">?</div><h2 id="give-up-title">정답을 보고 이번 게임을 끝낼까요?</h2><div class="confirm-actions"><button id="confirm-give-up" class="brass-button">포기하기</button><button data-close class="text-button">계속하기</button></div></dialog>
+</body></html>

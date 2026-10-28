@@ -1,0 +1,14 @@
+{
+  "id": "/twenty-questions/",
+  "name": "스무고개",
+  "short_name": "스무고개",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "/twenty-questions/",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#101a20",
+  "theme_color": "#101a20",
+  "icons": [{ "src": "../favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

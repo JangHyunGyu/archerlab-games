@@ -3,7 +3,7 @@
   "pages": {
     "index.html": {
       "title": "무료 브라우저 게임 모음 | ArcherLab Games",
-      "description": "슬라임 배구, 블럭팡, 고양이 타워, 루멘 쉬프트 등 게임 10종. 설치 없이, PC와 모바일에서 무료입니다.",
+      "description": "슬라임 배구, 블럭팡, 고양이 타워, 루멘 쉬프트 등 게임 11종. 설치 없이, PC와 모바일에서 무료입니다.",
       "image": "https://game.archerlab.dev/assets/images/social/archerlab-games-representative.png",
       "imageWidth": 1024,
       "imageHeight": 1024
@@ -95,6 +95,24 @@
       "image": "https://archerlab.dev/assets/images/solo-leveling_link.png?v=4",
       "imageWidth": 1024,
       "imageHeight": 1024
+    },
+    "twenty-questions/index.html": {
+      "title": "스무고개 | 비밀의 서재 - ArcherLab",
+      "description": "질문을 던져 숨겨진 단어를 맞혀 보세요. 질문과 정답 제출을 합쳐 20번의 기회가 주어져요. 힌트는 없어요.",
+      "gameName": "스무고개",
+      "image": "https://game.archerlab.dev/twenty-questions/assets/backgrounds/study.png",
+      "imageWidth": 1672,
+      "imageHeight": 941,
+      "updatedAt": "2026-10-28"
+    },
+    "twenty-questions/index-en.html": {
+      "title": "Twenty Questions | The Secret Archive - ArcherLab",
+      "description": "Ask questions to guess the hidden word. You have 20 turns for questions and guesses combined. There are no hints.",
+      "gameName": "Twenty Questions",
+      "image": "https://game.archerlab.dev/twenty-questions/assets/backgrounds/study.png",
+      "imageWidth": 1672,
+      "imageHeight": 941,
+      "updatedAt": "2026-10-28"
     }
   }
 }

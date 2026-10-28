@@ -1,0 +1,44 @@
+[
+  {
+    "file": "twenty-questions/assets/backgrounds/study.png",
+    "width": 1672,
+    "height": 941,
+    "hasAlpha": false,
+    "transparentPixels": 0,
+    "visibleBounds": {
+      "left": 0,
+      "top": 0,
+      "width": 1672,
+      "height": 941
+    },
+    "bytes": 2337718
+  },
+  {
+    "file": "twenty-questions/assets/ui/brass-button.png",
+    "width": 2129,
+    "height": 739,
+    "hasAlpha": true,
+    "transparentPixels": 704687,
+    "visibleBounds": {
+      "left": 56,
+      "top": 153,
+      "width": 2015,
+      "height": 409
+    },
+    "bytes": 1905840
+  },
+  {
+    "file": "twenty-questions/assets/ui/parchment-panel.png",
+    "width": 1122,
+    "height": 1402,
+    "hasAlpha": true,
+    "transparentPixels": 182465,
+    "visibleBounds": {
+      "left": 32,
+      "top": 55,
+      "width": 1059,
+      "height": 1299
+    },
+    "bytes": 2423373
+  }
+]

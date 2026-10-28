@@ -1,5 +1,5 @@
 {
   "version": 1,
-  "include": ["/jewelria", "/jewelria/", "/solo-leveling", "/solo-leveling/"],
+  "include": ["/jewelria", "/jewelria/", "/solo-leveling", "/solo-leveling/", "/server", "/server/*"],
   "exclude": []
 }

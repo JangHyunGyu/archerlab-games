@@ -2506,6 +2506,7 @@ async function initDB(db) {
 
 async function submitRanking(db, body) {
     const { game_id, player_name, score } = body;
+    if (game_id === 'twenty-questions') return jsonResponse({ error: 'server-verified streaks only' }, 403);
     let { extra_data } = body;
 
     if (!game_id || !player_name || score === undefined || score === null) {

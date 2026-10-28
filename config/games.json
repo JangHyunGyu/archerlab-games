@@ -12,9 +12,29 @@
         "node blockpang/start-input-guard.test.cjs"
       ]
     },
-    { "id": "cat-tower", "entry": "cat-tower/index.html", "tests": ["node cat-tower/static-quality.test.cjs"] },
-    { "id": "jelly-pang-2048", "entry": "jelly-pang-2048/index.html", "tests": ["node jelly-pang-2048/static-quality.test.cjs"] },
-    { "id": "jewelria", "entry": "jewelria/index.html", "tests": ["node jewelria/static-quality.test.cjs", "node --test jewelria/pixi-board-tween.test.mjs", "node jewelria/layout.browser.cjs"] },
+    {
+      "id": "cat-tower",
+      "entry": "cat-tower/index.html",
+      "tests": [
+        "node cat-tower/static-quality.test.cjs"
+      ]
+    },
+    {
+      "id": "jelly-pang-2048",
+      "entry": "jelly-pang-2048/index.html",
+      "tests": [
+        "node jelly-pang-2048/static-quality.test.cjs"
+      ]
+    },
+    {
+      "id": "jewelria",
+      "entry": "jewelria/index.html",
+      "tests": [
+        "node jewelria/static-quality.test.cjs",
+        "node --test jewelria/pixi-board-tween.test.mjs",
+        "node jewelria/layout.browser.cjs"
+      ]
+    },
     {
       "id": "lumen-shift",
       "entry": "lumen-shift/index.html",
@@ -52,10 +72,19 @@
         "node school-zombie-defense/tests/barricade-impact.test.cjs",
         "node school-zombie-defense/tests/hud-status.test.cjs",
         "node school-zombie-defense/tests/ranking-sync.test.cjs",
-        "node school-zombie-defense/tests/gamepad-permissions.test.cjs", "node school-zombie-defense/tests/combat-asset-jobs.test.cjs", "node school-zombie-defense/tests/combat-asset-loading.test.cjs"
+        "node school-zombie-defense/tests/gamepad-permissions.test.cjs",
+        "node school-zombie-defense/tests/combat-asset-jobs.test.cjs",
+        "node school-zombie-defense/tests/combat-asset-loading.test.cjs"
       ]
     },
-    { "id": "slimevolley", "entry": "slimevolley/index.html", "tests": ["node slimevolley/validate.js", "node --test slimevolley/input-lifecycle.test.cjs"] },
+    {
+      "id": "slimevolley",
+      "entry": "slimevolley/index.html",
+      "tests": [
+        "node slimevolley/validate.js",
+        "node --test slimevolley/input-lifecycle.test.cjs"
+      ]
+    },
     {
       "id": "solo-leveling",
       "entry": "solo-leveling/index.html",
@@ -76,6 +105,21 @@
         "node --test solo-leveling/tests/ranking-table.test.cjs"
       ]
     },
-    { "id": "water-sort", "entry": "water-sort/index.html", "tests": ["npm --prefix water-sort-src test", "npm --prefix water-sort-src run test:render"] }
+    {
+      "id": "water-sort",
+      "entry": "water-sort/index.html",
+      "tests": [
+        "npm --prefix water-sort-src test",
+        "npm --prefix water-sort-src run test:render"
+      ]
+    },
+    {
+      "id": "twenty-questions",
+      "entry": "twenty-questions/index.html",
+      "ranking": "server-streak",
+      "tests": [
+        "node --test twenty-questions/tests/catalog.test.mjs twenty-questions/tests/server.test.mjs"
+      ]
+    }
   ]
 }

@@ -1,0 +1,14 @@
+{
+  "id": "/twenty-questions/",
+  "name": "Twenty Questions",
+  "short_name": "20 Questions",
+  "lang": "en",
+  "start_url": "./index-en",
+  "scope": "/twenty-questions/",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#101a20",
+  "theme_color": "#101a20",
+  "icons": [{ "src": "../favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

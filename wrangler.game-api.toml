@@ -10,9 +10,29 @@ class_name = "RankingDelivery"
 tag = "ranking-delivery-v1"
 new_sqlite_classes = ["RankingDelivery"]
 
-# Daily 04:30 KST (19:30 UTC): stale unregistered Bubbly Lab runs.
+[[durable_objects.bindings]]
+name = "TWENTY_GAMEPLAY"
+class_name = "TwentyQuestionsRoom"
+
+[[migrations]]
+tag = "twenty-questions-v1"
+new_sqlite_classes = ["TwentyQuestionsRoom"]
+
+[[services]]
+binding = "TQ_AI"
+service = "openrouter-api"
+entrypoint = "TwentyQuestionsAiEntrypoint"
+remote = true
+
+[[services]]
+binding = "TQ_TEXT"
+service = "openrouter-api"
+entrypoint = "DeepSeekTextEntrypoint"
+remote = true
+
+# Daily 04:00 KST: answer stock; 04:30 KST: stale Bubbly Lab runs.
 [triggers]
-crons = ["30 19 * * *"]
+crons = ["30 19 * * *", "0 19 * * *"]
 
 # Optional Turnstile bot defense for Bubbly Lab. Leave unset to keep it off.
 #   TURNSTILE_SITE_KEY    (plain var, public)   -> [vars] TURNSTILE_SITE_KEY = "0x4AAAA..."

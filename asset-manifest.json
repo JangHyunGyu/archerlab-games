@@ -16539,6 +16539,101 @@
       "sha256": "ef7373b13cd5e60a6f50ba91c89d9119c51f6be6b5d682bc9cc084885d0c7ae2"
     },
     {
+      "path": "twenty-questions/assets/audio/end.mp3",
+      "bytes": 54587,
+      "sha256": "87862d84636851281e02049ab465db5c70d007ab76c4e35dec52acd85cccb941"
+    },
+    {
+      "path": "twenty-questions/assets/audio/ranking.mp3",
+      "bytes": 13209,
+      "sha256": "8968bf35461da33597c7ff57195d7ba4a46a378b44271edfa98b6194adae8826"
+    },
+    {
+      "path": "twenty-questions/assets/audio/record.wav",
+      "bytes": 35324,
+      "sha256": "1a114be9a5c40cacef0139b2cc38c829a592e3553444edc93743f971264b48ad"
+    },
+    {
+      "path": "twenty-questions/assets/audio/send.wav",
+      "bytes": 30914,
+      "sha256": "1189669a5deaafef2653ce343a2ba8df7b9034d990715e32467590158e8b7054"
+    },
+    {
+      "path": "twenty-questions/assets/audio/stamp.wav",
+      "bytes": 22094,
+      "sha256": "2d61af305a34e026d1f2dfdffb0b5d0e989debcdb942364cbf0c9af877a72e5d"
+    },
+    {
+      "path": "twenty-questions/assets/audio/streak.wav",
+      "bytes": 44144,
+      "sha256": "9211d42f577fc57a3993d3ac49520ba1f1a58f006bc53377af42e4a3fbe25d9f"
+    },
+    {
+      "path": "twenty-questions/assets/audio/success.wav",
+      "bytes": 57374,
+      "sha256": "a25df54aa31198431e4ec0ab0134fe25e7b9b65cc51a57201e325c2ee5f70880"
+    },
+    {
+      "path": "twenty-questions/assets/audio/tick.wav",
+      "bytes": 19448,
+      "sha256": "dca177b8b0be91c70e8c30b8555f977efaa30532334a8830c3ad0c8e2f83a07e"
+    },
+    {
+      "path": "twenty-questions/assets/audio/ui-click.mp3",
+      "bytes": 3805,
+      "sha256": "dc8f23eea261696c60ba73de965af73a580206c5952b46c9f314bde07a0b526c"
+    },
+    {
+      "path": "twenty-questions/assets/audio/wrong.mp3",
+      "bytes": 10075,
+      "sha256": "5dd9b4d83d8c368445b3b8fa35d7609ba587ba4202651b81715b95886f48c8d1"
+    },
+    {
+      "path": "twenty-questions/assets/backgrounds/study.png",
+      "bytes": 2337718,
+      "sha256": "11e179f7c3cb679d1ded9b1a570f2ae398dc2873a1d7574ef4299571bdc4273a"
+    },
+    {
+      "path": "twenty-questions/assets/backgrounds/study.webp",
+      "bytes": 1633874,
+      "sha256": "a37a5f926191bb864f4b2e436e5e031e45b3f26e41dea3d8f4bc72caa3017129"
+    },
+    {
+      "path": "twenty-questions/assets/ui/brass-button.png",
+      "bytes": 1905840,
+      "sha256": "2bd284ef437f28b88ccba24372a621eafab779515de4fa7ecad556952915d213"
+    },
+    {
+      "path": "twenty-questions/assets/ui/brass-button.webp",
+      "bytes": 1190538,
+      "sha256": "7f1668f9d717595eec223aa27cfda5fe8df8de7fcebca868a811e68d1865dc7b"
+    },
+    {
+      "path": "twenty-questions/assets/ui/parchment-panel.png",
+      "bytes": 2423373,
+      "sha256": "e32f96e0c4a76e5208e939a660c58ddcefacc927da365c5b550bbff79271d4b1"
+    },
+    {
+      "path": "twenty-questions/assets/ui/parchment-panel.webp",
+      "bytes": 1580118,
+      "sha256": "d2fed3b1f007390d177e0718d68ad0e15dfe9096224d5fabd13b217a192c46c6"
+    },
+    {
+      "path": "twenty-questions/design/masters/brass-button.png",
+      "bytes": 1905840,
+      "sha256": "2bd284ef437f28b88ccba24372a621eafab779515de4fa7ecad556952915d213"
+    },
+    {
+      "path": "twenty-questions/design/masters/parchment-panel.png",
+      "bytes": 2423373,
+      "sha256": "e32f96e0c4a76e5208e939a660c58ddcefacc927da365c5b550bbff79271d4b1"
+    },
+    {
+      "path": "twenty-questions/design/masters/study.png",
+      "bytes": 2337718,
+      "sha256": "11e179f7c3cb679d1ded9b1a570f2ae398dc2873a1d7574ef4299571bdc4273a"
+    },
+    {
       "path": "water-sort-src/freesound_community-bubbles-003-6397.mp3",
       "bytes": 241920,
       "sha256": "352d4f978f6858802a08a4490f6edceb0a2788b66abee8b694f538833056f7da"

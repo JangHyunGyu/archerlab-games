@@ -57,7 +57,7 @@ function buildOutputs() {
                     node.applicationCategory = 'GameApplication';
                     node.description = copy.description;
                     node.inLanguage = lang;
-                    node.dateModified = config.updatedAt;
+                    node.dateModified = copy.updatedAt || config.updatedAt;
                     node.image = copy.image;
                     if (file.startsWith('blockpang/')) node.alternateName = [...new Set([].concat(node.alternateName || [], 'Blockpang', 'Block Pang', '블럭팡'))];
                     if (file.startsWith('slimevolley/')) node.alternateName = [...new Set([].concat(node.alternateName || [], 'Slime Volley', 'Slime Volleyball', '슬라임 배구'))];
@@ -95,7 +95,7 @@ function buildOutputs() {
         const html = outputs.get(toFile(url)) || read(toFile(url));
         const alternates = [...html.matchAll(/<link\s+rel="alternate"\s+hreflang="([^"]+)"\s+href="([^"]+)"/g)];
         let updated = block.replace(/\s*<xhtml:link\b[^>]*\/>/g, '').trimEnd();
-        if (changedUrls.has(url)) updated = updated.replace(/<lastmod>[^<]+<\/lastmod>/, `<lastmod>${config.updatedAt}</lastmod>`);
+        if (changedUrls.has(url)) updated = updated.replace(/<lastmod>[^<]+<\/lastmod>/, `<lastmod>${config.pages[toFile(url)]?.updatedAt || config.updatedAt}</lastmod>`);
         for (const [, language, href] of alternates) updated += `\n    <xhtml:link rel="alternate" hreflang="${language}" href="${href}"/>`;
         return '<url>' + updated + '\n  </url>';
     });

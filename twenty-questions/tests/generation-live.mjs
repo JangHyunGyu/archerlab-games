@@ -1,0 +1,31 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import { harness } from './helpers.mjs';
+import { replenish } from '../../server/twenty-questions/generation.mjs';
+const h = harness(); await h.start();
+const player = h.row('SELECT id FROM tq_players').id;
+h.db.sqlite.prepare('INSERT OR IGNORE INTO tq_seen SELECT ?, id, ?, ? FROM tq_catalog LIMIT 175').run(player, 'seen-for-test', Date.now());
+const generated = JSON.parse(fs.readFileSync('tmp/twenty-questions-qa/generated-candidate.json', 'utf8'));
+const full = process.argv.includes('--full');
+const outputs = [];
+h.env.TQ_TEXT = { async complete(input) {
+    if (!full && input.maxTokens === 6000) return { text: JSON.stringify({ items: [generated.candidate] }) };
+    const response = await fetch('http://127.0.0.1:8799/complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
+    if (!response.ok) throw Error('Grounding unavailable');
+    const data = await response.json(); outputs.push({ maxTokens: input.maxTokens, ...data }); return data;
+} };
+const checks = [];
+h.env.TQ_AI = { async decide(input) {
+    const r = await fetch('http://127.0.0.1:8799/decide', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
+    if (!r.ok) throw Error('Verification service unavailable');
+    const data = await r.json(); checks.push(data.answers); return data;
+} };
+const result = await replenish(h.env);
+const totalWords = h.row('SELECT COUNT(*) n FROM tq_catalog').n;
+assert.equal(totalWords, 200 + result.added);
+fs.writeFileSync('tmp/twenty-questions-qa/live-generation-debug.json', JSON.stringify({ result, checks, totalWords, outputs }, null, 2));
+console.log(JSON.stringify({ result, checks: checks.length, outputCalls: outputs.length, totalWords }));
+if (full) assert.ok(result.added > 0, 'At least one fully verified new concept should be added');
+assert.ok(['already_attempted', 'stock_sufficient'].includes((await replenish(h.env)).skipped));
+fs.writeFileSync('tmp/twenty-questions-qa/live-generation.json', JSON.stringify({ full, result, checks, totalWords, sourceModel: generated.model, database: 'isolated SQLite' }, null, 2));
+console.log(JSON.stringify({ full, result, totalWords, verificationCalls: checks.length }));

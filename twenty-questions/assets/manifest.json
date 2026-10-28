@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "created_at": "2026-10-28",
+  "images": [
+    {
+      "id": "study",
+      "file": "backgrounds/study.webp",
+      "native_png": "backgrounds/study.png",
+      "master": "design/masters/study.png",
+      "width": 1672,
+      "height": 941,
+      "has_alpha": false,
+      "visible_bounds": {
+        "left": 0,
+        "top": 0,
+        "width": 1672,
+        "height": 941
+      },
+      "master_sha256": "11e179f7c3cb679d1ded9b1a570f2ae398dc2873a1d7574ef4299571bdc4273a",
+      "delivery_sha256": "a37a5f926191bb864f4b2e436e5e031e45b3f26e41dea3d8f4bc72caa3017129",
+      "delivery_conversion": "lossless WebP, no resize, zero visible decoded pixel differences"
+    },
+    {
+      "id": "brass-button",
+      "file": "ui/brass-button.webp",
+      "native_png": "ui/brass-button.png",
+      "master": "design/masters/brass-button.png",
+      "width": 2129,
+      "height": 739,
+      "has_alpha": true,
+      "visible_bounds": {
+        "left": 56,
+        "top": 153,
+        "width": 2015,
+        "height": 409
+      },
+      "master_sha256": "2bd284ef437f28b88ccba24372a621eafab779515de4fa7ecad556952915d213",
+      "delivery_sha256": "7f1668f9d717595eec223aa27cfda5fe8df8de7fcebca868a811e68d1865dc7b",
+      "delivery_conversion": "lossless WebP, no resize, zero visible decoded pixel differences"
+    },
+    {
+      "id": "parchment-panel",
+      "file": "ui/parchment-panel.webp",
+      "native_png": "ui/parchment-panel.png",
+      "master": "design/masters/parchment-panel.png",
+      "width": 1122,
+      "height": 1402,
+      "has_alpha": true,
+      "visible_bounds": {
+        "left": 32,
+        "top": 55,
+        "width": 1059,
+        "height": 1299
+      },
+      "master_sha256": "e32f96e0c4a76e5208e939a660c58ddcefacc927da365c5b550bbff79271d4b1",
+      "delivery_sha256": "d2fed3b1f007390d177e0718d68ad0e15dfe9096224d5fabd13b217a192c46c6",
+      "delivery_conversion": "lossless WebP, no resize, zero visible decoded pixel differences"
+    }
+  ],
+  "audio": [
+    {
+      "id": "click",
+      "file": "audio/ui-click.mp3",
+      "source": "lumen-shift/assets/audio/sfx/ui-click.mp3",
+      "sha256": "dc8f23eea261696c60ba73de965af73a580206c5952b46c9f314bde07a0b526c",
+      "bytes": 3805,
+      "edited": false
+    },
+    {
+      "id": "send",
+      "file": "audio/send.wav",
+      "source": "blockpang/sounds/whoosh.wav",
+      "sha256": "1189669a5deaafef2653ce343a2ba8df7b9034d990715e32467590158e8b7054",
+      "bytes": 30914,
+      "edited": false
+    },
+    {
+      "id": "stamp",
+      "file": "audio/stamp.wav",
+      "source": "blockpang/sounds/place.wav",
+      "sha256": "2d61af305a34e026d1f2dfdffb0b5d0e989debcdb942364cbf0c9af877a72e5d",
+      "bytes": 22094,
+      "edited": false
+    },
+    {
+      "id": "tick",
+      "file": "audio/tick.wav",
+      "source": "blockpang/sounds/pickup.wav",
+      "sha256": "dca177b8b0be91c70e8c30b8555f977efaa30532334a8830c3ad0c8e2f83a07e",
+      "bytes": 19448,
+      "edited": false
+    },
+    {
+      "id": "success",
+      "file": "audio/success.wav",
+      "source": "blockpang/sounds/clear_double.wav",
+      "sha256": "a25df54aa31198431e4ec0ab0134fe25e7b9b65cc51a57201e325c2ee5f70880",
+      "bytes": 57374,
+      "edited": false
+    },
+    {
+      "id": "record",
+      "file": "audio/record.wav",
+      "source": "blockpang/sounds/sparkle.wav",
+      "sha256": "1a114be9a5c40cacef0139b2cc38c829a592e3553444edc93743f971264b48ad",
+      "bytes": 35324,
+      "edited": false
+    },
+    {
+      "id": "streak",
+      "file": "audio/streak.wav",
+      "source": "blockpang/sounds/combo_escalate.wav",
+      "sha256": "9211d42f577fc57a3993d3ac49520ba1f1a58f006bc53377af42e4a3fbe25d9f",
+      "bytes": 44144,
+      "edited": false
+    },
+    {
+      "id": "wrong",
+      "file": "audio/wrong.mp3",
+      "source": "lumen-shift/assets/audio/sfx/ui-error.mp3",
+      "sha256": "5dd9b4d83d8c368445b3b8fa35d7609ba587ba4202651b81715b95886f48c8d1",
+      "bytes": 10075,
+      "edited": false
+    },
+    {
+      "id": "end",
+      "file": "audio/end.mp3",
+      "source": "lumen-shift/assets/audio/sfx/game-over.mp3",
+      "sha256": "87862d84636851281e02049ab465db5c70d007ab76c4e35dec52acd85cccb941",
+      "bytes": 54587,
+      "edited": false
+    },
+    {
+      "id": "ranking",
+      "file": "audio/ranking.mp3",
+      "source": "lumen-shift/assets/audio/sfx/ui-ranking-open.mp3",
+      "sha256": "8968bf35461da33597c7ff57195d7ba4a46a378b44271edfa98b6194adae8826",
+      "bytes": 13209,
+      "edited": false
+    }
+  ],
+  "generation": {
+    "tool": "image_gen",
+    "quality_request": "maximum supported quality and native resolution",
+    "quality_and_size_controls_exposed": false,
+    "prompts": "design/masters/generation-prompts.json",
+    "reference": "existing approved detective-study concept"
+  },
+  "usage": {
+    "study": "Background art only; titles and all UI remain separate.",
+    "button": "Transparent outer padding; optional runtime viewBox 56 153 2015 409.",
+    "panel": "Transparent outer padding; optional runtime viewBox 32 55 1059 1299.",
+    "text": "All text and counters must be rendered separately."
+  },
+  "verification": {
+    "audio_copies": "SHA-256 equals source for all 10",
+    "originals": "PNG master copies equal generated outputs",
+    "lossless": "See design/masters/lossless-verification.json",
+    "visual": "Inspected all three generated outputs; consistent matte brass, dark teal and paper materials; no baked UI text.",
+    "audio_auditioned": false
+  }
+}

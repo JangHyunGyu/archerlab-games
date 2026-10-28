@@ -20,7 +20,7 @@ test('search metadata is reproducible without rewriting game bodies', () => {
 
 test('sitemap targets are canonical, indexable pages with reciprocal language links', () => {
     assert.equal(new Set(urls).size, urls.length);
-    assert.equal(urls.length, 41);
+    assert.equal(urls.length, 43);
     for (const url of urls) {
         const html = read(toFile(url));
         assert.equal(/<link\s+rel="canonical"\s+href="([^"]+)"/.exec(html)?.[1], url, url);

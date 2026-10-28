@@ -11,7 +11,11 @@
     "assets:build": "node scripts/asset-manifest.mjs",
     "assets:check": "node scripts/asset-manifest.mjs --check",
     "seo:sync": "node scripts/sync-search-metadata.cjs --write",
-    "seo:check": "node scripts/sync-search-metadata.cjs --check && node --test tests/shared/search-metadata.test.cjs"
+    "seo:check": "node scripts/sync-search-metadata.cjs --check && node --test tests/shared/search-metadata.test.cjs",
+    "test:twenty": "node --test twenty-questions/tests/catalog.test.mjs twenty-questions/tests/server.test.mjs",
+    "test:twenty:browser": "node twenty-questions/tests/browser.mjs",
+    "preview:twenty": "node twenty-questions/tools/preview.mjs",
+    "build:twenty": "node twenty-questions/tools/build-pages.mjs && npm run seo:sync"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.0",

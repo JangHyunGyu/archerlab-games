@@ -135,11 +135,20 @@ test('aborting the UI wait does not cancel or remove delivery of a recorded even
   assert.equal(e.db.sql.prepare('SELECT score FROM ranking_sessions').get().score, 100);
 });
 
-test('all game entry points load recovery before their game code', () => {
+test('client-scored games load recovery; server streak games use their own request receipts', () => {
   const root = path.resolve(__dirname, '../..');
   const { games } = JSON.parse(fs.readFileSync(path.join(root, 'config/games.json')));
   for (const game of games) {
     const html = fs.readFileSync(path.join(root, game.entry), 'utf8');
+    if (game.ranking === 'server-streak') {
+      assert.equal(game.id, 'twenty-questions');
+      assert.match(html, /type="module" src="js\/main\.mjs/);
+      const client = fs.readFileSync(path.join(root, game.id, 'js/main.mjs'), 'utf8');
+      assert.match(client, /pendingCommand/);
+      assert.match(client, /expectedVersion/);
+      assert.doesNotMatch(client, /submitRanking|score-events/);
+      continue;
+    }
     assert.ok(html.indexOf('shared/ranking-delivery.js') > 0, game.id);
     assert.ok(html.indexOf('shared/ranking-delivery.js') < html.indexOf('</head>'), game.id);
   }

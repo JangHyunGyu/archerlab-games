@@ -330,4 +330,18 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://game.archerlab.dev/seo/archerlab-games-about-en"/>
   </url>
 <!-- about-pages:end -->
+  <url>
+    <loc>https://game.archerlab.dev/twenty-questions/</loc>
+    <lastmod>2026-10-28</lastmod>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://game.archerlab.dev/twenty-questions/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://game.archerlab.dev/twenty-questions/index-en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://game.archerlab.dev/twenty-questions/"/>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/twenty-questions/index-en</loc>
+    <lastmod>2026-10-28</lastmod>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://game.archerlab.dev/twenty-questions/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://game.archerlab.dev/twenty-questions/index-en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://game.archerlab.dev/twenty-questions/"/>
+  </url>
 </urlset>

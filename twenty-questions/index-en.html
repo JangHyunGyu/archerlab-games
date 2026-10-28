@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#101a20">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest-en.json">
+  <title>Twenty Questions | The Secret Archive - ArcherLab</title>
+  <meta name="description" content="Ask questions to guess the hidden word. You have 20 turns for questions and guesses combined. There are no hints.">
+  <link rel="canonical" href="https://game.archerlab.dev/twenty-questions/index-en">
+  <link rel="alternate" hreflang="ko" href="https://game.archerlab.dev/twenty-questions/">
+  <link rel="alternate" hreflang="en" href="https://game.archerlab.dev/twenty-questions/index-en">
+  <link rel="alternate" hreflang="x-default" href="https://game.archerlab.dev/twenty-questions/">
+  <meta property="og:title" content="Twenty Questions | The Secret Archive - ArcherLab">
+  <meta property="og:description" content="Ask questions to guess the hidden word. You have 20 turns for questions and guesses combined. There are no hints.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://game.archerlab.dev/twenty-questions/index-en">
+  <meta property="og:image" content="https://game.archerlab.dev/twenty-questions/assets/backgrounds/study.png">
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": [
+    "VideoGame",
+    "WebApplication"
+  ],
+  "name": "Twenty Questions",
+  "description": "Ask questions to guess the hidden word. You have 20 turns for questions and guesses combined. There are no hints.",
+  "url": "https://game.archerlab.dev/twenty-questions/index-en",
+  "image": "https://game.archerlab.dev/twenty-questions/assets/backgrounds/study.png",
+  "inLanguage": "en",
+  "applicationCategory": "GameApplication",
+  "operatingSystem": "Any",
+  "gamePlatform": [
+    "Web Browser",
+    "Mobile Browser"
+  ],
+  "playMode": "SinglePlayer",
+  "isAccessibleForFree": true,
+  "dateModified": "2026-10-28",
+  "author": {
+    "@type": "Organization",
+    "name": "ArcherLab",
+    "url": "https://archerlab.dev"
+  }
+}
+    </script>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css?v=1">
+  <link rel="preload" href="assets/backgrounds/study.webp" as="image" fetchpriority="high">
+  <script type="module" src="js/main.mjs?v=1"></script>
+  <script src="../shared/immersive.js?v=20261028" defer></script>
+
+    <meta name="twitter:title" content="Twenty Questions | The Secret Archive - ArcherLab">
+
+    <meta name="twitter:description" content="Ask questions to guess the hidden word. You have 20 turns for questions and guesses combined. There are no hints.">
+
+    <meta name="twitter:image" content="https://game.archerlab.dev/twenty-questions/assets/backgrounds/study.png">
+
+    <meta property="og:image:width" content="1672">
+
+    <meta property="og:image:height" content="941">
+</head>
+<body data-no-fullscreen>
+  <svg class="icon-definitions" aria-hidden="true"><defs>
+    <symbol id="icon-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m16 8-2.5 5.5L8 16l2.5-5.5L16 8ZM12 1v3m0 16v3M1 12h3m16 0h3"/></symbol>
+    <symbol id="icon-sound" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4Zm13-1a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
+    <symbol id="icon-trophy" viewBox="0 0 24 24"><path d="M7 3h10v6a5 5 0 0 1-10 0V3Zm0 2H3v3a4 4 0 0 0 4 4m10-7h4v3a4 4 0 0 1-4 4m-5 2v5m-5 2h10m-8-2h6"/></symbol>
+    <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+    <symbol id="icon-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="icon-book" viewBox="0 0 24 24"><path d="M12 5C9 3 5 3 3 4v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-2-1-6-1-9 1Zm0 0v15"/></symbol>
+  </defs></svg>
+  <div class="study-background" aria-hidden="true"></div>
+  <div class="outer-frame" aria-hidden="true"></div>
+  <header class="site-header">
+    <a class="brand" href="../" aria-label="All games"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-compass"/></svg><span>ArcherLab</span></a>
+    <div class="header-controls">
+      <nav class="languages" aria-label="Language"><a href="./" lang="ko" >한국어</a><span aria-hidden="true">/</span><a href="index-en.html" lang="en" aria-current="page">English</a></nav>
+      <button class="icon-button" id="ranking-open" aria-label="Hall of Fame"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-trophy"/></svg></button>
+      <button class="icon-button" id="settings-open" aria-label="Settings"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sound"/></svg></button>
+    </div>
+  </header>
+  <main>
+    <section id="title-screen" class="title-screen" aria-labelledby="game-title">
+      <div class="hero-copy">
+        <div class="eyebrow"><span></span>The private study<span></span></div>
+        <h1 id="game-title">Twenty<br>Questions</h1>
+        <p class="hero-subtitle">THE SECRET ARCHIVE</p>
+        <div class="ornament" aria-hidden="true"><i></i>◆<i></i></div>
+        <p class="hero-intro">Ask questions to guess the hidden word.</p>
+        <div class="rule-note"><span class="rule-number">20</span><p>You have 20 turns for questions and guesses combined. There are no hints.</p></div>
+        <button id="start" class="brass-button hero-start"><span>Begin a case</span><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow"/></svg></button>
+        <button id="resume" class="text-button" hidden>Continue <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow"/></svg></button>
+        <div class="hero-records"><div><span>Current streak</span><strong id="hero-streak">0</strong></div><i></i><div><span>Personal best</span><strong id="hero-best">0</strong></div></div>
+      </div>
+      <div class="hero-art-caption" aria-hidden="true"><span>ARCHIVE</span><i></i><span>№ 020</span></div>
+    </section>
+    <section id="game-screen" class="game-screen" hidden aria-label="Twenty Questions">
+      <div class="game-toolbar"><button id="home" class="text-button">← The study</button><span class="case-label">The sealed word</span><button id="give-up" class="text-button">Give up</button></div>
+      <div class="case-head"><div><span class="eyebrow">Turns left</span><div class="turn-number"><strong id="remaining">20</strong><span>/ 20</span></div></div><div class="streak-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-trophy"/></svg><span>Current streak</span><strong id="game-streak">0</strong></div></div>
+      <div id="turn-marks" class="turn-marks" aria-hidden="true"></div>
+      <div class="case-file">
+        <div class="paper-heading"><span>Case notes</span><span class="paper-heading-decoration" aria-hidden="true">XX</span></div>
+        <div id="history" class="history" role="log" aria-live="polite" aria-relevant="additions"></div>
+        <div id="empty-history" class="empty-history"><div class="wax-seal" aria-hidden="true">?</div><h2>Start with a question.</h2><p>Follow the answers to uncover the hidden word.</p></div>
+      </div>
+      <div class="composer-wrap">
+        <div id="last-turn" class="last-turn" hidden>This is your last turn. If you know the answer, select Make a guess.</div>
+        <div class="mode-tabs" role="group" aria-label="Ask a question"><button id="question-mode" aria-pressed="true">Ask a question</button><button id="guess-mode" aria-pressed="false">Make a guess</button></div>
+        <form id="question-form" class="composer"><label class="sr-only" id="input-label" for="question-input">Ask a question</label><textarea id="question-input" rows="1" maxlength="400" placeholder="Enter a yes-or-no question." autocomplete="off" enterkeyhint="send"></textarea><button id="send" class="brass-button" type="submit"><span>Send</span><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow"/></svg></button></form>
+        <div class="composer-meta"><span id="pending" hidden>Checking your question.</span><span id="input-count">0 / 200</span></div>
+        <p class="privacy-note">Questions are sent to the server for judging. Please leave out personal information.</p>
+      </div>
+    </section>
+    <section id="result-screen" class="result-screen" hidden aria-labelledby="result-title">
+      <div class="result-card"><div class="result-emblem" aria-hidden="true"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-check"/></svg></div><p id="record-badge" class="record-badge" hidden>A new personal best</p><h2 id="result-title"></h2><div class="ornament" aria-hidden="true"><i></i>◆<i></i></div><p class="answer-caption">The answer</p><strong id="result-answer" class="result-answer"></strong><a id="answer-source" class="answer-source" target="_blank" rel="noopener noreferrer" hidden>Reference</a><div class="result-stats"><div><span>Turns used</span><strong id="result-turns"></strong></div><div><span>Current streak</span><strong id="result-streak"></strong></div><div><span>Personal best</span><strong id="result-best"></strong></div></div><p id="result-note"></p><button id="next-game" class="brass-button">Next word<svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow"/></svg></button><button id="history-toggle" class="text-button" aria-expanded="false">View case notes</button><div id="result-history" class="result-history" hidden></div><button id="result-home" class="text-button">The study</button></div>
+      <div class="success-particles" aria-hidden="true"></div>
+    </section>
+  </main>
+  <div id="notice" class="notice" role="status" hidden></div>
+  <footer class="site-footer"><a href="../">ArcherLab Games</a><span>TWENTY QUESTIONS</span></footer>
+  <dialog id="ranking-dialog" class="game-dialog ranking-dialog" aria-labelledby="ranking-title"><button class="dialog-close icon-button" data-close aria-label="Close"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-close"/></svg></button><p class="eyebrow">ARCHIVE OF DISTINCTION</p><h2 id="ranking-title">Hall of Fame</h2><p class="dialog-intro">Ranked by your best winning streak. Fewer total turns break a tie.</p><form id="name-form" class="name-form"><label for="player-name">Display name</label><div><input id="player-name" minlength="2" maxlength="16" autocomplete="nickname" placeholder="2–16 letters, numbers or spaces"><button type="submit" class="small-brass">Save</button></div></form><div id="leaderboard" class="leaderboard"></div><p id="own-rank" class="own-rank"></p></dialog>
+  <dialog id="settings-dialog" class="game-dialog settings-dialog" aria-labelledby="settings-title"><button class="dialog-close icon-button" data-close aria-label="Close"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-close"/></svg></button><h2 id="settings-title">Settings</h2><label class="setting-row" for="sound-enabled"><span>Sound effects</span><input type="checkbox" id="sound-enabled" checked></label><label class="setting-row" for="sound-volume">Effects volume</label><input type="range" id="sound-volume" min="0" max="100" value="45"><p class="privacy-note">Questions are sent to the server for judging. Please leave out personal information.</p></dialog>
+  <dialog id="give-up-dialog" class="game-dialog confirm-dialog" aria-labelledby="give-up-title"><div class="wax-seal small" aria-hidden="true">?</div><h2 id="give-up-title">Reveal the answer and end this game?</h2><div class="confirm-actions"><button id="confirm-give-up" class="brass-button">Give up</button><button data-close class="text-button">Keep playing</button></div></dialog>
+</body></html>
