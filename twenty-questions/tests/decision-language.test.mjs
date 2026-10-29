@@ -3,6 +3,22 @@ import assert from 'node:assert/strict';
 import { harness, modelResult } from './helpers.mjs';
 import { decisionRequest } from '../../server/twenty-questions/decision.mjs';
 
+test('Worker RPC receives serializable plain question objects after singleton resolution', async () => {
+    let called = false;
+    const result = await decisionRequest({ TQ_AI: { async decide(payload) {
+        called = true;
+        assert.equal(Object.getPrototypeOf(payload.questions), Object.prototype);
+        assert.equal(payload.questions.who, undefined);
+        assert.deepEqual(payload.state.resolved_question_rules, ['Use facts.']);
+        return { answers: { supported: { type: 'noul', noul: .99 } } };
+    } } }, {}, {
+        who: { type: 'choice', instructions: 'Use facts.', criteria: { review: 'Review' } },
+        supported: { type: 'noul', instructions: 'Supported?' },
+    });
+    assert.equal(called, true);
+    assert.equal(result.answers.who.choice, 'review');
+});
+
 for (const locale of ['ko', 'ko-KR', 'en', 'ja']) test(`game page ${locale} reaches the decision service without changing turn accounting`, async () => {
     const h = harness();
     const { game } = await h.start();

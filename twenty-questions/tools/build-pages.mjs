@@ -30,9 +30,9 @@ for (const locale of ['ko', 'en']) {
   <meta property="og:image" content="https://game.archerlab.dev/twenty-questions/assets/backgrounds/study.png">
   <script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': ['VideoGame', 'WebApplication'], name: t.title, description: t.intro + ' ' + t.rules, url, image: 'https://game.archerlab.dev/twenty-questions/assets/backgrounds/study.png', inLanguage: locale, applicationCategory: 'GameApplication', operatingSystem: 'Any', gamePlatform: ['Web Browser', 'Mobile Browser'], playMode: 'SinglePlayer', isAccessibleForFree: true, dateModified: '2026-10-28', author: { '@type': 'Organization', name: 'ArcherLab', url: 'https://archerlab.dev' } })}</script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=1">
+  <link rel="stylesheet" href="css/style.css?v=20261029-ui2">
   <link rel="preload" href="assets/backgrounds/study.webp" as="image" fetchpriority="high">
-  <script type="module" src="js/main.mjs?v=1"></script>
+  <script type="module" src="js/main.mjs?v=20261029-ui2"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 </head>
 <body data-no-fullscreen>
@@ -92,9 +92,16 @@ for (const locale of ['ko', 'en']) {
       <div class="success-particles" aria-hidden="true"></div>
     </section>
   </main>
+  <div id="judging-overlay" class="judging-overlay" role="dialog" aria-modal="true" aria-labelledby="judging-title" tabindex="-1" hidden>
+    <div class="judging-panel">
+      <div class="judging-emblem" aria-hidden="true">${icon('compass')}</div>
+      <p id="judging-title" role="status">${text('pending')}</p>
+      <div class="judging-progress" role="progressbar" aria-label="${text('pending')}"><span></span></div>
+    </div>
+  </div>
   <div id="notice" class="notice" role="status" hidden></div>
   <footer class="site-footer"><a href="../">ArcherLab Games</a><span>TWENTY QUESTIONS</span></footer>
-  <dialog id="ranking-dialog" class="game-dialog ranking-dialog" aria-labelledby="ranking-title"><button class="dialog-close icon-button" data-close aria-label="${text('close')}">${icon('close')}</button><p class="eyebrow">ARCHIVE OF DISTINCTION</p><h2 id="ranking-title">${text('ranking')}</h2><p class="dialog-intro">${text('ranking_rule')}</p><form id="name-form" class="name-form"><label for="player-name">${text('name')}</label><div><input id="player-name" minlength="2" maxlength="16" autocomplete="nickname" placeholder="${text('name_help')}"><button type="submit" class="small-brass">${text('save')}</button></div></form><div id="leaderboard" class="leaderboard"></div><p id="own-rank" class="own-rank"></p></dialog>
+  <dialog id="ranking-dialog" class="game-dialog ranking-dialog" aria-labelledby="ranking-title"><button class="dialog-close icon-button" data-close aria-label="${text('close')}">${icon('close')}</button><p class="eyebrow">ARCHIVE OF DISTINCTION</p><h2 id="ranking-title">${text('ranking')}</h2><p class="dialog-intro">${text('ranking_rule')}</p><div id="leaderboard" class="leaderboard"></div><p id="own-rank" class="own-rank"></p></dialog>
   <dialog id="settings-dialog" class="game-dialog settings-dialog" aria-labelledby="settings-title"><button class="dialog-close icon-button" data-close aria-label="${text('close')}">${icon('close')}</button><h2 id="settings-title">${text('settings')}</h2><label class="setting-row" for="sound-enabled"><span>${text('sound')}</span><input type="checkbox" id="sound-enabled" checked></label><label class="setting-row" for="sound-volume">${text('volume')}</label><input type="range" id="sound-volume" min="0" max="100" value="45"><p class="privacy-note">${text('privacy')}</p></dialog>
   <dialog id="give-up-dialog" class="game-dialog confirm-dialog" aria-labelledby="give-up-title"><div class="wax-seal small" aria-hidden="true">?</div><h2 id="give-up-title">${text('give_up_confirm')}</h2><div class="confirm-actions"><button id="confirm-give-up" class="brass-button">${text('give_up')}</button><button data-close class="text-button">${text('cancel')}</button></div></dialog>
 </body></html>

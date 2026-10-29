@@ -18,7 +18,8 @@ export async function decisionRequest(env, state, questions, outputLanguage = ''
         for (const [key, question] of Object.entries(pending)) pending[key] = { ...question,
             instructions: 'Apply state.resolved_question_rules. ' + (typeof question.instructions === 'string' ? question.instructions : JSON.stringify(question.instructions || '')) };
     }
-    questions = pending;
+    // Worker RPC requires plain objects; null-prototype maps cannot cross the binding.
+    questions = { ...pending };
     if (!modelReady(env)) throw fault('service_unavailable', 503);
     if (env.TQ_AI) {
         try {

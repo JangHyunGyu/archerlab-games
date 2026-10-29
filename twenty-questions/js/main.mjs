@@ -11,6 +11,8 @@ let state = { profile: blankProfile, game: null };
 let mode = storage.get('mode') === 'guesses' ? 'guesses' : 'questions';
 let busy = false; let noticeTimer; let composing = false; let screen = 'title'; let mutationEpoch = 0;
 let pendingCommand;
+let blockedElements = [];
+let focusBeforeJudging;
 let syncKeyboard = () => {};
 try { pendingCommand = JSON.parse(storage.get('pending') || 'null'); } catch { pendingCommand = null; }
 
@@ -36,6 +38,29 @@ function setBusy(value) {
     $('question-form').setAttribute('aria-busy', String(value));
     for (const link of document.querySelectorAll('.languages a')) link.setAttribute('aria-disabled', String(value));
 }
+
+function blockScreen(value) {
+    const overlay = $('judging-overlay');
+    if (value) {
+        focusBeforeJudging = document.activeElement;
+        blockedElements = [...document.body.children].filter(node => node !== overlay && !node.inert);
+        blockedElements.forEach(node => { node.inert = true; });
+        overlay.hidden = false;
+        document.body.classList.add('is-judging');
+        overlay.focus({ preventScroll: true });
+    } else {
+        overlay.hidden = true;
+        blockedElements.forEach(node => { node.inert = false; });
+        blockedElements = [];
+        document.body.classList.remove('is-judging');
+        const focusTarget = screen === 'result' ? $('result-title') : focusBeforeJudging;
+        if (focusTarget?.isConnected && !focusTarget.disabled) focusTarget.focus({ preventScroll: true });
+        focusBeforeJudging = null;
+    }
+}
+$('judging-overlay').addEventListener('keydown', event => {
+    if (['Tab', 'Escape'].includes(event.key)) event.preventDefault();
+});
 
 function saveDraft() { storage.set('draft', $('question-input').value); storage.set('mode', mode); }
 function countInput() {
@@ -88,7 +113,6 @@ function render(data, { navigate = true, effects = false } = {}) {
     $('hero-streak').textContent = profile.streak;
     $('hero-best').textContent = profile.bestStreak;
     $('resume').hidden = !profile.activeGame;
-    $('player-name').value = profile.name || '';
     if (!data.game) return;
     const game = data.game;
     storage.remove('start_request'); storage.remove('start_locale');
@@ -149,10 +173,11 @@ async function recover() {
     return data;
 }
 
-async function action(callback) {
+async function action(callback, { blocking = false } = {}) {
     if (busy) return;
     mutationEpoch++;
     audio.unlock(); setBusy(true); $('notice').hidden = true;
+    if (blocking) blockScreen(true);
     try { await callback(); }
     catch (error) {
         reportException(error, 'game_action');
@@ -167,7 +192,7 @@ async function action(callback) {
         }
         if (error.code === 'stale_state') { pendingCommand = null; storage.remove('pending'); }
         notify(error.code || 'network_error');
-    } finally { setBusy(false); countInput(); }
+    } finally { setBusy(false); if (blocking) blockScreen(false); countInput(); }
 }
 
 async function start() {
@@ -203,7 +228,7 @@ async function submit(event) {
         if (data.event?.code === 'wrong_guess' && data.game.status === 'active') {
             $('question-form').classList.remove('wrong'); requestAnimationFrame(() => $('question-form').classList.add('wrong'));
         }
-    });
+    }, { blocking: true });
     if (state.game?.status === 'active') $('question-input').focus({ preventScroll: true });
 }
 
@@ -256,14 +281,6 @@ $('sound-enabled').addEventListener('change', () => audio.configure($('sound-ena
 $('sound-volume').addEventListener('input', () => audio.configure($('sound-enabled').checked, Number($('sound-volume').value) / 100));
 $('sound-volume').addEventListener('change', () => audio.play('click'));
 $('history-toggle').addEventListener('click', () => { const hidden = !$('result-history').hidden; $('result-history').hidden = hidden; $('history-toggle').setAttribute('aria-expanded', String(!hidden)); $('history-toggle').textContent = t(hidden ? 'history' : 'hide_history'); });
-$('name-form').addEventListener('submit', async event => {
-    event.preventDefault();
-    const button = event.submitter; if (button) button.disabled = true;
-    try { const data = await request('profile', { name: $('player-name').value }, 'PATCH'); state.profile = data.profile; notify('saved_name'); await showRankingRefresh(); }
-    catch (error) { reportException(error, 'profile'); notify(error.code || 'network_error'); }
-    finally { if (button) button.disabled = false; }
-});
-async function showRankingRefresh() { await showRanking(false); }
 document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
 document.querySelectorAll('.languages a').forEach(link => link.addEventListener('click', event => { if (busy) { event.preventDefault(); return; } saveDraft(); }));
 document.querySelectorAll('dialog').forEach(dialog => dialog.addEventListener('click', event => { if (event.target === dialog) { const box = dialog.getBoundingClientRect(); if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) dialog.close(); } }));

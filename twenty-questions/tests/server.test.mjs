@@ -77,6 +77,27 @@ test('server keeps best streak and never repeats a consumed concept', async () =
     const rank = await h.call('leaderboard'); assert.equal(rank.data.entries[0].streak, 2);
 });
 
+test('winning automatically persists the ranked record before opening rankings or saving a name', async () => {
+    const h = harness();
+    const { game } = await h.start();
+    const requestId = crypto.randomUUID();
+    const won = await h.turn(game, h.answer(game.id).en, 'guesses', requestId);
+    assert.equal(won.data.game.status, 'won');
+    const stored = h.row('SELECT best_streak, best_turns, name FROM tq_players');
+    assert.equal(stored.best_streak, 1);
+    assert.equal(stored.best_turns, 1);
+    assert.ok(stored.name);
+    const replay = await h.turn(game, h.answer(game.id).en, 'guesses', requestId);
+    assert.equal(replay.data.profile.bestStreak, 1);
+    const resumed = await h.call('profile');
+    assert.equal(resumed.data.profile.bestStreak, 1);
+    const ranked = await h.call('leaderboard');
+    assert.equal(ranked.data.entries.length, 1);
+    assert.equal(ranked.data.mine.streak, 1);
+    assert.equal(ranked.data.mine.name, stored.name);
+    h.db.sqlite.close();
+});
+
 test('pool exhaustion retains streak; an appended concept becomes playable', async () => {
     const h = harness(); let state = await h.start();
     state = (await h.turn(state.game, h.answer(state.game.id).ko, 'guesses')).data;

@@ -47,9 +47,9 @@
 }
     </script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=1">
+  <link rel="stylesheet" href="css/style.css?v=20261029-ui2">
   <link rel="preload" href="assets/backgrounds/study.webp" as="image" fetchpriority="high">
-  <script type="module" src="js/main.mjs?v=1"></script>
+  <script type="module" src="js/main.mjs?v=20261029-ui2"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 
     <meta name="twitter:title" content="Twenty Questions | The Secret Archive - ArcherLab">
@@ -119,9 +119,16 @@
       <div class="success-particles" aria-hidden="true"></div>
     </section>
   </main>
+  <div id="judging-overlay" class="judging-overlay" role="dialog" aria-modal="true" aria-labelledby="judging-title" tabindex="-1" hidden>
+    <div class="judging-panel">
+      <div class="judging-emblem" aria-hidden="true"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-compass"/></svg></div>
+      <p id="judging-title" role="status">Checking your question.</p>
+      <div class="judging-progress" role="progressbar" aria-label="Checking your question."><span></span></div>
+    </div>
+  </div>
   <div id="notice" class="notice" role="status" hidden></div>
   <footer class="site-footer"><a href="../">ArcherLab Games</a><span>TWENTY QUESTIONS</span></footer>
-  <dialog id="ranking-dialog" class="game-dialog ranking-dialog" aria-labelledby="ranking-title"><button class="dialog-close icon-button" data-close aria-label="Close"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-close"/></svg></button><p class="eyebrow">ARCHIVE OF DISTINCTION</p><h2 id="ranking-title">Hall of Fame</h2><p class="dialog-intro">Ranked by your best winning streak. Fewer total turns break a tie.</p><form id="name-form" class="name-form"><label for="player-name">Display name</label><div><input id="player-name" minlength="2" maxlength="16" autocomplete="nickname" placeholder="2–16 letters, numbers or spaces"><button type="submit" class="small-brass">Save</button></div></form><div id="leaderboard" class="leaderboard"></div><p id="own-rank" class="own-rank"></p></dialog>
+  <dialog id="ranking-dialog" class="game-dialog ranking-dialog" aria-labelledby="ranking-title"><button class="dialog-close icon-button" data-close aria-label="Close"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-close"/></svg></button><p class="eyebrow">ARCHIVE OF DISTINCTION</p><h2 id="ranking-title">Hall of Fame</h2><p class="dialog-intro">Ranked by your best winning streak. Fewer total turns break a tie.</p><div id="leaderboard" class="leaderboard"></div><p id="own-rank" class="own-rank"></p></dialog>
   <dialog id="settings-dialog" class="game-dialog settings-dialog" aria-labelledby="settings-title"><button class="dialog-close icon-button" data-close aria-label="Close"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-close"/></svg></button><h2 id="settings-title">Settings</h2><label class="setting-row" for="sound-enabled"><span>Sound effects</span><input type="checkbox" id="sound-enabled" checked></label><label class="setting-row" for="sound-volume">Effects volume</label><input type="range" id="sound-volume" min="0" max="100" value="45"><p class="privacy-note">Questions are sent to the server for judging. Please leave out personal information.</p></dialog>
   <dialog id="give-up-dialog" class="game-dialog confirm-dialog" aria-labelledby="give-up-title"><div class="wax-seal small" aria-hidden="true">?</div><h2 id="give-up-title">Reveal the answer and end this game?</h2><div class="confirm-actions"><button id="confirm-give-up" class="brass-button">Give up</button><button data-close class="text-button">Keep playing</button></div></dialog>
 </body></html>
