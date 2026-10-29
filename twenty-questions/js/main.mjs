@@ -28,6 +28,7 @@ function changeScreen(next) {
     for (const item of ['title', 'game', 'result']) $(item + '-screen').hidden = next !== item;
     storage.set('view', next);
     window.scrollTo({ top: 0, behavior: 'instant' });
+    syncKeyboard();
 }
 
 function setBusy(value) {
@@ -123,14 +124,15 @@ function render(data, { navigate = true, effects = false } = {}) {
         $('game-streak').textContent = profile.streak;
         $('last-turn').hidden = game.remaining !== 1;
         for (const [index, mark] of [...$('turn-marks').children].entries()) mark.classList.toggle('spent', index < game.turnsUsed);
-        const history = $('history'); const pinned = history.scrollHeight - history.scrollTop - history.clientHeight < 80;
+        const history = $('history');
         const rows = game.history.filter(entry => entry.mode !== 'give-up');
         const previous = [...history.children];
         const prefixMatches = previous.length <= rows.length && previous.every((row, index) => row.dataset.requestId === rows[index].request_id);
         if (prefixMatches) history.append(makeHistory(rows.slice(previous.length), effects ? data.event?.requestId : null));
         else history.replaceChildren(makeHistory(rows, effects ? data.event?.requestId : null));
         $('empty-history').hidden = game.history.some(item => item.mode !== 'give-up');
-        if (pinned || effects) history.scrollTop = history.scrollHeight;
+        history.scrollTop = history.scrollHeight;
+        requestAnimationFrame(() => { history.scrollTop = history.scrollHeight; });
     } else {
         if (navigate) changeScreen('result');
         const won = game.status === 'won';
@@ -287,19 +289,52 @@ document.querySelectorAll('dialog').forEach(dialog => dialog.addEventListener('c
 window.addEventListener('online', () => { if (!busy && screen === 'game') recover().catch(() => {}); });
 window.addEventListener('offline', () => notify('offline', true));
 document.addEventListener('visibilitychange', () => { if (!document.hidden && !busy && screen === 'game') recover().catch(() => {}); });
-if (window.visualViewport) {
-    const resize = () => {
-        const overlap = Math.max(0, window.innerHeight - visualViewport.height - visualViewport.offsetTop);
-        const open = screen === 'game' && overlap > 130;
+{
+    const viewport = window.visualViewport;
+    let fullHeight = window.innerHeight;
+    let fullWidth = window.innerWidth;
+    let frame = 0;
+    let focusTimers = [];
+    const update = () => {
+        frame = 0;
+        const height = viewport?.height || window.innerHeight;
+        const top = viewport?.offsetTop || 0;
+        const focused = document.activeElement === $('question-input');
+        const wasOpen = document.body.classList.contains('keyboard-open');
+        const unzoomed = Math.abs((viewport?.scale || 1) - 1) < .05;
+        if (Math.abs(window.innerWidth - fullWidth) > 80) {
+            fullWidth = window.innerWidth;
+            fullHeight = window.innerHeight;
+        }
+        if (!focused && !wasOpen) fullHeight = Math.max(fullHeight, window.innerHeight, height);
+        // Some keyboards shrink both viewports, so their difference alone can be zero.
+        const reduced = Math.max(fullHeight, window.innerHeight) - height > 100;
+        const open = screen === 'game' && unzoomed && reduced && (focused || wasOpen);
         document.body.classList.toggle('keyboard-open', open);
-        document.body.style.setProperty('--keyboard-height', `${overlap}px`);
-        if (open && document.activeElement === $('question-input')) requestAnimationFrame(() => {
-            const extra = $('question-input').getBoundingClientRect().bottom - (visualViewport.height + visualViewport.offsetTop - 12);
-            if (extra > 0) window.scrollBy({ top: extra, behavior: 'instant' });
-        });
+        const overlap = Math.max(0, window.innerHeight - height);
+        document.body.style.setProperty('--keyboard-height', `${open ? overlap + 16 : 0}px`);
+        if (screen !== 'game' || !focused || !unzoomed || busy) return;
+        // Keep the entire composer visible, including Send, after native keyboard panning.
+        const box = $('question-form').getBoundingClientRect();
+        const bottom = top + height - 16;
+        const delta = box.bottom > bottom ? box.bottom - bottom : box.top < top + 12 ? box.top - top - 12 : 0;
+        if (Math.abs(delta) > 1) window.scrollBy({ top: delta, behavior: 'instant' });
     };
-    visualViewport.addEventListener('resize', resize);
-    syncKeyboard = resize;
+    syncKeyboard = () => { if (!frame) frame = requestAnimationFrame(update); };
+    viewport?.addEventListener('resize', syncKeyboard);
+    viewport?.addEventListener('scroll', syncKeyboard);
+    window.addEventListener('resize', syncKeyboard);
+    $('question-input').addEventListener('focus', () => {
+        focusTimers.forEach(clearTimeout);
+        syncKeyboard();
+        // Native keyboard animation can finish after the browser's initial focus scroll.
+        focusTimers = [100, 300, 600].map(delay => setTimeout(syncKeyboard, delay));
+    });
+    $('question-input').addEventListener('blur', () => { focusTimers.forEach(clearTimeout); syncKeyboard(); });
+    if (window.ResizeObserver) new ResizeObserver(() => {
+        $('history').scrollTop = $('history').scrollHeight;
+        syncKeyboard();
+    }).observe($('history'));
 }
 
 async function initialize() {

@@ -14,6 +14,7 @@
     "seo:check": "node scripts/sync-search-metadata.cjs --check && node --test tests/shared/search-metadata.test.cjs",
     "test:twenty": "node --test twenty-questions/tests/catalog.test.mjs twenty-questions/tests/server.test.mjs twenty-questions/tests/decision-language.test.mjs",
     "test:twenty:browser": "node twenty-questions/tests/browser.mjs",
+    "test:twenty:keyboard": "node twenty-questions/tests/keyboard-browser.mjs",
     "preview:twenty": "node twenty-questions/tools/preview.mjs",
     "build:twenty": "node twenty-questions/tools/build-pages.mjs && npm run seo:sync"
   },

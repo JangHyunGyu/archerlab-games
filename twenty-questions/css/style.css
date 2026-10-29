@@ -50,3 +50,30 @@ body[data-screen=game] .study-background,body[data-screen=result] .study-backgro
   .keyboard-open .composer textarea{min-height:62px}.keyboard-open .composer .brass-button{min-width:0}
 }
 @media(prefers-reduced-motion:reduce){.judging-progress span{animation:none;transform:translateX(80%)}}
+
+/* The paper keeps its footprint; only its question ledger scrolls. */
+.case-file{display:grid;grid-template-rows:auto minmax(0,1fr);height:clamp(270px,34dvh,400px);min-height:0}
+.history{grid-row:2;grid-column:1;min-height:0;height:100%;max-height:none;overflow-y:auto}
+.history .stamp{position:sticky;top:8px;align-self:start}
+.empty-history{grid-row:2;grid-column:1;align-self:center;min-height:0}
+.keyboard-open .case-head{position:static}
+@media(max-width:600px){.case-file{height:clamp(230px,30dvh,300px)}}
+.keyboard-open .case-file{height:clamp(130px,22dvh,190px);min-height:0}
+.keyboard-open .empty-history{padding:4px}
+.keyboard-open .empty-history .wax-seal,.keyboard-open .empty-history p{display:none}
+.keyboard-open .empty-history h2{font-size:16px;margin:4px 0}
+
+body[data-screen=game] .site-header{height:76px;min-height:0;padding-top:12px;padding-bottom:12px}
+body[data-screen=game] .game-toolbar{margin-bottom:12px}
+@media(max-width:600px){
+  body[data-screen=game] .site-header{height:auto;min-height:68px;flex-wrap:nowrap;gap:12px;padding:12px 18px}
+  body[data-screen=game] .brand{width:44px;min-width:44px;height:44px;justify-content:center}
+  body[data-screen=game] .brand>span{display:none}
+  body[data-screen=game] .header-controls{width:auto;flex:1;gap:10px}
+  body[data-screen=game] .languages{gap:8px;font-size:11px}
+  body[data-screen=game] .languages a{min-width:44px;min-height:44px}
+  body[data-screen=game] .header-controls>.icon-button{width:44px;min-width:44px;height:44px}
+  body[data-screen=game] .game-toolbar{gap:12px;margin-bottom:12px}
+  body[data-screen=game] .game-toolbar .case-label{display:none}
+  body[data-screen=game] .game-toolbar .text-button{min-height:44px;padding:8px 12px}
+}

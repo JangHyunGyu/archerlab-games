@@ -30,9 +30,9 @@ for (const locale of ['ko', 'en']) {
   <meta property="og:image" content="https://game.archerlab.dev/twenty-questions/assets/backgrounds/study.png">
   <script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': ['VideoGame', 'WebApplication'], name: t.title, description: t.intro + ' ' + t.rules, url, image: 'https://game.archerlab.dev/twenty-questions/assets/backgrounds/study.png', inLanguage: locale, applicationCategory: 'GameApplication', operatingSystem: 'Any', gamePlatform: ['Web Browser', 'Mobile Browser'], playMode: 'SinglePlayer', isAccessibleForFree: true, dateModified: '2026-10-28', author: { '@type': 'Organization', name: 'ArcherLab', url: 'https://archerlab.dev' } })}</script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261029-ui2">
+  <link rel="stylesheet" href="css/style.css?v=20261029-keyboard3">
   <link rel="preload" href="assets/backgrounds/study.webp" as="image" fetchpriority="high">
-  <script type="module" src="js/main.mjs?v=20261029-ui2"></script>
+  <script type="module" src="js/main.mjs?v=20261029-keyboard3"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 </head>
 <body data-no-fullscreen>
