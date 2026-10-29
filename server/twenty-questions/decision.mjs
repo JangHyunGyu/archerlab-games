@@ -33,8 +33,15 @@ export async function decisionRequest(env, state, questions, outputLanguage = ''
     const endpoint = azure
         ? `${String(env.TQ_AZURE_ENDPOINT).replace(/\/$/, '')}/providers/microsoft/v1/systemone`
         : 'https://openrouter.ai/api/alpha/decisions';
-    const routes = [{ endpoint, headers: azure ? { 'api-key': env.AZURE_API_KEY } : { Authorization: `Bearer ${env.OPENROUTER_API_KEY}` },
-        model: azure ? env.TQ_AZURE_DEPLOYMENT : (env.TQ_DECISION_MODEL || 'microsoft/microsoft-decision-1') }];
+    const openRouterRoutes = env.OPENROUTER_API_KEY ? [
+        ['microsoft/microsoft-decision-1', 'azure'],
+        ['typesafe/jev-1.14', 'typesafe'],
+        ['cloudflare/clef-flash', 'cloudflare'],
+    ].map(([model, provider]) => ({ endpoint: 'https://openrouter.ai/api/alpha/decisions',
+        headers: { Authorization: `Bearer ${env.OPENROUTER_API_KEY}` }, model,
+        provider: { only: [provider], allow_fallbacks: false } })) : [];
+    const routes = azure ? [{ endpoint, headers: { 'api-key': env.AZURE_API_KEY }, model: env.TQ_AZURE_DEPLOYMENT },
+        ...openRouterRoutes.slice(1)] : openRouterRoutes;
     const deadline = Date.now() + 8000;
     const usage = { input_tokens: 0, output_tokens: 0, cost: 0 };
     for (const route of routes) {
@@ -43,7 +50,7 @@ export async function decisionRequest(env, state, questions, outputLanguage = ''
             const response = await fetch(route.endpoint, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', ...route.headers },
                 body: JSON.stringify({ model: route.model, ...(route.provider ? { provider: route.provider } : {}), state, questions }),
-                signal: AbortSignal.timeout(Math.max(50, Math.min(8000, deadline - Date.now()))),
+                signal: AbortSignal.timeout(Math.max(50, Math.min(2500, deadline - Date.now()))),
             });
             const result = await response.json().catch(() => null);
             usage.input_tokens += Number(result?.usage?.input_tokens) || 0;
@@ -64,7 +71,7 @@ export async function decisionRequest(env, state, questions, outputLanguage = ''
             });
             if (!valid) continue;
             return { ...result, answers: { ...result.answers, ...fixed }, usage };
-        } catch { /* Preserve the existing provider as the next attempt. */ }
+        } catch { /* Try the next provider within the shared eight-second budget. */ }
     }
     throw fault('model_unavailable', 503);
 }
