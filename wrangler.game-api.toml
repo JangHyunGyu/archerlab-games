@@ -2,6 +2,9 @@ name = "game-api"
 main = "game-api-entry.js"
 compatibility_date = "2026-09-01"
 
+[vars]
+KO_DECISION_MODEL_PRESET = "solar-decide-flash-upstage"
+
 [[durable_objects.bindings]]
 name = "RANKING_DELIVERY"
 class_name = "RankingDelivery"

@@ -155,7 +155,7 @@ async function performTurn(db, env, player, game, mode, body) {
             await db.prepare('UPDATE tq_games SET requests_count = requests_count + 1 WHERE id = ?').bind(game.id).run();
             const previous = await db.prepare("SELECT input, code FROM tq_turns WHERE game_id = ? AND code IN ('yes','no') ORDER BY version").bind(game.id).all();
             try {
-                const result = await judge(env, answer, input, previous.results);
+                const result = await judge(env, answer, input, previous.results, body.locale || 'ko');
                 code = result.code; decision = ['yes', 'no'].includes(code) ? code : null;
                 charged = decision ? 1 : 0;
                 await recordCost(db, budgetDay, result.cost);
