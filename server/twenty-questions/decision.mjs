@@ -5,12 +5,26 @@ export function modelReady(env) {
 }
 
 export async function decisionRequest(env, state, questions, outputLanguage = '') {
+    const fixed = Object.create(null), pending = Object.create(null), rules = [];
+    for (const [key, question] of Object.entries(questions)) {
+        const options = question.type === 'choice' ? Object.keys(question.criteria || {}) : [];
+        if (options.length !== 1) { pending[key] = question; continue; }
+        fixed[key] = { type: 'choice', choice: options[0], confidence: 1, probabilities: { [options[0]]: 1 } };
+        if (key === 'who' && ['classified', 'review'].includes(options[0]) && question.instructions) rules.push(question.instructions);
+    }
+    if (!Object.keys(pending).length) return { answers: fixed, model: null, usage: { input_tokens: 0, output_tokens: 0, cost: 0 } };
+    if (rules.length) {
+        state = { ...state, resolved_question_rules: rules };
+        for (const [key, question] of Object.entries(pending)) pending[key] = { ...question,
+            instructions: 'Apply state.resolved_question_rules. ' + (typeof question.instructions === 'string' ? question.instructions : JSON.stringify(question.instructions || '')) };
+    }
+    questions = pending;
     if (!modelReady(env)) throw fault('service_unavailable', 503);
     if (env.TQ_AI) {
         try {
             const result = await env.TQ_AI.decide({ state, questions, outputLanguage });
             if (!result?.answers) throw new Error('Invalid decision response');
-            return result;
+            return { ...result, answers: { ...result.answers, ...fixed } };
         } catch { throw fault('model_unavailable', 503); }
     }
     const azure = env.TQ_DECISION_PROVIDER === 'azure';
@@ -21,10 +35,6 @@ export async function decisionRequest(env, state, questions, outputLanguage = ''
         : 'https://openrouter.ai/api/alpha/decisions';
     const routes = [{ endpoint, headers: azure ? { 'api-key': env.AZURE_API_KEY } : { Authorization: `Bearer ${env.OPENROUTER_API_KEY}` },
         model: azure ? env.TQ_AZURE_DEPLOYMENT : (env.TQ_DECISION_MODEL || 'microsoft/microsoft-decision-1') }];
-    if (/^ko(?:[-_]kr)?$/i.test(outputLanguage) && env.KO_DECISION_MODEL_PRESET === 'solar-decide-flash-upstage' && env.OPENROUTER_API_KEY) {
-        routes.unshift({ endpoint: 'https://openrouter.ai/api/alpha/decisions', headers: { Authorization: `Bearer ${env.OPENROUTER_API_KEY}` },
-            model: 'upstage/solar-decide-flash', provider: { only: ['upstage'], allow_fallbacks: false } });
-    }
     const deadline = Date.now() + 8000;
     const usage = { input_tokens: 0, output_tokens: 0, cost: 0 };
     for (const route of routes) {
@@ -33,7 +43,7 @@ export async function decisionRequest(env, state, questions, outputLanguage = ''
             const response = await fetch(route.endpoint, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', ...route.headers },
                 body: JSON.stringify({ model: route.model, ...(route.provider ? { provider: route.provider } : {}), state, questions }),
-                signal: AbortSignal.timeout(Math.max(50, Math.min(routes.length > 1 ? 3500 : 8000, deadline - Date.now()))),
+                signal: AbortSignal.timeout(Math.max(50, Math.min(8000, deadline - Date.now()))),
             });
             const result = await response.json().catch(() => null);
             usage.input_tokens += Number(result?.usage?.input_tokens) || 0;
@@ -53,7 +63,7 @@ export async function decisionRequest(env, state, questions, outputLanguage = ''
                     && Math.abs(Object.values(probabilities).reduce((sum, value) => sum + value, 0) - 1) < .05;
             });
             if (!valid) continue;
-            return { ...result, usage };
+            return { ...result, answers: { ...result.answers, ...fixed }, usage };
         } catch { /* Preserve the existing provider as the next attempt. */ }
     }
     throw fault('model_unavailable', 503);

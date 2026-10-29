@@ -25,35 +25,53 @@ for (const locale of ['ko', 'ko-KR', 'en', 'ja', '']) test(`direct decision path
         return Response.json({ answers: { supported: { type: 'noul', noul: .99 } }, usage: { cost: .000005 } });
     });
     const result = await decisionRequest(config, { fact: 'A bird.' }, questions, locale);
-    assert.equal(calls[0].body.model, locale.startsWith('ko') ? 'upstage/solar-decide-flash' : 'microsoft/microsoft-decision-1');
-    if (locale.startsWith('ko')) assert.deepEqual(calls[0].body.provider, { only: ['upstage'], allow_fallbacks: false });
+    assert.equal(calls[0].body.model, 'microsoft/microsoft-decision-1');
     assert.equal(result.answers.supported.noul, .99);
     assert.equal(calls.length, 1);
 });
 
-for (const failure of ['http', 'timeout', 'invalid']) test(`direct Solar ${failure} preserves the existing provider and accumulated usage`, async t => {
+for (const failure of ['http', 'timeout', 'invalid']) test(`direct ${failure} never falls back to a removed provider`, async t => {
     const calls = [];
     t.mock.method(globalThis, 'fetch', async (url, options) => {
-        const body = JSON.parse(options.body); calls.push(body);
-        if (calls.length === 1) {
-            if (failure === 'timeout') throw new DOMException('timeout', 'TimeoutError');
-            return Response.json({ answers: { supported: { type: 'noul', noul: 2 } }, usage: { cost: .000005 } }, { status: failure === 'http' ? 503 : 200 });
-        }
-        return Response.json({ answers: { supported: { type: 'noul', noul: .99 } }, usage: { cost: .0000042 } });
+        calls.push(JSON.parse(options.body));
+        if (failure === 'timeout') throw new DOMException('timeout', 'TimeoutError');
+        return Response.json({ answers: { supported: { type: 'noul', noul: 2 } } }, { status: failure === 'http' ? 503 : 200 });
     });
-    const result = await decisionRequest(config, {}, questions, 'ko');
-    assert.deepEqual(calls.map(call => call.model), ['upstage/solar-decide-flash', 'microsoft/microsoft-decision-1']);
-    assert.ok(Math.abs(result.usage.cost - (failure === 'timeout' ? .0000042 : .0000092)) < 1e-12);
+    await assert.rejects(decisionRequest(config, {}, questions, 'ko'));
+    assert.deepEqual(calls.map(call => call.model), ['microsoft/microsoft-decision-1']);
 });
 
-test('Korean direct fallback can return to a configured Azure deployment', async t => {
+test('the direct path retains a configured Azure deployment', async t => {
     const calls = [];
     t.mock.method(globalThis, 'fetch', async (url, options) => {
         calls.push({ url, options });
-        return calls.length === 1 ? Response.json({}, { status: 503 }) : Response.json({ answers: { supported: { type: 'noul', noul: .99 } } });
+        return Response.json({ answers: { supported: { type: 'noul', noul: .99 } } });
     });
     await decisionRequest({ ...config, TQ_DECISION_PROVIDER: 'azure', TQ_AZURE_ENDPOINT: 'https://azure.example', AZURE_API_KEY: 'azure-test', TQ_AZURE_DEPLOYMENT: 'decision-deployment' }, {}, questions, 'ko');
-    assert.equal(calls[1].url, 'https://azure.example/providers/microsoft/v1/systemone');
-    assert.equal(JSON.parse(calls[1].options.body).model, 'decision-deployment');
-    assert.equal(calls[1].options.headers['api-key'], 'azure-test');
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, 'https://azure.example/providers/microsoft/v1/systemone');
+    assert.equal(JSON.parse(calls[0].options.body).model, 'decision-deployment');
+    assert.equal(calls[0].options.headers['api-key'], 'azure-test');
+});
+
+test('single-option game questions are resolved locally without a service or key', async () => {
+    const result = await decisionRequest({}, {}, { fixed: { type: 'choice', instructions: 'The only available result.', criteria: { selected: 'Selected' } } });
+    assert.equal(result.answers.fixed.choice, 'selected');
+    assert.equal(result.model, null);
+    assert.equal(result.usage.cost, 0);
+});
+
+test('direct decisions remove singleton helpers but preserve their instructions and answer', async t => {
+    let sent;
+    t.mock.method(globalThis, 'fetch', async (url, options) => {
+        sent = JSON.parse(options.body);
+        return Response.json({ answers: { supported: { type: 'noul', noul: .99 } } });
+    });
+    const result = await decisionRequest(config, { fact: 'A bird.' }, {
+        who: { type: 'choice', instructions: 'Use only supplied facts.', criteria: { review: 'Review the evidence.' } }, ...questions
+    });
+    assert.equal(sent.questions.who, undefined);
+    assert.deepEqual(sent.state.resolved_question_rules, ['Use only supplied facts.']);
+    assert.match(sent.questions.supported.instructions, /state.resolved_question_rules/);
+    assert.equal(result.answers.who.choice, 'review');
 });
