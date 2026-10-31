@@ -115,7 +115,7 @@ LevelUpScene.prototype._generateChoices = function _generateChoicesLocalized() {
 };
 
 const config = {
-    type: Phaser.WEBGL,
+    type: Phaser.AUTO,
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
     parent: 'game-container',
