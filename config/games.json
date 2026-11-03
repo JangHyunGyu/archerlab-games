@@ -32,7 +32,8 @@
       "tests": [
         "node jewelria/static-quality.test.cjs",
         "node --test jewelria/pixi-board-tween.test.mjs",
-        "node jewelria/layout.browser.cjs"
+        "node jewelria/layout.browser.cjs",
+        "node jewelria/localization.browser.cjs"
       ]
     },
     {

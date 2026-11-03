@@ -3,8 +3,8 @@ import { formatTime } from './stage.js';
 import { PixiBoard } from './pixi-board.js';
 
 export class UI {
-  text(korean, english) {
-    return this.lang === 'en' ? english : korean;
+  text(korean, english, japanese = english) {
+    return this.lang === 'ja' ? japanese : this.lang === 'en' ? english : korean;
   }
   constructor(lang = 'ko') {
     this.lang = lang;
@@ -36,6 +36,60 @@ export class UI {
       toast: document.getElementById('toast')
     };
     this.pixi = null;
+    if (this.lang === 'ja') this._localizeJapanese();
+  }
+
+  _localizeJapanese() {
+    const labels = {
+      '.title-plaque h1': 'ジュエルリア',
+      '.record-strip > div:first-child > span': '制限時間',
+      '.record-strip > div:last-child > span': 'ベストスコア',
+      '#play-btn .btn-label': 'ゲーム開始',
+      '.hud-stat-time > span': '残り時間',
+      '.hud-stat-score > span': 'スコア',
+      '#restart-btn': 'やり直す',
+      '#rank-open-game': 'ランキング',
+      '#pause-title': '一時停止',
+      '#resume-btn': '続ける',
+      '#pause-restart-btn': 'やり直す',
+      '#pause-home-btn': 'タイトルへ',
+      '#result-title': 'タイムアップ',
+      '.result-stats > div:first-child > span': 'スコア',
+      '.result-stats > div:last-child > span': 'ベスト',
+      '#rank-submit > label': 'ランキングに登録',
+      '#submit-rank-btn': '登録',
+      '#skip-rank-btn': 'スキップ',
+      '#retry-btn': 'もう一度',
+      '#result-home-btn': 'タイトルへ',
+      '#rank-title': 'ランキング TOP 20',
+      '#rank-close': '閉じる',
+      '#rank-content .rank-loading': '読み込み中...'
+    };
+    for (const [selector, label] of Object.entries(labels)) {
+      const node = document.querySelector(selector);
+      if (node) node.textContent = label;
+    }
+    const accessible = {
+      '.archerlab-link': 'ArcherLabを開く',
+      '#title-screen': 'ジュエルリア タイトル',
+      '#game-screen': 'ジュエルリア ゲーム画面',
+      '#sound-toggle-title': 'サウンド切り替え',
+      '#rank-open-title': 'ランキングを開く',
+      '#home-btn': 'タイトルに戻る',
+      '#pause-btn': '一時停止',
+      '.board-wrap': 'ゲーム盤面',
+      '#board': '8 × 8のジュエル盤面',
+      '#rank-close': '閉じる',
+      '#rank-submit-progress': 'スコアを登録中'
+    };
+    for (const [selector, label] of Object.entries(accessible)) {
+      const node = document.querySelector(selector);
+      node?.setAttribute('aria-label', label);
+      if (node?.hasAttribute('title')) node.setAttribute('title', label);
+    }
+    this.refs.nicknameInput?.setAttribute('placeholder', 'ニックネーム（20文字まで）');
+    this.refs.app?.setAttribute('data-lang', 'ja');
+    document.title = 'Jewelria - 無料マッチ3ジュエルパズル | ArcherLab Games';
   }
 
   async initBoard() {
@@ -248,7 +302,7 @@ export class UI {
 
   showResult({ score, bestScore, nickname }) {
     this.refs.resultKicker.textContent = 'TIME UP';
-    this.refs.resultTitle.textContent = this.text('타임 어택 종료', 'Time Attack Over');
+    this.refs.resultTitle.textContent = this.text('타임 어택 종료', 'Time Attack Over', 'タイムアップ');
     this.refs.resultScore.textContent = Number(score).toLocaleString();
     this.refs.resultBest.textContent = Number(bestScore).toLocaleString();
     // 점수가 0보다 높으면 명예의 전당 등록 UI를 노출한다.
@@ -288,7 +342,7 @@ export class UI {
   renderRanks(rows, myName = '') {
     this.refs.rankContent.replaceChildren();
     if (!rows || rows.length === 0) {
-      this._setRankMessage('rank-empty', this.text('아직 기록이 없습니다. 첫 기록을 남겨 주세요.', 'No scores yet. Be the first to play!'));
+      this._setRankMessage('rank-empty', this.text('아직 기록이 없습니다. 첫 기록을 남겨 주세요.', 'No scores yet. Be the first to play!', 'まだ記録がありません。最初のスコアを登録しましょう！'));
       return;
     }
     rows.slice(0, 20).forEach((row, index) => {
@@ -309,7 +363,7 @@ export class UI {
       score.className = 'rank-score';
       const points = document.createElement('span');
       points.className = 'rank-points';
-      points.textContent = `${Number(row.score || 0).toLocaleString()}${this.text('\uC810', ' pts')}`;
+      points.textContent = `${Number(row.score || 0).toLocaleString()}${this.text('\uC810', ' pts', '点')}`;
       score.append(points);
       item.append(pos, name, score);
       this.refs.rankContent.appendChild(item);
@@ -318,12 +372,12 @@ export class UI {
   }
 
   showRankLoading() {
-    this._setRankMessage('rank-loading', this.text('불러오는 중...', 'Loading...'));
+    this._setRankMessage('rank-loading', this.text('불러오는 중...', 'Loading...', '読み込み中...'));
     this.showModal(this.refs.rankModal);
   }
 
   showRankError() {
-    this._setRankMessage('rank-error', this.text('랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.', 'Could not load rankings. Please try again later.'));
+    this._setRankMessage('rank-error', this.text('랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.', 'Could not load rankings. Please try again later.', 'ランキングを読み込めませんでした。しばらくしてからお試しください。'));
   }
 
   _setRankMessage(className, message) {

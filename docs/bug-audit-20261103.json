@@ -1,0 +1,59 @@
+{
+  "date": "2026-11-03",
+  "baseline_commit": "688eea951d5347db7c2ca88ac309275567767107",
+  "scope": {
+    "games": ["blockpang", "cat-tower", "jelly-pang-2048", "jewelria", "lumen-shift", "parking-escape", "school-zombie-defense", "slimevolley", "solo-leveling", "water-sort", "twenty-questions"],
+    "localized_game_entries": 24,
+    "portal_entries": 1,
+    "static_html_pages_including_404": 26,
+    "browser": "Chromium via Playwright",
+    "viewports": [[375, 812], [430, 932], [768, 1024], [667, 375], [1440, 900]],
+    "unique_page_state_viewport_combinations": 400,
+    "states": ["title", "play", "saved game", "pause", "rankings"],
+    "backend": "Production ranking handlers with in-memory SQLite and Durable Object fixtures; Twenty Questions model responses supplied by its test harness"
+  },
+  "fixed_findings": [
+    {
+      "id": "JEWELRIA-JA-1",
+      "impact": "The Japanese entry redirected to ?lang=ja, but static controls remained Korean and the runtime text helper returned Korean for every non-English language. Japanese players saw Korean title, HUD, pause, result, ranking and submission messages.",
+      "fix": "Localize the existing static elements for Japanese and provide Japanese runtime result, rank, shuffle, submission and error messages. Preserve existing Korean and English strings, layout and image assets. Refresh the module and service-worker cache versions.",
+      "regression": "jewelria/localization.browser.cjs tests all three languages, title/play/pause/result, empty/populated/error rankings, score units and accessible labels at five viewports. Included in the regular game test matrix.",
+      "visual_verification": "All ten Korean/English title screenshots are pixel-identical before and after the change. Japanese title, gameplay, pause and ranking screenshots were inspected at phone, tablet, landscape and desktop sizes without clipping or horizontal overflow."
+    }
+  ],
+  "asset_verification": {
+    "manifest_files": 3365,
+    "decoded_raster_images": 3034,
+    "parsed_svg_files": 1,
+    "invalid_images": 0,
+    "checked_html_css_references": 601,
+    "missing_references": 0,
+    "css_files": 21,
+    "school_zombie_checks": "17 walking atlases inspected; automated sprite/death continuity, 180 proportional zombie frames, 24 nine-direction PNG/WebP attack pairs, 72 release origins, corpse ordering and combat asset loading passed.",
+    "asset_changes": "None"
+  },
+  "validation": {
+    "baseline_npm_test": "passed: all 11 game targets, shared runtime, API/ranking and asset manifest",
+    "release_npm_test": "passed: all 11 game targets including the new localization regression, shared runtime, API/ranking and asset manifest",
+    "offline_browser": "passed: KO/EN/JA navigation aliases and cross-game cache preservation",
+    "twenty_questions_browser": "passed: question, guess, result, reload, language switching, ranking and give-up flows",
+    "twenty_questions_keyboard": "passed: 20 viewport scenarios",
+    "solo_leveling_arise": "passed: six viewports; paused combat, centered extraction and automatic resume",
+    "combat_ready": "passed: five localized school-zombie-defense/solo-leveling entries waited for actual gameplay before screenshots",
+    "pages_functions_build": "passed",
+    "browser_runtime_errors": 0,
+    "browser_missing_resources": 0,
+    "horizontal_overflow": 0
+  },
+  "evidence": {
+    "directory": "tmp/audit-20261103/",
+    "reports": ["baseline/results.json", "combat-ready/results.json", "dialogs/results.json", "fixed/results.json", "fixed-dialogs/results.json", "assets.json", "unaffected-visuals.json"],
+    "additional_screenshots": "tmp/twenty-questions-qa/",
+    "test_logs": "D:/workspace/tmp/games-full-audit-*.log"
+  },
+  "limits": [
+    "Coverage is the complete registered game/locale inventory and the recorded states, not a proof that every possible game state is defect-free.",
+    "Browser checks use desktop Chromium with emulated viewports and touch input; no physical iOS or Android devices were used.",
+    "Production scoring and AI requests were not created by the audit; server logic was exercised with isolated fixtures."
+  ]
+}

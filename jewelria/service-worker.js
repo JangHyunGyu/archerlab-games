@@ -1,7 +1,7 @@
 self.__ARCHERLAB_GAME_ID__ = 'jewelria-service-worker';
 importScripts('../shared/service-worker-error-reporter.js?v=20260710-d1-v2');
 
-const CACHE_NAME = 'jewelria-20261012-language-entry-v1';
+const CACHE_NAME = 'jewelria-20261103-japanese-ui-v1';
 const CORE_ASSETS = [
   './',
   './index.html',
