@@ -51,3 +51,17 @@ test('slimevolley: leaving during countdown or the result delay cancels the pend
   assert.match(main,/msg\.event === 'gameOver'[\s\S]*?this\.gameOverTimer = setTimeout/);
   assert.equal(main.split('this.gameOverTimer = setTimeout').length - 1, 2);
 });
+
+test('slimevolley: host accepts remote input that arrives before the game loop initializes sequence tracking',()=>{
+  const f=fixture();const handlers=new Map();
+  f.game.network={...f.game.network,isHost:true,on:(name,fn)=>handlers.set(name,fn)};
+  f.game.setupNetworkHandlers();
+  f.game._remotePlayerInputs=new Map();
+  delete f.game._remoteInputSeqs;
+  const input={left:true,right:false,jump:false};
+  assert.doesNotThrow(()=>handlers.get('input')({input,slotIndex:1,seq:3}));
+  assert.deepEqual(f.game._remotePlayerInputs.get(1),input);
+  assert.equal(f.game._remoteInputSeqs.get(1),3);
+  handlers.get('input')({input:{left:false,right:true,jump:false},slotIndex:1,seq:2});
+  assert.deepEqual(f.game._remotePlayerInputs.get(1),input);
+});

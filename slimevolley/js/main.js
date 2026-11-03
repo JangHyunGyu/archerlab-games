@@ -862,6 +862,7 @@ class SlimeVolleyGame {
 
             this.network.mySlotIndex = msg.mySlotIndex;
             this._remotePlayerInputs = new Map();
+            this._remoteInputSeqs = new Map();
 
             // 봇만 있으면 P2P 불필요 → 바로 시작
             const humanPeers = msg.players.filter(p => p.id !== this.network.playerId && !p.isBot);
@@ -911,8 +912,9 @@ class SlimeVolleyGame {
             // 호스트: 원격 플레이어 입력 수신
             if (this.network.isHost && msg.input && msg.slotIndex !== undefined) {
                 if (this._remotePlayerInputs) {
+                    if (!this._remoteInputSeqs) this._remoteInputSeqs = new Map();
                     const hasSequence = Number.isSafeInteger(msg.seq);
-                    const lastSequence = this._remoteInputSeqs?.get(msg.slotIndex);
+                    const lastSequence = this._remoteInputSeqs.get(msg.slotIndex);
                     if (!hasSequence || lastSequence === undefined || msg.seq > lastSequence) {
                         this._remotePlayerInputs.set(msg.slotIndex, msg.input);
                         if (hasSequence) this._remoteInputSeqs.set(msg.slotIndex, msg.seq);
