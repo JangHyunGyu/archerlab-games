@@ -30,6 +30,18 @@ export const SCHEMA = [
         version INTEGER NOT NULL, created_at INTEGER NOT NULL,
         PRIMARY KEY(game_id, request_id)
     )`,
+    `CREATE TABLE IF NOT EXISTS tq_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        game_id TEXT NOT NULL, request_id TEXT NOT NULL, player_id TEXT NOT NULL,
+        locale TEXT NOT NULL DEFAULT 'ko', concept_id TEXT NOT NULL,
+        answer_ko TEXT NOT NULL, answer_en TEXT NOT NULL,
+        mode TEXT NOT NULL, question TEXT NOT NULL, reply TEXT NOT NULL,
+        code TEXT NOT NULL, decision TEXT, charged INTEGER NOT NULL DEFAULT 0,
+        ordinal INTEGER NOT NULL DEFAULT 0, model TEXT, question_kind TEXT,
+        kind_confidence REAL, supported_probability REAL, yes_probability REAL,
+        created_at INTEGER NOT NULL,
+        UNIQUE(game_id, request_id)
+    )`,
     `CREATE TABLE IF NOT EXISTS tq_requests (
         player_id TEXT NOT NULL, request_id TEXT NOT NULL, payload_hash TEXT NOT NULL,
         game_id TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(player_id, request_id)
@@ -42,4 +54,6 @@ export const SCHEMA = [
     )`,
     `CREATE INDEX IF NOT EXISTS tq_leaderboard ON tq_players(best_streak DESC, best_turns ASC, best_at ASC, id ASC)`,
     `CREATE INDEX IF NOT EXISTS tq_player_games ON tq_games(player_id, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS tq_logs_created_at ON tq_logs(created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS tq_logs_game_id ON tq_logs(game_id, ordinal ASC, created_at ASC)`,
 ];

@@ -9,6 +9,27 @@ export async function initialize(db) {
     if (!ready.has(db)) {
         const pending = (async () => {
             await db.batch(SCHEMA.map(sql => db.prepare(sql)));
+            await db.prepare(`INSERT OR IGNORE INTO tq_logs(
+                game_id, request_id, player_id, locale, concept_id, answer_ko, answer_en,
+                mode, question, reply, code, decision, charged, ordinal, created_at
+            )
+            SELECT
+                t.game_id, t.request_id, g.player_id, 'ko', g.concept_id,
+                COALESCE(json_extract(g.answer_json, '$.ko'), ''),
+                COALESCE(json_extract(g.answer_json, '$.en'), ''),
+                t.mode, t.input,
+                CASE
+                    WHEN COALESCE(t.decision, t.code) = 'yes' THEN '예'
+                    WHEN COALESCE(t.decision, t.code) = 'no' THEN '아니오'
+                    WHEN t.code = 'correct' THEN '정답'
+                    WHEN t.code = 'wrong_guess' THEN '오답'
+                    WHEN t.code = 'multiple' THEN '복수 질문(?)'
+                    WHEN t.code = 'given_up' THEN '포기'
+                    ELSE '판정 보류(?)'
+                END,
+                t.code, t.decision, t.charged, t.ordinal, t.created_at
+            FROM tq_turns t
+            JOIN tq_games g ON g.id = t.game_id`).run();
             const seed = await db.prepare("SELECT value FROM tq_meta WHERE key = 'seed_version'").first();
             if (seed?.value === '20261028-v1') return;
             const now = Date.now();

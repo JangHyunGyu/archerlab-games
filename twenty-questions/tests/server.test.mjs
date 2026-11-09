@@ -210,7 +210,26 @@ test('cleanup deletes old logs and limits but retains seen concepts and best rec
     assert.equal(h.row('SELECT COUNT(*) n FROM tq_turns').n, 0);
     assert.equal(h.row('SELECT COUNT(*) n FROM tq_games').n, 0);
     assert.equal(h.row('SELECT COUNT(*) n FROM tq_seen').n, 1);
+    assert.equal(h.row('SELECT COUNT(*) n FROM tq_logs').n, 1);
     assert.equal(h.row('SELECT best_streak FROM tq_players').best_streak, 1);
+});
+
+test('tq_logs records questions, answers, guesses and model decision probabilities in D1', async () => {
+    const h = harness(); let { game } = await h.start(); const ans = h.answer(game.id);
+    game = (await h.turn(game, '생물이야?', 'questions')).data.game;
+    game = (await h.turn(game, 'no', 'questions')).data.game;
+    game = (await h.turn(game, 'unknown', 'questions')).data.game;
+    await h.turn(game, ans.ko, 'guesses');
+    const logs = h.db.sqlite.prepare('SELECT * FROM tq_logs WHERE game_id = ? ORDER BY id ASC').all(game.id);
+    assert.equal(logs.length, 4);
+    assert.deepEqual(logs.map(row => row.code), ['yes', 'no', 'unknown', 'correct']);
+    assert.deepEqual(logs.map(row => row.reply), ['예', '아니오', '판정 보류(?)', '정답']);
+    assert.equal(logs[0].answer_ko, ans.ko);
+    assert.equal(logs[0].answer_en, ans.en);
+    assert.equal(logs[0].question, '생물이야?');
+    assert.equal(logs[0].question_kind, 'single');
+    assert.equal(typeof logs[0].yes_probability, 'number');
+    assert.equal(typeof logs[0].supported_probability, 'number');
 });
 
 test('the shared score API rejects client-provided Twenty Questions scores', async () => {

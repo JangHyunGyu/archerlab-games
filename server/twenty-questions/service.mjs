@@ -5,6 +5,18 @@ import { judge, modelReady } from './decision.mjs';
 const ID = /^[a-zA-Z0-9_-]{16,100}$/;
 const TOKEN = /^[a-f0-9]{64}$/;
 
+export function replyLabel(code, decision, locale = 'ko') {
+    const en = String(locale || '').toLowerCase().startsWith('en');
+    const resolved = decision || code;
+    if (resolved === 'yes') return en ? 'Yes' : '예';
+    if (resolved === 'no') return en ? 'No' : '아니오';
+    if (code === 'correct') return en ? 'Correct' : '정답';
+    if (code === 'wrong_guess') return en ? 'Wrong guess' : '오답';
+    if (code === 'multiple') return en ? 'Multiple questions(?)' : '복수 질문(?)';
+    if (code === 'given_up') return en ? 'Given up' : '포기';
+    return en ? 'Unknown(?)' : '판정 보류(?)';
+}
+
 export async function identity(request) {
     const token = request.headers.get('Authorization')?.replace(/^Bearer /, '') || '';
     if (!TOKEN.test(token)) throw fault('unauthorized', 401);
@@ -135,8 +147,9 @@ async function performTurn(db, env, player, game, mode, body) {
     if (game.version !== body.expectedVersion) throw fault('stale_state', 409);
     const now = Date.now(); const minute = Math.floor(now / 60000);
     await limit(db, `input:${player.id}:${minute}`, 30, (minute + 1) * 60000);
-    let code; let decision = null; let charged = 0;
+    let code; let decision = null; let charged = 0; let judgeDetails = null;
     const answer = JSON.parse(game.answer_json);
+    const locale = String(body.locale || 'ko');
     if (mode === 'give-up') code = 'given_up';
     else if (mode === 'guesses') { code = isCorrect(answer, input) ? 'correct' : 'wrong_guess'; charged = 1; }
     else {
@@ -155,7 +168,8 @@ async function performTurn(db, env, player, game, mode, body) {
             await db.prepare('UPDATE tq_games SET requests_count = requests_count + 1 WHERE id = ?').bind(game.id).run();
             const previous = await db.prepare("SELECT input, code FROM tq_turns WHERE game_id = ? AND code IN ('yes','no') ORDER BY version").bind(game.id).all();
             try {
-                const result = await judge(env, answer, input, previous.results, body.locale || 'ko');
+                const result = await judge(env, answer, input, previous.results, locale);
+                judgeDetails = result;
                 code = result.code; decision = ['yes', 'no'].includes(code) ? code : null;
                 charged = decision ? 1 : 0;
                 await recordCost(db, budgetDay, result.cost);
@@ -172,6 +186,22 @@ async function performTurn(db, env, player, game, mode, body) {
     const queries = [
         db.prepare('INSERT INTO tq_turns(game_id, request_id, payload_hash, mode, input, normalized, code, decision, charged, ordinal, version, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
             .bind(game.id, body.requestId, hash, mode, input, normalize(input), code, decision, charged, used, version, now),
+        db.prepare(`INSERT OR IGNORE INTO tq_logs(
+            game_id, request_id, player_id, locale, concept_id, answer_ko, answer_en,
+            mode, question, reply, code, decision, charged, ordinal,
+            model, question_kind, kind_confidence, supported_probability, yes_probability, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+            .bind(
+                game.id, body.requestId, player.id, locale, game.concept_id,
+                String(answer.ko || ''), String(answer.en || ''),
+                mode, input, replyLabel(code, decision, locale), code, decision, charged, used,
+                judgeDetails?.model ?? null,
+                judgeDetails?.questionKind ?? null,
+                judgeDetails?.kindConfidence ?? null,
+                judgeDetails?.supportedProbability ?? null,
+                judgeDetails?.yesProbability ?? null,
+                now
+            ),
         db.prepare('UPDATE tq_games SET status = ?, used = ?, version = ?, updated_at = ?, expires_at = ?, fault_since = NULL, record_improved = ? WHERE id = ?')
             .bind(status, used, version, now, game.expires_at + (game.fault_since ? now - game.fault_since : 0), record?.improved ? 1 : 0, game.id),
     ];
