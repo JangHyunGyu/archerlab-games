@@ -2126,6 +2126,15 @@ class PixiView {
       const dt = ticker.deltaMS || 16.67;
       onFrame(dt);
     });
+    // Pixi's Application re-renders the whole filtered stage on every tick by default,
+    // even while the opaque title/pause/result screens cover it. On weak or software GPUs
+    // that starves the main thread (5 fps on the title) and START clicks stall.
+    // Draw only when the game asks for a frame.
+    this.app.ticker.remove(this.app.render, this.app);
+  }
+
+  present() {
+    this.app?.render?.();
   }
 
   makeParticleLayer() {
@@ -6533,6 +6542,7 @@ class LumenShiftApp {
     this.applyModeSelection();
     await this.view.init((dt) => this.frame(dt));
     this.view.render(this.core.snapshot(), 16);
+    this.view.present();
     this.updateHud(this.core.snapshot());
   }
 
@@ -6671,7 +6681,10 @@ class LumenShiftApp {
     const snapshot = this.core.snapshot();
     const beatState = this.audio.getBeatState(snapshot, dt);
     // Opaque menus and pause screens do not need a particle scene behind them.
-    if (this.core.status === 'playing') this.view.render(snapshot, dt, beatState);
+    if (this.core.status === 'playing') {
+      this.view.render(snapshot, dt, beatState);
+      this.view.present();
+    }
     const now = performance.now();
     if (now - this.lastAudioMixAt > 48) {
       this.audio.updateMix(snapshot);
