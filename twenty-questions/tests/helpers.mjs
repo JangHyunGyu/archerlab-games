@@ -30,7 +30,7 @@ export function modelResult(code = 'yes') {
     const kind = code === 'multiple' ? 'multiple' : 'single';
     return { answers: {
         question_kind: { type: 'choice', choice: kind, probabilities: { [kind]: 0.99 } },
-        supported_by_facts: { type: 'noul', noul: code === 'unknown' ? 0.2 : 0.99 },
+        supported_by_facts: { type: 'noul', noul: code === 'unknown' ? 0.01 : 0.99 },
         answer_yes: { type: 'noul', noul: code === 'no' ? 0.01 : 0.99 },
     }, usage: { cost: 0.00002 } };
 }
