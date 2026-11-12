@@ -146,14 +146,14 @@ export async function decisionRequest(env, state, questions, outputLanguage = ''
         ? `${String(env.TQ_AZURE_ENDPOINT).replace(/\/$/, '')}/providers/microsoft/v1/systemone`
         : 'https://openrouter.ai/api/alpha/decisions';
     const openRouterRoutes = env.OPENROUTER_API_KEY ? [
+        ['google/gemini-decision-1', 'google-ai-studio'],
         ['microsoft/microsoft-decision-1', 'azure'],
         ['typesafe/jev-1.14', 'typesafe'],
-        ['cloudflare/clef-flash', 'cloudflare'],
     ].map(([model, provider]) => ({ endpoint: 'https://openrouter.ai/api/alpha/decisions',
         headers: { Authorization: `Bearer ${env.OPENROUTER_API_KEY}` }, model,
         provider: { only: [provider], allow_fallbacks: false } })) : [];
     const routes = azure ? [{ endpoint, headers: { 'api-key': env.AZURE_API_KEY }, model: env.TQ_AZURE_DEPLOYMENT },
-        ...openRouterRoutes.slice(1)] : openRouterRoutes;
+        ...openRouterRoutes.filter(route => route.model !== 'microsoft/microsoft-decision-1').slice(0, 2)] : openRouterRoutes;
     const deadline = Date.now() + 8000;
     const usage = { input_tokens: 0, output_tokens: 0, cost: 0 };
     for (const route of routes) {

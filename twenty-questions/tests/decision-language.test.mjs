@@ -41,12 +41,12 @@ for (const locale of ['ko', 'ko-KR', 'en', 'ja', '']) test(`direct decision path
         return Response.json({ answers: { supported: { type: 'noul', noul: .99 } }, usage: { cost: .000005 } });
     });
     const result = await decisionRequest(config, { fact: 'A bird.' }, questions, locale);
-    assert.equal(calls[0].body.model, 'microsoft/microsoft-decision-1');
+    assert.equal(calls[0].body.model, 'google/gemini-decision-1');
     assert.equal(result.answers.supported.noul, .99);
     assert.equal(calls.length, 1);
 });
 
-for (const failure of ['http', 'timeout', 'invalid']) test(`direct ${failure} exhausts Microsoft, Jev and Clef`, async t => {
+for (const failure of ['http', 'timeout', 'invalid']) test(`direct ${failure} exhausts Gemini, Microsoft and Jev`, async t => {
     const calls = [];
     t.mock.method(globalThis, 'fetch', async (url, options) => {
         calls.push(JSON.parse(options.body));
@@ -54,7 +54,7 @@ for (const failure of ['http', 'timeout', 'invalid']) test(`direct ${failure} ex
         return Response.json({ answers: { supported: { type: 'noul', noul: 2 } } }, { status: failure === 'http' ? 503 : 200 });
     });
     await assert.rejects(decisionRequest(config, {}, questions, 'ko'));
-    assert.deepEqual(calls.map(call => call.model), ['microsoft/microsoft-decision-1', 'typesafe/jev-1.14', 'cloudflare/clef-flash']);
+    assert.deepEqual(calls.map(call => call.model), ['google/gemini-decision-1', 'microsoft/microsoft-decision-1', 'typesafe/jev-1.14']);
 });
 
 for (const winner of [1, 2, 3]) test(`direct path stops at provider ${winner}, including valid uncertainty`, async t => {
@@ -65,10 +65,10 @@ for (const winner of [1, 2, 3]) test(`direct path stops at provider ${winner}, i
     });
     const result = await decisionRequest(config, {}, questions, 'ko');
     assert.equal(calls.length, winner);
-    assert.equal(result.model, ['microsoft/microsoft-decision-1', 'typesafe/jev-1.14', 'cloudflare/clef-flash'][winner - 1]);
+    assert.equal(result.model, ['google/gemini-decision-1', 'microsoft/microsoft-decision-1', 'typesafe/jev-1.14'][winner - 1]);
     assert.equal(result.answers.supported.noul, .5);
     assert.ok(Math.abs(result.usage.cost - winner * .00001) < 1e-10);
-    assert.deepEqual(calls.map(c => c.provider), ['azure', 'typesafe', 'cloudflare'].slice(0, winner).map(p => ({ only: [p], allow_fallbacks: false })));
+    assert.deepEqual(calls.map(c => c.provider), ['google-ai-studio', 'azure', 'typesafe'].slice(0, winner).map(p => ({ only: [p], allow_fallbacks: false })));
 });
 
 test('the direct path retains a configured Azure deployment', async t => {
