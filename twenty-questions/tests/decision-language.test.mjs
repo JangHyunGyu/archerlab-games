@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { harness, modelResult } from './helpers.mjs';
-import { decisionRequest } from '../../server/twenty-questions/decision.mjs';
+import { decisionRequest, isAlternativeChoiceQuestion, judge, parseDecision } from '../../server/twenty-questions/decision.mjs';
 
 test('Worker RPC receives serializable plain question objects after singleton resolution', async () => {
     let called = false;
@@ -104,4 +104,59 @@ test('direct decisions remove singleton helpers but preserve their instructions 
     assert.deepEqual(sent.state.resolved_question_rules, ['Use only supplied facts.']);
     assert.match(sent.questions.supported.instructions, /state.resolved_question_rules/);
     assert.equal(result.answers.who.choice, 'review');
+});
+
+test('non-polar Korean A-vs-B alternative questions resolve to unknown while X-or-not-X polarity stays yes/no', () => {
+    for (const q of ['유기물이야 무기물이야?', '생물이니 무생물이니', '동물이에요 아니면 식물이에요?', '실내인가요 실외인가요?']) {
+        assert.equal(isAlternativeChoiceQuestion(q), true, q);
+        assert.equal(parseDecision(modelResult('yes'), {}, q).code, 'unknown', q);
+    }
+    for (const q of ['유기물인가 아닌가?', '인간의 눈으로 볼수있는것인가 없는것이가', '생물이야?', '개예요? 고양이예요?']) {
+        assert.equal(isAlternativeChoiceQuestion(q), false, q);
+    }
+    assert.equal(parseDecision(modelResult('yes'), {}, '유기물인가 아닌가?').code, 'yes');
+    assert.equal(parseDecision(modelResult('multiple'), {}, '개예요? 고양이예요?').code, 'multiple');
+});
+
+test('confident unclear classifications (>= 0.78) stay unknown even with polarized answer_yes', () => {
+    const res = {
+        answers: {
+            question_kind: { type: 'choice', choice: 'unclear', probabilities: { unclear: 0.79, single: 0.21 } },
+            supported_by_facts: { type: 'noul', noul: 0.80 },
+            answer_yes: { type: 'noul', noul: 0.06 },
+        },
+        usage: { cost: 0.00001 },
+    };
+    assert.equal(parseDecision(res, {}, 'IS this about my crush').code, 'unknown');
+});
+
+test('judge avoids vehicle category contradiction for traffic light and grounds food vs non-food objects', async () => {
+    const payloads = [];
+    const env = {
+        TQ_AI: {
+            async decide(payload) {
+                payloads.push(payload);
+                return modelResult('no');
+            },
+        },
+    };
+    const trafficVerdict = await judge(env, {
+        id: 'transport.traffic-light',
+        ko: '신호등',
+        en: 'traffic light',
+        category: 'transport',
+        facts: 'A traffic light is a human-made signaling device. It is not a vehicle.',
+    }, '탈것인가요', [], 'ko');
+    assert.equal(trafficVerdict.code, 'no');
+    assert.doesNotMatch(payloads[0].state.fixed_answer.facts, /이동수단\/탈것/);
+    assert.match(payloads[0].state.fixed_answer.facts, /NOT a vehicle or rideable transport/);
+
+    await judge(env, {
+        id: 'food.cucumber',
+        ko: '오이',
+        en: 'cucumber',
+        category: 'food',
+        facts: 'A cucumber is a widely cultivated plant food.',
+    }, '물건인가요?', [], 'ko');
+    assert.match(payloads[1].state.fixed_answer.facts, /"물건인가요\?" = NO\/아니오/);
 });
