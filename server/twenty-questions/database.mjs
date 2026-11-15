@@ -2,6 +2,8 @@ import { SCHEMA } from './schema.mjs';
 import { SEED_CATALOG } from './seed-catalog.mjs';
 import { normalize, fault } from './core.mjs';
 
+export const SEED_VERSION = '20261115-v2';
+
 const ready = new WeakMap();
 
 export async function initialize(db) {
@@ -9,6 +11,8 @@ export async function initialize(db) {
     if (!ready.has(db)) {
         const pending = (async () => {
             await db.batch(SCHEMA.map(sql => db.prepare(sql)));
+            const seed = await db.prepare("SELECT value FROM tq_meta WHERE key = 'seed_version'").first();
+            if (seed?.value === SEED_VERSION) return;
             await db.prepare(`INSERT OR IGNORE INTO tq_logs(
                 game_id, request_id, player_id, locale, concept_id, answer_ko, answer_en,
                 mode, question, reply, code, decision, charged, ordinal, created_at
@@ -30,15 +34,14 @@ export async function initialize(db) {
                 t.code, t.decision, t.charged, t.ordinal, t.created_at
             FROM tq_turns t
             JOIN tq_games g ON g.id = t.game_id`).run();
-            const seed = await db.prepare("SELECT value FROM tq_meta WHERE key = 'seed_version'").first();
-            if (seed?.value === '20261028-v1') return;
             const now = Date.now();
             for (let offset = 0; offset < SEED_CATALOG.length; offset += 40) {
                 await db.batch(SEED_CATALOG.slice(offset, offset + 40).map(answer => db.prepare(
-                    'INSERT OR IGNORE INTO tq_catalog(id, ko_key, en_key, data, created_at) VALUES (?, ?, ?, ?, ?)'
+                    `INSERT INTO tq_catalog(id, ko_key, en_key, data, created_at) VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET ko_key = excluded.ko_key, en_key = excluded.en_key, data = excluded.data`
                 ).bind(answer.id, normalize(answer.ko), normalize(answer.en), JSON.stringify(answer), now)));
             }
-            await db.prepare("INSERT INTO tq_meta(key, value) VALUES ('seed_version', '20261028-v1') ON CONFLICT(key) DO UPDATE SET value = excluded.value").run();
+            await db.prepare("INSERT INTO tq_meta(key, value) VALUES ('seed_version', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").bind(SEED_VERSION).run();
         })().catch(error => { ready.delete(db); throw error; });
         ready.set(db, pending);
     }

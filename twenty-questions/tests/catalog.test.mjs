@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SEED_CATALOG } from '../../server/twenty-questions/seed-catalog.mjs';
+import { normalizeGuess } from '../../server/twenty-questions/core.mjs';
 
 const normalized = (value) => value.normalize('NFC').trim().toLowerCase();
 
@@ -65,4 +66,28 @@ test('aliases preserve specificity for easily confused concepts', () => {
   assert.ok(!find('animal.blue-whale').aliasesEn.includes('whale'));
   assert.ok(!find('plant.aloe-vera').aliasesKo.includes('알로에'));
   assert.ok(!find('object.spoon').aliasesKo.includes('수저'));
+});
+
+test('everyday aliases are registered and normalizeGuess stays collision-free across all 200 concepts', () => {
+  const find = (id) => SEED_CATALOG.find((entry) => entry.id === id);
+  assert.ok(find('plant.oak-tree').aliasesKo.includes('도토리나무'));
+  assert.ok(find('instrument.flute').aliasesKo.includes('플룻'));
+  assert.ok(find('object.battery').aliasesKo.includes('건전지'));
+  assert.ok(find('object.bowl').aliasesKo.includes('그릇'));
+  assert.ok(find('transport.train').aliasesKo.includes('열차'));
+  assert.ok(find('object.postage-stamp').aliasesEn.includes('stamp'));
+
+  const seenKeys = new Map();
+  for (const entry of SEED_CATALOG) {
+    const terms = [entry.ko, entry.en, ...entry.aliasesKo, ...entry.aliasesEn];
+    for (const term of terms) {
+      const key = normalizeGuess(term);
+      assert.ok(key.length > 0, `Empty normalized key for ${entry.id}: ${term}`);
+      const owner = seenKeys.get(key);
+      if (owner && owner !== entry.id) {
+        assert.fail(`normalizeGuess collision between ${owner} and ${entry.id} on "${term}" (${key})`);
+      }
+      seenKeys.set(key, entry.id);
+    }
+  }
 });

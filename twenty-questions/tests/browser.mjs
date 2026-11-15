@@ -172,9 +172,23 @@ try {
     raceServer.env.TQ_AI.decide = originalDecide;
     await racePage.locator('#send').tap();
     await racePage.waitForFunction(() => document.querySelector('#remaining').textContent === '17');
+    await racePage.locator('#guess-mode').click();
+    assert.equal(await racePage.locator('#guess-mode').getAttribute('aria-pressed'), 'true');
+    await racePage.locator('#question-input').fill('wrong guess candidate');
+    await racePage.locator('#send').tap();
+    await racePage.waitForFunction(() => document.querySelector('#remaining').textContent === '16');
+    assert.equal(await racePage.locator('#question-mode').getAttribute('aria-pressed'), 'true');
+    assert.equal(await racePage.locator('#guess-mode').getAttribute('aria-pressed'), 'false');
+    await racePage.locator('#guess-mode').click();
+    assert.equal(await racePage.locator('#guess-mode').getAttribute('aria-pressed'), 'true');
+    await racePage.locator('#question-input').fill('10명이상 탑승 가능할까요?');
+    await racePage.locator('#send').tap();
+    await racePage.waitForFunction(() => document.querySelector('#remaining').textContent === '15');
+    assert.equal(await racePage.locator('#question-mode').getAttribute('aria-pressed'), 'true');
+    assert.equal(await racePage.locator('.history-row').last().locator('.history-mode').count(), 0);
     await raceContext.close();
     assert.equal((await fetch(origin + '/server/twenty-questions/seed-catalog.mjs')).status, 404);
     assert.deepEqual(errors, []);
-    fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify({ provider: 'deterministic test double; real D1 game logic via SQLite', errors, viewports: 7, checks: ['start','questions','no-charge','language-session-draft-preservation','win','streak','automatic-ranking','ranking-reload','give-up','no-repeat','mobile-touch-spacing','source-protection','IME-composition','late-profile-race','blocking-progress','timeout-unlock-retry'] }, null, 2));
+    fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify({ provider: 'deterministic test double; real D1 game logic via SQLite', errors, viewports: 7, checks: ['start','questions','no-charge','language-session-draft-preservation','win','streak','automatic-ranking','ranking-reload','give-up','no-repeat','mobile-touch-spacing','source-protection','IME-composition','late-profile-race','blocking-progress','timeout-unlock-retry','wrong-guess-mode-reset','verbal-question-autoroute'] }, null, 2));
     console.log(`Browser checks passed. Screenshots: ${output}`);
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }

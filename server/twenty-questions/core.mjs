@@ -6,9 +6,69 @@ export function normalize(value) {
     return String(value ?? '').normalize('NFC').trim().replace(/\s+/gu, ' ').toLocaleLowerCase('en-US');
 }
 
+export function normalizeQuestionKey(value) {
+    const base = normalize(value);
+    const stripped = base.replace(/[?!.~]+$/gu, '').trim();
+    return stripped || base;
+}
+
+const GUESS_TRIM_RE = /^['"‘’“”`「」『』()[\]<>?!.~,;:]+|['"‘’“”`「」『』()[\]<>?!.~,;:]+$/gu;
+const HANGUL_WITH_SPACES_RE = /^[가-힣\s]+$/u;
+
+export function normalizeGuess(value) {
+    const base = normalize(value);
+    const stripped = base.replace(GUESS_TRIM_RE, '').replace(/\s+/gu, ' ').trim();
+    return stripped || base;
+}
+
+function guessCandidates(value) {
+    const root = normalizeGuess(value);
+    if (!root) return [];
+    const results = new Set([root]);
+    const queue = [root];
+    while (queue.length) {
+        const current = queue.shift();
+        const prefix = /^정답(?:은|이)?\s*[:：]?\s+(.+)$/u.exec(current);
+        if (prefix && prefix[1].trim()) {
+            const candidate = normalizeGuess(prefix[1]);
+            if (candidate && !results.has(candidate)) { results.add(candidate); queue.push(candidate); }
+        }
+        const koCopula = /^(.+?)(?:인가요|입니까|일까요|이에요|예요|이야|입니다|야)$/u.exec(current);
+        if (koCopula && koCopula[1].trim()) {
+            const candidate = normalizeGuess(koCopula[1]);
+            if (candidate && !results.has(candidate)) { results.add(candidate); queue.push(candidate); }
+        }
+        const enIsIt = /^is\s+(?:it|this|that)\s+(.+)$/u.exec(current);
+        if (enIsIt && enIsIt[1].trim()) {
+            const candidate = normalizeGuess(enIsIt[1]);
+            if (candidate && !results.has(candidate)) { results.add(candidate); queue.push(candidate); }
+        }
+        const enArticle = /^(?:a|an|the)\s+(.+)$/u.exec(current);
+        if (enArticle && enArticle[1].trim()) {
+            const candidate = normalizeGuess(enArticle[1]);
+            if (candidate && !results.has(candidate)) { results.add(candidate); queue.push(candidate); }
+        }
+    }
+    return [...results];
+}
+
+function compactHangul(value) {
+    if (!HANGUL_WITH_SPACES_RE.test(value)) return '';
+    const compacted = value.replace(/\s+/gu, '');
+    return [...compacted].length >= 2 ? compacted : '';
+}
+
 export function isCorrect(answer, input) {
     const accepted = [answer.ko, answer.en, ...(answer.aliasesKo || []), ...(answer.aliasesEn || [])];
-    return accepted.some(value => normalize(value) === normalize(input));
+    const inputCandidates = guessCandidates(input);
+    if (!inputCandidates.length) return false;
+    return accepted.some(value => {
+        const target = normalizeGuess(value);
+        if (!target) return false;
+        if (inputCandidates.includes(target)) return true;
+        const targetHangul = compactHangul(target);
+        return Boolean(targetHangul && inputCandidates.some(candidate => compactHangul(candidate) === targetHangul));
+    });
 }
 
 export function publicAnswer(answer) {

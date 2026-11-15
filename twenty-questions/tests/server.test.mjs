@@ -6,6 +6,8 @@ import { parseDecision } from '../../server/twenty-questions/decision.mjs';
 import { twentyQuestionsRoute } from '../../server/twenty-questions/service.mjs';
 import { validateCandidate, replenish, conceptChunks, cleanOldRecords } from '../../server/twenty-questions/generation.mjs';
 import { isCorrect } from '../../server/twenty-questions/core.mjs';
+import { initialize, SEED_VERSION } from '../../server/twenty-questions/database.mjs';
+import { SEED_BY_ID } from '../../server/twenty-questions/seed-catalog.mjs';
 import { messages } from '../js/i18n.mjs';
 import { submitRanking } from '../../game-api-worker.js';
 
@@ -249,5 +251,90 @@ test('missing model verification probability cannot publish a generated answer',
     try {
         const result = await replenish(h.env);
         assert.equal(result.added, 0); assert.equal(h.row('SELECT COUNT(*) n FROM tq_catalog WHERE id = ?', candidate.id).n, 0);
+    } finally { globalThis.fetch = originalFetch; }
+});
+
+test('initialize upgrades 20261028-v1 catalog rows and facts while preserving existing stats', async () => {
+    const h = harness();
+    await h.start();
+    h.db.sqlite.prepare("UPDATE tq_meta SET value = '20261028-v1' WHERE key = 'seed_version'").run();
+    h.db.sqlite.prepare("UPDATE tq_catalog SET data = ? WHERE id = 'plant.oak-tree'").run(JSON.stringify({
+        id: 'plant.oak-tree', ko: '참나무', en: 'oak tree', aliasesKo: [], aliasesEn: [], category: 'plant', facts: 'old oak facts',
+    }));
+    h.db.sqlite.prepare('UPDATE tq_players SET streak = 4, best_streak = 4').run();
+
+    const upgradedDb = { prepare: h.db.prepare, batch: h.db.batch };
+    await initialize(upgradedDb);
+
+    assert.equal(h.row("SELECT value FROM tq_meta WHERE key = 'seed_version'").value, SEED_VERSION);
+    const oak = JSON.parse(h.row("SELECT data FROM tq_catalog WHERE id = 'plant.oak-tree'").data);
+    assert.ok(oak.aliasesKo.includes('도토리나무'));
+    assert.equal(oak.facts, SEED_BY_ID.get('plant.oak-tree').facts);
+    assert.equal(h.row('SELECT streak, best_streak FROM tq_players').streak, 4);
+});
+
+test('isCorrect handles punctuation, English articles, Korean spacing, tentative copula forms, and newly added aliases without over-matching', () => {
+    assert.equal(isCorrect(SEED_BY_ID.get('plant.oak-tree'), '도토리나무'), true);
+    assert.equal(isCorrect(SEED_BY_ID.get('object.wallet'), '"지갑?"'), true);
+    assert.equal(isCorrect(SEED_BY_ID.get('animal.penguin'), 'the penguin'), true);
+    assert.equal(isCorrect(SEED_BY_ID.get('plant.oak-tree'), '참 나무'), true);
+    assert.equal(isCorrect(SEED_BY_ID.get('object.scarf'), '목도리인가요?'), true);
+
+    assert.equal(isCorrect(SEED_BY_ID.get('animal.penguin'), 'bird'), false);
+    assert.equal(isCorrect(SEED_BY_ID.get('animal.penguin'), 'pen'), false);
+    assert.equal(isCorrect(SEED_BY_ID.get('plant.oak-tree'), '나무'), false);
+});
+
+test('duplicate check normalizes trailing punctuation and spacing so repeated questions are not double-charged', async () => {
+    const h = harness();
+    const { game } = await h.start();
+    const first = await h.turn(game, '동물인가요?', 'questions');
+    assert.equal(first.status, 200);
+    assert.equal(first.data.game.remaining, 19);
+
+    const dup = await h.turn(first.data.game, '  동물인가요  ', 'questions');
+    assert.equal(dup.status, 200);
+    assert.equal(dup.data.event.code, 'duplicate');
+    assert.equal(dup.data.event.decision, 'yes');
+    assert.equal(dup.data.game.remaining, 19);
+});
+
+test('PATCH /profile preserves active game state instead of dropping activeGame', async () => {
+    const h = harness();
+    const { game } = await h.start();
+    const res = await h.call('profile', { name: '탐정' }, 'PATCH');
+    assert.equal(res.status, 200);
+    assert.equal(res.data.profile.name, '탐정');
+    assert.equal(res.data.profile.activeGame, game.id);
+    assert.equal(res.data.game?.id, game.id);
+});
+
+test('replenish follows same-origin Wikipedia REST redirects during candidate verification', async () => {
+    const h = harness();
+    await h.start();
+    const player = h.row('SELECT id FROM tq_players').id;
+    h.db.sqlite.prepare('INSERT OR IGNORE INTO tq_seen SELECT ?, id, ?, ? FROM tq_catalog LIMIT 175').run(player, 'seen', Date.now());
+    const good = { id: 'object.redirected', ko: '주판시험', en: 'abacus redirect test', aliasesKo: [], aliasesEn: [], category: 'objects', wikiTitle: 'Abacus tool', facts: 'An abacus is a traditional counting frame with beads slid along rods or grooves for performing arithmetic calculations by hand.' };
+    const blocked = { id: 'object.offorigin', ko: '외부차단시험', en: 'off origin test', aliasesKo: [], aliasesEn: [], category: 'objects', wikiTitle: 'Evil Redirect', facts: 'This candidate points off-origin on redirect and must never enter the catalog.' };
+    h.env.TQ_TEXT = { async complete(input) { return { text: JSON.stringify(input.maxTokens === 6000 ? { items: [blocked, good] } : { facts: good.facts }) }; } };
+    h.env.TQ_AI = { async decide() { return { answers: { supported: { type: 'noul', noul: 0.99 }, distinct: { type: 'noul', noul: 0.99 } } }; } };
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (url) => {
+        if (String(url).endsWith('/Evil_Redirect')) {
+            return new Response(null, { status: 302, headers: { Location: 'https://example.com/api/rest_v1/page/summary/Evil' } });
+        }
+        if (String(url).endsWith('/Abacus_tool')) {
+            return new Response(null, { status: 302, headers: { Location: 'https://en.wikipedia.org/api/rest_v1/page/summary/Abacus' } });
+        }
+        if (String(url).endsWith('/Abacus')) {
+            return Response.json({ extract: 'An abacus is an ancient calculating frame of beads sliding on rods used for arithmetic computations across many cultures.' });
+        }
+        return new Response('not found', { status: 404 });
+    };
+    try {
+        const result = await replenish(h.env);
+        assert.equal(result.added, 1);
+        assert.equal(h.row('SELECT COUNT(*) n FROM tq_catalog WHERE id = ?', good.id).n, 1);
+        assert.equal(h.row('SELECT COUNT(*) n FROM tq_catalog WHERE id = ?', blocked.id).n, 0);
     } finally { globalThis.fetch = originalFetch; }
 });

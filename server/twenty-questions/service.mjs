@@ -1,6 +1,19 @@
-import { MAX_TURNS, SESSION_MS, RULESET, normalize, isCorrect, publicAnswer, publicProfile, nextRecord, fingerprint, fault } from './core.mjs';
+import { MAX_TURNS, SESSION_MS, RULESET, normalize, normalizeQuestionKey, isCorrect, publicAnswer, publicProfile, nextRecord, fingerprint, fault } from './core.mjs';
 import { initialize, limit, reserveBudget, recordCost } from './database.mjs';
 import { judge, modelReady } from './decision.mjs';
+import { SEED_BY_ID } from './seed-catalog.mjs';
+
+function hydrateAnswer(raw) {
+    if (!raw || typeof raw !== 'object') return raw;
+    const seed = SEED_BY_ID.get(raw.id);
+    if (!seed || seed.ko !== raw.ko || seed.en !== raw.en) return raw;
+    return {
+        ...raw,
+        aliasesKo: [...new Set([...(seed.aliasesKo || []), ...(raw.aliasesKo || [])])],
+        aliasesEn: [...new Set([...(seed.aliasesEn || []), ...(raw.aliasesEn || [])])],
+        facts: seed.facts || raw.facts,
+    };
+}
 
 const ID = /^[a-zA-Z0-9_-]{16,100}$/;
 const TOKEN = /^[a-f0-9]{64}$/;
@@ -148,13 +161,14 @@ async function performTurn(db, env, player, game, mode, body) {
     const now = Date.now(); const minute = Math.floor(now / 60000);
     await limit(db, `input:${player.id}:${minute}`, 30, (minute + 1) * 60000);
     let code; let decision = null; let charged = 0; let judgeDetails = null;
-    const answer = JSON.parse(game.answer_json);
+    const answer = hydrateAnswer(JSON.parse(game.answer_json));
     const locale = String(body.locale || 'ko');
+    const normalizedInput = mode === 'questions' ? normalizeQuestionKey(input) : normalize(input);
     if (mode === 'give-up') code = 'given_up';
     else if (mode === 'guesses') { code = isCorrect(answer, input) ? 'correct' : 'wrong_guess'; charged = 1; }
     else {
-        const duplicate = await db.prepare("SELECT code FROM tq_turns WHERE game_id = ? AND mode = 'questions' AND normalized = ? AND code IN ('yes', 'no') LIMIT 1")
-            .bind(game.id, normalize(input)).first();
+        const duplicate = await db.prepare("SELECT code FROM tq_turns WHERE game_id = ? AND mode = 'questions' AND normalized IN (?, ?) AND code IN ('yes', 'no') LIMIT 1")
+            .bind(game.id, normalize(input), normalizedInput).first();
         if (duplicate) { code = 'duplicate'; decision = duplicate.code; }
         else {
             if (game.requests_count >= 60) throw fault('question_limit', 429);
@@ -185,7 +199,7 @@ async function performTurn(db, env, player, game, mode, body) {
     const record = status === 'won' ? nextRecord(player, used, now) : null;
     const queries = [
         db.prepare('INSERT INTO tq_turns(game_id, request_id, payload_hash, mode, input, normalized, code, decision, charged, ordinal, version, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-            .bind(game.id, body.requestId, hash, mode, input, normalize(input), code, decision, charged, used, version, now),
+            .bind(game.id, body.requestId, hash, mode, input, normalizedInput, code, decision, charged, used, version, now),
         db.prepare(`INSERT OR IGNORE INTO tq_logs(
             game_id, request_id, player_id, locale, concept_id, answer_ko, answer_en,
             mode, question, reply, code, decision, charged, ordinal,
@@ -240,7 +254,8 @@ export async function handleRoomRequest(request, env) {
             const name = String(body.name || '').trim();
             if (!/^[\p{L}\p{N} ._-]{2,16}$/u.test(name)) throw fault('invalid_name');
             await env.DB.prepare('UPDATE tq_players SET name = ? WHERE id = ?').bind(name, id).run();
-            return response(await stateFor(env.DB, id, null));
+            const game = player.active_game ? await ownedGame(env.DB, player, player.active_game) : null;
+            return response(await stateFor(env.DB, id, game));
         }
         if (request.method === 'POST' && path === 'games') return response(await startGame(env.DB, env, player, await readBody(request)));
         const match = /^games\/([a-zA-Z0-9_-]+)(?:\/(questions|guesses|give-up))?$/.exec(path);

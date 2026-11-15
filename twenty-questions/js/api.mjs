@@ -42,11 +42,15 @@ export async function request(path, body, method = body ? 'POST' : 'GET') {
 export const requestId = () => crypto.randomUUID();
 
 export function reportException(error, phase) {
+    const message = String(error?.message || error);
     if (error?.code || navigator.onLine === false) return;
+    if (error?.name === 'AbortError' || error?.name === 'TimeoutError') return;
+    if (error?.name === 'TypeError' && /^(?:Failed to fetch|Load failed|NetworkError|cancelled|Load cancelled|The Internet connection)/i.test(message)) return;
+    const url = location.origin + location.pathname;
     const body = {
-        appId: 'twenty-questions', errorType: 'client_exception',
-        errorClass: error?.name || 'Error', message: String(error?.message || error).slice(0, 500),
-        stack: String(error?.stack || '').slice(0, 2500), pageUrl: location.origin + location.pathname,
+        appId: 'twenty-questions', gameId: 'twenty-questions', errorType: 'client_exception',
+        errorClass: error?.name || 'Error', message: message.slice(0, 500),
+        stack: String(error?.stack || '').slice(0, 2500), url, pageUrl: url,
         extra: { phase },
     };
     fetch(`${apiBase}/client-errors`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: true }).catch(() => {});

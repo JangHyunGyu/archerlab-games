@@ -91,9 +91,21 @@ export async function replenish(env) {
             const names = [candidate.ko, candidate.en, ...candidate.aliasesKo, ...candidate.aliasesEn].map(normalize);
             if (names.some(name => aliases.has(name))) continue;
             try {
-                const sourceResponse = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(candidate.wikiTitle)}`, {
-                    headers: { 'User-Agent': 'ArcherLab-TwentyQuestions/1.0 (https://game.archerlab.dev)' }, signal: AbortSignal.timeout(5000), redirect: 'manual',
+                const slug = String(candidate.wikiTitle || '').trim().replaceAll(' ', '_');
+                const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(slug)}`;
+                const headers = { 'User-Agent': 'ArcherLab-TwentyQuestions/1.0 (https://game.archerlab.dev)' };
+                let sourceResponse = await fetch(summaryUrl, {
+                    headers, signal: AbortSignal.timeout(5000), redirect: 'manual',
                 });
+                if ([301, 302, 307, 308].includes(sourceResponse.status)) {
+                    const rawLocation = sourceResponse.headers.get('location') || '';
+                    let nextUrl = '';
+                    try { nextUrl = new URL(rawLocation, summaryUrl).href; } catch { nextUrl = ''; }
+                    if (!nextUrl.startsWith('https://en.wikipedia.org/api/rest_v1/page/summary/')) continue;
+                    sourceResponse = await fetch(nextUrl, {
+                        headers, signal: AbortSignal.timeout(5000), redirect: 'manual',
+                    });
+                }
                 if (!sourceResponse.ok) continue;
                 const source = await sourceResponse.json();
                 if (source.type === 'disambiguation' || typeof source.extract !== 'string' || source.extract.length < 100) continue;

@@ -8,7 +8,7 @@ const $ = id => document.getElementById(id);
 const audio = new GameAudio();
 const blankProfile = { streak: 0, bestStreak: 0, bestTurns: 0, name: '', activeGame: null };
 let state = { profile: blankProfile, game: null };
-let mode = storage.get('mode') === 'guesses' ? 'guesses' : 'questions';
+let mode = Boolean((storage.get('draft') || '').trim()) && storage.get('mode') === 'guesses' ? 'guesses' : 'questions';
 let busy = false; let noticeTimer; let composing = false; let screen = 'title'; let mutationEpoch = 0;
 let pendingCommand;
 let blockedElements = [];
@@ -205,9 +205,26 @@ async function start() {
         const data = await request('games', { locale: storage.get('start_locale') || locale, requestId: startId });
         storage.remove('start_request'); storage.remove('start_locale');
         pendingCommand = null; storage.remove('pending'); $('question-input').value = ''; saveDraft();
-        if (data.event?.code === 'started') setMode('questions', false, true);
+        if (data.game?.status === 'active') setMode('questions', false, true);
         render(data); audio.play('send', { gain: 0.5, duration: 0.18 });
     });
+}
+
+function looksLikeVerbalQuestion(text) {
+    const trimmed = String(text || '').trim();
+    if (!trimmed) return false;
+    const koVerbalEnd = /(?:있나요|없나요|있습니까|없습니까|하나요|한가요|합니까|할까요|될까요|되나요|됩니까|먹나요|마시나요|쓰나요|사용하나요|사용되나요|입나요|타나요|사나요|보이나요|들리나요|나나요|나오나요|날아다니나요|움직이나요|살아있나요|만들어졌나요|만드나요|생겼나요|달렸나요|들어있나요|가능한가요|가능할까요|필요한가요|크나요|큰가요|작나요|작은가요|긴가요|짧은가요|높은가요|낮은가요|무거운가요|가벼운가요|무겁나요|가볍나요|뜨거운가요|차가운가요|뜨겁나요|차갑나요|많은가요|적은가요|비싼가요|싼가요|둥근가요|울리나요|피나요|열리나요|키우나요|수\s*있나요|수\s*없나요|수\s*있습니까|수\s*있을까요)\s*\?*$/u;
+    if (/\s/.test(trimmed) && koVerbalEnd.test(trimmed)) return true;
+    if (/^[가-힣0-9\s]{2,}(?:있나요|없나요|할까요|될까요|가능한가요|가능할까요|먹나요|쓰나요|하나요|한가요|합니까|되나요|됩니까|있습니까|없습니까|움직이나요|살아있나요|날아다니나요|마시나요|타나요|입나요)\s*\?*$/u.test(trimmed) && !/(?:인가요|입니까|에요|예요|인가)\s*\?*$/u.test(trimmed)) {
+        return true;
+    }
+    if (/^(?:does|do|did|can|could|will|would|has|have|had)\s+[a-z0-9'"-]+(?:\s+[a-z0-9'"-]+){1,}\s*\?*$/i.test(trimmed)) {
+        return true;
+    }
+    if (/^(?:is|are)\s+(?:it|this|that|they|there)\s+(?:made|used|found|alive|edible|able|bigger|smaller|longer|shorter|heavier|lighter|older|newer|hot|cold|warm|cool|sweet|sour|living|worn|grown|kept|sold|played|built|driven|ridden)\b/i.test(trimmed)) {
+        return true;
+    }
+    return false;
 }
 
 async function submit(event) {
@@ -215,6 +232,7 @@ async function submit(event) {
     if (busy || composing || state.game?.status !== 'active') return;
     const text = $('question-input').value.trim();
     if (!text) { $('question-input').focus(); return; }
+    if (mode === 'guesses' && looksLikeVerbalQuestion(text)) setMode('questions', false, true);
     if ([...text].length > (mode === 'questions' ? 200 : 80)) { notify('input_too_long'); return; }
     await action(async () => {
         const path = `games/${state.game.id}/${mode}`;
@@ -228,6 +246,7 @@ async function submit(event) {
         saveDraft();
         render(data, { effects: true });
         if (data.event?.code === 'wrong_guess' && data.game.status === 'active') {
+            if (data.game.remaining > 1) setMode('questions', false, true);
             $('question-form').classList.remove('wrong'); requestAnimationFrame(() => $('question-form').classList.add('wrong'));
         }
     }, { blocking: true });
@@ -257,7 +276,11 @@ async function showRanking(open = true) {
 for (let i = 0; i < 20; i++) { const mark = document.createElement('i'); mark.className = 'turn-mark'; $('turn-marks').append(mark); }
 $('question-input').value = storage.get('draft') || ''; setMode(mode);
 $('start').addEventListener('click', start); $('next-game').addEventListener('click', start);
-$('resume').addEventListener('click', () => action(async () => { render(await request(`games/${state.profile.activeGame}`)); }));
+$('resume').addEventListener('click', () => action(async () => {
+    const data = await request(`games/${state.profile.activeGame}`);
+    if (!$('question-input').value.trim()) setMode('questions', false, true);
+    render(data);
+}));
 $('question-mode').addEventListener('click', () => setMode('questions', true));
 $('guess-mode').addEventListener('click', () => setMode('guesses', true));
 $('question-form').addEventListener('submit', submit);
