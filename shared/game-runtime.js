@@ -246,6 +246,10 @@
         function attemptRegistration() {
             attemptCount += 1;
             return global.navigator.serviceWorker.register(url).catch(function (error) {
+                var errorMessage = String((error && error.message) || error || '');
+                if (/Failed to access storage|Access is denied|The user denied permission to use Service Worker/i.test(errorMessage)) {
+                    return null;
+                }
                 lastError = error;
                 if (global.navigator.onLine !== false && attemptCount < 3) {
                     return new Promise(function (resolve) {

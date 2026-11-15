@@ -262,6 +262,9 @@ function getTransientServiceWorkerFetchReason(body) {
     if (String(context.source || '') !== 'shared-service-worker') return '';
     const message = String(body.message || '').replace(/^\[[^\]]+\]\s*/, '').trim();
     if (/bad HTTP response code|unsupported MIME type|SecurityError|redirect/i.test(message)) return '';
+    if (/Failed to access storage|Access is denied|The user denied permission to use Service Worker/i.test(message)) {
+        return 'service_worker_storage_access_unavailable';
+    }
     return SERVICE_WORKER_FETCH_FAILURE_PATTERN.test(message) ? 'transient_service_worker_script_fetch' : '';
 }
 

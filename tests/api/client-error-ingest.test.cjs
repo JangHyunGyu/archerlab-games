@@ -294,6 +294,20 @@ function createDb() {
     assert.deepEqual(await swResponse.json(), { ok: true, ignored: true, reason: 'transient_service_worker_script_fetch' });
     assert.equal(swDb.writes.length, 0);
   }
+  {
+    const storageSwDb = createDb();
+    const storageSwResponse = await context.__gameApiTest.storeClientError(
+      storageSwDb,
+      new Request(browserRequest.url, { method: 'POST', headers: { 'User-Agent': swUa } }),
+      {
+        ...swPayload("Failed to register a ServiceWorker for scope ('https://game.archerlab.dev/blockpang/') with script ('https://game.archerlab.dev/blockpang/sw.js'): Failed to access storage."),
+        appId: 'blockpang',
+        url: 'https://game.archerlab.dev/blockpang/',
+      }
+    );
+    assert.deepEqual(await storageSwResponse.json(), { ok: true, ignored: true, reason: 'service_worker_storage_access_unavailable' });
+    assert.equal(storageSwDb.writes.length, 0);
+  }
   // 응답·설정 오류와 다른 출처의 같은 문구는 그대로 남긴다.
   for (const payload of [
     swPayload("Failed to register a ServiceWorker for scope ('https://game.archerlab.dev/cat-tower/') with script ('https://game.archerlab.dev/cat-tower/sw.js'): A bad HTTP response code (404) was received when fetching the script."),

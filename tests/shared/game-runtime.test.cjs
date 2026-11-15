@@ -119,6 +119,21 @@ const ranking = window.ArcherGames.createRankingClient({
   assert.equal(persistentReports.length, 1);
   assert.equal(persistentReports[0][1].attempts, 3);
 
+  const storageDeniedReports = [];
+  let storageDeniedAttempts = 0;
+  retryWindow.ArcherGames = undefined;
+  retryWindow.navigator.serviceWorker.register = async () => {
+    storageDeniedAttempts += 1;
+    throw new DOMException('Failed to register a ServiceWorker: Failed to access storage.', 'AbortError');
+  };
+  retryWindow.ArcherLabClientErrorReporter = {
+    report: (...args) => storageDeniedReports.push(args)
+  };
+  vm.runInNewContext(source, retryWindow, { filename: 'game-runtime.js' });
+  assert.equal(await retryWindow.ArcherGames.registerServiceWorker('sw.js'), null);
+  assert.equal(storageDeniedAttempts, 1);
+  assert.deepEqual(storageDeniedReports, []);
+
   const lumenHtml = fs.readFileSync(path.join(__dirname, '../../lumen-shift/index.html'), 'utf8');
   assert.doesNotMatch(lumenHtml, /rel="preload"[^>]+title-screen-(?:desktop|mobile)-v2\.webp/);
   assert.match(lumenHtml, /game-runtime\.js\?v=20260905-bot-filter-v2/);
