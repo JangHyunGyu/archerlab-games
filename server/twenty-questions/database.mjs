@@ -4,6 +4,18 @@ import { fault } from './core.mjs';
 export const SCHEMA_VERSION = 'semantle-20261117-v2';
 
 const ready = new WeakMap();
+const rateBucketsByDb = new WeakMap();
+const fallbackBuckets = new Map();
+
+function bucketsFor(db) {
+    if (!db || typeof db !== 'object') return fallbackBuckets;
+    let map = rateBucketsByDb.get(db);
+    if (!map) {
+        map = new Map();
+        rateBucketsByDb.set(db, map);
+    }
+    return map;
+}
 
 async function ensureColumns(db, table, additions) {
     const info = await db.prepare(`PRAGMA table_info(${table})`).all();
@@ -17,11 +29,13 @@ async function ensureColumns(db, table, additions) {
     if (statements.length) await db.batch(statements);
 }
 
-// D1 시맨틀 테이블·컬럼·인덱스를 안전하게 초기화 및 마이그레이션
+// D1 시맨틀 테이블·컬럼·인덱스를 안전하게 초기화 및 마이그레이션 (이미 최신 버전이면 1회 조회로 즉시 통과)
 export async function initialize(db) {
     if (!db) throw fault('service_unavailable', 503);
     if (!ready.has(db)) {
         const pending = (async () => {
+            const meta = await db.prepare("SELECT value FROM sm_meta WHERE key = 'schema_version'").first().catch(() => null);
+            if (meta?.value === SCHEMA_VERSION) return;
             await db.batch(SCHEMA_TABLES.map(sql => db.prepare(sql)));
             await ensureColumns(db, 'sm_players', [
                 ['name_key', 'TEXT'],
@@ -47,16 +61,24 @@ export async function initialize(db) {
     return ready.get(db);
 }
 
+// DO/워커 메모리 슬라이딩 버킷으로 레이트 리미트를 즉시 판정해 추측당 D1 왕복 제거
 export async function limit(db, key, maximum, expiresAt) {
     const now = Date.now();
-    const row = await db.prepare(`INSERT INTO sm_limits(key, count, expires_at) VALUES (?, 1, ?)
-        ON CONFLICT(key) DO UPDATE SET
-            count = CASE WHEN sm_limits.expires_at <= ? THEN 1 ELSE sm_limits.count + 1 END,
-            expires_at = CASE WHEN sm_limits.expires_at <= ? THEN excluded.expires_at ELSE sm_limits.expires_at END
-        WHERE sm_limits.expires_at <= ? OR sm_limits.count < ?
-        RETURNING count`)
-        .bind(key, expiresAt, now, now, now, maximum).first();
-    if (!row) throw fault('rate_limited', 429, Math.max(1, Math.ceil((expiresAt - now) / 1000)));
+    const map = bucketsFor(db);
+    if (map.size > 5000) {
+        for (const [k, entry] of map) {
+            if (entry.expiresAt <= now) map.delete(k);
+        }
+    }
+    const existing = map.get(key);
+    if (!existing || existing.expiresAt <= now) {
+        map.set(key, { count: 1, expiresAt });
+        return;
+    }
+    if (existing.count >= maximum) {
+        throw fault('rate_limited', 429, Math.max(1, Math.ceil((existing.expiresAt - now) / 1000)));
+    }
+    existing.count += 1;
 }
 
 export async function cleanExpiredRecords(db, now = Date.now()) {

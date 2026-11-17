@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { harness } from './helpers.mjs';
-import { twentyQuestionsRoute } from '../../server/twenty-questions/service.mjs';
+import { twentyQuestionsRoute, handleRoomRequest } from '../../server/twenty-questions/service.mjs';
 import { calibrateSim, sanitizePlayerName } from '../../server/twenty-questions/core.mjs';
 import { submitRanking } from '../../game-api-worker.js';
 
@@ -218,7 +218,63 @@ test('anti-cheat blocks give-up reroll farming, duplicate nicknames, CSRF, proto
 
     for (const file of ['main.mjs', 'api.mjs', 'audio.mjs', 'i18n.mjs']) {
         const src = fs.readFileSync(new URL('../js/' + file, import.meta.url), 'utf8');
-        assert.doesNotMatch(src, /answer_word|secrets-top1k|vectors\.f16|OPENROUTER_API_KEY|sim_scale/);
+        assert.doesNotMatch(src, /answer_word|secrets-top1k|vectors\.f16|hot-pack|OPENROUTER_API_KEY|sim_scale/);
     }
+    h.db.sqlite.close();
+});
+
+test('DO room cache + deferred batch flushes cleanly before solve and give-up', async () => {
+    const h = harness({ secretWords: ['행복'] });
+    const pendingFlushes = [];
+    const queued = [];
+    const runtime = {
+        roomCache: { player: null, game: null, guesses: null },
+        clearCache: () => {
+            runtime.roomCache.player = null;
+            runtime.roomCache.game = null;
+            runtime.roomCache.guesses = null;
+        },
+        deferBatch: statements => {
+            queued.push(statements);
+            pendingFlushes.push(
+                h.db.batch(statements.map(s => h.db.prepare(s.sql).bind(...s.params)))
+            );
+        },
+        flushBatch: async () => {
+            await Promise.all(pendingFlushes.splice(0));
+        },
+        waitUntil: p => { pendingFlushes.push(Promise.resolve(p).catch(() => {})); },
+    };
+
+    const callRoom = async (path, body, method = body ? 'POST' : 'GET') => {
+        const res = await handleRoomRequest(new Request('https://api/twenty-questions/' + path, {
+            method,
+            headers: { Authorization: `Bearer ${'d'.repeat(64)}`, 'Content-Type': 'application/json' },
+            ...(body ? { body: JSON.stringify(body) } : {}),
+        }), h.env, runtime);
+        return { status: res.status, data: await res.json() };
+    };
+
+    const started = await callRoom('games', { locale: 'ko', requestId: crypto.randomUUID() });
+    assert.equal(started.status, 200);
+    let game = started.data.game;
+
+    const g1 = await callRoom(`games/${game.id}/guesses`, { text: '드라이기', expectedVersion: game.version, requestId: crypto.randomUUID() });
+    assert.equal(g1.status, 200);
+    assert.equal(g1.data.event.code, 'guess');
+    assert.equal(queued.length, 1);
+    game = g1.data.game;
+
+    const g2 = await callRoom(`games/${game.id}/guesses`, { text: '에어프라이어', expectedVersion: game.version, requestId: crypto.randomUUID() });
+    assert.equal(g2.status, 200);
+    assert.equal(g2.data.event.code, 'guess');
+    assert.equal(queued.length, 2);
+    game = g2.data.game;
+
+    const gu = await callRoom(`games/${game.id}/give-up`, { expectedVersion: game.version, requestId: crypto.randomUUID() });
+    assert.equal(gu.status, 200);
+    assert.equal(gu.data.game.status, 'given_up');
+    assert.equal(h.row('SELECT COUNT(*) n FROM sm_guesses WHERE game_id = ?', game.id).n, 2);
+    await runtime.flushBatch();
     h.db.sqlite.close();
 });

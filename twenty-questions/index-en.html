@@ -50,10 +50,10 @@
 }
     </script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261117-v3">
-  <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=3" media="(max-width: 768px) and (orientation: portrait)">
-  <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=3" media="(min-width: 769px), (orientation: landscape)">
-  <script type="module" src="js/main.mjs?v=20261117-v3"></script>
+  <link rel="stylesheet" href="css/style.css?v=20261117-v4">
+  <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
+  <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
+  <script type="module" src="js/main.mjs?v=20261117-v4"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 
     <meta name="twitter:title" content="Korean Semantle | Word Similarity Puzzle - ArcherLab">
@@ -177,8 +177,19 @@
           <input id="guess-input" type="text" maxlength="32" placeholder="Korean word (e.g. 사람, 기쁘다, 갑자기)" autocomplete="off" enterkeyhint="send">
           <button id="send" class="primary-btn" type="submit"><span>Guess</span></button>
         </form>
-        <p class="input-hint">Secret words are 2+ syllable dictionary base forms; 1-syllable Hangul guesses are also allowed.</p>
-        <div class="composer-meta"><span id="pending" hidden>Calculating vector similarity...</span></div>
+        <div class="composer-status-slot" id="composer-status-slot">
+          <p id="input-hint" class="input-hint">Enter everyday Korean nouns, loanwords, verbs, or adjectives to test how close they are.</p>
+          <div id="guess-loading" class="guess-loading" data-phase="idle" role="status" aria-live="polite" hidden>
+            <img class="guess-loading-emblem" src="assets/ui/compass-chronograph-160.webp?v=4" srcset="assets/ui/compass-chronograph-160.webp?v=4 1x, assets/ui/compass-chronograph-320.webp?v=4 2x" alt="" width="22" height="27" decoding="async">
+            <div class="guess-loading-gauge" aria-hidden="true">
+              <img class="guess-loading-frame" src="assets/ui/loading-bar-frame-320.webp?v=4" srcset="assets/ui/loading-bar-frame-320.webp?v=4 1x, assets/ui/loading-bar-frame-640.webp?v=4 2x" alt="" width="640" height="338" decoding="async">
+              <div class="guess-loading-track">
+                <img class="guess-loading-fill" src="assets/ui/loading-bar-fill-280.webp?v=4" srcset="assets/ui/loading-bar-fill-280.webp?v=4 1x, assets/ui/loading-bar-fill-560.webp?v=4 2x" alt="" width="560" height="52" decoding="async">
+              </div>
+            </div>
+            <span id="pending" class="guess-loading-text">Measuring meaning distance...</span>
+          </div>
+        </div>
         <p id="turn-feedback" class="turn-feedback" role="status" hidden></p>
       </div>
       <div class="ledger-panel crafted-frame">
@@ -210,7 +221,7 @@
     </section>
   </main>
   <div id="notice" class="notice" role="status" hidden></div>
-  <footer class="site-footer"><a href="../">ArcherLab Games</a><span>FastText Korean Vectors · Wiktionary 5800 · Server-Verified Timer</span></footer>
+  <footer class="site-footer"><a href="../">ArcherLab Games</a></footer>
 
   <dialog id="ranking-dialog" class="game-dialog crafted-frame" aria-labelledby="ranking-title">
     <button class="dialog-close icon-button" data-close aria-label="Close">✕</button>
@@ -230,7 +241,7 @@
   <dialog id="nearest-dialog" class="game-dialog crafted-frame" aria-labelledby="nearest-title">
     <button class="dialog-close icon-button" data-close aria-label="Close">✕</button>
     <h2 id="nearest-title"></h2>
-    <p class="dialog-intro">Ranked by cosine similarity using 300d Korean FastText embeddings.</p>
+    <p class="dialog-intro">The 1,000 words closest in meaning and context to the secret word.</p>
     <input id="nearest-filter" class="nearest-filter" type="search" placeholder="Filter words..." aria-label="Filter words...">
     <p id="nearest-loading" class="dialog-intro" hidden>Loading...</p>
     <div class="nearest-scroll">
@@ -258,7 +269,7 @@
     <div class="faq-list">
       <div class="faq-item"><h3>How do I play Korean Semantle?</h3><p>Every guess returns a semantic similarity score (-100 to +100). If your guess is among the 1,000 closest words to the secret, its exact rank also appears.</p></div>
       <div class="faq-item"><h3>How does the live timer &amp; leaderboard work?</h3><p>The stopwatch anchors to server time the moment a round starts and keeps counting even when minimized or closed. Verified solves with 2+ guesses compete for the fastest Hall of Fame clear time.</p></div>
-      <div class="faq-item"><h3>Why can antonyms score high?</h3><p>Vectors are learned from Wikipedia and Common Crawl contexts, so words appearing in similar sentences (like &quot;사랑&quot; love and &quot;증오&quot; hate) share high scores.</p></div>
+      <div class="faq-item"><h3>Why can antonyms score high?</h3><p>Similarity reflects how often words appear in related contexts, so opposites used in the same situations (like &quot;사랑&quot; love and &quot;증오&quot; hate) can both score high.</p></div>
       <div class="faq-item"><h3>Is there a daily limit?</h3><p>No. Play unlimited rounds back to back anytime.</p></div>
     </div>
   </dialog>

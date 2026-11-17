@@ -56,10 +56,10 @@
 | `resonance_won` | 정답을 맞혔어요! 다른 단어도 자유롭게 입력해 볼 수 있어요. | Solved! Keep testing any word to explore semantic neighbors. |
 | `guess_placeholder` | 단어 입력 (예: 사람, 기쁘다, 갑자기) | Korean word (e.g. 사람, 기쁘다, 갑자기) |
 | `explore_placeholder` | 정답과 다른 단어의 유사도도 확인해 보세요 | Test any Korean word against the answer |
-| `input_hint` | 정답은 2글자 이상 기본형(명사·동사·형용사 등)이며, 추측할 때는 1글자 단어도 입력할 수 있어요. | Secret words are 2+ syllable dictionary base forms; 1-syllable Hangul guesses are also allowed. |
+| `input_hint` | 일상 명사·외래어·용언 등 다양한 한국어 단어를 자유롭게 입력해 보세요. | Enter everyday Korean nouns, loanwords, verbs, or adjectives to test how close they are. |
 | `send` | 추측하기 | Guess |
 | `explore_send` | 확인하기 | Check |
-| `pending` | 유사도를 계산하고 있어요. | Calculating vector similarity... |
+| `pending` | 의미 거리를 재고 있어요... | Measuring meaning distance... |
 | `col_order` | # | # |
 | `col_word` | 입력한 단어 | Guess |
 | `col_sim` | 유사도 | Score |
@@ -98,7 +98,7 @@
 | `copied` | 결과를 클립보드에 복사했어요. | Result copied to clipboard. |
 | `copy_failed` | 클립보드 복사를 지원하지 않는 브라우저예요. | Clipboard unavailable here. |
 | `nearest_title` | ‘{word}’와 의미가 가장 가까운 단어 1,000개 | Top 1,000 Words Closest to "{word}" |
-| `nearest_desc` | 한국어 FastText 300차원 벡터 기준 유사도 순위예요. | Ranked by cosine similarity using 300d Korean FastText embeddings. |
+| `nearest_desc` | 정답 단어와 뜻·문맥이 가까운 순서대로 정렬된 상위 1,000개 단어예요. | The 1,000 words closest in meaning and context to the secret word. |
 | `nearest_filter` | 단어 검색... | Filter words... |
 | `nearest_empty` | 찾는 단어가 없어요. | No matching words. |
 | `ranking_rule` | 가장 빠르게 정답을 맞힌 순서대로 순위가 정해져요 (시간이 같으면 추측 수가 적은 기록이 앞서요). | Ranked by fastest verified clear time (fewer guesses break ties). |
@@ -126,7 +126,7 @@
 | `faq_q2` | 시간과 명예의 전당 랭킹은 어떻게 기록되나요? | How does the live timer & leaderboard work? |
 | `faq_a2` | 새 문제를 여는 순간 서버 시계 기준으로 시간이 올라가기 시작하며, 다른 창으로 이동하거나 앱을 닫아도 시간은 멈추지 않고 계속 흐릅니다. 2회 이상의 정상 추리로 가장 빠르게 정답을 맞힌 기록이 명예의 전당에 자동 등록돼요. | The stopwatch anchors to server time the moment a round starts and keeps counting even when minimized or closed. Verified solves with 2+ guesses compete for the fastest Hall of Fame clear time. |
 | `faq_q3` | 어떤 단어가 정답이 되나요? 왜 반대말도 점수가 높나요? | Why can antonyms score high? |
-| `faq_a3` | 정답은 한국어 빈도 어휘 중 2글자 이상 기본형(명사·동사·형용사·부사)에서 뽑힙니다. ‘사랑’과 ‘증오’처럼 반대되는 말이라도 같은 문맥에 자주 나오면 유사도가 높을 수 있고, ‘밤’처럼 뜻이 여러 개인 단어는 자주 쓰이는 문맥 쪽 점수가 높게 나와요. | Vectors are learned from Wikipedia and Common Crawl contexts, so words appearing in similar sentences (like "사랑" love and "증오" hate) share high scores. |
+| `faq_a3` | 정답은 한국어 빈도 어휘 중 2글자 이상 기본형(명사·동사·형용사·부사)에서 뽑힙니다. ‘사랑’과 ‘증오’처럼 반대되는 말이라도 같은 문맥에 자주 나오면 유사도가 높을 수 있고, ‘밤’처럼 뜻이 여러 개인 단어는 자주 쓰이는 문맥 쪽 점수가 높게 나와요. | Similarity reflects how often words appear in related contexts, so opposites used in the same situations (like "사랑" love and "증오" hate) can both score high. |
 | `faq_q4` | 하루에 한 번만 할 수 있나요? | Is there a daily limit? |
 | `faq_a4` | 아니요. 하루 횟수 제한 없이 원할 때마다 새 문제를 계속 풀 수 있어요. 정답을 맞히거나 포기한 뒤 상위 1,000개 단어를 살펴보고 바로 다음 문제로 넘어가 보세요. | No. Play unlimited rounds back to back anytime. |
 | `sound` | 효과음 | Sound Effects |
@@ -138,7 +138,7 @@
 | `loading` | 데이터를 불러오고 있어요. | Loading... |
 | `network_error` | 서버와 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요. | Connection failed. Check your network and retry. |
 | `offline` | 인터넷 연결을 확인해 주세요. | You appear to be offline. |
-| `service_unavailable` | 단어 데이터를 불러오는 중이에요. 잠시 뒤 다시 시도해 주세요. | Word vector service is loading. Retry shortly. |
+| `service_unavailable` | 단어 데이터를 불러오는 중이에요. 잠시 뒤 다시 시도해 주세요. | Word dictionary is loading. Please try again shortly. |
 | `stale_state` | 다른 창에서 진행이 바뀌어 최신 상태를 불러왔어요. | Synced newer state from another tab. |
 | `game_finished` | 이미 끝난 문제예요. 새 문제를 시작해 주세요. | This round has already ended. |
 | `rate_limited` | 요청이 너무 많아요. 잠시 뒤에 다시 시도해 주세요. | Too many requests. Please wait a moment. |
@@ -148,4 +148,3 @@
 | `unauthorized` | 접속 정보를 확인하지 못했어요. 페이지를 새로고침해 주세요. | Session could not be verified. Please reload. |
 | `request_conflict` | 요청 순서가 어긋났어요. 새로고침 후 다시 시도해 주세요. | Request mismatch. Please reload. |
 | `storage_notice` | 브라우저 저장을 사용할 수 없어 창을 닫으면 내 기록이 이어지지 않을 수 있어요. | Browser storage is blocked; progress may not persist after closing. |
-| `footer_credit` | FastText 한국어 벡터 · Wiktionary 5800 어휘 기반 · 서버 시간 검증 랭킹 | FastText Korean Vectors · Wiktionary 5800 · Server-Verified Timer |

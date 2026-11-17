@@ -246,10 +246,71 @@ export class TwentyQuestionsRoom extends DurableObject {
         super(ctx, env);
         this.gameEnv = env;
         this.queue = Promise.resolve();
+        this.flushPromise = null;
+        this.roomCache = { player: null, game: null, guesses: null };
+        ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS room_d1_outbox (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            statements TEXT NOT NULL,
+            created_at INTEGER NOT NULL
+        )`);
+        this.runtime = {
+            roomCache: this.roomCache,
+            clearCache: () => {
+                this.roomCache.player = null;
+                this.roomCache.game = null;
+                this.roomCache.guesses = null;
+            },
+            deferBatch: statements => {
+                this.ctx.storage.sql.exec(
+                    'INSERT INTO room_d1_outbox (statements, created_at) VALUES (?, ?)',
+                    JSON.stringify(statements),
+                    Date.now(),
+                );
+                this.ctx.waitUntil(this.flushOutbox().catch(() => {}));
+            },
+            flushBatch: () => this.flushOutbox(),
+            waitUntil: promise => this.ctx.waitUntil(promise),
+        };
+    }
+
+    async flushOutbox() {
+        if (this.flushPromise) return this.flushPromise;
+        this.flushPromise = (async () => {
+            while (true) {
+                const rows = this.ctx.storage.sql.exec(
+                    'SELECT id, statements FROM room_d1_outbox ORDER BY id ASC LIMIT 20'
+                ).toArray();
+                if (!rows.length) break;
+                const batchStmts = [];
+                for (const row of rows) {
+                    const parsed = JSON.parse(row.statements);
+                    for (const item of parsed) {
+                        batchStmts.push(this.gameEnv.DB.prepare(item.sql).bind(...item.params));
+                    }
+                }
+                if (batchStmts.length) {
+                    try {
+                        await this.gameEnv.DB.batch(batchStmts);
+                    } catch (err) {
+                        await this.ctx.storage.setAlarm(Date.now() + 15000);
+                        throw err;
+                    }
+                }
+                const maxId = rows[rows.length - 1].id;
+                this.ctx.storage.sql.exec('DELETE FROM room_d1_outbox WHERE id <= ?', maxId);
+            }
+        })().finally(() => {
+            this.flushPromise = null;
+        });
+        return this.flushPromise;
+    }
+
+    async alarm() {
+        await this.queue.then(() => this.flushOutbox().catch(() => {}));
     }
 
     fetch(request) {
-        const result = this.queue.then(() => handleRoomRequest(request, this.gameEnv));
+        const result = this.queue.then(() => handleRoomRequest(request, this.gameEnv, this.runtime));
         this.queue = result.catch(() => {});
         return result;
     }
@@ -265,7 +326,7 @@ export default {
 
     async fetch(request, env, ctx) {
         const path = new URL(request.url).pathname;
-        if (path.startsWith('/twenty-questions/')) return twentyQuestionsRoute(request, env);
+        if (path.startsWith('/twenty-questions/')) return twentyQuestionsRoute(request, env, ctx);
         if (path === '/water-sort/challenge') return waterSortRoute(request, env.DB, env);
         if (request.method !== 'POST' || (!PATHS.has(path) && path !== '/ranking-delivery')) {
             return api.fetch(request, env, ctx);

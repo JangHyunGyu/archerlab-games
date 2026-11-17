@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
@@ -211,6 +212,84 @@ for (const iconName of ['icon-trophy', 'icon-guide', 'icon-settings']) {
     ]);
 }
 
+const barFrame = await trimAndCleanAlpha(path.join(rawDir, 'loading-bar-frame.png'), { pad: 2 });
+const barFrameH = Math.round((640 / barFrame.width) * barFrame.height);
+await emitRgbaResponsive(barFrame.buffer, [
+    { width: 640, height: barFrameH, path: path.join(uiDir, 'loading-bar-frame.png') },
+    { width: 320, height: Math.round(barFrameH / 2), path: path.join(uiDir, 'loading-bar-frame-320.webp') },
+    { width: 640, height: barFrameH, path: path.join(uiDir, 'loading-bar-frame-640.webp') },
+]);
+
+const barFill = await trimAndCleanAlpha(path.join(rawDir, 'loading-bar-fill.png'), { pad: 2 });
+const barFillH = Math.round((560 / barFill.width) * barFill.height);
+await emitRgbaResponsive(barFill.buffer, [
+    { width: 560, height: barFillH, path: path.join(uiDir, 'loading-bar-fill.png') },
+    { width: 280, height: Math.round(barFillH / 2), path: path.join(uiDir, 'loading-bar-fill-280.webp') },
+    { width: 560, height: barFillH, path: path.join(uiDir, 'loading-bar-fill-560.webp') },
+]);
+
+// Measure inner dark trough bounds in trimmed loading-bar-frame for pixel-exact CSS alignment
+const frameRaw = await sharp(path.join(uiDir, 'loading-bar-frame.png')).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+let troughTop = frameRaw.info.height, troughBottom = 0, troughLeft = frameRaw.info.width, troughRight = 0;
+const midX = Math.floor(frameRaw.info.width / 2);
+for (let y = Math.floor(frameRaw.info.height * 0.42); y < Math.floor(frameRaw.info.height * 0.68); y++) {
+    const idx = (y * frameRaw.info.width + midX) * 4;
+    const r = frameRaw.data[idx], g = frameRaw.data[idx + 1], b = frameRaw.data[idx + 2], a = frameRaw.data[idx + 3];
+    if (a > 200 && r < 45 && g < 65 && b < 85) {
+        if (y < troughTop) troughTop = y;
+        if (y > troughBottom) troughBottom = y;
+    }
+}
+const midY = Math.floor((troughTop + troughBottom) / 2);
+for (let x = 0; x < frameRaw.info.width; x++) {
+    const idx = (midY * frameRaw.info.width + x) * 4;
+    const r = frameRaw.data[idx], g = frameRaw.data[idx + 1], b = frameRaw.data[idx + 2], a = frameRaw.data[idx + 3];
+    if (a > 200 && r < 45 && g < 65 && b < 85) {
+        if (x < troughLeft) troughLeft = x;
+        if (x > troughRight) troughRight = x;
+    }
+}
+console.log('Trough box px:', {
+    w: frameRaw.info.width,
+    h: frameRaw.info.height,
+    leftPct: ((troughLeft / frameRaw.info.width) * 100).toFixed(2) + '%',
+    rightPct: (((frameRaw.info.width - 1 - troughRight) / frameRaw.info.width) * 100).toFixed(2) + '%',
+    topPct: ((troughTop / frameRaw.info.height) * 100).toFixed(2) + '%',
+    heightPct: (((troughBottom - troughTop + 1) / frameRaw.info.height) * 100).toFixed(2) + '%',
+});
+
+// 1:1 무손실 PNG 3색 대비 시트 (#181824, #FF00FF, #00FF00) for loading bar assets
+const lbFrameMeta = await sharp(path.join(uiDir, 'loading-bar-frame.png')).metadata();
+const lbFillMeta = await sharp(path.join(uiDir, 'loading-bar-fill.png')).metadata();
+const lbSheetW = Math.max(lbFrameMeta.width, lbFillMeta.width) + 40;
+const lbRowH = Math.max(lbFrameMeta.height, lbFillMeta.height) + 28;
+const lbSheetH = lbRowH * 6;
+const bgColors = ['#181824', '#FF00FF', '#00FF00'];
+const lbTiles = [];
+for (let bi = 0; bi < bgColors.length; bi++) {
+    const topBand1 = bi * 2 * lbRowH;
+    const topBand2 = (bi * 2 + 1) * lbRowH;
+    lbTiles.push({
+        input: await sharp({ create: { width: lbSheetW, height: lbRowH * 2, channels: 4, background: bgColors[bi] } }).png().toBuffer(),
+        left: 0,
+        top: topBand1,
+    });
+    lbTiles.push({
+        input: path.join(uiDir, 'loading-bar-frame.png'),
+        left: 20,
+        top: topBand1 + Math.floor((lbRowH - lbFrameMeta.height) / 2),
+    });
+    lbTiles.push({
+        input: path.join(uiDir, 'loading-bar-fill.png'),
+        left: 20,
+        top: topBand2 + Math.floor((lbRowH - lbFillMeta.height) / 2),
+    });
+}
+await sharp({ create: { width: lbSheetW, height: lbSheetH, channels: 4, background: '#181824' } })
+    .composite(lbTiles)
+    .png({ compressionLevel: 9 })
+    .toFile(path.join(rawDir, 'loading-bar-verify.png'));
+
 // 3. 투명 UI 에셋 육안 검증용 고대비(#181824 / #00FF00) 시트 생성
 const previewItems = [
     { file: 'crafted-btn-gold.png', w: 340, h: 120 },
@@ -218,6 +297,8 @@ const previewItems = [
     { file: 'crafted-panel.png', w: 280, h: 280 },
     { file: 'compass-chronograph.png', w: 280, h: 280 },
     { file: 'vfx-compass-burst.png', w: 280, h: 280 },
+    { file: 'loading-bar-frame.png', w: 340, h: 190 },
+    { file: 'loading-bar-fill.png', w: 340, h: 80 },
     { file: 'icon-trophy.png', w: 96, h: 96 },
     { file: 'icon-guide.png', w: 96, h: 96 },
     { file: 'icon-settings.png', w: 96, h: 96 },
@@ -240,9 +321,37 @@ await sharp({ create: { width: 760, height: sheetH, channels: 4, background: '#1
     .png()
     .toFile(path.join(rawDir, 'alpha-verify-sheet.png'));
 
+// 4. Rebuild twenty-questions/assets/manifest.json for all background & UI images
+const manifestPath = fileURLToPath(new URL('../assets/manifest.json', import.meta.url));
+const imageEntries = [];
+for (const sub of ['backgrounds', 'ui']) {
+    const subDir = path.join(fileURLToPath(new URL('../assets/', import.meta.url)), sub);
+    for (const file of fs.readdirSync(subDir).sort()) {
+        if (!file.endsWith('.png') && !file.endsWith('.webp')) continue;
+        const abs = path.join(subDir, file);
+        const buf = fs.readFileSync(abs);
+        const meta = await sharp(buf).metadata();
+        imageEntries.push({
+            file: `${sub}/${file}`,
+            bytes: buf.byteLength,
+            width: meta.width,
+            height: meta.height,
+            sha256: crypto.createHash('sha256').update(buf).digest('hex'),
+        });
+    }
+}
+fs.writeFileSync(manifestPath, JSON.stringify({
+    version: 4,
+    created_at: new Date().toISOString().slice(0, 10),
+    images: imageEntries,
+}, null, 2) + '\n');
+
 console.log('Processed UI skins:', {
     btnGold: `${btnGold.width}x${btnGold.height} -> 720x${btnGoldH}`,
     btnTeal: `${btnTeal.width}x${btnTeal.height} -> 720x${btnTealH}`,
+    barFrame: `${barFrame.width}x${barFrame.height} -> 640x${barFrameH}`,
+    barFill: `${barFill.width}x${barFill.height} -> 560x${barFillH}`,
     panel: `${panelTrim.width}x${panelTrim.height} -> 1024x1024`,
     compass: `${compass.width}x${compass.height} -> 640x${Math.round((640 / compass.width) * compass.height)}`,
+    manifestEntries: imageEntries.length,
 });

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Build normalized float16 FastText vector pack and precomputed Top-1,000 tables for Korean Semantle."""
+"""Build semantle-ko/v2: full 1.50M Hangul vocabulary, expanded headword Top-1k, and hot/cold quantized vector packs."""
 
 from __future__ import annotations
 
 import argparse
+import csv
 import gzip
 import hashlib
+import io
 import json
 import os
 import re
@@ -28,13 +30,30 @@ WIKT_API_URL = (
     "https://en.wiktionary.org/w/api.php?action=parse"
     "&page=Wiktionary:Frequency_lists/Korean_5800&prop=wikitext&format=json"
 )
+NEWSJELLY_SECRETS_URL = "https://raw.githubusercontent.com/NewsJelly/semantle-ko/master/data/secrets.txt"
+NEWSJELLY_FREQ_URL = "https://raw.githubusercontent.com/NewsJelly/semantle-ko/master/data/frequent_words.txt"
+MECAB_BASE_URL = "https://raw.githubusercontent.com/lindera/mecab-ko-dic/main/"
+MECAB_CSVS = [
+    "NNG.csv",
+    "Foreign.csv",
+    "CoinedWord.csv",
+    "VV.csv",
+    "VA.csv",
+    "MAG.csv",
+    "XR.csv",
+    "IC.csv",
+    "Wikipedia.csv",
+    "Group.csv",
+]
 
-HANGUL_WORD_RE = re.compile(r"^[가-힣]{1,12}$")
+HANGUL_WORD_RE = re.compile(r"^[가-힣]{1,15}$")
 SECRET_WORD_RE = re.compile(r"^[가-힣]{2,7}$")
 
-# Ultra-generic function words / pronouns / conjunctions / slurs excluded from becoming secret answers
-# (still allowed as player guesses when present in the dictionary).
-SECRET_EXCLUSIONS: Set[str] = {
+SLUR_EXCLUSIONS: Set[str] = {
+    "새끼", "씨발", "병신", "미친놈", "개새끼", "존나", "창녀", "걸레",
+}
+
+SECRET_EXCLUSIONS: Set[str] = SLUR_EXCLUSIONS | {
     "하다", "되다", "있다", "없다", "이다", "아니다", "같다", "다르다",
     "그렇다", "이렇다", "저렇다", "어떻다", "그러하다", "이러하다",
     "그것", "이것", "저것", "여기", "거기", "저기", "이곳", "그곳", "저곳",
@@ -49,33 +68,30 @@ SECRET_EXCLUSIONS: Set[str] = {
     "아직", "벌써", "방금", "금방", "얼마", "얼마나", "만큼", "정도", "가지",
     "번째", "첫째", "둘째", "셋째", "넷째", "다섯째", "여섯째", "일곱째",
     "여덟째", "아홉째", "열째", "퍼센트", "달러", "억원", "만원",
-    # Offensive / sensitive terms
-    "새끼", "씨발", "병신", "미친놈", "개새끼", "존나", "창녀", "걸레",
     "흑인", "백인", "황인", "장애인", "병자", "자살", "강간", "살인", "마약",
 }
+
+DIMS = 300
+HOT_COUNT = 120000
+COLD_BLOCK_WORDS = 64
+SECRET_STRIDE = 24576
+TOP_K = 1000
 
 
 def download_file(url: str, dest: Path, label: str) -> None:
     if dest.exists() and dest.stat().st_size > 0:
         print(f"[cache] {label}: {dest} ({dest.stat().st_size:,} bytes)")
         return
+    dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_suffix(dest.suffix + ".part")
     print(f"[download] {label} -> {dest}")
-    req = urllib.request.Request(url, headers={"User-Agent": "ArcherLab-SemantleBuilder/1.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "ArcherLab-SemantleBuilder/2.0"})
     with urllib.request.urlopen(req, timeout=120) as resp, open(tmp, "wb") as out:
-        total = int(resp.headers.get("Content-Length") or 0)
-        read_bytes = 0
-        next_report = 25 * 1024 * 1024
         while True:
             chunk = resp.read(1024 * 1024)
             if not chunk:
                 break
             out.write(chunk)
-            read_bytes += len(chunk)
-            if read_bytes >= next_report:
-                pct = f" ({read_bytes * 100 / total:.1f}%)" if total else ""
-                print(f"  ... {read_bytes // (1024 * 1024)} MB{pct}")
-                next_report += 25 * 1024 * 1024
     os.replace(tmp, dest)
     print(f"[done] {label}: {dest.stat().st_size:,} bytes")
 
@@ -105,13 +121,73 @@ def load_wiktionary_words(json_path: Path) -> List[str]:
     return words
 
 
-def stream_fasttext_vectors(
-    vec_gz_path: Path, valid_vocab: Set[str], dims: int = 300
-) -> Tuple[List[str], np.ndarray]:
-    print(f"[parse] Streaming {vec_gz_path.name} against {len(valid_vocab):,} valid Korean words...")
+def load_word_list(txt_path: Path) -> List[str]:
     words: List[str] = []
-    vecs: List[np.ndarray] = []
     seen: Set[str] = set()
+    with open(txt_path, "r", encoding="utf-8") as f:
+        for line in f:
+            s = line.strip()
+            if not s or s.startswith("#"):
+                continue
+            token = unicodedata.normalize("NFC", s)
+            if HANGUL_WORD_RE.match(token) and token not in seen:
+                seen.add(token)
+                words.append(token)
+    return words
+
+
+def load_mecab_headwords(mecab_dir: Path) -> Set[str]:
+    words: Set[str] = set()
+    noun_like = {"NNG.csv", "Foreign.csv", "CoinedWord.csv", "MAG.csv", "IC.csv", "Wikipedia.csv", "Group.csv"}
+    for name in MECAB_CSVS:
+        path = mecab_dir / name
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            reader = csv.reader(f)
+            for row in reader:
+                if not row:
+                    continue
+                surface = unicodedata.normalize("NFC", row[0].strip())
+                if not surface or not re.match(r"^[가-힣]+$", surface):
+                    continue
+                if name in noun_like:
+                    if HANGUL_WORD_RE.match(surface):
+                        words.add(surface)
+                    for suffix in ("하다", "되다"):
+                        cand = surface + suffix
+                        if HANGUL_WORD_RE.match(cand):
+                            words.add(cand)
+                elif name in ("VV.csv", "VA.csv"):
+                    cand = surface + "다"
+                    if HANGUL_WORD_RE.match(cand):
+                        words.add(cand)
+                elif name == "XR.csv":
+                    for suffix in ("하다", "스럽다", "롭다"):
+                        cand = surface + suffix
+                        if HANGUL_WORD_RE.match(cand):
+                            words.add(cand)
+    return words
+
+
+def decode_quantized_norm(scale_f16: np.float16, q_i8: np.ndarray) -> np.ndarray:
+    vec = q_i8.astype(np.float32) * float(scale_f16)
+    norm = float(np.linalg.norm(vec))
+    if not np.isfinite(norm) or norm < 1e-8:
+        return np.zeros(DIMS, dtype=np.float32)
+    return vec / norm
+
+
+def stream_all_fasttext_quantized(
+    vec_gz_path: Path, dims: int = DIMS
+) -> Tuple[List[str], np.ndarray, np.ndarray]:
+    """Stream all unique NFC pure Hangul words (1..15 syllables) and quantize to f16-scale + int8[300]."""
+    print(f"[parse] Streaming ALL pure Hangul words from {vec_gz_path.name}...")
+    words: List[str] = []
+    seen: Set[str] = set()
+
+    cap = 1550000
+    scales = np.empty(cap, dtype="<f2")
+    quants = np.empty((cap, dims), dtype=np.int8)
+    count = 0
 
     with gzip.open(vec_gz_path, "rt", encoding="utf-8", errors="ignore") as gz:
         header = gz.readline().strip().split()
@@ -120,9 +196,8 @@ def stream_fasttext_vectors(
             sp = line.find(" ")
             if sp <= 0:
                 continue
-            raw_word = line[:sp]
-            word = unicodedata.normalize("NFC", raw_word)
-            if word in seen or word not in valid_vocab:
+            word = unicodedata.normalize("NFC", line[:sp])
+            if word in seen or not HANGUL_WORD_RE.match(word):
                 continue
             vec = np.fromstring(line[sp + 1 :], dtype=np.float32, sep=" ")
             if vec.shape[0] != dims:
@@ -130,14 +205,32 @@ def stream_fasttext_vectors(
             norm = float(np.linalg.norm(vec))
             if not np.isfinite(norm) or norm < 1e-8:
                 continue
+            unit = vec / norm
+            max_abs = float(np.max(np.abs(unit)))
+            scale_f16 = np.float16(max(max_abs / 127.0, 1e-6))
+            scale_f32 = float(scale_f16)
+            q = np.clip(np.rint(unit / scale_f32), -127, 127).astype(np.int8)
+
+            if count >= cap:
+                new_cap = int(cap * 1.2)
+                scales_new = np.empty(new_cap, dtype="<f2")
+                scales_new[:count] = scales[:count]
+                scales = scales_new
+                quants_new = np.empty((new_cap, dims), dtype=np.int8)
+                quants_new[:count] = quants[:count]
+                quants = quants_new
+                cap = new_cap
+
             seen.add(word)
             words.append(word)
-            vecs.append(vec / norm)
+            scales[count] = scale_f16
+            quants[count] = q
+            count += 1
             if idx % 400000 == 0:
-                print(f"  ... scanned {idx:,}/{total_lines:,} vectors, matched {len(words):,}")
+                print(f"  ... scanned {idx:,}/{total_lines:,}, kept {count:,} Hangul words")
 
-    print(f"[parse] Matched {len(words):,} unique normalized Korean vectors")
-    return words, np.vstack(vecs).astype(np.float32)
+    print(f"[parse] Kept {count:,} unique normalized Hangul words")
+    return words, scales[:count], quants[:count]
 
 
 def sha256_file(path: Path) -> str:
@@ -151,151 +244,335 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
-def build_pack(scratch_dir: Path, max_secrets: int = 4500) -> None:
+def build_pack(scratch_dir: Path, max_secrets: int = 5000) -> None:
     scratch_dir.mkdir(parents=True, exist_ok=True)
-    out_dir = scratch_dir / "out"
+    out_dir = scratch_dir / "out-v2"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     zip_path = scratch_dir / "ko-aff-dic-0.7.92.zip"
     wikt_path = scratch_dir / "wikt_ko_5800.json"
     vec_gz_path = scratch_dir / "cc.ko.300.vec.gz"
+    nj_secrets_path = scratch_dir / "semantle_secrets.txt"
+    nj_freq_path = scratch_dir / "semantle_frequent.txt"
+    mecab_dir = scratch_dir / "mecab"
 
     download_file(HUNSPELL_URL, zip_path, "Korean Hunspell ko.dic")
     download_file(WIKT_API_URL, wikt_path, "Wiktionary Korean_5800")
     download_file(FASTTEXT_URL, vec_gz_path, "FastText cc.ko.300.vec.gz")
+    download_file(NEWSJELLY_SECRETS_URL, nj_secrets_path, "NewsJelly secrets.txt")
+    download_file(NEWSJELLY_FREQ_URL, nj_freq_path, "NewsJelly frequent_words.txt")
+    for csv_name in MECAB_CSVS:
+        download_file(MECAB_BASE_URL + csv_name, mecab_dir / csv_name, f"mecab {csv_name}")
 
     dic_words = load_hunspell_words(zip_path)
     wikt_words = load_wiktionary_words(wikt_path)
-    valid_vocab = dic_words | set(wikt_words)
-    print(f"[dict] ko.dic={len(dic_words):,}, wikt={len(wikt_words):,}, union={len(valid_vocab):,}")
+    nj_secrets = load_word_list(nj_secrets_path)
+    nj_freq = load_word_list(nj_freq_path)
+    mecab_words = load_mecab_headwords(mecab_dir)
 
-    raw_words, raw_mat = stream_fasttext_vectors(vec_gz_path, valid_vocab, dims=300)
+    ranked_vocab = (dic_words | mecab_words | set(wikt_words) | set(nj_freq) | set(nj_secrets)) - SLUR_EXCLUSIONS
+    print(
+        f"[dict] hunspell={len(dic_words):,}, mecab={len(mecab_words):,}, "
+        f"wikt={len(wikt_words):,}, nj_freq={len(nj_freq):,}, ranked_vocab={len(ranked_vocab):,}"
+    )
 
-    # Sort lexicographically in Unicode codepoint order so JS binary search matches Python.
-    order = sorted(range(len(raw_words)), key=lambda i: raw_words[i])
-    words = [raw_words[i] for i in order]
-    word_to_idx: Dict[str, int] = {w: i for i, w in enumerate(words)}
+    all_words, all_scales, all_quants = stream_all_fasttext_quantized(vec_gz_path, dims=DIMS)
+    word_to_all_idx: Dict[str, int] = {w: i for i, w in enumerate(all_words)}
 
-    mat_f32 = raw_mat[order]
-    # Quantize to float16 and decode back + re-normalize so offline Top-1,000 matches JS runtime identically.
-    mat_f16 = mat_f32.astype(np.float16)
-    mat_q = mat_f16.astype(np.float32)
-    norms = np.linalg.norm(mat_q, axis=1, keepdims=True)
-    norms = np.maximum(norms, 1e-8)
-    mat_norm = mat_q / norms
+    # Build clean candidate secret list from NewsJelly secrets + Wiktionary ordered list
+    candidate_words: List[str] = []
+    seen_cand: Set[str] = set()
+    for w in [*nj_secrets, *wikt_words]:
+        if w in seen_cand:
+            continue
+        if SECRET_WORD_RE.match(w) and w not in SECRET_EXCLUSIONS and w in word_to_all_idx:
+            seen_cand.add(w)
+            candidate_words.append(w)
+            ranked_vocab.add(w)
 
-    candidate_secrets: List[int] = []
-    for w in wikt_words:
-        if SECRET_WORD_RE.match(w) and w not in SECRET_EXCLUSIONS and w in word_to_idx:
-            candidate_secrets.append(word_to_idx[w])
+    print(f"[secrets] Candidate secret words: {len(candidate_words):,}")
 
-    print(f"[secrets] Initial Wiktionary secret candidates: {len(candidate_secrets):,}")
+    # Build normalized matrix ONLY for ranked_vocab subset to compute clean Top-1,000 neighbors fast
+    ranked_all_indices = [i for i, w in enumerate(all_words) if w in ranked_vocab]
+    ranked_words = [all_words[i] for i in ranked_all_indices]
+    ranked_word_to_pos = {w: pos for pos, w in enumerate(ranked_words)}
 
-    top_k = 1000
-    secret_records: List[Tuple[int, int, int, int]] = []
-    top1k_chunks: List[bytes] = []
+    print(f"[rank] Decoding {len(ranked_words):,} ranked-headword vectors...")
+    r_scales = all_scales[ranked_all_indices].astype(np.float32)[:, None]
+    r_mat = all_quants[ranked_all_indices].astype(np.float32) * r_scales
+    r_norms = np.maximum(np.linalg.norm(r_mat, axis=1, keepdims=True), 1e-8)
+    r_mat /= r_norms
+    r_mat_t = r_mat.T
 
-    batch_size = 256
-    for start in range(0, len(candidate_secrets), batch_size):
-        batch_ids = candidate_secrets[start : start + batch_size]
-        # (B, 300) @ (300, V) -> (B, V)
-        sims_batch = mat_norm[batch_ids] @ mat_norm.T
-        for row_idx, word_idx in enumerate(batch_ids):
+    cand_positions = [ranked_word_to_pos[w] for w in candidate_words]
+
+    secret_meta_list: List[Tuple[str, int, int, int]] = []
+    top1k_records_bytes: List[bytes] = []
+    kept_secret_words: Set[str] = set()
+
+    batch_size = 128
+    for start in range(0, len(cand_positions), batch_size):
+        batch_pos = cand_positions[start : start + batch_size]
+        sims_batch = r_mat[batch_pos] @ r_mat_t
+        for row_idx, r_pos in enumerate(batch_pos):
             sims = sims_batch[row_idx]
-            sims[word_idx] = -2.0
-            # Partition top 1,000 indices and sort descending.
-            part = np.argpartition(sims, -top_k)[-top_k:]
-            sorted_idx = part[np.argsort(sims[part])[::-1]]
-            sorted_sims = sims[sorted_idx]
+            sims[r_pos] = -2.0
+            part = np.argpartition(sims, -TOP_K)[-TOP_K:]
+            sorted_r_pos = part[np.argsort(sims[part])[::-1]]
+            sorted_sims = sims[sorted_r_pos]
 
             top1_sim = float(sorted_sims[0])
             top10_sim = float(sorted_sims[9])
-            top1000_sim = float(sorted_sims[top_k - 1])
+            top1000_sim = float(sorted_sims[TOP_K - 1])
             if top1_sim < 0.30 or top1_sim > 0.98 or top1000_sim < 0.15:
                 continue
 
-            secret_records.append((
-                int(word_idx),
+            sec_word = ranked_words[r_pos]
+            all_i = word_to_all_idx[sec_word]
+
+            buf = bytearray(SECRET_STRIDE)
+            buf[0:2] = all_scales[all_i].tobytes()
+            buf[2 : 2 + DIMS] = all_quants[all_i].tobytes()
+            offset = 2 + DIMS
+            struct.pack_into("<H", buf, offset, TOP_K)
+            offset += 2
+            for k_i in range(TOP_K):
+                nbr_word = ranked_words[int(sorted_r_pos[k_i])]
+                wb = nbr_word.encode("utf-8")
+                sim_centi = max(-10000, min(10000, round(float(sorted_sims[k_i]) * 10000)))
+                assert len(wb) <= 255
+                assert offset + 1 + len(wb) + 2 <= SECRET_STRIDE, f"Secret record exceeded {SECRET_STRIDE}B on {sec_word}"
+                buf[offset] = len(wb)
+                offset += 1
+                buf[offset : offset + len(wb)] = wb
+                offset += len(wb)
+                struct.pack_into("<h", buf, offset, sim_centi)
+                offset += 2
+
+            secret_meta_list.append((
+                sec_word,
                 round(top1_sim * 10000),
                 round(top10_sim * 10000),
                 round(top1000_sim * 10000),
             ))
-            rec_bytes = bytearray(top_k * 8)
-            for k_i in range(top_k):
-                struct.pack_into("<If", rec_bytes, k_i * 8, int(sorted_idx[k_i]), float(sorted_sims[k_i]))
-            top1k_chunks.append(bytes(rec_bytes))
-            if len(secret_records) >= max_secrets:
+            top1k_records_bytes.append(bytes(buf))
+            kept_secret_words.add(sec_word)
+            if len(secret_meta_list) >= max_secrets:
                 break
-        if len(secret_records) >= max_secrets:
+        if len(secret_meta_list) >= max_secrets:
             break
-        print(f"  ... processed {min(start + batch_size, len(candidate_secrets)):,}/{len(candidate_secrets):,}, kept {len(secret_records):,}")
+        if (start // batch_size) % 4 == 3 or start + batch_size >= len(cand_positions):
+            print(f"  ... processed {min(start + batch_size, len(cand_positions)):,}/{len(cand_positions):,}, kept {len(secret_meta_list):,}")
 
-    print(f"[secrets] Final verified secrets: {len(secret_records):,}")
+    # Free ranking matrices before packing shards
+    del r_mat, r_mat_t, r_scales, r_norms
+    print(f"[secrets] Final verified secrets: {len(secret_meta_list):,}")
 
-    # Write output files
-    vocab_path = out_dir / "vocab.json"
-    vectors_path = out_dir / "vectors.f16"
+    # Partition into HOT (first HOT_COUNT in frequency order + any rare secret) and COLD (remaining)
+    hot_idx_set: Set[int] = set(range(min(HOT_COUNT, len(all_words))))
+    for sw in kept_secret_words:
+        hot_idx_set.add(word_to_all_idx[sw])
+
+    hot_indices = sorted(hot_idx_set, key=lambda i: all_words[i].encode("utf-8"))
+    cold_indices = sorted((i for i in range(len(all_words)) if i not in hot_idx_set), key=lambda i: all_words[i].encode("utf-8"))
+    print(f"[pack] Hot={len(hot_indices):,}, Cold={len(cold_indices):,}, Total={len(hot_indices) + len(cold_indices):,}")
+
+    # Write secrets-top1k.bin
     top1k_path = out_dir / "secrets-top1k.bin"
-    manifest_path = out_dir / "manifest.json"
+    with open(top1k_path, "wb") as f:
+        for chunk in top1k_records_bytes:
+            f.write(chunk)
 
-    with open(vocab_path, "w", encoding="utf-8") as f:
+    # Write hot-pack.bin: SMH2 header + offsets[N+1] + alignedWords + vecs(302B*N)
+    hot_path = out_dir / "hot-pack.bin"
+    h_count = len(hot_indices)
+    word_bytes_list = [all_words[i].encode("utf-8") for i in hot_indices]
+    words_blob_raw_len = sum(len(b) for b in word_bytes_list)
+    aligned_words_len = (words_blob_raw_len + 3) & ~3
+
+    hot_offsets = np.empty(h_count + 1, dtype="<u4")
+    pos = 0
+    for k, wb in enumerate(word_bytes_list):
+        hot_offsets[k] = pos
+        pos += len(wb)
+    hot_offsets[h_count] = pos
+
+    hot_vec_block = bytearray(h_count * 302)
+    for k, orig_i in enumerate(hot_indices):
+        off = k * 302
+        hot_vec_block[off : off + 2] = all_scales[orig_i].tobytes()
+        hot_vec_block[off + 2 : off + 302] = all_quants[orig_i].tobytes()
+
+    with open(hot_path, "wb") as f:
+        f.write(b"SMH2")
+        f.write(struct.pack("<III", h_count, aligned_words_len, 0))
+        f.write(hot_offsets.tobytes())
+        for wb in word_bytes_list:
+            f.write(wb)
+        pad = aligned_words_len - words_blob_raw_len
+        if pad:
+            f.write(b"\x00" * pad)
+        f.write(hot_vec_block)
+    del word_bytes_list, hot_offsets, hot_vec_block
+
+    # Write cold shards (2 shards <= 240 MB each) + cold-index.bin
+    blocks: List[Tuple[bytes, bytes]] = []
+    for b_start in range(0, len(cold_indices), COLD_BLOCK_WORDS):
+        b_slice = cold_indices[b_start : b_start + COLD_BLOCK_WORDS]
+        first_word_b = all_words[b_slice[0]].encode("utf-8")
+        parts = bytearray()
+        for orig_i in b_slice:
+            wb = all_words[orig_i].encode("utf-8")
+            assert len(wb) <= 255
+            parts.append(len(wb))
+            parts.extend(wb)
+            parts.extend(all_scales[orig_i].tobytes())
+            parts.extend(all_quants[orig_i].tobytes())
+        blocks.append((first_word_b, bytes(parts), len(b_slice)))
+
+    mid_block = len(blocks) // 2
+    shard_paths = [out_dir / "cold-0.bin", out_dir / "cold-1.bin"]
+    first_words_blob = bytearray()
+    index_entries = bytearray()
+
+    for shard_id, block_range in enumerate([range(0, mid_block), range(mid_block, len(blocks))]):
+        offset = 0
+        with open(shard_paths[shard_id], "wb") as sf:
+            for bi in block_range:
+                first_b, b_bytes, b_cnt = blocks[bi]
+                sf.write(b_bytes)
+                first_words_blob.extend(first_b)
+                assert len(b_bytes) <= 65535
+                index_entries.extend(struct.pack("<IIHBB", len(first_words_blob), offset, len(b_bytes), shard_id, b_cnt))
+                offset += len(b_bytes)
+        assert offset < 260 * 1024 * 1024, f"cold-{shard_id}.bin too large: {offset}"
+
+    cold_index_path = out_dir / "cold-index.bin"
+    with open(cold_index_path, "wb") as f:
+        f.write(b"SMC2")
+        f.write(struct.pack("<II", len(blocks), len(first_words_blob)))
+        f.write(index_entries)
+        f.write(first_words_blob)
+
+    # Write secrets-meta.json
+    meta_path = out_dir / "secrets-meta.json"
+    with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(
             {
-                "version": "semantle-ko-v1",
-                "dims": 300,
-                "words": words,
-                "secrets": secret_records,
+                "version": "semantle-ko-v2",
+                "dims": DIMS,
+                "totalVocab": len(all_words),
+                "rankedVocab": len(ranked_words),
+                "hotCount": h_count,
+                "coldCount": len(cold_indices),
+                "secretStride": SECRET_STRIDE,
+                "secrets": secret_meta_list,
             },
             f,
             ensure_ascii=False,
             separators=(",", ":"),
         )
 
-    # Ensure strictly little-endian IEEE 754 float16 bytes
-    mat_f16.astype("<f2").tofile(vectors_path)
+    # Self-verify lookups & math
+    hot_buf = hot_path.read_bytes()
+    cold_idx_buf = cold_index_path.read_bytes()
+    shard_bufs = [p.read_bytes() for p in shard_paths]
 
-    with open(top1k_path, "wb") as f:
-        for chunk in top1k_chunks:
-            f.write(chunk)
+    def test_lookup(word: str) -> Tuple[str, np.ndarray | None]:
+        wb = word.encode("utf-8")
+        # 1) hot binary search
+        lo, hi = 0, h_count - 1
+        words_base = 16 + (h_count + 1) * 4
+        vecs_base = words_base + aligned_words_len
+        while lo <= hi:
+            mid = (lo + hi) >> 1
+            s_off, e_off = struct.unpack_from("<II", hot_buf, 16 + mid * 4)
+            cur = hot_buf[words_base + s_off : words_base + e_off]
+            if cur == wb:
+                v_off = vecs_base + mid * 302
+                sc = np.frombuffer(hot_buf[v_off : v_off + 2], dtype="<f2")[0]
+                qi = np.frombuffer(hot_buf[v_off + 2 : v_off + 302], dtype=np.int8)
+                return "hot", decode_quantized_norm(sc, qi)
+            if cur < wb:
+                lo = mid + 1
+            else:
+                hi = mid - 1
+        # 2) cold index binary search
+        b_cnt_total = len(blocks)
+        fw_base = 12 + b_cnt_total * 12
+        lo, hi, cand = 0, b_cnt_total - 1, -1
+        while lo <= hi:
+            mid = (lo + hi) >> 1
+            prev_end = struct.unpack_from("<I", cold_idx_buf, 12 + (mid - 1) * 12)[0] if mid > 0 else 0
+            cur_end = struct.unpack_from("<I", cold_idx_buf, 12 + mid * 12)[0]
+            fw = cold_idx_buf[fw_base + prev_end : fw_base + cur_end]
+            if fw <= wb:
+                cand = mid
+                lo = mid + 1
+            else:
+                hi = mid - 1
+        if cand < 0:
+            return "miss", None
+        _, b_off, b_len, sh_id, w_cnt = struct.unpack_from("<IIHBB", cold_idx_buf, 12 + cand * 12)
+        blk = shard_bufs[sh_id][b_off : b_off + b_len]
+        p = 0
+        for _ in range(w_cnt):
+            wl = blk[p]
+            p += 1
+            cur = blk[p : p + wl]
+            p += wl
+            if cur == wb:
+                sc = np.frombuffer(blk[p : p + 2], dtype="<f2")[0]
+                qi = np.frombuffer(blk[p + 2 : p + 302], dtype=np.int8)
+                return f"cold-{sh_id}", decode_quantized_norm(sc, qi)
+            p += 302
+        return "miss", None
 
-    # Self-verify generated binary integrity against raw float16 round-trip
-    check_bytes = np.fromfile(vectors_path, dtype="<f2", count=600).reshape(2, 300)
-    assert check_bytes.shape == (2, 300)
-    sample_sec_idx = 0
-    s_word_idx, s_t1, s_t10, s_t1000 = secret_records[sample_sec_idx]
-    with open(top1k_path, "rb") as f:
-        buf = f.read(8000)
-    first_nbr_idx, first_nbr_sim = struct.unpack_from("<If", buf, 0)
-    recomputed = float(np.dot(mat_norm[s_word_idx], mat_norm[first_nbr_idx]))
-    assert abs(recomputed - first_nbr_sim) < 1e-5, f"Mismatch: {recomputed} vs {first_nbr_sim}"
+    probes = [
+        "드라이기", "헤어드라이어", "아메리카노", "에어프라이어", "민트초코",
+        "떡볶이", "삼겹살", "유튜브", "퇴근길", "사람", "학교", "행복",
+    ]
+    for probe in probes:
+        tier, vec = test_lookup(probe)
+        assert vec is not None, f"Missing expected Korean probe word: {probe}"
+        print(f"  [probe] {probe} -> {tier} (norm={np.linalg.norm(vec):.5f})")
 
-    for probe in ["사람", "사과", "학교", "행복", "기쁘다", "사랑하다", "물", "집"]:
-        assert probe in word_to_idx, f"Missing expected Korean word: {probe}"
-
+    out_files = [
+        "secrets-meta.json",
+        "secrets-top1k.bin",
+        "hot-pack.bin",
+        "cold-index.bin",
+        "cold-0.bin",
+        "cold-1.bin",
+    ]
     manifest = {
-        "version": "semantle-ko-v1",
-        "dims": 300,
-        "vocabCount": len(words),
-        "secretCount": len(secret_records),
+        "version": "semantle-ko-v2",
+        "dims": DIMS,
+        "totalVocab": len(all_words),
+        "rankedVocab": len(ranked_words),
+        "hotCount": h_count,
+        "coldCount": len(cold_indices),
+        "secretCount": len(secret_meta_list),
         "files": {
             name: {
                 "bytes": (out_dir / name).stat().st_size,
                 "sha256": sha256_file(out_dir / name),
             }
-            for name in ["vocab.json", "vectors.f16", "secrets-top1k.bin"]
+            for name in out_files
         },
     }
+    manifest_path = out_dir / "manifest.json"
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, ensure_ascii=False, indent=2)
 
-    print("[verify] Integrity check passed!")
+    print("[verify] Semantle v2 pack integrity passed!")
     print(json.dumps(manifest, ensure_ascii=False, indent=2))
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Build Korean Semantle vector & top-1k dataset")
+    parser = argparse.ArgumentParser(description="Build Korean Semantle v2 max-vocab pack")
     parser.add_argument("--scratch", type=Path, default=DEFAULT_SCRATCH)
-    parser.add_argument("--max-secrets", type=int, default=4500)
+    parser.add_argument("--max-secrets", type=int, default=5000)
     args = parser.parse_args()
     build_pack(args.scratch, max_secrets=args.max_secrets)
 

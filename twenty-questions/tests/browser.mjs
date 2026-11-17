@@ -53,9 +53,10 @@ try {
     assert.ok(cardState.complete && cardState.naturalWidth > 0, JSON.stringify(cardState));
     assert.match(cardState.currentSrc, /semantle-wide-(?:480|960|1440)\.webp/);
 
-    // Verify Semantle title screen, zero SVG usage, and UI skin image loading
+    // Verify Semantle title screen, zero SVG usage, clean jargon-free copy, and UI skin image loading
     await page.goto(origin + '/twenty-questions/', { waitUntil: 'networkidle' });
     assert.equal(await page.locator('svg').count(), 0, 'Zero SVG elements expected');
+    assert.doesNotMatch(await page.locator('body').textContent(), /FastText|Wiktionary|서버 시간 검증/);
     assert.ok(await page.locator('.example-card').isVisible());
     const skinLoaded = await page.locator('header img, .compass-showcase img').evaluateAll(
         imgs => imgs.every(img => img.complete && img.naturalWidth > 0)
@@ -72,11 +73,28 @@ try {
     assert.notEqual(t1, t0, `expected live count-up timer to advance (${t0} -> ${t1})`);
     assert.ok(Number(await page.locator('#top1-score').textContent()) > 30);
 
-    // Submit starter chip + manual guess and verify pinned row + delimiter
+    // Submit starter chip + manual guess (with brief delay to verify custom 3D image loading bar)
     await page.locator('.starter-chip[data-word="사람"]').click();
     await page.waitForFunction(() => document.querySelector('#guess-count-display').textContent === '1');
+
+    let holdNextGuess = true;
+    await context.route('http://127.0.0.1:8787/twenty-questions/games/*/guesses', async route => {
+        const req = route.request();
+        if (holdNextGuess && req.method() === 'POST') {
+            holdNextGuess = false;
+            await new Promise(r => setTimeout(r, 240));
+        }
+        return route.fallback();
+    });
+
     await page.locator('#guess-input').fill('물');
     await page.locator('#send').click();
+    await page.locator('#guess-loading').waitFor({ state: 'visible' });
+    const loadingBarOk = await page.locator('#guess-loading img').evaluateAll(
+        imgs => imgs.length === 3 && imgs.every(img => img.complete && img.naturalWidth > 0)
+    );
+    assert.ok(loadingBarOk, 'Custom 3D loading bar frame, fill, and compass emblem must load cleanly');
+    await page.screenshot({ path: path.join(output, 'ko-guess-loading.png'), fullPage: true });
     await page.waitForFunction(() => document.querySelector('#guess-count-display').textContent === '2');
 
     assert.equal(await page.locator('#guesses-body tr.latest-guess .word-text').textContent(), '물');

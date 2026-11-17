@@ -16774,6 +16774,36 @@
       "sha256": "e1cc1a98513e22158cf539708cee36450f319d0b88e3050d0609abf18290adda"
     },
     {
+      "path": "twenty-questions/assets/ui/loading-bar-fill-280.webp",
+      "bytes": 6710,
+      "sha256": "bbf0a0904cc7ec2134d61862cf13651604c4fa7d80a864dd5ea5c78f8757baf1"
+    },
+    {
+      "path": "twenty-questions/assets/ui/loading-bar-fill-560.webp",
+      "bytes": 18784,
+      "sha256": "de9cd06ec5eed114541a5dfc519ace7dc83c5eae7315a95a202247e376b183ae"
+    },
+    {
+      "path": "twenty-questions/assets/ui/loading-bar-fill.png",
+      "bytes": 79844,
+      "sha256": "08b93ecc08b03fa9794ece297ef784c530792487e59c27b024fb803ec72234cc"
+    },
+    {
+      "path": "twenty-questions/assets/ui/loading-bar-frame-320.webp",
+      "bytes": 21770,
+      "sha256": "9be5e7d2d509d45f4a35478ed1dca165d034d7719f48a5a954e773121c538e40"
+    },
+    {
+      "path": "twenty-questions/assets/ui/loading-bar-frame-640.webp",
+      "bytes": 65256,
+      "sha256": "c31c3ac0d87e736e6ad8ec50e3fd9da10eaf310263eedafa5cd41af0ba352a7d"
+    },
+    {
+      "path": "twenty-questions/assets/ui/loading-bar-frame.png",
+      "bytes": 283709,
+      "sha256": "99bbae4d7ad167f6d71eec12950a2f8382ef55c38b0059ed0c3f03096f06c02c"
+    },
+    {
       "path": "twenty-questions/assets/ui/semantle-card-1200.webp",
       "bytes": 658548,
       "sha256": "943cff8a3d7192e85ad6e2b16fc08a62e9105238d8b1800786987376fffa6eb7"

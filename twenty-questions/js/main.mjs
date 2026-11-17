@@ -256,6 +256,42 @@ function changeScreen(next) {
     syncKeyboard();
 }
 
+let guessLoadingHideTimer = 0;
+
+function startGuessLoading() {
+    clearTimeout(guessLoadingHideTimer);
+    guessLoadingHideTimer = 0;
+    const slot = $('composer-status-slot');
+    const gl = $('guess-loading');
+    slot?.classList.add('is-loading');
+    if (gl) {
+        gl.hidden = false;
+        gl.dataset.phase = 'idle';
+        void gl.offsetWidth;
+        gl.dataset.phase = 'loading';
+    }
+}
+
+function finishGuessLoading(immediate = false) {
+    clearTimeout(guessLoadingHideTimer);
+    const slot = $('composer-status-slot');
+    const gl = $('guess-loading');
+    if (!gl || gl.hidden || immediate) {
+        if (gl) {
+            gl.dataset.phase = 'idle';
+            gl.hidden = true;
+        }
+        slot?.classList.remove('is-loading');
+        return;
+    }
+    gl.dataset.phase = 'done';
+    guessLoadingHideTimer = setTimeout(() => {
+        gl.dataset.phase = 'idle';
+        gl.hidden = true;
+        slot?.classList.remove('is-loading');
+    }, 240);
+}
+
 function setBusy(value) {
     busy = value;
     for (const id of ['start', 'resume', 'send', 'next-game', 'give-up', 'confirm-give-up', 'home', 'open-nearest', 'open-ranking-result', 'share-result']) {
@@ -263,7 +299,6 @@ function setBusy(value) {
         if (el) el.disabled = value;
     }
     $('guess-input').setAttribute('aria-busy', String(value));
-    $('pending').hidden = !value || screen !== 'game';
     $('guess-form').setAttribute('aria-busy', String(value));
     for (const link of document.querySelectorAll('.languages a')) link.setAttribute('aria-disabled', String(value));
 }
@@ -666,55 +701,65 @@ async function submitGuess(wordText) {
     if (!game) return;
 
     if (game.status !== 'active') {
-        await action(async () => {
-            audio.play('send', { gain: 0.4, duration: 0.14 });
-            const res = await request(`games/${game.id}/explore`, { text, locale });
-            $('guess-input').value = '';
-            storage.remove('draft');
-            if (res.code === 'unknown_word') {
-                audio.play('wrong', { gain: 0.45, duration: 0.2 });
-                showTurnFeedback('unknown_word', { word: res.word }, 'error');
-                return;
-            }
-            const rankStr = res.rank === 0 ? t('rank_exact') : res.rank !== null ? t('rank_badge', { rank: res.rank }) : t('rank_outside');
-            audio.play(res.rank !== null ? 'stamp' : 'tick', { rate: res.rank !== null ? 1.15 : 0.9, gain: 0.5 });
-            showTurnFeedback('explore_notice', { word: res.word, sim: res.similarity.toFixed(2), rank: rankStr }, res.rank !== null ? 'warm' : 'info');
-        });
+        startGuessLoading();
+        try {
+            await action(async () => {
+                audio.play('send', { gain: 0.4, duration: 0.14 });
+                const res = await request(`games/${game.id}/explore`, { text, locale });
+                $('guess-input').value = '';
+                storage.remove('draft');
+                if (res.code === 'unknown_word') {
+                    audio.play('wrong', { gain: 0.45, duration: 0.2 });
+                    showTurnFeedback('unknown_word', { word: res.word }, 'error');
+                    return;
+                }
+                const rankStr = res.rank === 0 ? t('rank_exact') : res.rank !== null ? t('rank_badge', { rank: res.rank }) : t('rank_outside');
+                audio.play(res.rank !== null ? 'stamp' : 'tick', { rate: res.rank !== null ? 1.15 : 0.9, gain: 0.5 });
+                showTurnFeedback('explore_notice', { word: res.word, sim: res.similarity.toFixed(2), rank: rankStr }, res.rank !== null ? 'warm' : 'info');
+            });
+        } finally {
+            finishGuessLoading();
+        }
         $('guess-input').focus({ preventScroll: true });
         return;
     }
 
-    await action(async () => {
-        const path = `games/${game.id}/guesses`;
-        const samePending = pendingCommand?.path === path && pendingCommand.body.text === text;
-        const body = samePending ? pendingCommand.body : { text, locale, requestId: requestId(), expectedVersion: game.version };
-        if (!samePending) {
-            pendingCommand = { path, body };
-            storage.set('pending', JSON.stringify(pendingCommand));
-        }
-        audio.play('send', { gain: 0.4, duration: 0.15 });
-        const data = await request(path, body);
-        pendingCommand = null;
-        storage.remove('pending');
+    startGuessLoading();
+    try {
+        await action(async () => {
+            const path = `games/${game.id}/guesses`;
+            const samePending = pendingCommand?.path === path && pendingCommand.body.text === text;
+            const body = samePending ? pendingCommand.body : { text, locale, requestId: requestId(), expectedVersion: game.version };
+            if (!samePending) {
+                pendingCommand = { path, body };
+                storage.set('pending', JSON.stringify(pendingCommand));
+            }
+            audio.play('send', { gain: 0.4, duration: 0.15 });
+            const data = await request(path, body);
+            pendingCommand = null;
+            storage.remove('pending');
 
-        if (data.event?.code === 'unknown_word') {
-            audio.result(data.event, data.game);
-            showTurnFeedback('unknown_word', { word: data.event.word }, 'error');
-            return;
-        }
-        if (data.event?.code === 'duplicate') {
-            $('guess-input').value = '';
+            if (data.event?.code === 'unknown_word') {
+                audio.result(data.event, data.game);
+                showTurnFeedback('unknown_word', { word: data.event.word }, 'error');
+                return;
+            }
+            if (data.event?.code === 'duplicate') {
+                $('guess-input').value = '';
+                storage.remove('draft');
+                latestHighlightWord = data.event.word;
+                render(data, { effects: true });
+                showTurnFeedback('duplicate_word', { word: data.event.word }, 'info');
+                return;
+            }
+            if ($('guess-input').value.trim() === text) $('guess-input').value = '';
             storage.remove('draft');
-            latestHighlightWord = data.event.word;
+            showTurnFeedback(null);
             render(data, { effects: true });
-            showTurnFeedback('duplicate_word', { word: data.event.word }, 'info');
-            return;
-        }
-        if ($('guess-input').value.trim() === text) $('guess-input').value = '';
-        storage.remove('draft');
-        showTurnFeedback(null);
-        render(data, { effects: true });
-    });
+        });
+    } finally {
+        finishGuessLoading();
+    }
 
     if (state.game?.status === 'active') $('guess-input').focus({ preventScroll: true });
 }

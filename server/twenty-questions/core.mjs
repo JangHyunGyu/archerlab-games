@@ -1,6 +1,6 @@
 export const RULESET = 'semantle-ko-v1';
 export const SESSION_MS = 24 * 60 * 60 * 1000;
-export const HANGUL_WORD_RE = /^[가-힣]{1,12}$/u;
+export const HANGUL_WORD_RE = /^[가-힣]{1,15}$/u;
 export const MIN_RANKED_GUESSES = 2;
 export const MIN_RANKED_SOLVE_MS = 1500;
 const NAME_PATTERN = /^[\p{L}\p{N} ._-]{2,16}$/u;

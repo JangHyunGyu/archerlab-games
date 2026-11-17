@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "created_at": "2026-11-17",
   "images": [
     {
@@ -213,6 +213,48 @@
       "sha256": "e1cc1a98513e22158cf539708cee36450f319d0b88e3050d0609abf18290adda"
     },
     {
+      "file": "ui/loading-bar-fill-280.webp",
+      "bytes": 6710,
+      "width": 280,
+      "height": 26,
+      "sha256": "bbf0a0904cc7ec2134d61862cf13651604c4fa7d80a864dd5ea5c78f8757baf1"
+    },
+    {
+      "file": "ui/loading-bar-fill-560.webp",
+      "bytes": 18784,
+      "width": 560,
+      "height": 52,
+      "sha256": "de9cd06ec5eed114541a5dfc519ace7dc83c5eae7315a95a202247e376b183ae"
+    },
+    {
+      "file": "ui/loading-bar-fill.png",
+      "bytes": 79844,
+      "width": 560,
+      "height": 52,
+      "sha256": "08b93ecc08b03fa9794ece297ef784c530792487e59c27b024fb803ec72234cc"
+    },
+    {
+      "file": "ui/loading-bar-frame-320.webp",
+      "bytes": 21770,
+      "width": 320,
+      "height": 169,
+      "sha256": "9be5e7d2d509d45f4a35478ed1dca165d034d7719f48a5a954e773121c538e40"
+    },
+    {
+      "file": "ui/loading-bar-frame-640.webp",
+      "bytes": 65256,
+      "width": 640,
+      "height": 338,
+      "sha256": "c31c3ac0d87e736e6ad8ec50e3fd9da10eaf310263eedafa5cd41af0ba352a7d"
+    },
+    {
+      "file": "ui/loading-bar-frame.png",
+      "bytes": 283709,
+      "width": 640,
+      "height": 338,
+      "sha256": "99bbae4d7ad167f6d71eec12950a2f8382ef55c38b0059ed0c3f03096f06c02c"
+    },
+    {
       "file": "ui/semantle-card-1200.webp",
       "bytes": 658548,
       "width": 1200,
@@ -288,93 +330,6 @@
       "width": 1024,
       "height": 1024,
       "sha256": "3c1fb5db1cbaffc378c013a6224f42587ae07edf138bb87acf22af878e7b1465"
-    }
-  ],
-  "audio": [
-    {
-      "file": "audio/clue-hot.mp3",
-      "bytes": 37660,
-      "sha256": "5530b07e1cb6f913c11718ffc285d12a0f41127348396c281358277ae26b4049"
-    },
-    {
-      "file": "audio/clue-mild.mp3",
-      "bytes": 8194,
-      "sha256": "e78cc1dfcc5e2c4f5cd1f141fa7b967ea76e68779690bfef1755b24810c57b50"
-    },
-    {
-      "file": "audio/clue-molten.mp3",
-      "bytes": 27002,
-      "sha256": "97d7a530315e12f4a6018ecb0ee244a990f6d16f5c6e20253575ab073124783a"
-    },
-    {
-      "file": "audio/clue-warm.mp3",
-      "bytes": 20942,
-      "sha256": "82c58fcb2aaeb0fd9d087ed29e9a58d28bc676917b4e3d70c09693c8d154c09a"
-    },
-    {
-      "file": "audio/end.mp3",
-      "bytes": 54587,
-      "sha256": "87862d84636851281e02049ab465db5c70d007ab76c4e35dec52acd85cccb941"
-    },
-    {
-      "file": "audio/ranking.mp3",
-      "bytes": 13209,
-      "sha256": "8968bf35461da33597c7ff57195d7ba4a46a378b44271edfa98b6194adae8826"
-    },
-    {
-      "file": "audio/record.wav",
-      "bytes": 35324,
-      "sha256": "1a114be9a5c40cacef0139b2cc38c829a592e3553444edc93743f971264b48ad"
-    },
-    {
-      "file": "audio/round-start.mp3",
-      "bytes": 13836,
-      "sha256": "33749d8d01045c23e1ce6cc56115848c6ea729b02a03a844d8114e0521297971"
-    },
-    {
-      "file": "audio/send.wav",
-      "bytes": 30914,
-      "sha256": "1189669a5deaafef2653ce343a2ba8df7b9034d990715e32467590158e8b7054"
-    },
-    {
-      "file": "audio/solve-burst.mp3",
-      "bytes": 41422,
-      "sha256": "38835a268049ce0ed056b178b9d24a460aa1528d7fb1b9bf1da3244b600c7314"
-    },
-    {
-      "file": "audio/solve-fanfare.mp3",
-      "bytes": 78620,
-      "sha256": "09af8db5e6eceec0d7e6ee0d9e41918380e982a533cdea2e0d812bccb14bb82b"
-    },
-    {
-      "file": "audio/stamp.wav",
-      "bytes": 22094,
-      "sha256": "2d61af305a34e026d1f2dfdffb0b5d0e989debcdb942364cbf0c9af877a72e5d"
-    },
-    {
-      "file": "audio/streak.wav",
-      "bytes": 44144,
-      "sha256": "9211d42f577fc57a3993d3ac49520ba1f1a58f006bc53377af42e4a3fbe25d9f"
-    },
-    {
-      "file": "audio/success.wav",
-      "bytes": 57374,
-      "sha256": "a25df54aa31198431e4ec0ab0134fe25e7b9b65cc51a57201e325c2ee5f70880"
-    },
-    {
-      "file": "audio/tick.wav",
-      "bytes": 19448,
-      "sha256": "dca177b8b0be91c70e8c30b8555f977efaa30532334a8830c3ad0c8e2f83a07e"
-    },
-    {
-      "file": "audio/ui-click.mp3",
-      "bytes": 3805,
-      "sha256": "dc8f23eea261696c60ba73de965af73a580206c5952b46c9f314bde07a0b526c"
-    },
-    {
-      "file": "audio/wrong.mp3",
-      "bytes": 10075,
-      "sha256": "5dd9b4d83d8c368445b3b8fa35d7609ba587ba4202651b81715b95886f48c8d1"
     }
   ]
 }

@@ -1,11 +1,13 @@
 import { DatabaseSync } from 'node:sqlite';
 import { handleRoomRequest } from '../../server/twenty-questions/service.mjs';
 import {
-    decodeFloat16Vector,
+    decodeInt8Vector,
     dotNormalized,
     toCentipoints,
     clearVectorCache,
 } from '../../server/twenty-questions/vectors.mjs';
+
+const ENCODER = new TextEncoder();
 
 export function database() {
     const sqlite = new DatabaseSync(':memory:');
@@ -68,7 +70,7 @@ export function createSemantleStore({ secretWords = ['행복', '학교', '사과
     const coreWords = [
         '사람', '사랑', '학교', '시간', '사과', '과일', '도서관', '행복', '기쁨',
         '물', '집', '바다', '하늘', '고양이', '강아지', '컴퓨터', '나무', '책', '친구', '밤',
-        '음식', '자연',
+        '음식', '자연', '드라이기', '아메리카노', '에어프라이어',
     ];
     const wordSet = new Set([...coreWords, ...secretWords]);
     let idx = 0;
@@ -78,10 +80,9 @@ export function createSemantleStore({ secretWords = ['행복', '학교', '사과
     const words = [...wordSet].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
     const wordToIdx = new Map(words.map((w, i) => [w, i]));
 
-    // Build deterministic unit vectors in 300 dimensions.
-    // Give semantic pairs positive overlap while keeping synthetic filler words weakly or negatively correlated.
     const dims = 300;
-    const rawVectorsBytes = new Uint8Array(words.length * dims * 2);
+    const quantBytes = dims + 2;
+    const rawQuants = new Uint8Array(words.length * quantBytes);
     const decodedVecs = new Array(words.length);
 
     const groups = new Map([
@@ -97,7 +98,10 @@ export function createSemantleStore({ secretWords = ['행복', '학교', '사과
         ['과일', [0.1, 0.1, 0.96]],
         ['나무', [0.15, 0.2, 0.8]],
         ['사람', [0.45, 0.4, 0.35]],
+        ['아메리카노', [0.1, 0.2, 0.65]],
+        ['드라이기', [-0.35, -0.35, -0.25]],
         ['물', [-0.4, -0.4, -0.2]],
+        ['에어프라이어', [-0.45, -0.30, -0.15]],
     ]);
 
     for (let i = 0; i < words.length; i++) {
@@ -110,7 +114,6 @@ export function createSemantleStore({ secretWords = ['행복', '학교', '사과
             vec[2] = preset[2];
             vec[3 + (i % 16)] = 0.05;
         } else {
-            // Deterministic pseudo-orthogonal directions in higher dimensions so top1k orders cleanly.
             const dA = 3 + (i % 200);
             const dB = 3 + ((i * 7 + 13) % 200);
             vec[0] = 0.25 - ((i % 7) * 0.08);
@@ -122,18 +125,41 @@ export function createSemantleStore({ secretWords = ['행복', '학교', '사과
         let sq = 0;
         for (let d = 0; d < dims; d++) sq += vec[d] * vec[d];
         const norm = Math.sqrt(sq) || 1;
-        const offset = i * dims * 2;
+        let maxAbs = 0;
         for (let d = 0; d < dims; d++) {
-            const half = encodeFloat16(vec[d] / norm);
-            rawVectorsBytes[offset + d * 2] = half & 0xff;
-            rawVectorsBytes[offset + d * 2 + 1] = (half >> 8) & 0xff;
+            vec[d] /= norm;
+            if (Math.abs(vec[d]) > maxAbs) maxAbs = Math.abs(vec[d]);
         }
-        decodedVecs[i] = decodeFloat16Vector(rawVectorsBytes.subarray(offset, offset + dims * 2), dims);
+        const half = encodeFloat16(Math.max(maxAbs / 127, 1e-6));
+        const viewF16 = new Uint16Array([half]);
+        const scale = (() => {
+            const tmp = new Uint8Array(dims + 2);
+            tmp[0] = viewF16[0] & 0xff;
+            tmp[1] = (viewF16[0] >> 8) & 0xff;
+            tmp.fill(1, 2);
+            return decodeInt8Vector(tmp, 0, dims);
+        })();
+        void scale;
+        // Use exact decoded float16 scale for quantization parity
+        const sign = (half & 0x8000) ? -1 : 1;
+        const exp = (half >> 10) & 0x1f;
+        const mant = half & 0x03ff;
+        const fScale = exp === 0 ? sign * Math.pow(2, -14) * (mant / 1024) : sign * Math.pow(2, exp - 15) * (1 + mant / 1024);
+
+        const offset = i * quantBytes;
+        rawQuants[offset] = half & 0xff;
+        rawQuants[offset + 1] = (half >> 8) & 0xff;
+        for (let d = 0; d < dims; d++) {
+            const q = Math.max(-127, Math.min(127, Math.round(vec[d] / fScale)));
+            rawQuants[offset + 2 + d] = q < 0 ? q + 256 : q;
+        }
+        decodedVecs[i] = decodeInt8Vector(rawQuants, offset, dims);
     }
 
     const topK = 1000;
+    const secretStride = 24576;
     const secrets = [];
-    const top1kBytes = new Uint8Array(secretWords.length * topK * 8);
+    const top1kBytes = new Uint8Array(secretWords.length * secretStride);
     const top1kView = new DataView(top1kBytes.buffer);
 
     for (let s = 0; s < secretWords.length; s++) {
@@ -148,23 +174,124 @@ export function createSemantleStore({ secretWords = ['행복', '학교', '사과
         sims.sort((a, b) => b.sim - a.sim);
         const top = sims.slice(0, topK);
         secrets.push([
-            sIdx,
+            sWord,
             toCentipoints(top[0].sim),
             toCentipoints(top[9].sim),
             toCentipoints(top[topK - 1].sim),
         ]);
-        const baseOff = s * topK * 8;
+        const baseOff = s * secretStride;
+        top1kBytes.set(rawQuants.subarray(sIdx * quantBytes, (sIdx + 1) * quantBytes), baseOff);
+        top1kView.setUint16(baseOff + dims + 2, topK, true);
+        let pos = baseOff + dims + 4;
         for (let k = 0; k < topK; k++) {
-            top1kView.setUint32(baseOff + k * 8, top[k].wIdx, true);
-            top1kView.setFloat32(baseOff + k * 8 + 4, top[k].sim, true);
+            const wb = ENCODER.encode(words[top[k].wIdx]);
+            top1kBytes[pos++] = wb.length;
+            top1kBytes.set(wb, pos);
+            pos += wb.length;
+            top1kView.setInt16(pos, toCentipoints(top[k].sim), true);
+            pos += 2;
         }
     }
 
-    const vocabJson = JSON.stringify({ version: 'semantle-ko-test-v1', dims, words, secrets });
+    // Partition words into hot-pack (~550 words including core words except '에어프라이어') & cold shard (remaining words + '에어프라이어')
+    const coldForce = new Set(['에어프라이어']);
+    const hotSet = new Set([...coreWords.filter(w => !coldForce.has(w)), ...secretWords]);
+    for (const w of words) {
+        if (hotSet.size >= 550) break;
+        if (!coldForce.has(w)) hotSet.add(w);
+    }
+    const cmpUtf8 = (a, b) => Buffer.compare(Buffer.from(a, 'utf8'), Buffer.from(b, 'utf8'));
+    const hotWords = [...hotSet].sort(cmpUtf8);
+    const coldWords = words.filter(w => !hotSet.has(w)).sort(cmpUtf8);
+
+    // Encode hot-pack.bin
+    const hotWb = hotWords.map(w => ENCODER.encode(w));
+    const hotRawLen = hotWb.reduce((sum, b) => sum + b.length, 0);
+    const hotAlignedLen = (hotRawLen + 3) & ~3;
+    const hotBuf = new Uint8Array(16 + (hotWords.length + 1) * 4 + hotAlignedLen + hotWords.length * quantBytes);
+    hotBuf.set([0x53, 0x4d, 0x48, 0x32], 0); // SMH2
+    const hotView = new DataView(hotBuf.buffer);
+    hotView.setUint32(4, hotWords.length, true);
+    hotView.setUint32(8, hotAlignedLen, true);
+    let wCursor = 0;
+    const wordsBase = 16 + (hotWords.length + 1) * 4;
+    const vecsBase = wordsBase + hotAlignedLen;
+    for (let k = 0; k < hotWords.length; k++) {
+        hotView.setUint32(16 + k * 4, wCursor, true);
+        hotBuf.set(hotWb[k], wordsBase + wCursor);
+        wCursor += hotWb[k].length;
+        const origIdx = wordToIdx.get(hotWords[k]);
+        hotBuf.set(rawQuants.subarray(origIdx * quantBytes, (origIdx + 1) * quantBytes), vecsBase + k * quantBytes);
+    }
+    hotView.setUint32(16 + hotWords.length * 4, wCursor, true);
+
+    // Encode cold-0.bin and cold-index.bin (block size 32)
+    const blockWords = 32;
+    const blocks = [];
+    const coldChunks = [];
+    let coldOffset = 0;
+    for (let b = 0; b < coldWords.length; b += blockWords) {
+        const sliceWords = coldWords.slice(b, b + blockWords);
+        const firstWb = ENCODER.encode(sliceWords[0]);
+        const parts = [];
+        let blockLen = 0;
+        for (const w of sliceWords) {
+            const wb = ENCODER.encode(w);
+            const rec = new Uint8Array(1 + wb.length + quantBytes);
+            rec[0] = wb.length;
+            rec.set(wb, 1);
+            const origIdx = wordToIdx.get(w);
+            rec.set(rawQuants.subarray(origIdx * quantBytes, (origIdx + 1) * quantBytes), 1 + wb.length);
+            parts.push(rec);
+            blockLen += rec.length;
+        }
+        const blockBuf = new Uint8Array(blockLen);
+        let p = 0;
+        for (const part of parts) { blockBuf.set(part, p); p += part.length; }
+        coldChunks.push(blockBuf);
+        blocks.push({ firstWb, offset: coldOffset, length: blockLen, shardId: 0, wordCount: sliceWords.length });
+        coldOffset += blockLen;
+    }
+    const cold0Buf = new Uint8Array(coldOffset);
+    let cPos = 0;
+    for (const chunk of coldChunks) { cold0Buf.set(chunk, cPos); cPos += chunk.length; }
+
+    const fwLen = blocks.reduce((s, blk) => s + blk.firstWb.length, 0);
+    const coldIdxBuf = new Uint8Array(12 + blocks.length * 12 + fwLen);
+    coldIdxBuf.set([0x53, 0x4d, 0x43, 0x32], 0); // SMC2
+    const coldIdxView = new DataView(coldIdxBuf.buffer);
+    coldIdxView.setUint32(4, blocks.length, true);
+    coldIdxView.setUint32(8, fwLen, true);
+    const fwBase = 12 + blocks.length * 12;
+    let fwPos = 0;
+    for (let bi = 0; bi < blocks.length; bi++) {
+        const blk = blocks[bi];
+        coldIdxBuf.set(blk.firstWb, fwBase + fwPos);
+        fwPos += blk.firstWb.length;
+        const eOff = 12 + bi * 12;
+        coldIdxView.setUint32(eOff, fwPos, true);
+        coldIdxView.setUint32(eOff + 4, blk.offset, true);
+        coldIdxView.setUint16(eOff + 8, blk.length, true);
+        coldIdxBuf[eOff + 10] = blk.shardId;
+        coldIdxBuf[eOff + 11] = blk.wordCount;
+    }
+
+    const metaJson = JSON.stringify({
+        version: 'semantle-ko-test-v2',
+        dims,
+        totalVocab: words.length,
+        rankedVocab: words.length,
+        hotCount: hotWords.length,
+        coldCount: coldWords.length,
+        secretStride,
+        secrets,
+    });
     const files = {
-        'semantle-ko/v1/vocab.json': new TextEncoder().encode(vocabJson),
-        'semantle-ko/v1/vectors.f16': rawVectorsBytes,
-        'semantle-ko/v1/secrets-top1k.bin': top1kBytes,
+        'semantle-ko/v2/secrets-meta.json': ENCODER.encode(metaJson),
+        'semantle-ko/v2/hot-pack.bin': hotBuf,
+        'semantle-ko/v2/cold-index.bin': coldIdxBuf,
+        'semantle-ko/v2/cold-0.bin': cold0Buf,
+        'semantle-ko/v2/secrets-top1k.bin': top1kBytes,
     };
 
     const rangeCalls = [];
@@ -188,7 +315,7 @@ export function createSemantleStore({ secretWords = ['행복', '학교', '사과
         },
     };
 
-    return { store, words, secrets, vocabJson, decodedVecs };
+    return { store, words, secrets, metaJson, decodedVecs };
 }
 
 export function harness(storeOptions) {

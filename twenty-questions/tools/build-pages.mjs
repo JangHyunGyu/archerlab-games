@@ -37,10 +37,10 @@ for (const locale of ['ko', 'en']) {
   <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': ['VideoGame', 'WebApplication'], name: t.title, description: `${t.intro} ${t.rules}`, url, image: 'https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png', inLanguage: locale, applicationCategory: 'GameApplication', operatingSystem: 'Any', gamePlatform: ['Web Browser', 'Mobile Browser'], playMode: 'SinglePlayer', isAccessibleForFree: true, dateModified: '2026-11-17', author: { '@type': 'Organization', name: 'ArcherLab', url: 'https://archerlab.dev' } })}</script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261117-v3">
-  <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=3" media="(max-width: 768px) and (orientation: portrait)">
-  <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=3" media="(min-width: 769px), (orientation: landscape)">
-  <script type="module" src="js/main.mjs?v=20261117-v3"></script>
+  <link rel="stylesheet" href="css/style.css?v=20261117-v4">
+  <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
+  <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
+  <script type="module" src="js/main.mjs?v=20261117-v4"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 </head>
 <body data-no-fullscreen data-screen="title">
@@ -158,8 +158,19 @@ for (const locale of ['ko', 'en']) {
           <input id="guess-input" type="text" maxlength="32" placeholder="${text('guess_placeholder')}" autocomplete="off" enterkeyhint="send">
           <button id="send" class="primary-btn" type="submit"><span>${text('send')}</span></button>
         </form>
-        <p class="input-hint">${text('input_hint')}</p>
-        <div class="composer-meta"><span id="pending" hidden>${text('pending')}</span></div>
+        <div class="composer-status-slot" id="composer-status-slot">
+          <p id="input-hint" class="input-hint">${text('input_hint')}</p>
+          <div id="guess-loading" class="guess-loading" data-phase="idle" role="status" aria-live="polite" hidden>
+            <img class="guess-loading-emblem" src="assets/ui/compass-chronograph-160.webp?v=4" srcset="assets/ui/compass-chronograph-160.webp?v=4 1x, assets/ui/compass-chronograph-320.webp?v=4 2x" alt="" width="22" height="27" decoding="async">
+            <div class="guess-loading-gauge" aria-hidden="true">
+              <img class="guess-loading-frame" src="assets/ui/loading-bar-frame-320.webp?v=4" srcset="assets/ui/loading-bar-frame-320.webp?v=4 1x, assets/ui/loading-bar-frame-640.webp?v=4 2x" alt="" width="640" height="338" decoding="async">
+              <div class="guess-loading-track">
+                <img class="guess-loading-fill" src="assets/ui/loading-bar-fill-280.webp?v=4" srcset="assets/ui/loading-bar-fill-280.webp?v=4 1x, assets/ui/loading-bar-fill-560.webp?v=4 2x" alt="" width="560" height="52" decoding="async">
+              </div>
+            </div>
+            <span id="pending" class="guess-loading-text">${text('pending')}</span>
+          </div>
+        </div>
         <p id="turn-feedback" class="turn-feedback" role="status" hidden></p>
       </div>
       <div class="ledger-panel crafted-frame">
@@ -191,7 +202,7 @@ for (const locale of ['ko', 'en']) {
     </section>
   </main>
   <div id="notice" class="notice" role="status" hidden></div>
-  <footer class="site-footer"><a href="../">ArcherLab Games</a><span>${text('footer_credit')}</span></footer>
+  <footer class="site-footer"><a href="../">ArcherLab Games</a></footer>
 
   <dialog id="ranking-dialog" class="game-dialog crafted-frame" aria-labelledby="ranking-title">
     <button class="dialog-close icon-button" data-close aria-label="${text('close')}">✕</button>
