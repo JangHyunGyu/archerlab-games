@@ -119,7 +119,7 @@
       "entry": "twenty-questions/index.html",
       "ranking": "server-streak",
       "tests": [
-        "node --test twenty-questions/tests/catalog.test.mjs twenty-questions/tests/server.test.mjs twenty-questions/tests/decision-language.test.mjs"
+        "node --test twenty-questions/tests/vectors.test.mjs twenty-questions/tests/server.test.mjs"
       ]
     }
   ]

@@ -1,7 +1,6 @@
 import { waterSortRoute } from './water-sort-src/worker/route.ts';
 import { cleanupStaleRuns } from './water-sort-src/worker/cleanup.ts';
 import { twentyQuestionsRoute, handleRoomRequest } from './server/twenty-questions/service.mjs';
-import { replenish } from './server/twenty-questions/generation.mjs';
 import { DurableObject } from 'cloudflare:workers';
 import api, { initDB, createScoreSession, recordScoreEvents, submitRanking, getProtectedGameKind, jsonResponse, bankSchoolZombieRunCoins } from './game-api-worker.js';
 
@@ -259,10 +258,6 @@ export class TwentyQuestionsRoom extends DurableObject {
 export default {
     // Daily: delete water-sort runs that were started but never registered and are older than the grace period.
     async scheduled(_controller, env, ctx) {
-        if (_controller.cron === '0 19 * * *') {
-            ctx.waitUntil(replenish(env));
-            return;
-        }
         ctx.waitUntil(cleanupStaleRuns(env.DB).then(
             deleted => console.log(JSON.stringify({ event: 'water_sort_stale_cleanup', deleted })),
             error => console.error(JSON.stringify({ event: 'water_sort_stale_cleanup_failed', error: String(error?.message).slice(0, 200) }))));

@@ -306,6 +306,17 @@
         .lumen-shift:hover {
             border-color: #68e9ff;
         }
+        .twenty-questions .game-thumb {
+            background: linear-gradient(135deg, #071926 0%, #0e3244 52%, #2b1f0e 100%);
+        }
+        .twenty-questions .game-tag {
+            background: #d0a05b22;
+            color: #f1d79e;
+            border: 1px solid #d0a05b55;
+        }
+        .twenty-questions:hover {
+            border-color: #d0a05b;
+        }
         @media (max-width: 480px) {
             header {
                 padding: 56px 16px 24px;
@@ -449,7 +460,8 @@
           "@type": "ListItem",
           "position": 11,
           "url": "https://game.archerlab.dev/twenty-questions/",
-          "name": "스무고개"
+          "name": "시맨틀",
+          "description": "의미 유사도 점수와 상위 1,000위 순위를 단서로 숨겨진 한국어 단어를 맞히는 추리 게임."
         }
       ],
       "@id": "https://game.archerlab.dev/#games"
@@ -611,8 +623,8 @@
             </div>
         </a>
         <a href="twenty-questions/" class="game-card twenty-questions">
-            <div class="game-thumb"><picture><source srcset="twenty-questions/assets/backgrounds/study.webp" type="image/webp"><img src="twenty-questions/assets/backgrounds/study.png" alt="스무고개" loading="lazy" decoding="async" width="1672" height="941"></picture></div>
-            <div class="game-info"><h2>스무고개</h2><p>질문을 던져 숨겨진 단어를 맞혀 보세요.</p><span class="game-tag">추리 · 스무고개</span></div>
+            <div class="game-thumb"><picture><source srcset="twenty-questions/assets/ui/semantle-wide-480.webp?v=3 480w, twenty-questions/assets/ui/semantle-wide-960.webp?v=3 960w, twenty-questions/assets/ui/semantle-wide-1440.webp?v=3 1440w" sizes="(max-width: 640px) calc(100vw - 32px), (max-width: 1024px) calc(50vw - 40px), 380px" type="image/webp"><img src="twenty-questions/assets/ui/semantle-wide.png?v=3" alt="시맨틀 - 황금 의미 나침반과 크로노미터로 단어를 추적하는 추리 게임" loading="lazy" decoding="async" width="1440" height="810"></picture></div>
+            <div class="game-info"><h2>시맨틀</h2><p>글자가 아니라 의미 거리 점수와 순위로 숨겨진 한국어 단어를 가장 빠르게 맞히는 추리 게임.</p><span class="game-tag">추리 · 단어 유사도</span></div>
         </a>
     </main>
 

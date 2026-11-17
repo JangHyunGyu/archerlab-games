@@ -16539,6 +16539,26 @@
       "sha256": "ef7373b13cd5e60a6f50ba91c89d9119c51f6be6b5d682bc9cc084885d0c7ae2"
     },
     {
+      "path": "twenty-questions/assets/audio/clue-hot.mp3",
+      "bytes": 37660,
+      "sha256": "5530b07e1cb6f913c11718ffc285d12a0f41127348396c281358277ae26b4049"
+    },
+    {
+      "path": "twenty-questions/assets/audio/clue-mild.mp3",
+      "bytes": 8194,
+      "sha256": "e78cc1dfcc5e2c4f5cd1f141fa7b967ea76e68779690bfef1755b24810c57b50"
+    },
+    {
+      "path": "twenty-questions/assets/audio/clue-molten.mp3",
+      "bytes": 27002,
+      "sha256": "97d7a530315e12f4a6018ecb0ee244a990f6d16f5c6e20253575ab073124783a"
+    },
+    {
+      "path": "twenty-questions/assets/audio/clue-warm.mp3",
+      "bytes": 20942,
+      "sha256": "82c58fcb2aaeb0fd9d087ed29e9a58d28bc676917b4e3d70c09693c8d154c09a"
+    },
+    {
       "path": "twenty-questions/assets/audio/end.mp3",
       "bytes": 54587,
       "sha256": "87862d84636851281e02049ab465db5c70d007ab76c4e35dec52acd85cccb941"
@@ -16554,9 +16574,24 @@
       "sha256": "1a114be9a5c40cacef0139b2cc38c829a592e3553444edc93743f971264b48ad"
     },
     {
+      "path": "twenty-questions/assets/audio/round-start.mp3",
+      "bytes": 13836,
+      "sha256": "33749d8d01045c23e1ce6cc56115848c6ea729b02a03a844d8114e0521297971"
+    },
+    {
       "path": "twenty-questions/assets/audio/send.wav",
       "bytes": 30914,
       "sha256": "1189669a5deaafef2653ce343a2ba8df7b9034d990715e32467590158e8b7054"
+    },
+    {
+      "path": "twenty-questions/assets/audio/solve-burst.mp3",
+      "bytes": 41422,
+      "sha256": "38835a268049ce0ed056b178b9d24a460aa1528d7fb1b9bf1da3244b600c7314"
+    },
+    {
+      "path": "twenty-questions/assets/audio/solve-fanfare.mp3",
+      "bytes": 78620,
+      "sha256": "09af8db5e6eceec0d7e6ee0d9e41918380e982a533cdea2e0d812bccb14bb82b"
     },
     {
       "path": "twenty-questions/assets/audio/stamp.wav",
@@ -16589,49 +16624,209 @@
       "sha256": "5dd9b4d83d8c368445b3b8fa35d7609ba587ba4202651b81715b95886f48c8d1"
     },
     {
-      "path": "twenty-questions/assets/backgrounds/study.png",
-      "bytes": 2337718,
-      "sha256": "11e179f7c3cb679d1ded9b1a570f2ae398dc2873a1d7574ef4299571bdc4273a"
+      "path": "twenty-questions/assets/backgrounds/study-desktop-1440.webp",
+      "bytes": 203074,
+      "sha256": "78fa2a8d1cb7510c3c474b3c7f615b55c57b9156cc382753967778d31beb654d"
     },
     {
-      "path": "twenty-questions/assets/backgrounds/study.webp",
-      "bytes": 1633874,
-      "sha256": "a37a5f926191bb864f4b2e436e5e031e45b3f26e41dea3d8f4bc72caa3017129"
+      "path": "twenty-questions/assets/backgrounds/study-desktop-1920.webp",
+      "bytes": 339164,
+      "sha256": "87bf8bb049c1b8df2c348e8251ce95e7edea37c4e19a8833ea9a8fe4d6dd2f4b"
     },
     {
-      "path": "twenty-questions/assets/ui/brass-button.png",
-      "bytes": 1905840,
-      "sha256": "2bd284ef437f28b88ccba24372a621eafab779515de4fa7ecad556952915d213"
+      "path": "twenty-questions/assets/backgrounds/study-desktop-960.webp",
+      "bytes": 87384,
+      "sha256": "efe8bd80704989169b093f0a6b025096408342356f2e1b6184d5471a79b04dbf"
     },
     {
-      "path": "twenty-questions/assets/ui/brass-button.webp",
-      "bytes": 1190538,
-      "sha256": "7f1668f9d717595eec223aa27cfda5fe8df8de7fcebca868a811e68d1865dc7b"
+      "path": "twenty-questions/assets/backgrounds/study-desktop.png",
+      "bytes": 4144318,
+      "sha256": "14fe753aaf887609819a217186e79d7e7d3b76637a36fae93af3fe77009cac5d"
     },
     {
-      "path": "twenty-questions/assets/ui/parchment-panel.png",
-      "bytes": 2423373,
-      "sha256": "e32f96e0c4a76e5208e939a660c58ddcefacc927da365c5b550bbff79271d4b1"
+      "path": "twenty-questions/assets/backgrounds/study-mobile-1080.webp",
+      "bytes": 370448,
+      "sha256": "72686615137ecee7978958ca0fd836fe4d436617448f8cfefb8c5bff5d23448d"
     },
     {
-      "path": "twenty-questions/assets/ui/parchment-panel.webp",
-      "bytes": 1580118,
-      "sha256": "d2fed3b1f007390d177e0718d68ad0e15dfe9096224d5fabd13b217a192c46c6"
+      "path": "twenty-questions/assets/backgrounds/study-mobile-480.webp",
+      "bytes": 58232,
+      "sha256": "375913195c38c27dac1b56f20aea8406ff4f9f7db529a4057aa85923d188e525"
     },
     {
-      "path": "twenty-questions/design/masters/brass-button.png",
-      "bytes": 1905840,
-      "sha256": "2bd284ef437f28b88ccba24372a621eafab779515de4fa7ecad556952915d213"
+      "path": "twenty-questions/assets/backgrounds/study-mobile-828.webp",
+      "bytes": 217972,
+      "sha256": "eee43270a4556f9a381268ec7aceee448c6fff10026ad95be8d998853d375b50"
     },
     {
-      "path": "twenty-questions/design/masters/parchment-panel.png",
-      "bytes": 2423373,
-      "sha256": "e32f96e0c4a76e5208e939a660c58ddcefacc927da365c5b550bbff79271d4b1"
+      "path": "twenty-questions/assets/backgrounds/study-mobile.png",
+      "bytes": 3802899,
+      "sha256": "9375dcf777323e74584e582c3254ba4d8377bf21e141b70020373d2f1a698e51"
     },
     {
-      "path": "twenty-questions/design/masters/study.png",
-      "bytes": 2337718,
-      "sha256": "11e179f7c3cb679d1ded9b1a570f2ae398dc2873a1d7574ef4299571bdc4273a"
+      "path": "twenty-questions/assets/ui/compass-chronograph-160.webp",
+      "bytes": 20938,
+      "sha256": "b6c92a44142b2c140751d0358643af61494f716a7e5a087569a31471fb916fbb"
+    },
+    {
+      "path": "twenty-questions/assets/ui/compass-chronograph-320.webp",
+      "bytes": 61922,
+      "sha256": "b59ced668a396cf5b77273ef19ae84b67e1d644456f16146851e850701b19c58"
+    },
+    {
+      "path": "twenty-questions/assets/ui/compass-chronograph-640.webp",
+      "bytes": 194988,
+      "sha256": "40cced7bb14450f9b21e506372003b712c9bef020a351b4388b695093577d39a"
+    },
+    {
+      "path": "twenty-questions/assets/ui/compass-chronograph.png",
+      "bytes": 1040014,
+      "sha256": "fac9da42ce81d48c770ed48c99a9bba0155aac155e174490bf832a037f71fbe8"
+    },
+    {
+      "path": "twenty-questions/assets/ui/crafted-btn-gold-360.webp",
+      "bytes": 11578,
+      "sha256": "543becedc016c4942ec944ea2811e8e55dfb2b35aa233f79552337dc9653e9e0"
+    },
+    {
+      "path": "twenty-questions/assets/ui/crafted-btn-gold-720.webp",
+      "bytes": 31060,
+      "sha256": "717ca72aaeb0880d3d1a72938e09e3a583103d5c2a7ad82aaf18d3386737086c"
+    },
+    {
+      "path": "twenty-questions/assets/ui/crafted-btn-gold.png",
+      "bytes": 271454,
+      "sha256": "ac3f590e26156b831f2f04deada8a66f272bd1a244467812b9e72baf830e8022"
+    },
+    {
+      "path": "twenty-questions/assets/ui/crafted-btn-teal-360.webp",
+      "bytes": 11400,
+      "sha256": "89c33ac915b14458a4ce3c34ba004993a1e3bf27f7454ddcb07a8bbad635b070"
+    },
+    {
+      "path": "twenty-questions/assets/ui/crafted-btn-teal-720.webp",
+      "bytes": 34220,
+      "sha256": "29bf31cbb311032156a6bf771844052f70456b410bfe07d6f78d8e2dfcef5716"
+    },
+    {
+      "path": "twenty-questions/assets/ui/crafted-btn-teal.png",
+      "bytes": 236744,
+      "sha256": "d15231ee032c37662efbf8c9cdba4aba93afb1a48d40adb373cbc902e3db1061"
+    },
+    {
+      "path": "twenty-questions/assets/ui/crafted-panel-1024.webp",
+      "bytes": 86914,
+      "sha256": "31c0ba0636bc2d4b8e86f909ac7c5737cc83c687bfe1047c2cfeef005a4d4ded"
+    },
+    {
+      "path": "twenty-questions/assets/ui/crafted-panel-512.webp",
+      "bytes": 31688,
+      "sha256": "e47cebdf1900bd7210862400cef70f8a2fa1a499f24165c7b6900fa1b972eab4"
+    },
+    {
+      "path": "twenty-questions/assets/ui/crafted-panel.png",
+      "bytes": 1168400,
+      "sha256": "7dd9eae740f3f9adcc3ee632cf15cf1615a43b68a47ba0832414a855b012d9dc"
+    },
+    {
+      "path": "twenty-questions/assets/ui/icon-guide-48.webp",
+      "bytes": 2606,
+      "sha256": "706dc3e8c657094c47a3b87d6e5d2ba2c9fed23a52cec81c61b220779080b267"
+    },
+    {
+      "path": "twenty-questions/assets/ui/icon-guide-96.webp",
+      "bytes": 6184,
+      "sha256": "b27f4edd83d9e1083bbccd74a4d1fd61825ca077a08a0ba79e8ab16b99d2a318"
+    },
+    {
+      "path": "twenty-questions/assets/ui/icon-guide.png",
+      "bytes": 21482,
+      "sha256": "33aadf9ec65621d361def6519acfe707009537803a034a28222a7e9bd13d09d6"
+    },
+    {
+      "path": "twenty-questions/assets/ui/icon-settings-48.webp",
+      "bytes": 2992,
+      "sha256": "250d9b709391dce5b3386f9ca63d14a5e432318382168dd7ce81422238731d25"
+    },
+    {
+      "path": "twenty-questions/assets/ui/icon-settings-96.webp",
+      "bytes": 8512,
+      "sha256": "d433c4a140c7cfe74decb9a90c954f361df64cda382ae26c9d0fa2d63dfd18cd"
+    },
+    {
+      "path": "twenty-questions/assets/ui/icon-settings.png",
+      "bytes": 23413,
+      "sha256": "59dc6ae7367de96c9aa624fead725d3e6cb27da31e32d2c4db6229918f4cea3e"
+    },
+    {
+      "path": "twenty-questions/assets/ui/icon-trophy-48.webp",
+      "bytes": 2866,
+      "sha256": "c0bd8c9ab4c542b6adf2347c6310c6d9a2b2be22980e2cf648d3ec91203de970"
+    },
+    {
+      "path": "twenty-questions/assets/ui/icon-trophy-96.webp",
+      "bytes": 7822,
+      "sha256": "215a58997f8c93b69750228658c08c0dae1f288aa030abb181a464d5bcb22d59"
+    },
+    {
+      "path": "twenty-questions/assets/ui/icon-trophy.png",
+      "bytes": 19041,
+      "sha256": "e1cc1a98513e22158cf539708cee36450f319d0b88e3050d0609abf18290adda"
+    },
+    {
+      "path": "twenty-questions/assets/ui/semantle-card-1200.webp",
+      "bytes": 658548,
+      "sha256": "943cff8a3d7192e85ad6e2b16fc08a62e9105238d8b1800786987376fffa6eb7"
+    },
+    {
+      "path": "twenty-questions/assets/ui/semantle-card-400.webp",
+      "bytes": 84416,
+      "sha256": "f0d16d2f998d513c67a512d6f4038bd373f90b29c1e35bf60861d285ebec1549"
+    },
+    {
+      "path": "twenty-questions/assets/ui/semantle-card-800.webp",
+      "bytes": 318016,
+      "sha256": "d8db9f558d8a3c45f320c79abab52f8673776fce135fa1069eeb1736d5de8152"
+    },
+    {
+      "path": "twenty-questions/assets/ui/semantle-card.png",
+      "bytes": 3902700,
+      "sha256": "b5550aa87c1de204c8c1538465c4afcb6b4d8430851d74808139ee69c54d0370"
+    },
+    {
+      "path": "twenty-questions/assets/ui/semantle-wide-1440.webp",
+      "bytes": 479508,
+      "sha256": "083e380ac4cb6442eb4c14c5b3f20710c62bd4f0940080d4d349d78056703e32"
+    },
+    {
+      "path": "twenty-questions/assets/ui/semantle-wide-480.webp",
+      "bytes": 58658,
+      "sha256": "5b097006afc04ea492dda3239ac2b91ca2e8ccf7378d7e823d36dbcc7f76477b"
+    },
+    {
+      "path": "twenty-questions/assets/ui/semantle-wide-960.webp",
+      "bytes": 229762,
+      "sha256": "a1279b076347458fe0e907f0d00c59a3835df814bb95bf30ea6597457ab40ae3"
+    },
+    {
+      "path": "twenty-questions/assets/ui/semantle-wide.png",
+      "bytes": 3049403,
+      "sha256": "2ed5e6ab28d69cbefac3518bc145cd1f40aacbfd991703c606eda22c56b1cae1"
+    },
+    {
+      "path": "twenty-questions/assets/ui/vfx-compass-burst-1024.webp",
+      "bytes": 228474,
+      "sha256": "e086c8407eedb249cd4f376c56729536b4cec2cecc182679c755fc8e5c7ae806"
+    },
+    {
+      "path": "twenty-questions/assets/ui/vfx-compass-burst-512.webp",
+      "bytes": 89770,
+      "sha256": "846d042bea7f573f789d96da19fce56e2a2aebff74e667c7cb1e4aedea76f25e"
+    },
+    {
+      "path": "twenty-questions/assets/ui/vfx-compass-burst.png",
+      "bytes": 2247174,
+      "sha256": "3c1fb5db1cbaffc378c013a6224f42587ae07edf138bb87acf22af878e7b1465"
     },
     {
       "path": "water-sort-src/freesound_community-bubbles-003-6397.mp3",

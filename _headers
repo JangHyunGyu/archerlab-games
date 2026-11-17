@@ -114,3 +114,33 @@ https://:version.archerlab-games.pages.dev/*
 
 /school-zombie-defense/tools/*
   X-Robots-Tag: noindex, nofollow
+
+/twenty-questions
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/twenty-questions/
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/twenty-questions/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/twenty-questions/js/*
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Content-Type-Options: nosniff
+
+/twenty-questions/css/*
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Content-Type-Options: nosniff
+
+/twenty-questions/assets/*
+  Cache-Control: public, max-age=604800, s-maxage=31536000, stale-while-revalidate=86400
+  X-Content-Type-Options: nosniff

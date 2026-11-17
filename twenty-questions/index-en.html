@@ -1,23 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#101a20">
+  <meta name="theme-color" content="#07131a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="manifest-en.json">
-  <title>Twenty Questions | The Secret Archive - ArcherLab</title>
-  <meta name="description" content="Ask questions to guess the hidden word. You have 20 turns for questions and guesses combined. There are no hints.">
+  <title>Korean Semantle | Word Similarity Puzzle - ArcherLab</title>
+  <meta name="description" content="Enter any Korean word to see a semantic similarity score (-100 to +100) showing how close its meaning and context are to the secret word. Unlimited rounds with no daily lock. Guess and give up only — no hints, pure deduction.">
   <link rel="canonical" href="https://game.archerlab.dev/twenty-questions/index-en">
   <link rel="alternate" hreflang="ko" href="https://game.archerlab.dev/twenty-questions/">
   <link rel="alternate" hreflang="en" href="https://game.archerlab.dev/twenty-questions/index-en">
   <link rel="alternate" hreflang="x-default" href="https://game.archerlab.dev/twenty-questions/">
-  <meta property="og:title" content="Twenty Questions | The Secret Archive - ArcherLab">
-  <meta property="og:description" content="Ask questions to guess the hidden word. You have 20 turns for questions and guesses combined. There are no hints.">
+  <meta property="og:title" content="Korean Semantle | Word Similarity Puzzle - ArcherLab">
+  <meta property="og:description" content="Enter any Korean word to see a semantic similarity score (-100 to +100) showing how close its meaning and context are to the secret word. Unlimited rounds with no daily lock. Guess and give up only — no hints, pure deduction.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://game.archerlab.dev/twenty-questions/index-en">
-  <meta property="og:image" content="https://game.archerlab.dev/twenty-questions/assets/backgrounds/study.png">
+  <meta property="og:image" content="https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="1200">
+  <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -25,10 +28,10 @@
     "VideoGame",
     "WebApplication"
   ],
-  "name": "Twenty Questions",
-  "description": "Ask questions to guess the hidden word. You have 20 turns for questions and guesses combined. There are no hints.",
+  "name": "Korean Semantle",
+  "description": "Enter any Korean word to see a semantic similarity score (-100 to +100) showing how close its meaning and context are to the secret word. Unlimited rounds with no daily lock. Guess and give up only — no hints, pure deduction.",
   "url": "https://game.archerlab.dev/twenty-questions/index-en",
-  "image": "https://game.archerlab.dev/twenty-questions/assets/backgrounds/study.png",
+  "image": "https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png",
   "inLanguage": "en",
   "applicationCategory": "GameApplication",
   "operatingSystem": "Any",
@@ -38,7 +41,7 @@
   ],
   "playMode": "SinglePlayer",
   "isAccessibleForFree": true,
-  "dateModified": "2026-10-28",
+  "dateModified": "2026-11-17",
   "author": {
     "@type": "Organization",
     "name": "ArcherLab",
@@ -47,88 +50,238 @@
 }
     </script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261115-v2">
-  <link rel="preload" href="assets/backgrounds/study.webp" as="image" fetchpriority="high">
-  <script type="module" src="js/main.mjs?v=20261115-v2"></script>
+  <link rel="stylesheet" href="css/style.css?v=20261117-v3">
+  <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=3" media="(max-width: 768px) and (orientation: portrait)">
+  <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=3" media="(min-width: 769px), (orientation: landscape)">
+  <script type="module" src="js/main.mjs?v=20261117-v3"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 
-    <meta name="twitter:title" content="Twenty Questions | The Secret Archive - ArcherLab">
+    <meta name="twitter:title" content="Korean Semantle | Word Similarity Puzzle - ArcherLab">
 
-    <meta name="twitter:description" content="Ask questions to guess the hidden word. You have 20 turns for questions and guesses combined. There are no hints.">
+    <meta name="twitter:description" content="Enter any Korean word to see a semantic similarity score (-100 to +100) showing how close its meaning and context are to the secret word. Unlimited rounds with no daily lock. Guess and give up only — no hints, pure deduction.">
 
-    <meta name="twitter:image" content="https://game.archerlab.dev/twenty-questions/assets/backgrounds/study.png">
-
-    <meta property="og:image:width" content="1672">
-
-    <meta property="og:image:height" content="941">
+    <meta name="twitter:image" content="https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png">
 </head>
-<body data-no-fullscreen>
-  <svg class="icon-definitions" aria-hidden="true"><defs>
-    <symbol id="icon-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m16 8-2.5 5.5L8 16l2.5-5.5L16 8ZM12 1v3m0 16v3M1 12h3m16 0h3"/></symbol>
-    <symbol id="icon-sound" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4Zm13-1a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
-    <symbol id="icon-trophy" viewBox="0 0 24 24"><path d="M7 3h10v6a5 5 0 0 1-10 0V3Zm0 2H3v3a4 4 0 0 0 4 4m10-7h4v3a4 4 0 0 1-4 4m-5 2v5m-5 2h10m-8-2h6"/></symbol>
-    <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
-    <symbol id="icon-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
-    <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
-    <symbol id="icon-book" viewBox="0 0 24 24"><path d="M12 5C9 3 5 3 3 4v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-2-1-6-1-9 1Zm0 0v15"/></symbol>
-  </defs></svg>
-  <div class="study-background" aria-hidden="true"></div>
-  <div class="outer-frame" aria-hidden="true"></div>
+<body data-no-fullscreen data-screen="title">
+  <div class="observatory-bg" aria-hidden="true"></div>
+  <canvas id="vfx-canvas" class="vfx-canvas" aria-hidden="true"></canvas>
   <header class="site-header">
-    <a class="brand" href="../" aria-label="All games"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-compass"/></svg><span>ArcherLab</span></a>
+    <a class="brand" href="../" aria-label="All Games">
+      <img src="assets/ui/compass-chronograph-160.webp?v=3" srcset="assets/ui/compass-chronograph-160.webp?v=3 1x, assets/ui/compass-chronograph-320.webp?v=3 2x" alt="" width="30" height="37" decoding="async">
+      <span>ArcherLab</span>
+    </a>
     <div class="header-controls">
       <nav class="languages" aria-label="Language"><a href="./" lang="ko" >한국어</a><span aria-hidden="true">/</span><a href="index-en.html" lang="en" aria-current="page">English</a></nav>
-      <button class="icon-button" id="ranking-open" aria-label="Hall of Fame"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-trophy"/></svg></button>
-      <button class="icon-button" id="settings-open" aria-label="Settings"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sound"/></svg></button>
+      <button class="icon-button" id="ranking-open" aria-label="Hall of Fame"><img src="assets/ui/icon-trophy-48.webp?v=3" srcset="assets/ui/icon-trophy-48.webp?v=3 1x, assets/ui/icon-trophy-96.webp?v=3 2x" alt="" width="22" height="22" decoding="async"></button>
+      <button class="icon-button" id="guide-open" aria-label="Guide &amp; Stats"><img src="assets/ui/icon-guide-48.webp?v=3" srcset="assets/ui/icon-guide-48.webp?v=3 1x, assets/ui/icon-guide-96.webp?v=3 2x" alt="" width="22" height="22" decoding="async"></button>
+      <button class="icon-button" id="settings-open" aria-label="Settings"><img src="assets/ui/icon-settings-48.webp?v=3" srcset="assets/ui/icon-settings-48.webp?v=3 1x, assets/ui/icon-settings-96.webp?v=3 2x" alt="" width="22" height="22" decoding="async"></button>
     </div>
   </header>
   <main>
     <section id="title-screen" class="title-screen" aria-labelledby="game-title">
       <div class="hero-copy">
-        <div class="eyebrow"><span></span>The private study<span></span></div>
-        <h1 id="game-title">Twenty<br>Questions</h1>
-        <p class="hero-subtitle">THE SECRET ARCHIVE</p>
-        <div class="ornament" aria-hidden="true"><i></i>◆<i></i></div>
-        <p class="hero-intro">Ask questions to guess the hidden word.</p>
-        <div class="rule-note"><span class="rule-number">20</span><p>You have 20 turns for questions and guesses combined. There are no hints.</p></div>
-        <button id="start" class="brass-button hero-start"><span>Begin a case</span><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow"/></svg></button>
-        <button id="resume" class="text-button" hidden>Continue <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow"/></svg></button>
-        <div class="hero-records"><div><span>Current streak</span><strong id="hero-streak">0</strong></div><i></i><div><span>Personal best</span><strong id="hero-best">0</strong></div></div>
+        <span class="eyebrow"><i></i>Korean Word Similarity Puzzle</span>
+        <h1 id="game-title">Korean Semantle</h1>
+        <p class="hero-subtitle">Find the hidden Korean word by meaning distance, not spelling</p>
+        <p class="hero-intro">Enter any Korean word to see a semantic similarity score (-100 to +100) showing how close its meaning and context are to the secret word.</p>
+        <div class="rule-strip" aria-label="Unlimited rounds with no daily lock. Guess and give up only — no hints, pure deduction.">
+          <span class="rule-token">Top-1,000 Proximity Ranks</span>
+          <span class="rule-token">Live Timer &amp; Fastest-Solve Ranking</span>
+          <span class="rule-token">No Daily Lock &amp; No Hints</span>
+        </div>
+        <div class="hero-actions">
+          <button id="start" class="primary-btn"><span>Start Game</span><span class="btn-arrow" aria-hidden="true">▶</span></button>
+          <button id="resume" class="secondary-btn" hidden><span>Resume Game</span><span id="resume-timer" class="resume-timer">00:00.0</span></button>
+        </div>
+        <div class="hero-records">
+          <div class="hero-stat accent"><span>Best Time</span><strong id="hero-best-time">-</strong></div>
+          <div class="hero-stat"><span>Solved</span><strong id="hero-wins">0</strong></div>
+          <div class="hero-stat"><span>Streak</span><strong id="hero-streak">0</strong></div>
+        </div>
       </div>
-      <div class="hero-art-caption" aria-hidden="true"><span>ARCHIVE</span><i></i><span>№ 020</span></div>
+      <div class="hero-art">
+        <div class="compass-showcase" aria-hidden="true">
+          <img class="showcase-burst" src="assets/ui/vfx-compass-burst-512.webp?v=3" alt="" width="240" height="240" decoding="async">
+          <img class="showcase-compass" src="assets/ui/compass-chronograph-320.webp?v=3" srcset="assets/ui/compass-chronograph-320.webp?v=3 1x, assets/ui/compass-chronograph-640.webp?v=3 2x" alt="" width="136" height="170" decoding="async">
+        </div>
+        <div class="example-card crafted-frame" aria-label="Understand in 3 Seconds">
+          <div class="example-head">
+            <span class="example-badge">Understand in 3 Seconds</span>
+            <strong class="example-target">If the secret is &quot;커피&quot; (Coffee)</strong>
+          </div>
+          <div class="example-rows">
+            <div class="ex-row cool"><span class="ex-word">구름 (Cloud)</span><span class="ex-score">4.20</span><div class="ex-rank-col"><span class="ex-rank">1000+ · Cold</span><div class="sim-meter"><i style="width:12%"></i></div></div></div>
+            <div class="ex-row warm"><span class="ex-word">우유 (Milk)</span><span class="ex-score">41.80</span><div class="ex-rank-col"><span class="ex-rank">#412 · Clue</span><div class="sim-meter"><i style="width:58%"></i></div></div></div>
+            <div class="ex-row hot"><span class="ex-word">아메리카노 (Americano)</span><span class="ex-score">63.50</span><div class="ex-rank-col"><span class="ex-rank">#2 · Very Close</span><div class="sim-meter"><i style="width:93%"></i></div></div></div>
+            <div class="ex-row exact"><span class="ex-word">커피 (Coffee)</span><span class="ex-score">100.00</span><div class="ex-rank-col"><span class="ex-rank">Solved!</span><div class="sim-meter"><i style="width:100%"></i></div></div></div>
+          </div>
+          <p class="example-note">Words used in shared real-world contexts score higher. Cast wide starter words, then narrow down fast.</p>
+        </div>
+      </div>
     </section>
-    <section id="game-screen" class="game-screen" hidden aria-label="Twenty Questions">
-      <div class="game-toolbar"><button id="home" class="text-button">← The study</button><span class="case-label">The sealed word</span><button id="give-up" class="text-button">Give up</button></div>
-      <div class="case-head"><div><span class="eyebrow">Turns left</span><div class="turn-number"><strong id="remaining">20</strong><span>/ 20</span></div></div><div class="streak-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-trophy"/></svg><span>Current streak</span><strong id="game-streak">0</strong></div></div>
-      <div id="turn-marks" class="turn-marks" aria-hidden="true"></div>
-      <div class="case-file">
-        <div class="paper-heading"><span>Case notes</span><span class="paper-heading-decoration" aria-hidden="true">XX</span></div>
-        <div id="history" class="history" role="log" aria-live="polite" aria-relevant="additions"></div>
-        <div id="empty-history" class="empty-history"><div class="wax-seal" aria-hidden="true">?</div><h2>Start with a question.</h2><p>Follow the answers to uncover the hidden word.</p></div>
+
+    <section id="game-screen" class="game-screen" hidden aria-label="Korean Semantle">
+      <div class="game-toolbar">
+        <button id="home" class="ghost-btn">← Lobby</button>
+        <span id="case-label" class="case-label"></span>
+        <button id="give-up" class="ghost-btn">Give Up</button>
+      </div>
+      <div class="chronometer-console crafted-frame">
+        <div class="hud-primary">
+          <div class="hud-card timer-card">
+            <span><img class="timer-emblem" src="assets/ui/compass-chronograph-160.webp?v=3" alt="" width="18" height="22" decoding="async">Elapsed</span>
+            <strong id="game-timer" aria-live="off">00:00.0</strong>
+          </div>
+          <div class="hud-card"><span>Guesses</span><strong id="guess-count-display">0</strong></div>
+          <div class="hud-card accent"><span>Best Time</span><strong id="game-best-time">-</strong></div>
+        </div>
+        <div class="benchmark-strip">
+          <span class="bench-prefix">This answer:</span>
+          <span class="bench-chip hot">#1 Closest <strong id="top1-score">-</strong></span>
+          <span class="bench-chip warm">#10 <strong id="top10-score">-</strong></span>
+          <span class="bench-chip cool">#1,000 <strong id="top1000-score">-</strong></span>
+          <span class="bench-suffix">— beat #1,000 to unlock exact rank.</span>
+        </div>
+        <div class="resonance-strip" id="resonance-strip">
+          <div class="resonance-meta"><span id="resonance-text">Type your first Korean word to measure meaning distance.</span></div>
+          <div class="resonance-track"><div id="resonance-fill" class="resonance-fill" data-tier="idle"></div></div>
+        </div>
+      </div>
+      <div id="result-wrap" class="result-wrap">
+        <div id="vfx-burst" class="vfx-burst" aria-hidden="true">
+          <img src="assets/ui/vfx-compass-burst-512.webp?v=3" srcset="assets/ui/vfx-compass-burst-512.webp?v=3 1x, assets/ui/vfx-compass-burst-1024.webp?v=3 2x" alt="" width="440" height="440" decoding="async">
+        </div>
+        <div id="result-banner" class="result-banner crafted-frame" hidden>
+          <p id="record-badge" class="record-badge" hidden>New Personal Fastest Time!</p>
+          <p id="unranked-note" class="unranked-note" hidden></p>
+          <h2 id="result-title"></h2>
+          <div class="result-answer-line"><span>Secret Word</span><strong id="result-answer"></strong></div>
+          <div class="result-stats">
+            <div><span>Clear Time</span><strong id="result-time">00:00.00</strong></div>
+            <div><span>Guesses</span><strong id="result-guesses">0</strong></div>
+            <div><span>Best Time</span><strong id="result-best-time">-</strong></div>
+            <div><span>Streak</span><strong id="result-streak">0</strong></div>
+          </div>
+          <div class="result-actions">
+            <button id="next-game" class="primary-btn"><span>Next Word</span><span class="btn-arrow" aria-hidden="true">▶</span></button>
+            <button id="open-nearest" class="secondary-btn">Top 1,000 Words</button>
+            <button id="open-ranking-result" class="secondary-btn">Hall of Fame</button>
+            <button id="share-result" class="ghost-btn">Share Result</button>
+          </div>
+          <p class="explore-banner-note">Round complete — test other words or inspect the Top 1,000 neighbors.</p>
+        </div>
       </div>
       <div class="composer-wrap">
-        <div id="last-turn" class="last-turn" hidden>This is your last turn. If you know the answer, select Make a guess.</div>
-        <div class="mode-tabs" role="group" aria-label="Ask a question"><button id="question-mode" aria-pressed="true">Ask a question</button><button id="guess-mode" aria-pressed="false">Make a guess</button></div>
-        <form id="question-form" class="composer"><label class="sr-only" id="input-label" for="question-input">Ask a question</label><textarea id="question-input" rows="1" maxlength="400" placeholder="Enter a yes-or-no question." autocomplete="off" enterkeyhint="send"></textarea><button id="send" class="brass-button" type="submit"><span>Send</span><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow"/></svg></button></form>
-        <div class="composer-meta"><span id="pending" hidden>Checking your question.</span><span id="input-count">0 / 200</span></div>
-        <p class="privacy-note">Questions are sent to the server for judging. Please leave out personal information.</p>
+        <form id="guess-form" class="composer">
+          <label class="sr-only" for="guess-input">Korean word (e.g. 사람, 기쁘다, 갑자기)</label>
+          <input id="guess-input" type="text" maxlength="32" placeholder="Korean word (e.g. 사람, 기쁘다, 갑자기)" autocomplete="off" enterkeyhint="send">
+          <button id="send" class="primary-btn" type="submit"><span>Guess</span></button>
+        </form>
+        <p class="input-hint">Secret words are 2+ syllable dictionary base forms; 1-syllable Hangul guesses are also allowed.</p>
+        <div class="composer-meta"><span id="pending" hidden>Calculating vector similarity...</span></div>
+        <p id="turn-feedback" class="turn-feedback" role="status" hidden></p>
+      </div>
+      <div class="ledger-panel crafted-frame">
+        <div class="ledger-scroll">
+          <table id="guesses-table" class="guesses-table" hidden>
+            <thead>
+              <tr>
+                <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-sort="guessNo">#</button></th>
+                <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-sort="word">Guess</button></th>
+                <th scope="col" aria-sort="descending"><button type="button" class="sort-btn is-sorted" data-sort="similarity" data-dir="desc">Score</button></th>
+                <th scope="col">Distance</th>
+              </tr>
+            </thead>
+            <tbody id="guesses-body"></tbody>
+          </table>
+          <div id="empty-history" class="empty-history">
+            <h2>Make your first guess.</h2>
+            <p>Scores follow contextual meaning rather than letters. Try clicking a starter category below.</p>
+            <div id="starter-chips" class="starter-chips" aria-label="Starter words">
+              <button type="button" class="starter-chip" data-word="사람">사람</button>
+              <button type="button" class="starter-chip" data-word="음식">음식</button>
+              <button type="button" class="starter-chip" data-word="학교">학교</button>
+              <button type="button" class="starter-chip" data-word="자연">자연</button>
+              <button type="button" class="starter-chip" data-word="기쁘다">기쁘다</button>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
-    <section id="result-screen" class="result-screen" hidden aria-labelledby="result-title">
-      <div class="result-card"><div class="result-emblem" aria-hidden="true"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-check"/></svg></div><p id="record-badge" class="record-badge" hidden>A new personal best</p><h2 id="result-title"></h2><div class="ornament" aria-hidden="true"><i></i>◆<i></i></div><p class="answer-caption">The answer</p><strong id="result-answer" class="result-answer"></strong><a id="answer-source" class="answer-source" target="_blank" rel="noopener noreferrer" hidden>Reference</a><div class="result-stats"><div><span>Turns used</span><strong id="result-turns"></strong></div><div><span>Current streak</span><strong id="result-streak"></strong></div><div><span>Personal best</span><strong id="result-best"></strong></div></div><p id="result-note"></p><button id="next-game" class="brass-button">Next word<svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow"/></svg></button><button id="history-toggle" class="text-button" aria-expanded="false">View case notes</button><div id="result-history" class="result-history" hidden></div><button id="result-home" class="text-button">The study</button></div>
-      <div class="success-particles" aria-hidden="true"></div>
-    </section>
   </main>
-  <div id="judging-overlay" class="judging-overlay" role="dialog" aria-modal="true" aria-labelledby="judging-title" tabindex="-1" hidden>
-    <div class="judging-panel">
-      <div class="judging-emblem" aria-hidden="true"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-compass"/></svg></div>
-      <p id="judging-title" role="status">Checking your question.</p>
-      <div class="judging-progress" role="progressbar" aria-label="Checking your question."><span></span></div>
-    </div>
-  </div>
   <div id="notice" class="notice" role="status" hidden></div>
-  <footer class="site-footer"><a href="../">ArcherLab Games</a><span>TWENTY QUESTIONS</span></footer>
-  <dialog id="ranking-dialog" class="game-dialog ranking-dialog" aria-labelledby="ranking-title"><button class="dialog-close icon-button" data-close aria-label="Close"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-close"/></svg></button><p class="eyebrow">ARCHIVE OF DISTINCTION</p><h2 id="ranking-title">Hall of Fame</h2><p class="dialog-intro">Ranked by your best winning streak. Fewer total turns break a tie.</p><div id="leaderboard" class="leaderboard"></div><p id="own-rank" class="own-rank"></p></dialog>
-  <dialog id="settings-dialog" class="game-dialog settings-dialog" aria-labelledby="settings-title"><button class="dialog-close icon-button" data-close aria-label="Close"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-close"/></svg></button><h2 id="settings-title">Settings</h2><label class="setting-row" for="sound-enabled"><span>Sound effects</span><input type="checkbox" id="sound-enabled" checked></label><label class="setting-row" for="sound-volume">Effects volume</label><input type="range" id="sound-volume" min="0" max="100" value="45"><p class="privacy-note">Questions are sent to the server for judging. Please leave out personal information.</p></dialog>
-  <dialog id="give-up-dialog" class="game-dialog confirm-dialog" aria-labelledby="give-up-title"><div class="wax-seal small" aria-hidden="true">?</div><h2 id="give-up-title">Reveal the answer and end this game?</h2><div class="confirm-actions"><button id="confirm-give-up" class="brass-button">Give up</button><button data-close class="text-button">Keep playing</button></div></dialog>
-</body></html>
+  <footer class="site-footer"><a href="../">ArcherLab Games</a><span>FastText Korean Vectors · Wiktionary 5800 · Server-Verified Timer</span></footer>
+
+  <dialog id="ranking-dialog" class="game-dialog crafted-frame" aria-labelledby="ranking-title">
+    <button class="dialog-close icon-button" data-close aria-label="Close">✕</button>
+    <h2 id="ranking-title">Hall of Fame</h2>
+    <p class="dialog-intro">Ranked by fastest verified clear time (fewer guesses break ties).</p>
+    <form id="name-form" class="name-form">
+      <label class="sr-only" for="name-input">Display Name</label>
+      <input id="name-input" type="text" maxlength="16" placeholder="2–16 characters" aria-label="Display Name">
+      <button id="name-save" class="secondary-btn" type="submit">Save</button>
+      <p class="name-help">2–16 unique characters (letters/digits required)</p>
+      <p id="name-status" class="name-status" role="status"></p>
+    </form>
+    <div id="leaderboard" class="leaderboard"></div>
+    <p id="own-rank" class="own-rank"></p>
+  </dialog>
+
+  <dialog id="nearest-dialog" class="game-dialog crafted-frame" aria-labelledby="nearest-title">
+    <button class="dialog-close icon-button" data-close aria-label="Close">✕</button>
+    <h2 id="nearest-title"></h2>
+    <p class="dialog-intro">Ranked by cosine similarity using 300d Korean FastText embeddings.</p>
+    <input id="nearest-filter" class="nearest-filter" type="search" placeholder="Filter words..." aria-label="Filter words...">
+    <p id="nearest-loading" class="dialog-intro" hidden>Loading...</p>
+    <div class="nearest-scroll">
+      <table class="nearest-table">
+        <thead><tr><th>Rank</th><th>Guess</th><th>Score</th><th></th></tr></thead>
+        <tbody id="nearest-body"></tbody>
+      </table>
+      <p id="nearest-empty" class="dialog-intro" hidden>No matching words.</p>
+    </div>
+  </dialog>
+
+  <dialog id="guide-dialog" class="game-dialog crafted-frame" aria-labelledby="guide-title">
+    <button class="dialog-close icon-button" data-close aria-label="Close">✕</button>
+    <h2 id="guide-title">Guide &amp; Stats</h2>
+    <p class="dialog-intro">Your Statistics</p>
+    <div class="stats-grid">
+      <div><span>Played</span><strong id="stat-played">0</strong></div>
+      <div><span>Solved</span><strong id="stat-wins">0</strong></div>
+      <div><span>Give-ups</span><strong id="stat-giveups">0</strong></div>
+      <div><span>Total Guesses</span><strong id="stat-total-guesses">0</strong></div>
+      <div><span>Streak</span><strong id="stat-streak">0</strong></div>
+      <div><span>Best Time</span><strong id="stat-best-time">-</strong></div>
+    </div>
+    <p class="dialog-intro">How It Works</p>
+    <div class="faq-list">
+      <div class="faq-item"><h3>How do I play Korean Semantle?</h3><p>Every guess returns a semantic similarity score (-100 to +100). If your guess is among the 1,000 closest words to the secret, its exact rank also appears.</p></div>
+      <div class="faq-item"><h3>How does the live timer &amp; leaderboard work?</h3><p>The stopwatch anchors to server time the moment a round starts and keeps counting even when minimized or closed. Verified solves with 2+ guesses compete for the fastest Hall of Fame clear time.</p></div>
+      <div class="faq-item"><h3>Why can antonyms score high?</h3><p>Vectors are learned from Wikipedia and Common Crawl contexts, so words appearing in similar sentences (like &quot;사랑&quot; love and &quot;증오&quot; hate) share high scores.</p></div>
+      <div class="faq-item"><h3>Is there a daily limit?</h3><p>No. Play unlimited rounds back to back anytime.</p></div>
+    </div>
+  </dialog>
+
+  <dialog id="settings-dialog" class="game-dialog crafted-frame" aria-labelledby="settings-title">
+    <button class="dialog-close icon-button" data-close aria-label="Close">✕</button>
+    <h2 id="settings-title">Settings</h2>
+    <label class="setting-row" for="dark-mode"><span>Dark Mode</span><input type="checkbox" id="dark-mode" checked></label>
+    <label class="setting-row" for="sound-enabled"><span>Sound Effects</span><input type="checkbox" id="sound-enabled" checked></label>
+    <label class="setting-row" for="sound-volume">Effects Volume</label>
+    <input type="range" id="sound-volume" min="0" max="100" value="45">
+    <label class="setting-row" for="share-guesses"><span>Include guess count when sharing</span><input type="checkbox" id="share-guesses" checked></label>
+    <label class="setting-row" for="share-time"><span>Include clear time when sharing</span><input type="checkbox" id="share-time" checked></label>
+    <label class="setting-row" for="share-max"><span>Include max similarity when sharing</span><input type="checkbox" id="share-max" checked></label>
+  </dialog>
+
+  <dialog id="give-up-dialog" class="game-dialog confirm-dialog crafted-frame" aria-labelledby="give-up-title">
+    <h2 id="give-up-title">Reveal the secret word and end this round?</h2>
+    <p class="dialog-intro">Giving up resets your current winning streak to 0.</p>
+    <div class="confirm-actions">
+      <button id="confirm-give-up" class="primary-btn">Give Up</button>
+      <button data-close class="secondary-btn">Keep Playing</button>
+    </div>
+  </dialog>
+</body>
+</html>

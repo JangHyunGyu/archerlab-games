@@ -1,340 +1,224 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { harness, modelResult } from './helpers.mjs';
-import { parseDecision } from '../../server/twenty-questions/decision.mjs';
+import { harness } from './helpers.mjs';
 import { twentyQuestionsRoute } from '../../server/twenty-questions/service.mjs';
-import { validateCandidate, replenish, conceptChunks, cleanOldRecords } from '../../server/twenty-questions/generation.mjs';
-import { isCorrect } from '../../server/twenty-questions/core.mjs';
-import { initialize, SEED_VERSION } from '../../server/twenty-questions/database.mjs';
-import { SEED_BY_ID } from '../../server/twenty-questions/seed-catalog.mjs';
-import { messages } from '../js/i18n.mjs';
+import { calibrateSim, sanitizePlayerName } from '../../server/twenty-questions/core.mjs';
 import { submitRanking } from '../../game-api-worker.js';
 
-test('start, resume and repeated start request retain one private answer', async () => {
-    const h = harness(); const id = crypto.randomUUID();
+test('start, resume, idempotent start, active timer immutability, and secret isolation work end to end', async () => {
+    const h = harness();
+    const id = crypto.randomUUID();
     const a = await h.call('games', { requestId: id, locale: 'ko' });
     const b = await h.call('games', { requestId: id, locale: 'ko' });
     const c = await h.start();
-    assert.equal(a.status, 200); assert.equal(a.data.game.id, b.data.game.id); assert.equal(c.game.id, a.data.game.id);
-    assert.equal(h.row('SELECT COUNT(*) n FROM tq_seen').n, 1);
-    assert.equal(a.data.game.remaining, 20);
+    assert.equal(a.status, 200);
+    assert.equal(a.data.game.id, b.data.game.id);
+    assert.equal(c.game.id, a.data.game.id);
+    assert.equal(c.game.createdAt, a.data.game.createdAt);
+    assert.ok(Number.isFinite(a.data.serverNow));
     assert.equal(a.data.game.answer, undefined);
-    assert.doesNotMatch(JSON.stringify(a.data), /answer_json|facts|aliasesKo|concept_id/);
+    assert.ok(a.data.game.benchmarks.top1 > a.data.game.benchmarks.top10);
+    assert.ok(a.data.game.benchmarks.top10 >= a.data.game.benchmarks.top1000);
+    assert.doesNotMatch(JSON.stringify(a.data), /answer_word|secret_id|sim_scale/);
     const foreign = await h.call(`games/${a.data.game.id}`, null, 'GET', 'b'.repeat(64));
     assert.equal(foreign.status, 404);
-});
-
-test('parallel starts are serialized and do not consume two words', async () => {
-    const h = harness(); const results = await Promise.all([h.start(), h.start(), h.start()]);
-    assert.equal(new Set(results.map(r => r.game.id)).size, 1);
-    assert.equal(h.row('SELECT COUNT(*) n FROM tq_seen').n, 1);
-});
-
-test('yes/no charge once; repeats, unknown and multiple preserve turns', async () => {
-    const h = harness(); let { game } = await h.start();
-    let r = await h.turn(game, 'a clear question'); game = r.data.game;
-    assert.equal(game.remaining, 19); assert.equal(h.calls, 1);
-    r = await h.turn(game, '  A clear question  '); game = r.data.game;
-    assert.equal(r.data.event.code, 'duplicate'); assert.equal(game.remaining, 19); assert.equal(h.calls, 1);
-    r = await h.turn(game, 'unknown'); game = r.data.game;
-    assert.equal(game.remaining, 19); assert.equal(r.data.event.code, 'unknown');
-    r = await h.turn(game, 'multiple'); game = r.data.game;
-    assert.equal(game.remaining, 19); assert.equal(r.data.event.code, 'multiple');
-    r = await h.turn(game, 'no'); assert.equal(r.data.game.remaining, 18);
-});
-
-test('idempotent answers and conflicting reuse cannot change the score twice', async () => {
-    const h = harness(); const { game } = await h.start(); const id = crypto.randomUUID();
-    const a = await h.turn(game, 'yes question', 'questions', id);
-    const b = await h.turn(game, 'yes question', 'questions', id);
-    assert.equal(a.data.game.remaining, 19); assert.equal(b.data.game.remaining, 19); assert.equal(h.calls, 1);
-    assert.equal((await h.turn(game, 'different question', 'questions', id)).status, 409);
-    assert.equal((await h.turn(game, 'stale question')).data.error, 'stale_state');
-});
-
-test('twentieth action may win; twentieth question ends the game without extra guess', async () => {
-    for (const win of [true, false]) {
-        const h = harness(); let { game } = await h.start();
-        for (let i = 0; i < 19; i++) game = (await h.turn(game, 'incorrect guess ' + i, 'guesses')).data.game;
-        const r = await h.turn(game, win ? h.answer(game.id).en : 'final question', win ? 'guesses' : 'questions');
-        assert.equal(r.data.game.status, win ? 'won' : 'lost');
-        assert.equal(r.data.game.remaining, 0); assert.ok(r.data.game.answer);
-        assert.equal(r.data.profile.streak, win ? 1 : 0);
-        assert.equal((await h.turn(r.data.game, 'again', 'guesses')).data.error, 'game_finished');
-    }
-});
-
-test('server keeps best streak and never repeats a consumed concept', async () => {
-    const h = harness(); let state = await h.start(); const first = h.answer(state.game.id);
-    state = (await h.turn(state.game, first.ko, 'guesses')).data;
-    assert.equal(state.profile.streak, 1); assert.equal(state.profile.bestStreak, 1);
-    state = await h.start(); assert.notEqual(h.answer(state.game.id).id, first.id);
-    state = (await h.turn(state.game, h.answer(state.game.id).en.toUpperCase(), 'guesses')).data;
-    assert.equal(state.profile.streak, 2); assert.equal(state.profile.bestTurns, 2);
-    state = await h.start();
-    state = (await h.turn(state.game, '', 'give-up')).data;
-    assert.equal(state.profile.streak, 0); assert.equal(state.profile.bestStreak, 2);
-    assert.equal(h.row('SELECT COUNT(*) n FROM tq_seen').n, 3);
-    const rank = await h.call('leaderboard'); assert.equal(rank.data.entries[0].streak, 2);
-});
-
-test('winning automatically persists the ranked record before opening rankings or saving a name', async () => {
-    const h = harness();
-    const { game } = await h.start();
-    const requestId = crypto.randomUUID();
-    const won = await h.turn(game, h.answer(game.id).en, 'guesses', requestId);
-    assert.equal(won.data.game.status, 'won');
-    const stored = h.row('SELECT best_streak, best_turns, name FROM tq_players');
-    assert.equal(stored.best_streak, 1);
-    assert.equal(stored.best_turns, 1);
-    assert.ok(stored.name);
-    const replay = await h.turn(game, h.answer(game.id).en, 'guesses', requestId);
-    assert.equal(replay.data.profile.bestStreak, 1);
-    const resumed = await h.call('profile');
-    assert.equal(resumed.data.profile.bestStreak, 1);
-    const ranked = await h.call('leaderboard');
-    assert.equal(ranked.data.entries.length, 1);
-    assert.equal(ranked.data.mine.streak, 1);
-    assert.equal(ranked.data.mine.name, stored.name);
     h.db.sqlite.close();
 });
 
-test('pool exhaustion retains streak; an appended concept becomes playable', async () => {
-    const h = harness(); let state = await h.start();
-    state = (await h.turn(state.game, h.answer(state.game.id).ko, 'guesses')).data;
-    const player = h.row('SELECT id FROM tq_players').id;
-    h.db.sqlite.prepare('INSERT OR IGNORE INTO tq_seen SELECT ?, id, ?, ? FROM tq_catalog').run(player, 'exhausted', Date.now());
-    const r = await h.call('games', { requestId: crypto.randomUUID() });
-    assert.equal(r.data.error, 'pool_exhausted'); assert.equal(h.row('SELECT streak FROM tq_players').streak, 1);
-    const answer = { id: 'test.new', ko: '새로운 개념', en: 'new concept', aliasesKo: [], aliasesEn: [], category: 'test', facts: 'A test-only card.' };
-    h.db.sqlite.prepare('INSERT INTO tq_catalog(id, ko_key, en_key, data, created_at) VALUES (?, ?, ?, ?, ?)').run(answer.id, answer.ko, answer.en, JSON.stringify(answer), Date.now());
-    const next = await h.start(); assert.equal(h.answer(next.game.id).id, answer.id);
-});
-
-test('model outage preserves turns and pauses session expiration', async () => {
-    const h = harness(); let { game } = await h.start();
-    const r = await h.turn(game, 'outage'); assert.equal(r.status, 503);
-    let snapshot = h.row('SELECT * FROM tq_games WHERE id = ?', game.id);
-    assert.equal(snapshot.used, 0); assert.ok(snapshot.fault_since);
-    h.db.sqlite.prepare('UPDATE tq_games SET expires_at = ?, fault_since = ? WHERE id = ?').run(Date.now() - 1000, Date.now() - 10000, game.id);
-    game = (await h.call(`games/${game.id}`)).data.game; assert.equal(game.status, 'active');
-    const ok = await h.turn(game, 'a valid question'); assert.equal(ok.status, 200); assert.equal(ok.data.game.remaining, 19);
-    snapshot = h.row('SELECT * FROM tq_games WHERE id = ?', game.id); assert.equal(snapshot.fault_since, null); assert.ok(snapshot.expires_at > Date.now());
-});
-
-test('normal expiration ends current streak, preserves best and consumed history', async () => {
-    const h = harness(); const state = await h.start();
-    h.db.sqlite.prepare('UPDATE tq_players SET streak = 3, best_streak = 3').run();
-    h.db.sqlite.prepare('UPDATE tq_games SET expires_at = 1').run();
-    const expired = await h.call(`games/${state.game.id}`);
-    assert.equal(expired.data.game.status, 'expired'); assert.equal(expired.data.profile.streak, 0);
-    assert.equal(expired.data.profile.bestStreak, 3); assert.equal(h.row('SELECT COUNT(*) n FROM tq_seen').n, 1);
-});
-
-test('question limit still allows guesses and model budget is bounded', async () => {
-    const h = harness(); let { game } = await h.start();
-    h.db.sqlite.prepare('UPDATE tq_games SET requests_count = 60 WHERE id = ?').run(game.id);
-    assert.equal((await h.turn(game, 'valid')).data.error, 'question_limit');
-    assert.equal((await h.turn(game, h.answer(game.id).en, 'guesses')).data.game.status, 'won');
-    ({ game } = await h.start()); h.env.TQ_DAILY_CALL_LIMIT = 1;
-    game = (await h.turn(game, 'one question')).data.game;
-    const next = await h.turn(game, 'another question'); assert.equal(next.data.error, 'daily_limit');
-    assert.ok(h.row('SELECT fault_since FROM tq_games WHERE id = ?', game.id).fault_since);
-});
-
-test('leaderboard breaks ties using turns from the same best record', async () => {
-    const h = harness(); await h.start();
-    for (const [id, streak, turns, at] of [['b', 7, 81, 1], ['c', 7, 65, 2], ['d', 6, 40, 0]]) {
-        h.db.sqlite.prepare('INSERT INTO tq_players(id, name, best_streak, best_turns, best_at, last_seen) VALUES (?, ?, ?, ?, ?, 0)').run(id, id, streak, turns, at);
-    }
-    const result = await h.call('leaderboard'); assert.deepEqual(result.data.entries.map(row => row.name), ['c', 'b', 'd']);
-    assert.ok(result.data.entries.every(row => !Object.hasOwn(row, 'id')));
-});
-
-test('invalid model output never becomes a yes/no; known types map correctly', () => {
-    assert.equal(parseDecision(modelResult('yes')).code, 'yes'); assert.equal(parseDecision(modelResult('no')).code, 'no');
-    const wrong = modelResult(); wrong.answers.answer_yes.noul = 'yes'; assert.throws(() => parseDecision(wrong));
-    const vague = modelResult(); vague.answers.answer_yes.noul = 0.5; assert.equal(parseDecision(vague).code, 'unknown');
-    assert.throws(() => parseDecision({ answers: {} }));
-});
-
-test('guess matching is exact, normalized and bilingual', () => {
-    const answer = { ko: '펭귄', en: 'penguin', aliasesEn: ['penguins'] };
-    assert.ok(isCorrect(answer, ' PENGUIN ')); assert.ok(isCorrect(answer, '펭귄'));
-    assert.ok(!isCorrect(answer, 'bird')); assert.ok(!isCorrect(answer, 'pen'));
-});
-
-test('CORS denies foreign origins and inputs have bounded length', async () => {
+test('parallel starts are serialized and consume only one secret', async () => {
     const h = harness();
-    const forbidden = await twentyQuestionsRoute(new Request('https://api/twenty-questions/status', { headers: { Origin: 'https://other.example' } }), h.env);
-    assert.equal(forbidden.status, 403);
-    const { game } = await h.start(); assert.equal((await h.turn(game, 'a'.repeat(201))).data.error, 'input_too_long');
+    const results = await Promise.all([h.start(), h.start(), h.start()]);
+    assert.equal(new Set(results.map(r => r.game.id)).size, 1);
+    assert.equal(h.row('SELECT COUNT(*) n FROM sm_seen').n, 1);
+    h.db.sqlite.close();
 });
 
-test('replenishment skips while stock is sufficient; invalid candidates cannot be inserted', async () => {
-    const h = harness(); h.env.TQ_TEXT = { complete() { throw new Error('Should not generate'); } };
-    assert.equal((await replenish(h.env)).skipped, 'stock_sufficient');
-    assert.ok(!validateCandidate({ id: 'bad' }));
-});
+test('guesses charge count cleanly while OOV and duplicates do not alter version or guessCount', async () => {
+    const h = harness({ secretWords: ['행복'] });
+    let { game } = await h.start();
 
-test('localized keys match and browser files contain no secret catalog import', () => {
-    assert.deepEqual(Object.keys(messages.ko).sort(), Object.keys(messages.en).sort());
-    for (const file of ['main.mjs', 'api.mjs', 'audio.mjs', 'i18n.mjs']) {
-        const source = fs.readFileSync(new URL('../js/' + file, import.meta.url), 'utf8');
-        assert.doesNotMatch(source, /seed-catalog|answer_json|OPENROUTER_API_KEY/);
-    }
-    const routes = JSON.parse(fs.readFileSync(new URL('../../_routes.json', import.meta.url)));
-    assert.ok(routes.include.includes('/server/*'));
-});
-
-test('verification batches stay within the RPC byte budget as the catalog grows', () => {
-    const rows = Array.from({ length: 2000 }, (_, i) => ({ ko_key: '긴이름'.repeat(12) + i, en_key: 'long concept name '.repeat(3) + i }));
-    const chunks = conceptChunks(rows);
-    assert.equal(chunks.flat().length, 2000);
-    assert.ok(chunks.every(chunk => new TextEncoder().encode(JSON.stringify(chunk)).length <= 6000));
-});
-
-test('returning players refresh activity even when no words remain', async () => {
-    const h = harness(); const state = await h.start(); await h.turn(state.game, '', 'give-up');
-    const player = h.row('SELECT id FROM tq_players').id;
-    h.db.sqlite.prepare('INSERT OR IGNORE INTO tq_seen SELECT ?, id, ?, ? FROM tq_catalog').run(player, 'done', 1);
-    h.db.sqlite.prepare('UPDATE tq_players SET last_seen = 1').run();
-    assert.equal((await h.call('games', { requestId: crypto.randomUUID() })).data.error, 'pool_exhausted');
-    assert.ok(h.row('SELECT last_seen FROM tq_players').last_seen > Date.now() - 1000);
-});
-
-test('cleanup deletes old logs and limits but retains seen concepts and best records', async () => {
-    const h = harness(); let state = await h.start(); state = (await h.turn(state.game, h.answer(state.game.id).en, 'guesses')).data;
-    h.db.sqlite.prepare('UPDATE tq_games SET updated_at = 1').run();
-    h.db.sqlite.prepare('INSERT INTO tq_limits(key, count, expires_at) VALUES (?, 1, 1)').run('old');
-    await cleanOldRecords(h.db);
-    assert.equal(h.row('SELECT COUNT(*) n FROM tq_turns').n, 0);
-    assert.equal(h.row('SELECT COUNT(*) n FROM tq_games').n, 0);
-    assert.equal(h.row('SELECT COUNT(*) n FROM tq_seen').n, 1);
-    assert.equal(h.row('SELECT COUNT(*) n FROM tq_logs').n, 1);
-    assert.equal(h.row('SELECT best_streak FROM tq_players').best_streak, 1);
-});
-
-test('tq_logs records questions, answers, guesses and model decision probabilities in D1', async () => {
-    const h = harness(); let { game } = await h.start(); const ans = h.answer(game.id);
-    game = (await h.turn(game, '생물이야?', 'questions')).data.game;
-    game = (await h.turn(game, 'no', 'questions')).data.game;
-    game = (await h.turn(game, 'unknown', 'questions')).data.game;
-    await h.turn(game, ans.ko, 'guesses');
-    const logs = h.db.sqlite.prepare('SELECT * FROM tq_logs WHERE game_id = ? ORDER BY id ASC').all(game.id);
-    assert.equal(logs.length, 4);
-    assert.deepEqual(logs.map(row => row.code), ['yes', 'no', 'unknown', 'correct']);
-    assert.deepEqual(logs.map(row => row.reply), ['예', '아니오', '판정 보류(?)', '정답']);
-    assert.equal(logs[0].answer_ko, ans.ko);
-    assert.equal(logs[0].answer_en, ans.en);
-    assert.equal(logs[0].question, '생물이야?');
-    assert.equal(logs[0].question_kind, 'single');
-    assert.equal(typeof logs[0].yes_probability, 'number');
-    assert.equal(typeof logs[0].supported_probability, 'number');
-});
-
-test('the shared score API rejects client-provided Twenty Questions scores', async () => {
-    const response = await submitRanking({}, { game_id: 'twenty-questions', player_name: 'Fake', score: 999999 });
-    assert.equal(response.status, 403);
-});
-
-test('missing model verification probability cannot publish a generated answer', async () => {
-    const h = harness(); await h.start();
-    const player = h.row('SELECT id FROM tq_players').id;
-    h.db.sqlite.prepare('INSERT OR IGNORE INTO tq_seen SELECT ?, id, ?, ? FROM tq_catalog LIMIT 175').run(player, 'seen', Date.now());
-    const candidate = { id: 'object.testnew', ko: '검증시험', en: 'verification test', aliasesKo: [], aliasesEn: [], category: 'objects', wikiTitle: 'Abacus', facts: 'This is an isolated test candidate. Its long factual description exists only to exercise the validation gate and must never enter the playable catalog without a numeric confidence.' };
-    h.env.TQ_TEXT = { async complete(input) { return { text: JSON.stringify(input.maxTokens === 6000 ? { items: [candidate] } : { facts: candidate.facts }) }; } };
-    h.env.TQ_AI = { async decide() { return { answers: { supported: { type: 'noul' } } }; } };
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = async () => Response.json({ extract: 'This test excerpt is long enough to enter the verification stage, but the model response intentionally omits its probability value.' });
-    try {
-        const result = await replenish(h.env);
-        assert.equal(result.added, 0); assert.equal(h.row('SELECT COUNT(*) n FROM tq_catalog WHERE id = ?', candidate.id).n, 0);
-    } finally { globalThis.fetch = originalFetch; }
-});
-
-test('initialize upgrades 20261028-v1 catalog rows and facts while preserving existing stats', async () => {
-    const h = harness();
-    await h.start();
-    h.db.sqlite.prepare("UPDATE tq_meta SET value = '20261028-v1' WHERE key = 'seed_version'").run();
-    h.db.sqlite.prepare("UPDATE tq_catalog SET data = ? WHERE id = 'plant.oak-tree'").run(JSON.stringify({
-        id: 'plant.oak-tree', ko: '참나무', en: 'oak tree', aliasesKo: [], aliasesEn: [], category: 'plant', facts: 'old oak facts',
-    }));
-    h.db.sqlite.prepare('UPDATE tq_players SET streak = 4, best_streak = 4').run();
-
-    const upgradedDb = { prepare: h.db.prepare, batch: h.db.batch };
-    await initialize(upgradedDb);
-
-    assert.equal(h.row("SELECT value FROM tq_meta WHERE key = 'seed_version'").value, SEED_VERSION);
-    const oak = JSON.parse(h.row("SELECT data FROM tq_catalog WHERE id = 'plant.oak-tree'").data);
-    assert.ok(oak.aliasesKo.includes('도토리나무'));
-    assert.equal(oak.facts, SEED_BY_ID.get('plant.oak-tree').facts);
-    assert.equal(h.row('SELECT streak, best_streak FROM tq_players').streak, 4);
-});
-
-test('isCorrect handles punctuation, English articles, Korean spacing, tentative copula forms, and newly added aliases without over-matching', () => {
-    assert.equal(isCorrect(SEED_BY_ID.get('plant.oak-tree'), '도토리나무'), true);
-    assert.equal(isCorrect(SEED_BY_ID.get('object.wallet'), '"지갑?"'), true);
-    assert.equal(isCorrect(SEED_BY_ID.get('animal.penguin'), 'the penguin'), true);
-    assert.equal(isCorrect(SEED_BY_ID.get('plant.oak-tree'), '참 나무'), true);
-    assert.equal(isCorrect(SEED_BY_ID.get('object.scarf'), '목도리인가요?'), true);
-
-    assert.equal(isCorrect(SEED_BY_ID.get('animal.penguin'), 'bird'), false);
-    assert.equal(isCorrect(SEED_BY_ID.get('animal.penguin'), 'pen'), false);
-    assert.equal(isCorrect(SEED_BY_ID.get('plant.oak-tree'), '나무'), false);
-});
-
-test('duplicate check normalizes trailing punctuation and spacing so repeated questions are not double-charged', async () => {
-    const h = harness();
-    const { game } = await h.start();
-    const first = await h.turn(game, '동물인가요?', 'questions');
-    assert.equal(first.status, 200);
-    assert.equal(first.data.game.remaining, 19);
-
-    const dup = await h.turn(first.data.game, '  동물인가요  ', 'questions');
-    assert.equal(dup.status, 200);
-    assert.equal(dup.data.event.code, 'duplicate');
-    assert.equal(dup.data.event.decision, 'yes');
-    assert.equal(dup.data.game.remaining, 19);
-});
-
-test('PATCH /profile preserves active game state instead of dropping activeGame', async () => {
-    const h = harness();
-    const { game } = await h.start();
-    const res = await h.call('profile', { name: '탐정' }, 'PATCH');
+    let res = await h.guess(game, '기쁨');
     assert.equal(res.status, 200);
-    assert.equal(res.data.profile.name, '탐정');
-    assert.equal(res.data.profile.activeGame, game.id);
-    assert.equal(res.data.game?.id, game.id);
+    assert.equal(res.data.event.code, 'guess');
+    assert.equal(res.data.event.rank, 1);
+    assert.equal(res.data.game.guessCount, 1);
+    game = res.data.game;
+
+    // Outside Top-1,000 valid word still scores similarity and increments guessCount.
+    res = await h.guess(game, '물');
+    assert.equal(res.status, 200);
+    assert.equal(res.data.event.rank, null);
+    assert.equal(res.data.game.guessCount, 2);
+    game = res.data.game;
+
+    // Duplicate word does not increment guessCount or version.
+    res = await h.guess(game, '기쁨');
+    assert.equal(res.status, 200);
+    assert.equal(res.data.event.code, 'duplicate');
+    assert.equal(res.data.game.guessCount, 2);
+    assert.equal(res.data.game.version, game.version);
+
+    // Unknown or non-Hangul word does not increment guessCount or version.
+    res = await h.guess(game, '뷁뷁뷁');
+    assert.equal(res.status, 200);
+    assert.equal(res.data.event.code, 'unknown_word');
+    assert.equal(res.data.game.guessCount, 2);
+
+    res = await h.guess(game, 'hello');
+    assert.equal(res.status, 200);
+    assert.equal(res.data.event.code, 'unknown_word');
+    assert.equal(res.data.game.guessCount, 2);
+
+    // Idempotent replay with same requestId returns exact replay without double increment.
+    const reqId = crypto.randomUUID();
+    const g1 = await h.guess(game, '사랑', reqId);
+    const g2 = await h.guess(game, '사랑', reqId);
+    assert.equal(g1.data.game.guessCount, 3);
+    assert.equal(g2.data.game.guessCount, 3);
+    assert.equal(g2.data.event.replayed, true);
+    assert.equal((await h.guess(game, '사람', reqId)).status, 409);
+
+    h.db.sqlite.close();
 });
 
-test('replenish follows same-origin Wikipedia REST redirects during candidate verification', async () => {
-    const h = harness();
-    await h.start();
-    const player = h.row('SELECT id FROM tq_players').id;
-    h.db.sqlite.prepare('INSERT OR IGNORE INTO tq_seen SELECT ?, id, ?, ? FROM tq_catalog LIMIT 175').run(player, 'seen', Date.now());
-    const good = { id: 'object.redirected', ko: '주판시험', en: 'abacus redirect test', aliasesKo: [], aliasesEn: [], category: 'objects', wikiTitle: 'Abacus tool', facts: 'An abacus is a traditional counting frame with beads slid along rods or grooves for performing arithmetic calculations by hand.' };
-    const blocked = { id: 'object.offorigin', ko: '외부차단시험', en: 'off origin test', aliasesKo: [], aliasesEn: [], category: 'objects', wikiTitle: 'Evil Redirect', facts: 'This candidate points off-origin on redirect and must never enter the catalog.' };
-    h.env.TQ_TEXT = { async complete(input) { return { text: JSON.stringify(input.maxTokens === 6000 ? { items: [blocked, good] } : { facts: good.facts }) }; } };
-    h.env.TQ_AI = { async decide() { return { answers: { supported: { type: 'noul', noul: 0.99 }, distinct: { type: 'noul', noul: 0.99 } } }; } };
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = async (url) => {
-        if (String(url).endsWith('/Evil_Redirect')) {
-            return new Response(null, { status: 302, headers: { Location: 'https://example.com/api/rest_v1/page/summary/Evil' } });
-        }
-        if (String(url).endsWith('/Abacus_tool')) {
-            return new Response(null, { status: 302, headers: { Location: 'https://en.wikipedia.org/api/rest_v1/page/summary/Abacus' } });
-        }
-        if (String(url).endsWith('/Abacus')) {
-            return Response.json({ extract: 'An abacus is an ancient calculating frame of beads sliding on rods used for arithmetic computations across many cultures.' });
-        }
-        return new Response('not found', { status: 404 });
-    };
-    try {
-        const result = await replenish(h.env);
-        assert.equal(result.added, 1);
-        assert.equal(h.row('SELECT COUNT(*) n FROM tq_catalog WHERE id = ?', good.id).n, 1);
-        assert.equal(h.row('SELECT COUNT(*) n FROM tq_catalog WHERE id = ?', blocked.id).n, 0);
-    } finally { globalThis.fetch = originalFetch; }
+test('fastest-time ranking, anti-cheat unranked filters, calibration consistency, and post-game explore hold', async () => {
+    const h = harness({ secretWords: ['행복', '학교', '사과'] });
+
+    // Round 1: Single-guess solve wins locally but stays unranked on leaderboard.
+    const s1 = await h.start();
+    const a1 = h.answer(s1.game.id);
+    const w1 = await h.guess(s1.game, a1);
+    assert.equal(w1.status, 200);
+    assert.equal(w1.data.game.status, 'won');
+    assert.equal(w1.data.game.ranked, false);
+    assert.equal(w1.data.game.unrankedReason, 'single_guess');
+    assert.equal(w1.data.profile.bestTimeMs, null);
+
+    // Round 2: Sub-1.5s multi-guess solve also stays unranked to block bot sniping.
+    const s2 = await h.start();
+    const a2 = h.answer(s2.game.id);
+    const g2a = (await h.guess(s2.game, '사람')).data;
+    const w2 = await h.guess(g2a.game, a2);
+    assert.equal(w2.data.game.status, 'won');
+    assert.equal(w2.data.game.ranked, false);
+    assert.equal(w2.data.game.unrankedReason, 'too_fast');
+    assert.equal(w2.data.profile.bestTimeMs, null);
+
+    // Round 3: Valid >=2 guesses and >=1.5s elapsed -> ranked on Hall of Fame!
+    const s3 = await h.start();
+    const a3 = h.answer(s3.game.id);
+    assert.equal((await h.call(`games/${s3.game.id}/nearest`, null, 'GET')).status, 403);
+    assert.equal((await h.call(`games/${s3.game.id}/explore`, { text: '사랑' })).status, 403);
+
+    const g3a = (await h.guess(s3.game, '사람')).data;
+    h.db.sqlite.prepare('UPDATE sm_games SET created_at = ? WHERE id = ?').run(Date.now() - 8500, s3.game.id);
+    const w3 = await h.guess(g3a.game, a3);
+    assert.equal(w3.status, 200);
+    assert.equal(w3.data.game.status, 'won');
+    assert.equal(w3.data.game.ranked, true);
+    assert.equal(w3.data.game.unrankedReason, null);
+    assert.ok(w3.data.game.solvedMs >= 8000);
+    assert.equal(w3.data.profile.bestTimeMs, w3.data.game.solvedMs);
+    assert.equal(w3.data.profile.bestTimeGuesses, 2);
+    assert.equal(w3.data.game.recordImproved, true);
+
+    // Calibrated nearest-1k and post-game explore share identical similarity scores.
+    const nearest = await h.call(`games/${s3.game.id}/nearest`, null, 'GET');
+    assert.equal(nearest.status, 200);
+    assert.equal(nearest.data.words.length, 1000);
+    const probeWord = nearest.data.words[0].word;
+    const explored = await h.call(`games/${s3.game.id}/explore`, { text: probeWord });
+    assert.equal(explored.status, 200);
+    assert.equal(explored.data.similarity, nearest.data.words[0].similarity);
+    assert.equal(h.row('SELECT guess_count FROM sm_games WHERE id = ?', s3.game.id).guess_count, 2);
+
+    // Pool wraps cleanly on 4th round with streak intact.
+    const s4 = await h.start();
+    assert.equal(s4.profile.streak, 3);
+    assert.equal(s4.game.caseNo, 4);
+
+    // Leaderboard orders fastest bestTimeMs ASC, breaking ties by guesses ASC.
+    h.db.sqlite.prepare('INSERT INTO sm_players(id, name, name_key, best_time_ms, best_time_guesses, wins, best_streak, best_at, last_seen) VALUES (?, ?, ?, ?, ?, 1, 1, 999, 0)')
+        .run('p-faster', 'SpeedRunner', 'speedrunner', 4200, 5);
+    h.db.sqlite.prepare('INSERT INTO sm_players(id, name, name_key, best_time_ms, best_time_guesses, wins, best_streak, best_at, last_seen) VALUES (?, ?, ?, ?, ?, 1, 1, 999, 0)')
+        .run('p-tie-fewer', 'PreciseRunner', 'preciserunner', 4200, 3);
+    const lb = await h.call('leaderboard');
+    assert.equal(lb.data.entries[0].name, 'PreciseRunner');
+    assert.equal(lb.data.entries[0].bestTimeMs, 4200);
+    assert.equal(lb.data.entries[1].name, 'SpeedRunner');
+    assert.ok(lb.data.entries.every(row => !Object.hasOwn(row, 'id')));
+
+    h.db.sqlite.close();
+});
+
+test('anti-cheat blocks give-up reroll farming, duplicate nicknames, CSRF, prototype pollution, and leaks', async () => {
+    const h = harness({ secretWords: ['행복', '학교', '사과'] });
+
+    // Zero-guess give-up spam is throttled after 4 attempts in 10 minutes.
+    for (let i = 0; i < 4; i++) {
+        const s = await h.start();
+        const gu = await h.call(`games/${s.game.id}/give-up`, { requestId: crypto.randomUUID(), expectedVersion: s.game.version });
+        assert.equal(gu.status, 200);
+    }
+    const s5 = await h.start();
+    const blockedGu = await h.call(`games/${s5.game.id}/give-up`, { requestId: crypto.randomUUID(), expectedVersion: s5.game.version });
+    assert.equal(blockedGu.status, 429);
+    assert.equal(blockedGu.data.error, 'rate_limited');
+
+    // Name sanitization & uniqueness.
+    assert.equal(sanitizePlayerName('\u202EStar\u200BGazer'), 'StarGazer');
+    assert.equal(sanitizePlayerName('..'), null);
+    const inv = await h.call('profile', { name: '..' }, 'PATCH');
+    assert.equal(inv.status, 400);
+
+    const tokenB = 'b'.repeat(64);
+    assert.equal((await h.call('profile', { name: 'AlphaUser' }, 'PATCH')).status, 200);
+    const taken = await h.call('profile', { name: 'alphauser' }, 'PATCH', tokenB);
+    assert.equal(taken.status, 409);
+    assert.equal(taken.data.error, 'name_taken');
+
+    // Monotone calibration check.
+    assert.equal(calibrateSim(10000, 9812, true), 10000);
+    assert.ok(calibrateSim(6000, 9812, false) > calibrateSim(5000, 9812, false));
+
+    // Security headers, Origin/Sec-Fetch-Site blocks, prototype pollution, and score-event isolation.
+    const forbiddenOrigin = await twentyQuestionsRoute(
+        new Request('https://api/twenty-questions/status', { headers: { Origin: 'https://evil.example' } }),
+        h.env
+    );
+    assert.equal(forbiddenOrigin.status, 403);
+
+    const forbiddenFetchSite = await twentyQuestionsRoute(
+        new Request('https://api/twenty-questions/status', { headers: { 'Sec-Fetch-Site': 'cross-site' } }),
+        h.env
+    );
+    assert.equal(forbiddenFetchSite.status, 403);
+
+    const okStatus = await twentyQuestionsRoute(
+        new Request('https://api/twenty-questions/status', { headers: { Origin: 'https://game.archerlab.dev' } }),
+        h.env
+    );
+    assert.equal(okStatus.status, 200);
+    assert.equal(okStatus.headers.get('X-Content-Type-Options'), 'nosniff');
+    assert.equal(okStatus.headers.get('X-Frame-Options'), 'DENY');
+    const statusJson = await okStatus.json();
+    assert.equal(statusJson.ready, true);
+    assert.equal(statusJson.ruleset, 'semantle-ko-v1');
+
+    const protoPollute = await h.fetch(new Request('https://api/twenty-questions/profile', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${'c'.repeat(64)}`, 'Content-Type': 'application/json' },
+        body: '{"__proto__":{"polluted":true},"name":"SafeName"}',
+    }));
+    assert.equal(protoPollute.status, 400);
+
+    const blockedScore = await submitRanking({}, { game_id: 'twenty-questions', player_name: 'Fake', score: 999 });
+    assert.equal(blockedScore.status, 403);
+
+    for (const file of ['main.mjs', 'api.mjs', 'audio.mjs', 'i18n.mjs']) {
+        const src = fs.readFileSync(new URL('../js/' + file, import.meta.url), 'utf8');
+        assert.doesNotMatch(src, /answer_word|secrets-top1k|vectors\.f16|OPENROUTER_API_KEY|sim_scale/);
+    }
+    h.db.sqlite.close();
 });

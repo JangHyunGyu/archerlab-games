@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = fileURLToPath(new URL('../../', import.meta.url));
+const root = path.resolve(fileURLToPath(new URL('../../', import.meta.url)));
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webp': 'image/webp', '.png': 'image/png', '.svg': 'image/svg+xml', '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.ico': 'image/x-icon' };
 export function previewServer() {
     return http.createServer((request, response) => {
@@ -12,7 +12,7 @@ export function previewServer() {
         catch { response.writeHead(400).end(); return; }
         if (pathname === '/server' || pathname.startsWith('/server/') || pathname.split('/').some(part => part.startsWith('.'))) { response.writeHead(404).end(); return; }
         let file = path.resolve(root, '.' + pathname);
-        if (!file.startsWith(root)) { response.writeHead(404).end(); return; }
+        if (file !== root && !file.startsWith(root + path.sep)) { response.writeHead(404).end(); return; }
         if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
         if (!path.extname(file) && !fs.existsSync(file)) file += '.html';
         if (!fs.existsSync(file) || !fs.statSync(file).isFile()) { response.writeHead(404).end(); return; }

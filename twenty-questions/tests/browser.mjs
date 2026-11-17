@@ -13,182 +13,212 @@ const output = fileURLToPath(new URL('../../tmp/twenty-questions-qa/', import.me
 fs.mkdirSync(output, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const errors = [];
+
 try {
-    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-    const h = harness();
-    const apiRequests = [];
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 2 });
+    const h = harness({ secretWords: ['행복', '학교', '사과'] });
     await context.route('http://127.0.0.1:8787/twenty-questions/**', async route => {
         const original = route.request();
-        if (original.method() !== 'OPTIONS') apiRequests.push({ url: original.url(), method: original.method() });
-        const headers = { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS', 'Content-Type': 'application/json' };
+        const headers = {
+            'Access-Control-Allow-Origin': origin,
+            'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+            'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
+            'Content-Type': 'application/json',
+        };
         if (original.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
-        const response = await h.fetch(new Request(original.url(), { method: original.method(), headers: original.headers(), ...(['GET','HEAD'].includes(original.method()) ? {} : { body: original.postData() }) }));
+        const response = await h.fetch(new Request(original.url(), {
+            method: original.method(),
+            headers: original.headers(),
+            ...(['GET', 'HEAD'].includes(original.method()) ? {} : { body: original.postData() }),
+        }));
         await route.fulfill({ status: response.status, headers, body: await response.text() });
     });
-    const page = await context.newPage(); page.on('pageerror', error => errors.push(error.message));
+
+    const page = await context.newPage();
+    page.on('pageerror', error => errors.push(error.message));
+
+    // Verify portal card responsive srcset & loaded artwork on game.archerlab.dev index.html
+    await page.goto(origin + '/', { waitUntil: 'domcontentloaded' });
+    const cardImg = page.locator('.game-card.twenty-questions img');
+    await cardImg.scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => {
+        const img = document.querySelector('.game-card.twenty-questions img');
+        return Boolean(img && img.complete && img.naturalWidth > 0);
+    });
+    const cardState = await cardImg.evaluate(img => ({
+        complete: img.complete,
+        naturalWidth: img.naturalWidth,
+        currentSrc: img.currentSrc,
+    }));
+    assert.ok(cardState.complete && cardState.naturalWidth > 0, JSON.stringify(cardState));
+    assert.match(cardState.currentSrc, /semantle-wide-(?:480|960|1440)\.webp/);
+
+    // Verify Semantle title screen, zero SVG usage, and UI skin image loading
     await page.goto(origin + '/twenty-questions/', { waitUntil: 'networkidle' });
+    assert.equal(await page.locator('svg').count(), 0, 'Zero SVG elements expected');
+    assert.ok(await page.locator('.example-card').isVisible());
+    const skinLoaded = await page.locator('header img, .compass-showcase img').evaluateAll(
+        imgs => imgs.every(img => img.complete && img.naturalWidth > 0)
+    );
+    assert.ok(skinLoaded, 'All UI skin images must load cleanly');
     await page.screenshot({ path: path.join(output, 'ko-title-desktop.png'), fullPage: true });
+
+    // Start game -> stopwatch begins counting up immediately
     await page.locator('#start').click();
     await page.locator('#game-screen').waitFor({ state: 'visible' });
-    await page.locator('#question-input').fill('a clear question'); await page.locator('#send').click();
-    await page.waitForFunction(() => document.querySelector('#remaining').textContent === '19');
-    assert.equal(await page.locator('.turn-mark').count(), 20); assert.equal(await page.locator('.turn-mark.spent').count(), 1);
-    await page.locator('#question-input').fill('unknown'); await page.locator('#send').click();
-    await page.waitForFunction(() => document.querySelectorAll('.history-row').length === 2);
-    assert.equal(await page.locator('#remaining').textContent(), '19');
-    const before = h.row('SELECT id, concept_id, used FROM tq_games WHERE status = ?', 'active');
-    await page.locator('#question-input').fill('draft kept');
-    await page.locator('.languages a[lang=en]').click();
+    const t0 = await page.locator('#game-timer').textContent();
+    await page.waitForTimeout(350);
+    const t1 = await page.locator('#game-timer').textContent();
+    assert.notEqual(t1, t0, `expected live count-up timer to advance (${t0} -> ${t1})`);
+    assert.ok(Number(await page.locator('#top1-score').textContent()) > 30);
+
+    // Submit starter chip + manual guess and verify pinned row + delimiter
+    await page.locator('.starter-chip[data-word="사람"]').click();
+    await page.waitForFunction(() => document.querySelector('#guess-count-display').textContent === '1');
+    await page.locator('#guess-input').fill('물');
+    await page.locator('#send').click();
+    await page.waitForFunction(() => document.querySelector('#guess-count-display').textContent === '2');
+
+    assert.equal(await page.locator('#guesses-body tr.latest-guess .word-text').textContent(), '물');
+    assert.ok(await page.locator('#guesses-body tr.latest-guess .latest-pill').isVisible());
+    assert.equal(await page.locator('#guesses-body tr.delimiter').count(), 1);
+    assert.equal(await page.locator('#guesses-body tr:not(.delimiter)').count(), 3);
+
+    // Simulate background time passing & foreground return -> clock continues seamlessly!
+    const activeRow = h.row("SELECT id, answer_word, created_at FROM sm_games WHERE status = 'active'");
+    h.db.sqlite.prepare('UPDATE sm_games SET created_at = ? WHERE id = ?').run(activeRow.created_at - 15200, activeRow.id);
+    await page.locator('#home').click();
+    await page.locator('#title-screen').waitFor({ state: 'visible' });
+    await page.locator('#resume').click();
+    await page.locator('#game-screen').waitFor({ state: 'visible' });
+    const resumedTime = await page.locator('#game-timer').textContent();
+    assert.match(resumedTime, /^00:1[5-9]\.\d$/, `resumed timer expected >=15s, got ${resumedTime}`);
+
+    // Sort toggle
+    await page.locator('button[data-sort="guessNo"]').click();
+    assert.equal(await page.locator('button[data-sort="guessNo"]').getAttribute('data-dir'), 'asc');
+
+    // Unknown and duplicate word feedback
+    await page.locator('#guess-input').fill('뷁뷁뷁');
+    await page.locator('#send').click();
+    await page.locator('#turn-feedback[data-kind="error"]').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#guess-count-display').textContent(), '2');
+
+    await page.locator('#guess-input').fill('사람');
+    await page.locator('#send').click();
+    await page.waitForFunction(() => document.querySelector('#guesses-body tr.latest-guess .word-text')?.textContent === '사람');
+    assert.equal(await page.locator('#guess-count-display').textContent(), '2');
+
+    // Language switch preserves active game & draft
+    await page.locator('#guess-input').fill('기쁨');
+    await page.locator('.languages a[lang="en"]').click();
     await page.locator('#game-screen').waitFor({ state: 'visible' });
     assert.equal(await page.locator('html').getAttribute('lang'), 'en');
-    assert.equal(await page.locator('#remaining').textContent(), '19');
-    assert.equal(await page.locator('#question-input').inputValue(), 'draft kept');
-    assert.deepEqual(h.row('SELECT id, concept_id, used FROM tq_games WHERE status = ?', 'active'), before);
+    assert.equal(await page.locator('#guess-count-display').textContent(), '2');
+    assert.equal(await page.locator('#guess-input').inputValue(), '기쁨');
     await page.screenshot({ path: path.join(output, 'en-game-desktop.png'), fullPage: true });
-    await page.locator('#guess-mode').click(); await page.locator('#question-input').fill(h.answer(before.id).en); await page.locator('#send').click();
-    await page.locator('#result-screen').waitFor({ state: 'visible' });
-    assert.equal(await page.locator('#result-streak').textContent(), '1');
-    assert.equal(await page.evaluate(() => document.activeElement.id), 'result-title');
-    await page.waitForTimeout(1100);
-    await page.screenshot({ path: path.join(output, 'en-success-desktop.png'), fullPage: true });
-    assert.equal(h.row('SELECT best_streak FROM tq_players').best_streak, 1);
-    assert.equal(apiRequests.some(r => r.url.endsWith('/leaderboard') || r.method === 'PATCH'), false);
-    await page.reload({ waitUntil: 'networkidle' });
-    await page.locator('#result-screen').waitFor({ state: 'visible' });
-    assert.equal(await page.locator('#result-best').textContent(), '1');
-    await page.locator('#ranking-open').click(); await page.locator('.leaderboard tbody tr').waitFor();
-    assert.equal(await page.locator('.leaderboard tbody tr').count(), 1);
-    assert.equal(await page.locator('#ranking-dialog form, #ranking-dialog input, #ranking-dialog button[type=submit]').count(), 0);
-    assert.equal(await page.locator('.leaderboard tbody tr.own').count(), 1);
-    assert.equal(apiRequests.some(r => r.method === 'PATCH'), false);
+
+    // Solve after >=2 guesses & >=15s elapsed -> verify fastest-time registration, Top-1,000, post-win explore
+    await page.locator('#guess-input').fill(activeRow.answer_word);
+    await page.locator('#send').click();
+    await page.locator('#result-banner').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#result-answer').textContent(), activeRow.answer_word);
+    assert.match(await page.locator('#result-best-time').textContent(), /^00:1\d\.\d{2}$/);
+    await page.screenshot({ path: path.join(output, 'en-won-desktop.png'), fullPage: true });
+
+    await page.locator('#open-nearest').click();
+    await page.locator('#nearest-dialog').waitFor({ state: 'visible' });
+    await page.waitForFunction(() => document.querySelectorAll('#nearest-body tr').length === 1000);
+    await page.locator('#nearest-filter').fill('사람');
+    assert.equal(await page.locator('#nearest-body tr').count(), 1);
+    await page.locator('#nearest-dialog [data-close]').click();
+
+    await page.locator('#guess-input').fill('나무');
+    await page.locator('#send').click();
+    await page.locator('#turn-feedback').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#result-guesses').textContent(), '3');
+
+    // Open Hall of Fame from result banner -> verify fastest time row + display name update
+    await page.locator('#open-ranking-result').click();
+    await page.locator('.leaderboard tbody tr').waitFor();
+    await page.locator('#name-input').fill('StarGazer');
+    await page.locator('#name-save').click();
+    await page.waitForFunction(() => document.querySelector('#leaderboard tbody tr')?.textContent.includes('StarGazer'));
+    assert.match(await page.locator('#leaderboard tbody tr').first().textContent(), /00:1\d\.\d{2}/);
     await page.locator('#ranking-dialog [data-close]').click();
-    await page.locator('#next-game').click(); await page.locator('#game-screen').waitFor({ state: 'visible' });
-    assert.notEqual(h.row('SELECT concept_id FROM tq_games WHERE status = ?', 'active').concept_id, before.concept_id);
-    await page.locator('#give-up').click(); await page.locator('#confirm-give-up').click(); await page.locator('#result-screen').waitFor({ state: 'visible' });
-    assert.equal(await page.locator('#result-streak').textContent(), '0'); assert.equal(await page.locator('#result-best').textContent(), '1');
-    for (const [width, height] of [[320,568],[360,800],[390,844],[430,932],[768,1024],[844,390]]) {
+
+    await page.locator('#guide-open').click();
+    await page.locator('#guide-dialog').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#stat-wins').textContent(), '1');
+    await page.locator('#guide-dialog [data-close]').click();
+
+    await page.locator('#settings-open').click();
+    await page.locator('#dark-mode').click();
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'light');
+    await page.locator('#dark-mode').click();
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
+    await page.locator('#settings-dialog [data-close]').click();
+
+    // Next unlimited word -> Give up
+    await page.locator('#next-game').click();
+    await page.waitForFunction(() => document.querySelector('#result-banner').hidden === true);
+    await page.locator('#give-up').click();
+    await page.locator('#confirm-give-up').click();
+    await page.locator('#result-banner').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#result-streak').textContent(), '0');
+
+    // Responsive check across all mobile & tablet viewports
+    await page.locator('.languages a[lang="ko"]').click();
+    await page.locator('#result-banner').waitFor({ state: 'visible' });
+    await page.locator('#next-game').click();
+    await page.waitForFunction(() => document.querySelector('#result-banner').hidden === true);
+
+    for (const [width, height] of [[320, 568], [360, 800], [390, 844], [430, 932], [768, 1024], [844, 390]]) {
         await page.setViewportSize({ width, height });
-        await page.locator('#result-home').click();
-        await page.screenshot({ path: path.join(output, `en-title-${width}x${height}.png`), fullPage: true });
-        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width}: horizontal overflow at title`);
-        await page.locator('#ranking-open').click(); await page.locator('.leaderboard tbody tr').waitFor();
-        await page.screenshot({ path: path.join(output, `en-ranking-${width}x${height}.png`), fullPage: true });
-        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width}: horizontal overflow in ranking`);
-        await page.locator('#ranking-dialog [data-close]').click();
-        await page.locator('#start').click(); await page.locator('#game-screen').waitFor({ state: 'visible' });
-        await page.locator('#question-input').fill('a clear mobile question'); await page.locator('#send').click();
-        await page.waitForFunction(() => document.querySelector('#remaining').textContent === '19');
-        await page.waitForTimeout(300);
-        await page.screenshot({ path: path.join(output, `en-game-${width}x${height}.png`), fullPage: true });
-        const controls = await page.locator('#home,#give-up,#question-mode,#guess-mode,#send,.header-controls button,.languages a').evaluateAll(nodes => nodes.map(n => ({ id:n.id, rect:n.getBoundingClientRect().toJSON() })));
-        for (const {id,rect} of controls) assert.ok(rect.width >= 44 && rect.height >= 44, `${width}: ${id} touch target`);
-        const q = await page.locator('#question-mode').boundingBox(), g = await page.locator('#guess-mode').boundingBox();
-        assert.ok(g.x - q.x - q.width >= 11, `${width}: mode button separation`);
-        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width}: horizontal overflow at game`);
-        await page.locator('#give-up').click(); await page.locator('#confirm-give-up').click(); await page.locator('#result-screen').waitFor({ state: 'visible' });
+        await page.locator('#home').click();
+        await page.locator('#title-screen').waitFor({ state: 'visible' });
+        if (width === 390 && height === 844) {
+            await page.screenshot({ path: path.join(output, 'ko-title-mobile-390.png'), fullPage: true });
+        }
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width}x${height}: title overflow`);
+        await page.locator('#resume').click();
+        await page.locator('#game-screen').waitFor({ state: 'visible' });
+        if (width === 390 && height === 844) {
+            await page.locator('.starter-chip[data-word="사람"]').click();
+            await page.waitForFunction(() => Number(document.querySelector('#guess-count-display').textContent) >= 1);
+            await page.screenshot({ path: path.join(output, 'ko-game-mobile-390.png'), fullPage: true });
+        }
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width}x${height}: game overflow`);
+        const controls = await page.locator('#home,#give-up,#send,#ranking-open,#guide-open,#settings-open,.languages a,button[data-sort]').evaluateAll(
+            nodes => nodes.map(n => ({ id: n.id || n.dataset.sort || n.textContent.trim(), rect: n.getBoundingClientRect().toJSON() }))
+        );
+        for (const { id, rect } of controls) {
+            if (rect.width === 0 && rect.height === 0) continue;
+            assert.ok(rect.width >= 44 && rect.height >= 44, `${width}x${height}: ${id} touch target ${rect.width}x${rect.height}`);
+        }
     }
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.locator('.languages a[lang=ko]').click();
-    await page.locator('#result-screen').waitFor({ state: 'visible' });
-    await page.locator('#result-home').click();
-    await page.screenshot({ path: path.join(output, 'ko-title-mobile.png'), fullPage: true });
-    await page.locator('#start').click(); await page.locator('#game-screen').waitFor({ state: 'visible' });
-    await page.locator('#question-input').fill('한국어로 적은 긴 질문도 줄이 잘리고 겹치지 않는지 확인할 수 있나요?');
-    await page.locator('#send').click(); await page.waitForFunction(() => document.querySelector('#remaining').textContent === '19');
-    await page.waitForTimeout(300);
-    await page.screenshot({ path: path.join(output, 'ko-game-mobile.png'), fullPage: true });
-    await page.locator('#question-input').fill('아');
-    const callsBeforeComposition = h.calls;
-    await page.locator('#question-input').dispatchEvent('compositionstart');
-    await page.locator('#question-input').dispatchEvent('keydown', { key: 'Enter', isComposing: true });
-    await page.waitForTimeout(100);
-    assert.equal(h.calls, callsBeforeComposition);
-    assert.equal(await page.locator('#remaining').textContent(), '19');
-    await page.locator('#question-input').dispatchEvent('compositionend');
-    await page.locator('#question-input').focus();
-    await page.evaluate(() => { Object.defineProperty(visualViewport, 'height', { configurable: true, value: 500 }); visualViewport.dispatchEvent(new Event('resize')); });
-    await page.waitForTimeout(150);
-    assert.ok(await page.locator('body').evaluate(node => node.classList.contains('keyboard-open')));
-    assert.ok(await page.locator('#question-input').evaluate(node => node.getBoundingClientRect().bottom <= 500), 'Input stays above the simulated keyboard');
-    h.db.sqlite.exec("UPDATE tq_games SET used = 18 WHERE status = 'active'");
-    await page.locator('#question-input').fill('reach the last turn'); await page.locator('#send').click();
-    await page.waitForFunction(() => document.querySelector('#remaining').textContent === '1');
-    await page.waitForTimeout(150);
-    assert.ok(await page.locator('#question-input').evaluate(node => node.getBoundingClientRect().bottom <= 500), 'Last-turn notice does not bury the input');
-    await page.evaluate(() => { delete visualViewport.height; visualViewport.dispatchEvent(new Event('resize')); });
-    const raceContext = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
-    const raceServer = harness();
-    let releaseProfile;
-    const held = new Promise(resolve => { releaseProfile = resolve; });
-    await raceContext.route('http://127.0.0.1:8787/twenty-questions/**', async route => {
-        const original = route.request();
-        const headers = { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS', 'Content-Type': 'application/json' };
-        if (original.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
-        const response = await raceServer.fetch(new Request(original.url(), { method: original.method(), headers: original.headers(), ...(original.method() === 'GET' ? {} : { body: original.postData() }) }));
-        const body = await response.text();
-        if (original.url().endsWith('/profile') && original.method() === 'GET') await held;
-        await route.fulfill({ status: response.status, headers, body });
+
+    // Check portal game card image loads cleanly alongside sibling games
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(origin + '/', { waitUntil: 'networkidle' });
+    const portalCard = page.locator('.game-card.twenty-questions');
+    await portalCard.scrollIntoViewIfNeeded();
+    const portalImgOk = await page.evaluate(async () => {
+        const img = document.querySelector('.game-card.twenty-questions img');
+        if (!img || !img.complete || img.naturalWidth <= 0) return false;
+        if (typeof img.decode === 'function') await img.decode().catch(() => {});
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        return img.naturalWidth > 0;
     });
-    const racePage = await raceContext.newPage();
-    await racePage.goto(origin + '/twenty-questions/', { waitUntil: 'domcontentloaded' });
-    await racePage.locator('#start').click(); await racePage.locator('#game-screen').waitFor({ state: 'visible' });
-    releaseProfile(); await racePage.waitForTimeout(100);
-    await racePage.locator('#question-input').fill('valid question after late profile'); await racePage.locator('#send').click();
-    await racePage.waitForFunction(() => document.querySelector('#remaining').textContent === '19');
-    const originalDecide = raceServer.env.TQ_AI.decide;
-    let releaseDecision;
-    const heldDecision = new Promise(resolve => { releaseDecision = resolve; });
-    raceServer.env.TQ_AI.decide = async input => { await heldDecision; return originalDecide(input); };
-    await racePage.locator('#question-input').fill('a slow question');
-    await racePage.locator('#send').tap();
-    await racePage.locator('#judging-overlay').waitFor({ state: 'visible' });
-    assert.equal(await racePage.evaluate(() => document.activeElement.id), 'judging-overlay');
-    assert.equal(await racePage.locator('main').evaluate(node => node.inert), true);
-    assert.equal(await racePage.locator('.site-header').evaluate(node => node.inert), true);
-    assert.equal(await racePage.locator('.judging-progress').getAttribute('aria-valuenow'), null);
-    assert.equal(await racePage.locator('.judging-progress span').evaluate(node => getComputedStyle(node).animationName), 'archive-progress');
-    await racePage.screenshot({ path: path.join(output, 'judging-mobile.png'), fullPage: true });
-    const rankingButton = await racePage.locator('#ranking-open').boundingBox();
-    await racePage.mouse.click(rankingButton.x + 15, rankingButton.y + 15);
-    await racePage.keyboard.press('Escape');
-    assert.equal(await racePage.locator('#ranking-dialog').evaluate(node => node.open), false);
-    assert.equal(await racePage.locator('#judging-overlay').isVisible(), true);
-    await racePage.emulateMedia({ reducedMotion: 'reduce' });
-    assert.equal(await racePage.locator('.judging-progress span').evaluate(node => getComputedStyle(node).animationName), 'none');
-    await racePage.emulateMedia({ reducedMotion: 'no-preference' });
-    releaseDecision();
-    await racePage.waitForFunction(() => document.querySelector('#remaining').textContent === '18');
-    await racePage.locator('#judging-overlay').waitFor({ state: 'hidden' });
-    assert.equal(await racePage.locator('main').evaluate(node => node.inert), false);
-    assert.equal(await racePage.locator('#question-input').inputValue(), '');
-    raceServer.env.TQ_AI.decide = async () => { throw new DOMException('timeout', 'TimeoutError'); };
-    await racePage.locator('#question-input').fill('retry after timeout'); await racePage.locator('#send').tap();
-    await racePage.locator('#notice').waitFor({ state: 'visible' });
-    await racePage.locator('#judging-overlay').waitFor({ state: 'hidden' });
-    assert.equal(await racePage.locator('#remaining').textContent(), '18');
-    assert.equal(await racePage.locator('#question-input').inputValue(), 'retry after timeout');
-    assert.equal(await racePage.locator('#send').isEnabled(), true);
-    assert.equal(await racePage.locator('.site-header').evaluate(node => node.inert), false);
-    raceServer.env.TQ_AI.decide = originalDecide;
-    await racePage.locator('#send').tap();
-    await racePage.waitForFunction(() => document.querySelector('#remaining').textContent === '17');
-    await racePage.locator('#guess-mode').click();
-    assert.equal(await racePage.locator('#guess-mode').getAttribute('aria-pressed'), 'true');
-    await racePage.locator('#question-input').fill('wrong guess candidate');
-    await racePage.locator('#send').tap();
-    await racePage.waitForFunction(() => document.querySelector('#remaining').textContent === '16');
-    assert.equal(await racePage.locator('#question-mode').getAttribute('aria-pressed'), 'true');
-    assert.equal(await racePage.locator('#guess-mode').getAttribute('aria-pressed'), 'false');
-    await racePage.locator('#guess-mode').click();
-    assert.equal(await racePage.locator('#guess-mode').getAttribute('aria-pressed'), 'true');
-    await racePage.locator('#question-input').fill('10명이상 탑승 가능할까요?');
-    await racePage.locator('#send').tap();
-    await racePage.waitForFunction(() => document.querySelector('#remaining').textContent === '15');
-    assert.equal(await racePage.locator('#question-mode').getAttribute('aria-pressed'), 'true');
-    assert.equal(await racePage.locator('.history-row').last().locator('.history-mode').count(), 0);
-    await raceContext.close();
-    assert.equal((await fetch(origin + '/server/twenty-questions/seed-catalog.mjs')).status, 404);
+    assert.ok(portalImgOk, 'Portal game card image must load and decode with naturalWidth > 0');
+    await page.screenshot({ path: path.join(output, 'portal-card-desktop.png') });
+
+    assert.equal((await fetch(origin + '/server/twenty-questions/service.mjs')).status, 404);
     assert.deepEqual(errors, []);
-    fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify({ provider: 'deterministic test double; real D1 game logic via SQLite', errors, viewports: 7, checks: ['start','questions','no-charge','language-session-draft-preservation','win','streak','automatic-ranking','ranking-reload','give-up','no-repeat','mobile-touch-spacing','source-protection','IME-composition','late-profile-race','blocking-progress','timeout-unlock-retry','wrong-guess-mode-reset','verbal-question-autoroute'] }, null, 2));
+    fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify({ ok: true, viewports: 7, errors }, null, 2));
     console.log(`Browser checks passed. Screenshots: ${output}`);
-} finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
+    h.db.sqlite.close();
+} finally {
+    await browser.close();
+    await new Promise(resolve => server.close(resolve));
+}
