@@ -459,7 +459,7 @@ Object.assign(WEAPONS, {
         basicAttackPattern: [{ motion: null, side: 1 }, { motion: 'rise', side: -1 }],
         basicAttackEffectKey: 'light_sword_slash',
         effectOrientation: 'bodyArc',
-        effectRotationOffset: Math.PI / 4,
+        effectRotationOffset: -Math.PI / 4,
         effectFrameMs: 40,
         effectStartFrame: 1,
         effectPeakAlpha: 0.94,

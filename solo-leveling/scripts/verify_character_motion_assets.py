@@ -19,6 +19,7 @@ from typing import Sequence
 
 from PIL import Image, ImageChops, ImageFilter, ImageOps
 from build_basic_attack_variants import VARIANTS
+from build_character_motion_v2 import is_native_transparent_strip, split_strip as build_split_strip
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -92,12 +93,14 @@ def image_pixels(image: Image.Image):
 def expected_names(prefix: str) -> list[str]:
     names = [f"{prefix}idle_{index}" for index in range(4)]
     for direction in DIRECTIONS:
+        names.extend(f"{prefix}idle_{direction}_{index}" for index in range(4))
+    for direction in DIRECTIONS:
         names.extend(f"{prefix}walk_{direction}_{index}" for index in range(WALK_FRAMES))
-    names.extend(f"{prefix}attack_{index}" for index in range(ATTACK_FRAMES))
+    names.extend(f"{prefix}attack_{index}" for index in range(6))
     for direction in DIRECTIONS:
         names.extend(f"{prefix}attack_{direction}_{index}" for index in range(ATTACK_FRAMES))
     names.extend(f"{prefix}hit_{index}" for index in range(2))
-    assert len(names) == 68
+    assert len(names) == 84
     return names
 
 
@@ -382,7 +385,15 @@ def verify_motion_set(motion_set: MotionSet) -> dict[str, float]:
         for direction in DIRECTIONS:
             sequence = [logical(frames, motion_set, f'attack_{variant}_{direction}_{i}') for i in range(ATTACK_FRAMES)]
             verify_sequence_variance(f'{motion_set.label}/{variant}/{direction}', sequence,
-                                     minimum_unique=4, minimum_peak=0.045, minimum_active_steps=3)
+                                     minimum_unique=5, minimum_peak=0.045, minimum_active_steps=4)
+            if digest(sequence[2]) == digest(sequence[3]):
+                raise AssertionError(f'{motion_set.label}/{variant}/{direction}: frame 2 and 3 must not be identical')
+            heights = [alpha_bbox(f, f'{motion_set.label}/{variant}/{direction}')[3] - alpha_bbox(f, f'{motion_set.label}/{variant}/{direction}')[1] for f in sequence]
+            if abs(heights[5] - heights[0]) > 14 and abs(heights[5] - statistics.mean(heights[:5])) > 15:
+                raise AssertionError(
+                    f'{motion_set.label}/{variant}/{direction}: recovery height jump too large '
+                    f'(ready={heights[0]}, recovery={heights[5]}, mean={statistics.mean(heights[:5]):.1f})'
+                )
             old_recovery = logical(frames, motion_set, f'attack_{direction}_5')
             if sequence[-1].tobytes() != old_recovery.tobytes():
                 raise AssertionError(f'{motion_set.label}/{variant}: recovery drift')
@@ -391,8 +402,20 @@ def verify_motion_set(motion_set: MotionSet) -> dict[str, float]:
             left = logical(frames, motion_set, f'attack_{variant}_left_{i}')
             if ImageOps.mirror(right).tobytes() != left.tobytes():
                 raise AssertionError(f'{motion_set.label}/{variant}: mirror drift')
+    for index in range(4):
+        right_idle = logical(frames, motion_set, f"idle_right_{index}")
+        left_idle = logical(frames, motion_set, f"idle_left_{index}")
+        if ImageChops.difference(ImageOps.mirror(right_idle), left_idle).getbbox():
+            raise AssertionError(f"{motion_set.label}/idle_left_{index} is not an exact right mirror")
+        if ImageChops.difference(logical(frames, motion_set, f"idle_{index}"), logical(frames, motion_set, f"idle_down_{index}")).getbbox():
+            raise AssertionError(f"{motion_set.label}/idle_{index} does not match idle_down_{index}")
+
+    walk_heights: list[int] = []
     for direction in DIRECTIONS:
         walk = [logical(frames, motion_set, f"walk_{direction}_{index}") for index in range(WALK_FRAMES)]
+        for wf in walk:
+            wb = alpha_bbox(wf, f"{motion_set.label}/walk_{direction}")
+            walk_heights.append(wb[3] - wb[1])
         verify_sequence_variance(
             f"{motion_set.label}/walk_{direction}",
             walk,
@@ -405,12 +428,24 @@ def verify_motion_set(motion_set: MotionSet) -> dict[str, float]:
         peak, step_mean = verify_sequence_variance(
             f"{motion_set.label}/attack_{direction}",
             attack,
-            minimum_unique=4,
+            minimum_unique=5,
             minimum_peak=0.045,
-            minimum_active_steps=3,
+            minimum_active_steps=4,
         )
+        if digest(attack[2]) == digest(attack[3]):
+            raise AssertionError(f"{motion_set.label}/attack_{direction}: frame 2 and 3 must not be identical")
+        atk_heights = [alpha_bbox(f, f"{motion_set.label}/attack_{direction}")[3] - alpha_bbox(f, f"{motion_set.label}/attack_{direction}")[1] for f in attack]
+        if abs(atk_heights[5] - atk_heights[0]) > 14 and abs(atk_heights[5] - statistics.mean(atk_heights[:5])) > 15:
+            raise AssertionError(
+                f"{motion_set.label}/attack_{direction}: recovery height jump too large "
+                f"(ready={atk_heights[0]}, recovery={atk_heights[5]}, mean={statistics.mean(atk_heights[:5]):.1f})"
+            )
         peaks.append(peak)
         step_means.append(step_mean)
+
+    median_walk_h = statistics.median(walk_heights)
+    if not 112 <= median_walk_h <= 134:
+        raise AssertionError(f"{motion_set.label}: standing walk height {median_walk_h:.1f}px outside 112..134px")
 
     # The v2 generator contract mirrors complete frames, including the weapon.
     for index in range(WALK_FRAMES):
@@ -596,6 +631,31 @@ def split_source_strip(path: Path, track: str) -> tuple[list[Image.Image], list[
     width, height = strip.size
     if width < 256 or height < 128 or width / height < 2.0:
         raise AssertionError(f"{path} is not a plausible four-pose horizontal strip: {strip.size}")
+    if is_native_transparent_strip(strip):
+        clean_poses = build_split_strip(path, track)
+        a_bytes = strip.getchannel("A").tobytes()
+        removed_ratio = sum(1 for v in a_bytes if v <= 8) / max(1, len(a_bytes))
+        if len(clean_poses) != 4:
+            raise AssertionError(f"{path}: expected 4 clean poses, got {len(clean_poses)}")
+        areas = [
+            sum(1 for *_, alpha in image_pixels(pose.image) if alpha > 8)
+            for pose in clean_poses
+        ]
+        if min(areas) <= 0 or max(areas) / min(areas) > 2.35:
+            raise AssertionError(f"{path} pose silhouette sizes are inconsistent: {areas}")
+        poses = [normalized_subject(pose.image) for pose in clean_poses]
+        unique = len({digest(pose) for pose in poses})
+        if unique < 4:
+            raise AssertionError(f"{path} contains duplicated pose cells ({unique}/4 unique)")
+        meaningful_pairs = sum(
+            difference_score(poses[left], poses[right]) >= 0.018
+            for left in range(4)
+            for right in range(left + 1, 4)
+        )
+        if meaningful_pairs < 4:
+            raise AssertionError(f"{path} has insufficient pose variation ({meaningful_pairs}/6 meaningful pairs)")
+        return poses, [removed_ratio] * 4, [0.0] * 4
+
     keyed, removed_ratio, residual_ratio = quick_chroma_key(strip, str(path))
     # Long integrated blades can approach the neighbouring pose at source
     # scale.  Do not dilate components here: a one-pixel bridge can merge two
@@ -635,12 +695,15 @@ def split_source_strip(path: Path, track: str) -> tuple[list[Image.Image], list[
 
 
 def verify_source_set(motion_set: MotionSet) -> dict[str, float]:
-    source_dir = SOURCE_ROOT / motion_set.source_id
+    native_dir = SOURCE_ROOT / "native_rgba" / motion_set.source_id
+    use_native = all((native_dir / f"{track}.png").is_file() for track in SOURCE_TRACKS)
+    source_dir = native_dir if use_native else (SOURCE_ROOT / motion_set.source_id)
     tracks: dict[str, list[Image.Image]] = {}
     removed: list[float] = []
     residual: list[float] = []
     for track in SOURCE_TRACKS:
-        poses, track_removed, track_residual = split_source_strip(source_dir / f"{track}_chroma.png", track)
+        strip_path = source_dir / (f"{track}.png" if use_native else f"{track}_chroma.png")
+        poses, track_removed, track_residual = split_source_strip(strip_path, track)
         tracks[track] = poses
         removed.extend(track_removed)
         residual.extend(track_residual)
@@ -747,7 +810,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         for motion_set in MOTION_SETS:
             metrics = verify_motion_set(motion_set)
             print(
-                f"frames verified {motion_set.label}: {68 + 24 * len(VARIANTS.get(motion_set.source_id, ()))} PNG + pixel-identical WebP / "
+                f"frames verified {motion_set.label}: {84 + 24 * len(VARIANTS.get(motion_set.source_id, ()))} PNG + pixel-identical WebP / "
                 f"direction down-up {metrics['down_up']:.3f}, left-right {metrics['left_right']:.3f} / "
                 f"min attack peak {metrics['min_attack_peak']:.3f}"
             )

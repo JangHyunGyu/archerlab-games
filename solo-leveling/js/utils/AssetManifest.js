@@ -118,6 +118,9 @@ const ENEMY_BOSS_EFFECT_KEYS = [
 const PLAYER_MOTION_NAMES = [
     ...Array.from({ length: 4 }, (_, i) => `player_idle_${i}`),
     ...['down', 'right', 'up', 'left'].flatMap(dir =>
+        Array.from({ length: 4 }, (_, i) => `player_idle_${dir}_${i}`)
+    ),
+    ...['down', 'right', 'up', 'left'].flatMap(dir =>
         Array.from({ length: 8 }, (_, i) => `player_walk_${dir}_${i}`)
     ),
     ...Array.from({ length: 6 }, (_, i) => `player_attack_${i}`),
@@ -130,8 +133,8 @@ const PLAYER_MOTION_NAMES = [
 // Character image URLs are otherwise stable across releases and can remain in
 // a browser/CDN cache after portraits or motion frames are rebuilt in place.
 export const CHARACTER_VISUAL_ASSET_VERSION = '20260714-integrated-character-motion-v2';
-export const CHARACTER_MOTION_ASSET_VERSION = '20261010-basic-combo-motion-v4';
-export const CHARACTER_COMBAT_VFX_ASSET_VERSION = '20261010-basic-combo-vfx-v16';
+export const CHARACTER_MOTION_ASSET_VERSION = '20261118-native-rgba-motion-v5';
+export const CHARACTER_COMBAT_VFX_ASSET_VERSION = '20261118-combat-vfx-polish-v17';
 export const CHARACTER_COMBAT_VFX_FRAME_COUNT = 6;
 
 const uiAsset = (key) => ({

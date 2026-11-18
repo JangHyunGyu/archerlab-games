@@ -145,5 +145,106 @@ for (const motion of ['cut','reverse','rise','backhand','lift','blessing']) {
         delays[0].fn();
     }
     assert.deepEqual(samples[0],samples[1],'slash preserves stab range, angle and knockback');
-    console.log('basic cycles: all five characters, 12 emitted attacks each, asset coverage, variant persistence, skill reset and dagger hit parity passed');
+
+    // 4-directional idle frames and facing preservation (no mirror flip on idle/hit)
+    const { CHARACTER_FRAME_NAMES } = await import(pathToFileURL(path.join(__dirname, '../js/utils/Characters.js')));
+    const shadowAssets = getGameplayAssetList('shadowMonarch');
+    for (const dir of ['down', 'right', 'up', 'left']) {
+        for (let i = 0; i < 4; i++) {
+            assert.ok(CHARACTER_FRAME_NAMES.includes(`idle_${dir}_${i}`), `CHARACTER_FRAME_NAMES includes idle_${dir}_${i}`);
+            assert.ok(shadowAssets.some(a => a.key === `motion_player_idle_${dir}_${i}`), `gameplay assets include motion_player_idle_${dir}_${i}`);
+        }
+    }
+    for (const dir of ['down', 'right', 'up', 'left']) {
+        const p = Object.create(Player.prototype);
+        Object.assign(p, {
+            active: true, isDead: false, texturePrefix: 'test', facingDirection: dir,
+            facingRight: dir !== 'left', moveIntensity: 0, character: {}, _attackPose: {},
+            _hitFlashTimer: 0, _isMoving: false, flipX: true,
+            scene: { anims: { exists: () => true } },
+            anims: { currentAnim: null },
+            play(config) { this.played = config; },
+            setFlipX(value) { this.flipX = value; },
+        });
+        assert.equal(p._getActiveAnimationKey(), `test_idle_${dir}`, `idle key keeps facing ${dir}`);
+        p._applyFlipForAnimation(`test_idle_${dir}`);
+        assert.equal(p.flipX, false, `idle_${dir} never sets flipX`);
+        p._applyFlipForAnimation('test_hit');
+        assert.equal(p.flipX, false, 'hit never sets flipX');
+    }
+
+    // RulersAuthority targetMode === 'self' respects facingDirection/lastMoveAngle and avoids 0-degree snap
+    const rulerSrc = fs.readFileSync(path.join(__dirname, '../js/weapons/RulersAuthority.js'), 'utf8')
+        .replace(/^import .*;\r?\n/gm, '').replace('export class RulersAuthority', 'class RulersAuthority');
+    context.Phaser.Math.Angle = {
+        Between: (x1, y1, x2, y2) => Math.atan2(y2 - y1, x2 - x1),
+        Wrap: (a) => Math.atan2(Math.sin(a), Math.cos(a)),
+    };
+    vm.runInContext(`${rulerSrc}\nglobalThis.RulersAuthority = RulersAuthority;`, context);
+    const noopSprite = { scaleX: 1, scaleY: 1 };
+    for (const m of ['setDepth', 'setAlpha', 'setScale', 'setBlendMode', 'setRotation', 'setTint']) noopSprite[m] = () => noopSprite;
+    const rulerCalls = [];
+    const ruler = Object.create(context.RulersAuthority.prototype);
+    Object.assign(ruler, {
+        config: { targetMode: 'self', blastRange: 180, motionDuration: 260, imageOnlyVfx: true },
+        extraRange: 0,
+        player: {
+            x: 120, y: 240, facingDirection: 'up', facingRight: true, moveIntensity: 0,
+            character: { basicAttackVariants: ['lift'] },
+            getAllEnemies: () => [],
+            playAttackMotion: (angle, duration, side, variant) => rulerCalls.push({ angle, duration, side, variant }),
+        },
+        scene: {
+            scene: { isActive: () => true },
+            textures: { exists: () => true },
+            tweens: { add: () => ({}) },
+        },
+        getEffectTexture: () => 'test_vfx',
+        getEffectScaleForVisibleSize: () => ({ x: 1, y: 1 }),
+        createEffectSprite: () => noopSprite,
+        getEffectColor: () => 0,
+        playConfiguredSound() {},
+        healPlayerFromConfig() {},
+        _delay() {},
+    });
+    ruler._blast(0);
+    assert.equal(rulerCalls.length, 1);
+    assert.ok(Math.abs(rulerCalls[0].angle - (-Math.PI / 2)) < 1e-6, 'self targetMode uses facingDirection up (-pi/2) instead of 0');
+    assert.equal(rulerCalls[0].variant, 'lift');
+
+    // ShadowSlash multi-wave fan triggers playAttackMotion once per cast (sequence === 0)
+    const slashSrc = fs.readFileSync(path.join(__dirname, '../js/weapons/ShadowSlash.js'), 'utf8')
+        .replace(/^import .*;\r?\n/gm, '').replace('export class ShadowSlash', 'class ShadowSlash');
+    vm.runInContext(`${slashSrc}\nglobalThis.ShadowSlash = ShadowSlash;`, context);
+    const slashDelays = [];
+    const slashMotions = [];
+    const slashW = Object.create(context.ShadowSlash.prototype);
+    Object.assign(slashW, {
+        config: { arcOffsets: [-0.35, 0, 0.35], slashRange: 260, imageOnlyVfx: true },
+        extraRange: 0,
+        count: 2,
+        player: {
+            x: 100, y: 200, facingDirection: 'left', facingRight: false, moveIntensity: 0,
+            getClosestEnemy: () => null,
+            getAllEnemies: () => [],
+            playAttackMotion: (angle, duration) => slashMotions.push({ angle, duration }),
+        },
+        scene: { textures: { exists: () => false }, tweens: { add: () => ({}) } },
+        _delay(ms, fn) { slashDelays.push({ ms, fn }); },
+        getEffectDarkColor: () => 0,
+        getEffectColor: () => 0,
+        getEffectGlowColor: () => 0,
+        getEffectTexture: () => 'test_vfx',
+        getEffectRotation: (a) => a,
+        getEffectForwardFit: () => ({ scale: 1, centerForward: 90 }),
+        getDamage: () => 50,
+        createEffectSprite: () => noopSprite,
+        playConfiguredSound() {},
+    });
+    slashW.fire();
+    assert.equal(slashDelays.length, 6, '2 repeats x 3 offsets scheduled');
+    slashDelays.forEach((d) => d.fn());
+    assert.equal(slashMotions.length, 1, 'fan slash triggers playAttackMotion only on first wave');
+
+    console.log('basic cycles: all five characters, 12 emitted attacks each, asset coverage, variant persistence, skill reset, dagger hit parity, 4-dir idle, self-target angle and single-trigger fan slash passed');
 })().catch(e=>{console.error(e);process.exitCode=1;});

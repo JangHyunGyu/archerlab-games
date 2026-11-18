@@ -476,7 +476,7 @@ const expectedCombatVfxOrientations = {
     sanctuaryField: 'selfRadial',
 };
 const expectedCombatVfxRotationOffsets = {
-    lightPierce: Math.PI / 4,
+    lightPierce: -Math.PI / 4,
     lightLance: -3 * Math.PI / 4,
     lightCrescent: -Math.PI / 2,
     tigerPalm: -Math.PI / 4,

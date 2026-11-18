@@ -4,6 +4,9 @@ export const CHARACTER_STORAGE_KEY = 'shadow_survival_selected_character_v1';
 export const CHARACTER_FRAME_NAMES = [
     ...Array.from({ length: 4 }, (_, i) => `idle_${i}`),
     ...['down', 'right', 'up', 'left'].flatMap(dir =>
+        Array.from({ length: 4 }, (_, i) => `idle_${dir}_${i}`)
+    ),
+    ...['down', 'right', 'up', 'left'].flatMap(dir =>
         Array.from({ length: 8 }, (_, i) => `walk_${dir}_${i}`)
     ),
     ...Array.from({ length: 6 }, (_, i) => `attack_${i}`),
@@ -75,6 +78,7 @@ export const CHARACTER_DEFS = {
         archetype: '소환 / 올라운더',
         accent: 0x9a5cff,
         accentText: '#b996ff',
+        visualScale: 0.94,
         stats: {
             hp: 154,
             maxHp: 154,
@@ -96,6 +100,7 @@ export const CHARACTER_DEFS = {
         archetype: '치명 / 고속 근접',
         accent: 0xffd86a,
         accentText: '#ffe29a',
+        visualScale: 0.96,
         stats: {
             hp: 122,
             maxHp: 122,
@@ -139,6 +144,7 @@ export const CHARACTER_DEFS = {
         archetype: '광역 / 폭발 화력',
         accent: 0xff7a34,
         accentText: '#ffb077',
+        visualScale: 0.94,
         stats: {
             hp: 112,
             maxHp: 112,
@@ -160,6 +166,7 @@ export const CHARACTER_DEFS = {
         archetype: '회복 / 보호막',
         accent: 0x66f2b0,
         accentText: '#9dffd0',
+        visualScale: 0.94,
         stats: {
             hp: 160,
             maxHp: 160,

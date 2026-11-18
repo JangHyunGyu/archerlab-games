@@ -33,6 +33,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.isInvincible = false;
         this.invincibleTimer = 0;
         this.facingRight = true;
+        this.facingDirection = 'down';
         this.isMoving = false;
         this.animFrame = 0;
         this.animTimer = 0;
@@ -119,11 +120,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         };
 
         create('idle', frames('idle_', 4), 5);
+        create('idle_down', frames('idle_down_', 4), 5);
+        create('idle_right', frames('idle_right_', 4), 5);
+        create('idle_up', frames('idle_up_', 4), 5);
+        create('idle_left', frames('idle_left_', 4), 5);
         create('walk', frames('walk_', 8), 10);
-        create('walk_down', frames('walk_down_', 8), 12);
-        create('walk_right', frames('walk_right_', 8), 12);
-        create('walk_up', frames('walk_up_', 8), 12);
-        create('walk_left', frames('walk_left_', 8), 12);
+        create('walk_down', frames('walk_down_', 8), 14);
+        create('walk_right', frames('walk_right_', 8), 14);
+        create('walk_up', frames('walk_up_', 8), 14);
+        create('walk_left', frames('walk_left_', 8), 14);
         create('attack', frames('attack_', 6), 18, 0);
         create('attack_down', frames('attack_down_', 6), 20, 0);
         create('attack_right', frames('attack_right_', 6), 20, 0);
@@ -213,6 +218,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             } else if (ax > 0.02) {
                 this.moveDirection = this.moveInputX < 0 ? 'left' : 'right';
             }
+            this.facingDirection = this.moveDirection;
         }
 
         this._applyFacingFlip();
@@ -232,6 +238,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this._attackPose.angle = angle;
         this._attackPose.side = side || 1;
         this._attackPose.direction = this._directionFromAngle(angle);
+        this.facingDirection = this._attackPose.direction;
         this._attackPose.motion = motion;
         const variantAnimKey = motion && this._usesDirectionalAttackAnimations()
             ? this._animKey(`attack_${motion}_${this._attackPose.direction}`) : null;
@@ -249,6 +256,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             // to cut a 190 ms cast off before its recovery frames.
             this.play({ key: activeAnimKey, duration, frameRate: null }, false);
             this._applyFlipForAnimation(activeAnimKey);
+            this._emitAttackAfterimage();
         }
     }
 
@@ -303,12 +311,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             if (this._animExists(directionalWalk)) return directionalWalk;
             if (this._animExists(this._animKey('walk'))) return this._animKey('walk');
         }
+        const directionalIdle = this._animKey(`idle_${this.facingDirection || 'down'}`);
+        if (this._animExists(directionalIdle)) return directionalIdle;
         return this._animKey('idle');
     }
 
     _applyFlipForAnimation(animKey) {
         const name = this._animName(animKey);
-        if (name === 'walk_left' || name === 'walk_right' ||
+        if (name === 'idle' || name === 'hit' ||
+            /^idle_(left|right|up|down)$/.test(name) ||
+            name === 'walk_left' || name === 'walk_right' ||
             name === 'walk_up' || name === 'walk_down' ||
             name === 'attack_left' || name === 'attack_right' ||
             name === 'attack_up' || name === 'attack_down' ||
@@ -339,9 +351,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         const walkWeight = this._moveBlend;
         const idleWeight = 1 - walkWeight;
         const facingSign = this.facingRight ? 1 : -1;
-        const horizontalLean = this.moveInputX * 2.2;
-        const verticalLean = this.moveInputY * 0.75;
-        const walkSway = step * 0.55 * walkWeight * facingSign;
+        const horizontalLean = this.moveInputX * 0.85;
+        const verticalLean = this.moveInputY * 0.3;
+        const walkSway = step * 0.22 * walkWeight * facingSign;
         const walkSquash = footfall * 0.007 * walkWeight;
         const idleScaleY = idleBreath * 0.008 * idleWeight;
         const idleScaleX = -idleBreath * 0.004 * idleWeight;
@@ -399,6 +411,35 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         } catch (e) { /* afterimage optional */ }
     }
 
+    _emitAttackAfterimage() {
+        if (this._reducedMotion || !this.scene?.add?.sprite || !this.texture?.key) return;
+        const angle = this._attackPose.angle || 0;
+        try {
+            const echo = this.scene.add.sprite(
+                this.x - Math.cos(angle) * 6,
+                this.y - Math.sin(angle) * 6,
+                this.texture.key
+            )
+                .setDepth(this.depth - 1)
+                .setAlpha(0.24)
+                .setTint(this.character?.accent ?? 0x7b2fff)
+                .setBlendMode(Phaser.BlendModes.ADD)
+                .setScale((this.scaleX || this.visualBaseScale) * 1.04, (this.scaleY || this.visualBaseScale) * 1.04)
+                .setRotation(this.rotation || 0)
+                .setFlipX(!!this.flipX);
+
+            this.scene.tweens?.add({
+                targets: echo,
+                alpha: 0,
+                scaleX: echo.scaleX * 1.05,
+                scaleY: echo.scaleY * 1.05,
+                duration: 175,
+                ease: 'Quad.Out',
+                onComplete: () => echo.destroy(),
+            });
+        } catch (e) { /* afterimage optional */ }
+    }
+
     _sampleAttackPose(delta) {
         const pose = this._attackPose;
         if (!pose.active) {
@@ -412,11 +453,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         const isVertical = direction === 'up' || direction === 'down';
         const forwardSign = direction === 'left' || direction === 'up' ? -1 : 1;
         const leanSign = isVertical ? side * (direction === 'up' ? -1 : 1) : forwardSign;
-        const prepLean = isVertical ? 3.2 : 5.5;
-        const strikeLean = isVertical ? 6.2 : 13.5;
-        const settleLean = isVertical ? 4.4 : 8;
-        const prepTwist = isVertical ? 2.8 : 1.8;
-        const strikeTwist = isVertical ? 3.6 : 2.5;
+        const prepLean = isVertical ? 1.4 : 2.2;
+        const strikeLean = isVertical ? 2.6 : 4.5;
+        const settleLean = isVertical ? 1.8 : 2.6;
+        const prepTwist = isVertical ? 1.1 : 0.7;
+        const strikeTwist = isVertical ? 1.4 : 0.9;
         const easeOut = (v) => 1 - Math.pow(1 - Phaser.Math.Clamp(v, 0, 1), 3);
         const easeIn = (v) => {
             const k = Phaser.Math.Clamp(v, 0, 1);
@@ -443,7 +484,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         } else {
             const k = easeIn((p - 0.48) / 0.52);
             lean = leanSign * settleLean * (1 - k);
-            twist = side * (isVertical ? 1.6 : 1.2) * (1 - k);
+            twist = side * (isVertical ? 0.7 : 0.5) * (1 - k);
             scaleX = (isVertical ? 0.045 : 0.07) * (1 - k);
             scaleY = (isVertical ? -0.038 : -0.055) * (1 - k);
         }

@@ -12,6 +12,7 @@ export class BasicDagger extends WeaponBase {
         this._activeThrusts = [];
         this._stabSide = 1;
         this._basicAttackIndex = 0;
+        this._currentMotionDuration = BASIC_ATTACK_MOTION_DURATION;
     }
 
     _getBlade(textureKey = 'proj_dagger_stab') {
@@ -56,12 +57,20 @@ export class BasicDagger extends WeaponBase {
 
     fire() {
         const style = this.config.attackStyle || 'daggerThrust';
+        const stepDelay = style === 'fireball' ? 145 : 110;
         for (let i = 0; i < this.count; i++) {
-            this._delay(i * (style === 'fireball' ? 145 : 110), () => {
+            this._delay(i * stepDelay, () => {
                 if (!this.player?.active || this.player.isDead) return;
                 const pattern = this.config.basicAttackPattern;
                 const variant = pattern?.length ? pattern[this._basicAttackIndex++ % pattern.length] : null;
-                this._attackByStyle(variant?.style || style, variant);
+                this._currentMotionDuration = (this.count > 1 && i < this.count - 1)
+                    ? Math.max(155, stepDelay + 35)
+                    : BASIC_ATTACK_MOTION_DURATION;
+                try {
+                    this._attackByStyle(variant?.style || style, variant);
+                } finally {
+                    this._currentMotionDuration = BASIC_ATTACK_MOTION_DURATION;
+                }
             });
         }
     }
@@ -107,9 +116,12 @@ export class BasicDagger extends WeaponBase {
 
     _getAttackSetup({ rangeBonus = 50, duration = 240, variant = null } = {}) {
         const target = this.player.getClosestEnemy(this._getTargetAcquireRange(rangeBonus));
+        const dirAngles = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
+        const idleAngle = dirAngles[this.player.facingDirection]
+            ?? (this.player.facingRight ? 0 : Math.PI);
         const fallbackAngle = this.player.moveIntensity > 0.12
             ? this.player.lastMoveAngle
-            : (this.player.facingRight ? 0 : Math.PI);
+            : idleAngle;
         const baseAngle = target
             ? Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y)
             : fallbackAngle;
@@ -132,9 +144,12 @@ export class BasicDagger extends WeaponBase {
         const target = isMoving
             ? null
             : this.player.getClosestEnemy(this._getTargetAcquireRange(rangeBonus));
+        const dirAngles = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
+        const idleAngle = dirAngles[this.player.facingDirection]
+            ?? (this.player.facingRight ? 0 : Math.PI);
         const fallbackAngle = isMoving
             ? this.player.lastMoveAngle
-            : (this.player.facingRight ? 0 : Math.PI);
+            : idleAngle;
         const baseAngle = target
             ? Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y)
             : fallbackAngle;
@@ -209,9 +224,12 @@ export class BasicDagger extends WeaponBase {
 
     _thrust(variant = null) {
         const target = this.player.getClosestEnemy(this._getTargetAcquireRange(this.config.targetRangeBonus ?? 50));
+        const dirAngles = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
+        const idleAngle = dirAngles[this.player.facingDirection]
+            ?? (this.player.facingRight ? 0 : Math.PI);
         const fallbackAngle = this.player.moveIntensity > 0.12
             ? this.player.lastMoveAngle
-            : (this.player.facingRight ? 0 : Math.PI);
+            : idleAngle;
         const baseAngle = target
             ? Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y)
             : fallbackAngle;
@@ -224,7 +242,7 @@ export class BasicDagger extends WeaponBase {
         this._stabSide *= -1;
         const side = variant?.side ?? this._stabSide;
         if (this.player.playAttackMotion) {
-            this.player.playAttackMotion(baseAngle, BASIC_ATTACK_MOTION_DURATION, side, variant?.motion);
+            this.player.playAttackMotion(baseAngle, this._currentMotionDuration || BASIC_ATTACK_MOTION_DURATION, side, variant?.motion);
         }
         const effectTexture = this._getConfiguredEffectTexture() || this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;
@@ -529,7 +547,7 @@ export class BasicDagger extends WeaponBase {
         }
         const { baseAngle, side } = this._getAttackSetup({
             rangeBonus: this.config.targetRangeBonus ?? 50,
-            duration: BASIC_ATTACK_MOTION_DURATION,
+            duration: this._currentMotionDuration || BASIC_ATTACK_MOTION_DURATION,
             variant,
         });
         const hitRange = this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 0);
@@ -572,7 +590,7 @@ export class BasicDagger extends WeaponBase {
 
         const { baseAngle, side } = this._getAttackSetup({
             rangeBonus: this.config.targetRangeBonus ?? 50,
-            duration: BASIC_ATTACK_MOTION_DURATION,
+            duration: this._currentMotionDuration || BASIC_ATTACK_MOTION_DURATION,
             variant,
         });
         const cosA = Math.cos(baseAngle);
@@ -682,7 +700,7 @@ export class BasicDagger extends WeaponBase {
     _swordSlash(variant = null) {
         const { baseAngle, side } = this._getAttackSetup({
             rangeBonus: this.config.targetRangeBonus ?? 65,
-            duration: BASIC_ATTACK_MOTION_DURATION,
+            duration: this._currentMotionDuration || BASIC_ATTACK_MOTION_DURATION,
             variant,
         });
         const originX = this.player.x;
@@ -703,6 +721,18 @@ export class BasicDagger extends WeaponBase {
         const targetScale = effectFit?.scale ?? (this.config.effectScale || 0.44);
 
         const peakAlpha = this.config.effectPeakAlpha ?? 0.82;
+        const slashEcho = effectTexture
+            ? this.createEffectSprite(originX, originY, effectTexture, {
+                frameMs: this.config.effectFrameMs ?? 42,
+                loopStart: this.config.effectStartFrame ?? 0,
+            })
+                .setDepth(13)
+                .setAlpha(peakAlpha * 0.45)
+                .setScale(targetScale * 0.9)
+                .setRotation(this.getMirroredEffectRotation(baseAngle, flipY))
+                .setFlipY(flipY)
+                .setBlendMode(Phaser.BlendModes.ADD)
+            : null;
         const slash = effectTexture
             ? this.createEffectSprite(originX, originY, effectTexture, {
                 frameMs: this.config.effectFrameMs ?? 42,
@@ -717,11 +747,21 @@ export class BasicDagger extends WeaponBase {
             : null;
         const progress = { t: 0 };
         const objects = [];
+        if (slashEcho && slashEcho !== slash) objects.push(slashEcho);
         if (slash) objects.push(slash);
         const entry = this._trackAttackObjects(objects);
 
         const draw = (t) => {
-            const eased = Phaser.Math.Easing.Cubic.Out(Phaser.Math.Clamp(t, 0, 1));
+            const clampedT = Phaser.Math.Clamp(t, 0, 1);
+            const eased = Phaser.Math.Easing.Cubic.Out(clampedT);
+            const waveAlpha = Math.sin(Math.PI * clampedT) * peakAlpha;
+            if (slashEcho && slashEcho !== slash) {
+                slashEcho.setPosition(this.player.x, this.player.y - 18);
+                slashEcho.setRotation(this.getMirroredEffectRotation(baseAngle, flipY) + side * 0.04);
+                slashEcho.setFlipY(flipY);
+                slashEcho.setAlpha(waveAlpha * 0.42);
+                slashEcho.setScale(targetScale * (0.9 + eased * 0.24));
+            }
             if (slash) {
                 // This authored arc is a body-centered horizontal sweep, not a
                 // projectile. It must stay pinned to the character while it opens.
@@ -730,7 +770,7 @@ export class BasicDagger extends WeaponBase {
                 slash.setFlipY(flipY);
                 // The hit lands at 118 ms of a 250 ms sweep. Keep the light
                 // strongest at contact, rather than fading 85% before it.
-                slash.setAlpha(Math.sin(Math.PI * Phaser.Math.Clamp(t, 0, 1)) * peakAlpha);
+                slash.setAlpha(waveAlpha);
                 slash.setScale(targetScale * (0.78 + eased * 0.22));
             }
         };
@@ -760,7 +800,7 @@ export class BasicDagger extends WeaponBase {
     _clawSwipe(variant = null) {
         const { baseAngle, side } = this._getAttackSetup({
             rangeBonus: this.config.targetRangeBonus ?? 35,
-            duration: BASIC_ATTACK_MOTION_DURATION,
+            duration: this._currentMotionDuration || BASIC_ATTACK_MOTION_DURATION,
             variant,
         });
         const cosA = Math.cos(baseAngle);
@@ -785,6 +825,14 @@ export class BasicDagger extends WeaponBase {
             : null;
         const targetScale = effectFit?.scale ?? (this.config.effectScale || 0.42);
         const fx = effectTexture ? null : this.scene.add.graphics().setDepth(15);
+        const swipeEcho = effectTexture
+            ? this.createEffectSprite(originX, originY, effectTexture, { frameMs: 40 })
+                .setDepth(15)
+                .setAlpha(0)
+                .setScale(targetScale * 0.88)
+                .setRotation(baseAngle)
+                .setBlendMode(Phaser.BlendModes.ADD)
+            : null;
         const swipeSprite = effectTexture
             ? this.createEffectSprite(originX, originY, effectTexture, { frameMs: 40 })
                 .setDepth(16)
@@ -794,7 +842,10 @@ export class BasicDagger extends WeaponBase {
                 .setBlendMode(Phaser.BlendModes.ADD)
             : null;
         const progress = { t: 0 };
-        const entry = this._trackAttackObjects([fx, swipeSprite].filter(Boolean));
+        const objects = [fx];
+        if (swipeEcho && swipeEcho !== swipeSprite) objects.push(swipeEcho);
+        if (swipeSprite) objects.push(swipeSprite);
+        const entry = this._trackAttackObjects(objects.filter(Boolean));
 
         const world = (forward, lateral) => ({
             x: originX + cosA * forward + perpX * lateral,
@@ -834,9 +885,14 @@ export class BasicDagger extends WeaponBase {
                 fx.strokeCircle(impact.x, impact.y, 18 + eased * 12);
             }
 
+            if (swipeEcho && swipeEcho !== swipeSprite) {
+                swipeEcho.setPosition(this.player.x, this.player.y - 14);
+                swipeEcho.setRotation(this.getMirroredEffectRotation(baseAngle, flipY) + side * 0.03);
+                swipeEcho.setFlipY(flipY);
+                swipeEcho.setAlpha(alpha * 0.4);
+                swipeEcho.setScale(targetScale * (0.88 + eased * 0.28));
+            }
             if (swipeSprite) {
-                // Keep the claw fan centered on the brawler so the image reads
-                // as a lateral body swing instead of a narrow forward thrust.
                 swipeSprite.setPosition(this.player.x, this.player.y - 14);
                 swipeSprite.setRotation(this.getMirroredEffectRotation(baseAngle, flipY) + side * 0.08);
                 swipeSprite.setFlipY(flipY);
@@ -870,7 +926,7 @@ export class BasicDagger extends WeaponBase {
     _sanctuaryBurst(variant = null) {
         const { target, baseAngle, side } = this._getAttackSetup({
             rangeBonus: this.config.targetRangeBonus ?? 25,
-            duration: BASIC_ATTACK_MOTION_DURATION,
+            duration: this._currentMotionDuration || BASIC_ATTACK_MOTION_DURATION,
             variant,
         });
         const cosA = Math.cos(baseAngle);
@@ -952,7 +1008,7 @@ export class BasicDagger extends WeaponBase {
     _fireball(variant = null) {
         const { target, baseAngle, side } = this._getAttackSetup({
             rangeBonus: this.config.targetRangeBonus ?? 130,
-            duration: BASIC_ATTACK_MOTION_DURATION,
+            duration: this._currentMotionDuration || BASIC_ATTACK_MOTION_DURATION,
             variant,
         });
         const cosA = Math.cos(baseAngle);
@@ -990,9 +1046,28 @@ export class BasicDagger extends WeaponBase {
                 .setBlendMode(Phaser.BlendModes.ADD)
             : this.scene.add.circle(startX, startY, 13, effectColor, 0.95).setDepth(14);
         const trailFx = usesImageEffect ? null : this.scene.add.graphics().setDepth(13);
+        const castSpark = effectTexture
+            ? this.createEffectSprite(startX, startY, effectTexture, { frameMs: 42 })
+                .setDepth(15)
+                .setAlpha(0.68)
+                .setScale(projectileScale * 0.85)
+                .setRotation(this.getEffectRotation(baseAngle))
+                .setBlendMode(Phaser.BlendModes.ADD)
+            : null;
+        if (castSpark) {
+            this.scene.tweens.add({
+                targets: castSpark,
+                alpha: 0,
+                scaleX: castSpark.scaleX * 1.55,
+                scaleY: castSpark.scaleY * 1.55,
+                duration: 165,
+                ease: 'Quad.easeOut',
+                onComplete: () => castSpark.destroy(),
+            });
+        }
         const hitEnemies = new Set();
         const progress = { t: 0 };
-        const entry = this._trackAttackObjects([projectile, trailFx].filter(Boolean));
+        const entry = this._trackAttackObjects([projectile, trailFx, castSpark].filter(Boolean));
 
         const spawnTrail = () => {
             if (usesImageEffect) return;

@@ -237,7 +237,7 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
     );
     assert.strictEqual(WEAPONS.lightPierce.name, '빛가름 검격');
     assert.strictEqual(WEAPONS.lightPierce.attackStyle, 'swordSlash');
-    assert.strictEqual(WEAPONS.lightPierce.effectRotationOffset, Math.PI / 4);
+    assert.strictEqual(WEAPONS.lightPierce.effectRotationOffset, -Math.PI / 4);
     assert.strictEqual(WEAPONS.lightPierce.effectStartFrame, 1);
     assert.ok(WEAPONS.lightPierce.effectPeakAlpha >= 0.9);
     assert.strictEqual(WEAPONS.lightLance.imageOnlyVfx, true);
@@ -315,7 +315,7 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
     // on every frame. A separate visual head/tail audit chooses the signed
     // runtime correction; this catches tilted partial reveal frames as well.
     for (const key of [
-        'basicDagger', 'shadowDagger', 'lightPierce', 'lightLance',
+        'basicDagger', 'shadowDagger', 'lightLance',
         'flameSpark', 'flameBolt',
     ]) {
         const offset = WEAPONS[key].effectRotationOffset || 0;
@@ -335,7 +335,7 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
     const authoredForwardAngles = {
         basicDagger: 0,
         shadowDagger: 0,
-        lightPierce: -Math.PI / 4,
+        lightPierce: Math.PI / 4,
         lightLance: 3 * Math.PI / 4,
         lightCrescent: Math.PI / 2,
         tigerPalm: Math.PI / 4,
@@ -356,7 +356,7 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
     // Crescent art has a 180-degree ambiguity that PCA cannot solve. Its alpha
     // mass must land on +X after correction: open side toward the player, convex
     // edge toward the target. This catches accidentally reversed arc assets.
-    for (const key of ['lightCrescent', 'flameArc', 'sanctuaryArc']) {
+    for (const key of ['lightPierce', 'lightCrescent', 'flameArc', 'sanctuaryArc']) {
         const offset = WEAPONS[key].effectRotationOffset || 0;
         const cos = Math.cos(offset);
         const sin = Math.sin(offset);

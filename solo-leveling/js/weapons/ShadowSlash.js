@@ -37,14 +37,14 @@ export class ShadowSlash extends WeaponBase {
     fire() {
         if (this.config.slashMode === 'linePierce') {
             for (let i = 0; i < this.count; i++) {
-                this._delay(i * (this.config.patternDelay ?? 140), () => this._doLinePierce());
+                this._delay(i * (this.config.patternDelay ?? 140), () => this._doLinePierce(i === 0));
             }
             return;
         }
 
         if (this.config.slashMode === 'radialPulse') {
             for (let i = 0; i < this.count; i++) {
-                this._delay(i * 180, () => this._doRadialPulse());
+                this._delay(i * 180, () => this._doRadialPulse(i === 0));
             }
             return;
         }
@@ -59,7 +59,8 @@ export class ShadowSlash extends WeaponBase {
 
         for (let r = 0; r < repeats; r++) {
             for (const angleOffset of patternOffsets) {
-                this._delay(sequence * 120, () => this._doSlash(angleOffset));
+                const triggerMotion = sequence === 0;
+                this._delay(sequence * 120, () => this._doSlash(angleOffset, triggerMotion));
                 sequence++;
             }
         }
@@ -67,17 +68,22 @@ export class ShadowSlash extends WeaponBase {
 
     _getAimAngle(acquireRange) {
         const target = this.player.getClosestEnemy(acquireRange);
+        const dirAngles = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
+        const idleAngle = dirAngles[this.player.facingDirection]
+            ?? (this.player.facingRight ? 0 : Math.PI);
         const fallbackAngle = this.player.moveIntensity > 0.12
             ? this.player.lastMoveAngle
-            : (this.player.facingRight ? 0 : Math.PI);
+            : idleAngle;
         return target
             ? Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y)
             : fallbackAngle;
     }
 
-    _doSlash(angleOffset) {
+    _doSlash(angleOffset, triggerMotion = true) {
         const angle = this._getAimAngle((this.config.acquireRange || 360) + this.extraRange) + angleOffset;
-        this.player.playAttackMotion?.(angle, this.config.motionDuration || 260, 1);
+        if (triggerMotion) {
+            this.player.playAttackMotion?.(angle, this.config.motionDuration || 260, 1);
+        }
 
         const range = (this.config.slashRange || 350) + this.extraRange;
         const slashDist = range * (this.config.slashDistanceRatio ?? 0.45);
@@ -204,20 +210,49 @@ export class ShadowSlash extends WeaponBase {
         const visualSlashDist = effectFit?.centerForward ?? slashDist;
         const visualSlashX = this.player.x + Math.cos(angle) * visualSlashDist;
         const visualSlashY = this.player.y + Math.sin(angle) * visualSlashDist;
+        const peakAlpha = useCharacterEffect
+            ? (this.config.effectPeakAlpha ?? 0.82)
+            : (useEffectAsset ? 0.82 : 0.5);
+        const baseScale = useCharacterEffect ? fittedCharacterScale : (useEffectAsset ? 0.48 + this.extraRange / 460 : 1.5 + this.extraRange / 60);
+        const slashTex = effectTexture || (useEffectAsset ? 'effect_shadow_slash' : 'proj_slash');
         const slash = this.createEffectSprite(
             visualSlashX,
             visualSlashY,
-            effectTexture || (useEffectAsset ? 'effect_shadow_slash' : 'proj_slash'),
+            slashTex,
             { frameMs: 44 },
         )
             .setDepth(8)
             .setRotation(slashRotation)
-            .setAlpha(useCharacterEffect
-                ? (this.config.effectPeakAlpha ?? 0.82)
-                : (useEffectAsset ? 0.82 : 0.5))
-            .setScale(useCharacterEffect ? fittedCharacterScale : (useEffectAsset ? 0.48 + this.extraRange / 460 : 1.5 + this.extraRange / 60))
+            .setAlpha(peakAlpha)
+            .setScale(baseScale)
             .setBlendMode((useCharacterEffect || useEffectAsset) ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
         if (!useCharacterEffect && !useEffectAsset) slash.setTint(color);
+
+        const fadeDuration = useCharacterEffect
+            ? (this.config.effectFadeDuration ?? 320)
+            : (useEffectAsset ? 320 : 400);
+        if (useCharacterEffect || useEffectAsset) {
+            const slashEcho = this.createEffectSprite(
+                visualSlashX,
+                visualSlashY,
+                slashTex,
+                { frameMs: 44 },
+            )
+                .setDepth(7)
+                .setRotation(slashRotation)
+                .setAlpha(peakAlpha * 0.44)
+                .setScale(baseScale * 1.12)
+                .setTint(glowColor)
+                .setBlendMode(Phaser.BlendModes.ADD);
+            this.scene.tweens.add({
+                targets: slashEcho,
+                alpha: 0,
+                scaleX: slashEcho.scaleX * 1.14,
+                scaleY: slashEcho.scaleY * 1.14,
+                duration: Math.max(160, Math.round(fadeDuration * 0.9)),
+                onComplete: () => slashEcho.destroy(),
+            });
+        }
 
         this.scene.tweens.add({
             targets: slash,
@@ -225,9 +260,7 @@ export class ShadowSlash extends WeaponBase {
             scaleX: slash.scaleX * ((useCharacterEffect || useEffectAsset) ? 1.08 : 1.8),
             scaleY: slash.scaleY * ((useCharacterEffect || useEffectAsset) ? 1.08 : 1.8),
             hold: useCharacterEffect ? (this.config.effectHold ?? 0) : 0,
-            duration: useCharacterEffect
-                ? (this.config.effectFadeDuration ?? 320)
-                : (useEffectAsset ? 320 : 400),
+            duration: fadeDuration,
             onComplete: () => slash.destroy(),
         });
 
@@ -302,7 +335,7 @@ export class ShadowSlash extends WeaponBase {
         return Phaser.Math.Distance.Between(px, py, ax + dx * t, ay + dy * t);
     }
 
-    _doLinePierce() {
+    _doLinePierce(triggerMotion = true) {
         const angle = this._getAimAngle((this.config.acquireRange || 540) + this.extraRange);
 
         const px = this.player.x;
@@ -400,13 +433,23 @@ export class ShadowSlash extends WeaponBase {
             this.applyDamage(enemy, damage, px, py);
         }
 
-        if (this.player.playAttackMotion) {
+        if (triggerMotion && this.player.playAttackMotion) {
             this.player.playAttackMotion(angle, this.config.motionDuration || 230, 1);
         }
         this.playConfiguredSound('slash');
     }
 
-    _doRadialPulse() {
+    _doRadialPulse(triggerMotion = true) {
+        if (triggerMotion && this.player.playAttackMotion) {
+            const dirAngles = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
+            const idleAngle = dirAngles[this.player.facingDirection]
+                ?? (this.player.facingRight ? 0 : Math.PI);
+            const motionAngle = this.player.moveIntensity > 0.12
+                ? this.player.lastMoveAngle
+                : idleAngle;
+            const variantMotion = this.player.character?.basicAttackVariants?.[0];
+            this.player.playAttackMotion(motionAngle, this.config.motionDuration || 260, 1, variantMotion);
+        }
         const range = (this.config.slashRange || 280) + this.extraRange;
         const color = this.getEffectColor(0x66f2b0);
         const glowColor = this.getEffectGlowColor(0xe8fff5);

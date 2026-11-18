@@ -76,8 +76,16 @@ export class RulersAuthority extends WeaponBase {
         }
 
         if (strikeIndex === 0 && this.player.playAttackMotion) {
-            const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY);
-            this.player.playAttackMotion(angle, this.config.motionDuration || 260, 1);
+            const selfCentered = this.config.targetMode === 'self'
+                || (targetX === this.player.x && targetY === this.player.y);
+            const dirAngles = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
+            const facingAngle = dirAngles[this.player.facingDirection]
+                ?? (this.player.facingRight ? 0 : Math.PI);
+            const angle = selfCentered
+                ? (this.player.moveIntensity > 0.12 ? this.player.lastMoveAngle : facingAngle)
+                : Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY);
+            const variantMotion = this.player.character?.basicAttackVariants?.[0];
+            this.player.playAttackMotion(angle, this.config.motionDuration || 260, 1, variantMotion);
         }
 
         // Visual effect - expanding circle

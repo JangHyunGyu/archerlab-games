@@ -23,6 +23,7 @@ import argparse
 from collections import deque
 from dataclasses import dataclass, field, replace
 import hashlib
+import importlib.util
 import math
 import os
 from pathlib import Path
@@ -31,11 +32,28 @@ import statistics
 import tempfile
 from typing import Mapping, Sequence
 
+import numpy as np
 from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter, ImageOps
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SOURCE_ROOT = ROOT / "assets" / "player" / "motion_v2_sources"
+DEFAULT_SOURCE_ROOT = ROOT / "assets" / "player" / "motion_v2_sources" / "native_rgba"
+LEGACY_SOURCE_ROOT = ROOT / "assets" / "player" / "motion_v2_sources"
 DEFAULT_PREVIEW_ROOT = ROOT.parent.parent / "_codex_tmp" / "solo-leveling-motion-v2"
+HAREM_CLEANER_PATH = Path(r"D:\workspace\harem\scripts\clean-sprite-bg.py")
+
+
+def _load_clean_sprite_module():
+    if not HAREM_CLEANER_PATH.is_file():
+        return None
+    spec = importlib.util.spec_from_file_location("harem_clean_sprite_bg", HAREM_CLEANER_PATH)
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_CLEAN_SPRITE_MOD = _load_clean_sprite_module()
 
 FRAME_W = 112
 FRAME_H = 144
@@ -43,9 +61,10 @@ FOOT_Y = 138  # Alpha bbox bottom (exclusive), matching the current motion asset
 MIN_PADDING = 4
 MAX_BODY_W = FRAME_W - MIN_PADDING * 2
 MAX_BODY_H = FOOT_Y - MIN_PADDING
+TARGET_STANDING_H = 124
 MAX_SOURCE_CELL_SIZE = 384  # Still ~3x the final body height, but avoids wasting work on chroma pixels.
 WALK_POSE_MAP = (0, 0, 1, 1, 2, 2, 3, 3)
-ATTACK_POSE_MAP: tuple[int | None, ...] = (0, 1, 2, 2, 3, None)
+ATTACK_POSE_MAP: tuple[int | None, ...] = (0, 1, 2, 3, 0, None)
 SOURCE_TRACKS = (
     "walk_down",
     "walk_right",
@@ -125,31 +144,26 @@ CHARACTER_PROFILES: dict[str, CharacterProfile] = {
         output_relative=Path("assets/player/motion"),
         filename_prefix="player_",
         embedded_weapon=True,
-        source_track_scales={"attack_down": 1.08, "attack_right": 1.08, "attack_up": 1.08},
     ),
     "light_swordswoman": CharacterProfile(
         character_id="light_swordswoman",
         output_relative=Path("assets/player/characters/light_swordswoman/motion"),
         embedded_weapon=True,
-        source_track_scales={"attack_down": 1.22, "attack_right": 1.14, "attack_up": 1.14},
     ),
     "white_tiger_brawler": CharacterProfile(
         character_id="white_tiger_brawler",
         output_relative=Path("assets/player/characters/white_tiger_brawler/motion"),
         embedded_weapon=True,
-        source_track_scales={"attack_down": 1.10, "attack_right": 1.08, "attack_up": 1.08},
     ),
     "flame_mage": CharacterProfile(
         character_id="flame_mage",
         output_relative=Path("assets/player/characters/flame_mage/motion"),
         embedded_weapon=True,
-        source_track_scales={"attack_down": 1.15, "attack_right": 1.15, "attack_up": 1.15},
     ),
     "sanctuary_healer": CharacterProfile(
         character_id="sanctuary_healer",
         output_relative=Path("assets/player/characters/sanctuary_healer/motion"),
         embedded_weapon=True,
-        source_track_scales={"attack_down": 1.12, "attack_right": 1.12, "attack_up": 1.12},
     ),
 }
 
@@ -222,12 +236,14 @@ SOCKET_PROFILES: dict[str, dict[str, tuple[WeaponSocket, ...]]] = {
 def expected_frame_names() -> list[str]:
     names = [f"idle_{index}" for index in range(4)]
     for direction in DIRECTIONS:
+        names.extend(f"idle_{direction}_{index}" for index in range(4))
+    for direction in DIRECTIONS:
         names.extend(f"walk_{direction}_{index}" for index in range(8))
     names.extend(f"attack_{index}" for index in range(6))
     for direction in DIRECTIONS:
         names.extend(f"attack_{direction}_{index}" for index in range(6))
     names.extend(f"hit_{index}" for index in range(2))
-    assert len(names) == 68
+    assert len(names) == 84
     return names
 
 
@@ -434,17 +450,166 @@ def bbox_distance(first: tuple[int, int, int, int], second: tuple[int, int, int,
     return math.hypot(horizontal, vertical)
 
 
+def is_native_transparent_strip(image: Image.Image) -> bool:
+    rgba = image.convert("RGBA")
+    arr = np.array(rgba)
+    a = arr[:, :, 3]
+    h, w = a.shape
+    patch = max(4, min(12, h // 32, w // 32))
+    corner_means = [
+        float(a[:patch, :patch].mean()),
+        float(a[:patch, w - patch :].mean()),
+        float(a[h - patch :, :patch].mean()),
+        float(a[h - patch :, w - patch :].mean()),
+    ]
+    border_a = np.concatenate([a[0, :], a[-1, :], a[:, 0], a[:, w - 1]])
+    transparent_ratio = float((a <= 8).mean())
+    opaque_ratio = float((a >= 180).mean())
+    return (
+        max(corner_means) <= 12.0
+        and float((border_a <= 12).mean()) >= 0.70
+        and transparent_ratio >= 0.30
+        and opaque_ratio >= 0.04
+    )
+
+
+def _split_merged_native_components(clean: Image.Image) -> list[tuple[list[int], tuple[int, int, int, int]]] | None:
+    """포즈 사이 옅은 반투명 잔광(alpha 9..48)으로 연결된 4인 스트립을 불투명 코어 기준으로 재분리."""
+    from scipy import ndimage
+
+    arr = np.array(clean)
+    alpha = arr[:, :, 3]
+    h, w = alpha.shape
+    vis_mask = alpha > 8
+    for core_thresh in (24, 36, 48, 64, 96, 128, 160, 180):
+        core = alpha >= core_thresh
+        lbl, num = ndimage.label(core)
+        if num < 4:
+            continue
+        sizes = ndimage.sum(core, lbl, range(1, num + 1))
+        top_ids = np.argsort(sizes)[::-1]
+        major_ids = [int(i) + 1 for i in top_ids[:4]]
+        major_sizes = [float(sizes[i - 1]) for i in major_ids]
+        if min(major_sizes) <= 0 or max(major_sizes) / min(major_sizes) > 2.35:
+            continue
+        if len(top_ids) > 4 and float(sizes[top_ids[4]]) >= min(major_sizes) * 0.22:
+            continue
+
+        # 4개 코어 마스크를 기준으로 거리 변환을 계산해 반투명 외곽 잔광(alpha > 8)을 가장 가까운 포즈에 배정
+        core4 = np.isin(lbl, major_ids)
+        _, nearest_idx = ndimage.distance_transform_edt(~core4, return_indices=True)
+        owner = np.zeros((h, w), dtype=np.int32)
+        owner[vis_mask] = lbl[nearest_idx[0, vis_mask], nearest_idx[1, vis_mask]]
+
+        rebuilt: list[tuple[list[int], tuple[int, int, int, int]]] = []
+        for mid in major_ids:
+            ys, xs = np.where(owner == mid)
+            if len(xs) == 0:
+                rebuilt = []
+                break
+            flat = (ys * w + xs).tolist()
+            bbox = (int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1)
+            rebuilt.append((flat, bbox))
+        if len(rebuilt) == 4:
+            return sorted(rebuilt, key=lambda item: len(item[0]), reverse=True)
+    return None
+
+
+def clean_native_rgba_strip(image: Image.Image) -> tuple[Image.Image, float, float]:
+    from scipy import ndimage
+
+    rgba = image.convert("RGBA")
+    arr = np.array(rgba)
+    a = arr[:, :, 3]
+    scale = max(0.5, rgba.height / 640.0)
+    dist_from_fg24 = ndimage.distance_transform_edt(a < 24)
+    ghost_mist = (a > 0) & (a <= 14) & (dist_from_fg24 > 2.5 * scale)
+    a[ghost_mist] = 0
+    a[a <= 4] = 0
+    arr[a == 0, :3] = 0
+    cleaned = Image.fromarray(arr, mode="RGBA")
+    transparent_ratio = float((a == 0).mean())
+    return cleaned, transparent_ratio, 0.0
+
+
+def clean_native_rgba_pose(crop: Image.Image) -> Image.Image:
+    # 16px 투명 여백으로 감싼 뒤 얇은 검끝·지팡이 끝 보존형 네이티브 알파 후처리 적용
+    from PIL import ImageFilter
+    from scipy import ndimage
+
+    pad = 16
+    padded = Image.new("RGBA", (crop.width + pad * 2, crop.height + pad * 2), (0, 0, 0, 0))
+    padded.alpha_composite(crop, (pad, pad))
+    arr = np.array(padded)
+    alpha = arr[:, :, 3].copy()
+
+    # 가장 큰 불투명 본체(a >= 20)와 2px 이내(5x5 최대 필터)로 이어진 가느다란 칼날·지팡이 끝(a >= 5)만 보존
+    core_mask = alpha >= 20
+    core_lbl, core_num = ndimage.label(core_mask)
+    if core_num >= 1:
+        core_sizes = ndimage.sum(core_mask, core_lbl, range(1, core_num + 1))
+        main_core = core_lbl == (int(np.argmax(core_sizes)) + 1)
+        bridge_zone = np.array(
+            Image.fromarray((main_core.astype(np.uint8)) * 255).filter(ImageFilter.MaxFilter(5))
+        ) > 0
+        keep_mask = (alpha >= 5) & (main_core | bridge_zone)
+        # 브리지 구역을 통해 연결된 잔여 전경 성분(얇은 무기/망토 끝)도 함께 연결 유지
+        vis_lbl, vis_num = ndimage.label(alpha >= 5)
+        if vis_num >= 1:
+            linked_labels = np.unique(vis_lbl[keep_mask])
+            linked_labels = linked_labels[linked_labels > 0]
+            alpha[~np.isin(vis_lbl, linked_labels)] = 0
+
+    # 허공에 남는 미세 확산 먼지(a <= 10) 제거 후 비배경 픽셀 외 RGB 초기화
+    alpha[alpha <= 10] = 0
+
+    # 완전 불투명 경계(a >= 220)로 둘러싸인 18px 이하 미세 닫힌 핀홀만 보수적으로 복원 (검 가드 고리·팔/다리 틈 보존)
+    opaque_wall = alpha >= 220
+    holes_mask = ~opaque_wall
+    hole_lbl, hole_num = ndimage.label(holes_mask)
+    if hole_num > 1:
+        border_lbls = set(np.unique(hole_lbl[0, :])) | set(np.unique(hole_lbl[-1, :])) | set(
+            np.unique(hole_lbl[:, 0])
+        ) | set(np.unique(hole_lbl[:, -1]))
+        hole_sizes = ndimage.sum(holes_mask, hole_lbl, range(1, hole_num + 1))
+        for idx, sz in enumerate(hole_sizes, start=1):
+            if idx not in border_lbls and 0 < sz <= 18:
+                pinhole = hole_lbl == idx
+                # 인접 불투명 색상을 평균 채워 검은 구멍 방지
+                dilated = ndimage.binary_dilation(pinhole, structure=np.ones((3, 3))) & opaque_wall
+                if np.any(dilated):
+                    arr[pinhole, :3] = np.round(arr[dilated, :3].mean(axis=0)).astype(np.uint8)
+                alpha[pinhole] = 255
+
+    # 실루엣 내부 깊숙한 곳(경계 4px 이상 안쪽)의 120 <= a < 255 반투명 누수만 255로 잠금
+    sil_dist = ndimage.distance_transform_edt(alpha > 0)
+    interior_leak = (sil_dist >= 4.0) & (alpha >= 120) & (alpha < 255)
+    alpha[interior_leak] = 255
+
+    # 외곽 부유 노이즈 최종 1성분 확인
+    final_lbl, final_num = ndimage.label(alpha > 0)
+    if final_num > 1:
+        final_sizes = ndimage.sum(alpha > 0, final_lbl, range(1, final_num + 1))
+        alpha[final_lbl != (int(np.argmax(final_sizes)) + 1)] = 0
+
+    arr[:, :, 3] = alpha
+    arr[alpha == 0, :3] = 0
+    cleaned = Image.fromarray(arr, mode="RGBA")
+    return clear_low_alpha(cleaned.crop(alpha_bbox(cleaned)))
+
+
 def split_strip(path: Path, track: str) -> list[CleanPose]:
     """Extract four subjects without assuming equal-width generator cells.
 
-    Chroma is removed from the *whole* strip first.  The four dominant body
-    silhouettes are then identified, and disconnected ribbons/tassels are
-    assigned to their nearest body before each pose is independently masked
-    and cropped.  Thus no mathematical seam can steal pixels from a neighbour.
+    Supports both native transparent RGBA strips (GPT Image 2.6) and legacy
+    green-chroma strips.  Identifies the four dominant body silhouettes,
+    assigns nearby detached tassels/wisps to their nearest body, and runs
+    lightweight native-alpha cleanup on each isolated pose.
     """
 
     with Image.open(path) as source:
         strip = source.convert("RGBA")
+    native_rgba = is_native_transparent_strip(strip)
     width, height = strip.size
     if width < 128 or height < 32:
         raise ValueError(f"{path}: source strip {strip.size} is too small")
@@ -459,8 +624,22 @@ def split_strip(path: Path, track: str) -> list[CleanPose]:
             Image.Resampling.LANCZOS,
         )
 
-    clean, removed_ratio, residual_ratio = remove_green_chroma(strip)
+    if native_rgba:
+        clean, removed_ratio, residual_ratio = clean_native_rgba_strip(strip)
+    else:
+        clean, removed_ratio, residual_ratio = remove_green_chroma(strip)
     components = connected_alpha_components(clean)
+    merged_split = None
+    if native_rgba:
+        needs_resplit = len(components) < 4
+        if not needs_resplit:
+            top4 = [len(c[0]) for c in components[:4]]
+            if min(top4) <= 0 or max(top4) / min(top4) > 2.35:
+                needs_resplit = True
+        if needs_resplit:
+            merged_split = _split_merged_native_components(clean)
+    if merged_split is not None:
+        components = merged_split
     if len(components) < 4:
         raise ValueError(f"{path}: found only {len(components)} visible components; expected four subjects")
     majors = components[:4]
@@ -511,6 +690,8 @@ def split_strip(path: Path, track: str) -> list[CleanPose]:
             min(clean.height, bbox[3] + padding),
         )
         crop = clear_low_alpha(isolated.crop(padded_bbox))
+        if native_rgba:
+            crop = clean_native_rgba_pose(crop)
         if crop.width < 12 or crop.height < 18:
             raise ValueError(f"{path}: pose {pose_index} has an implausibly small visible subject {crop.size}")
         poses.append(
@@ -525,7 +706,7 @@ def split_strip(path: Path, track: str) -> list[CleanPose]:
             )
         )
     if removed_ratio < 0.02:
-        raise ValueError(f"{path}: removed too little chroma ({removed_ratio:.1%})")
+        raise ValueError(f"{path}: removed too little background ({removed_ratio:.1%})")
     if residual_ratio > 0.08:
         raise ValueError(f"{path}: retains excessive green spill ({residual_ratio:.1%})")
     return poses
@@ -580,14 +761,26 @@ def validate_source_pose_consistency(character_id: str, poses: Mapping[str, Sequ
             raise ValueError(f"{character_id}: {track} has fewer than three distinct poses")
 
 
+def resolve_track_source_path(source_root: Path, character_id: str, track: str) -> Path | None:
+    native_subdir_candidate = source_root / "native_rgba" / character_id / f"{track}.png"
+    if native_subdir_candidate.is_file():
+        return native_subdir_candidate
+    native_candidate = source_root / character_id / f"{track}.png"
+    if native_candidate.is_file():
+        return native_candidate
+    chroma_candidate = source_root / character_id / f"{track}_chroma.png"
+    if chroma_candidate.is_file():
+        return chroma_candidate
+    return None
+
+
 def load_character_poses(source_root: Path, profile: CharacterProfile) -> dict[str, list[CleanPose]]:
-    character_dir = source_root / profile.character_id
     poses: dict[str, list[CleanPose]] = {}
     missing = []
     for track in SOURCE_TRACKS:
-        source_path = character_dir / f"{track}_chroma.png"
-        if not source_path.is_file():
-            missing.append(source_path)
+        source_path = resolve_track_source_path(source_root, profile.character_id, track)
+        if source_path is None:
+            missing.append(source_root / profile.character_id / f"{track}.png")
             continue
         poses[track] = split_strip(source_path, track)
     if missing:
@@ -603,14 +796,46 @@ def load_character_poses(source_root: Path, profile: CharacterProfile) -> dict[s
     return poses
 
 
+def track_scales(poses: Mapping[str, Sequence[CleanPose]]) -> dict[str, float]:
+    """Normalize standing walk height across characters and lock attack guard height."""
+
+    scales: dict[str, float] = {}
+    for direction in ("down", "right", "up"):
+        w_track = f"walk_{direction}"
+        w_poses = poses[w_track]
+        med_h = statistics.median(pose.image.height for pose in w_poses)
+        w_scale = min(
+            TARGET_STANDING_H / max(1, med_h),
+            MAX_BODY_W / max(pose.image.width for pose in w_poses),
+            MAX_BODY_H / max(pose.image.height for pose in w_poses),
+        )
+        if w_scale <= 0:
+            raise ValueError(f"invalid scale for {w_track}")
+        scales[w_track] = w_scale
+
+    for direction in ("down", "right", "up"):
+        track = f"attack_{direction}"
+        rendered_walk_h = (
+            statistics.median(pose.image.height for pose in poses[f"walk_{direction}"])
+            * scales[f"walk_{direction}"]
+        )
+        track_poses = poses[track]
+        guard_pose = track_poses[0]
+        guard_h = max(1, guard_pose.image.height)
+        target_guard_h = max(108.0, rendered_walk_h * 0.96)
+        scale = min(
+            target_guard_h / guard_h,
+            MAX_BODY_W / max(1, guard_pose.image.width),
+            MAX_BODY_H / max(1, guard_pose.image.height),
+        )
+        if scale <= 0:
+            raise ValueError(f"invalid scale for {track}")
+        scales[track] = scale
+    return scales
+
+
 def common_pose_scale(poses: Mapping[str, Sequence[CleanPose]]) -> float:
-    all_poses = [pose for track in poses.values() for pose in track]
-    widest = max(pose.image.width for pose in all_poses)
-    tallest = max(pose.image.height for pose in all_poses)
-    scale = min(MAX_BODY_W / widest, MAX_BODY_H / tallest)
-    if scale <= 0:
-        raise ValueError("invalid common pose scale")
-    return scale
+    return statistics.median(track_scales(poses).values())
 
 
 def place_body(crop: Image.Image, *, scale: float | None = None) -> Image.Image:
@@ -633,12 +858,75 @@ def place_body(crop: Image.Image, *, scale: float | None = None) -> Image.Image:
         resized = clear_low_alpha(resized)
         resized = resized.crop(alpha_bbox(resized))
 
+    # 112x144 리사이즈 직후 Lanczos 링잉·미세 부유 섬·닫힌 핀홀을 배치 전에 정리해 발끝 앵커(FOOT_Y=138) 일치 보장
+    from scipy import ndimage
+
+    c_arr = np.array(resized)
+    c_alpha = c_arr[:, :, 3].copy()
+    c_alpha[c_alpha <= 8] = 0
+
+    vis_lbl, vis_num = ndimage.label(c_alpha > 0)
+    if vis_num > 1:
+        vis_sizes = ndimage.sum(c_alpha > 0, vis_lbl, range(1, vis_num + 1))
+        c_alpha[vis_lbl != (int(np.argmax(vis_sizes)) + 1)] = 0
+
+    # 얇은 칼날·지팡이 끝이 alpha 9..17로 끊길 경우 1px 인접 브리지 보강 후 잔여 미세 점 제거
+    a18 = c_alpha >= 18
+    lbl18, num18 = ndimage.label(a18)
+    if num18 > 1:
+        sizes18 = ndimage.sum(a18, lbl18, range(1, num18 + 1))
+        main18_id = int(np.argmax(sizes18)) + 1
+        main18 = lbl18 == main18_id
+        for sec_id in range(1, num18 + 1):
+            if sec_id == main18_id:
+                continue
+            sec_mask = lbl18 == sec_id
+            near_main = ndimage.binary_dilation(main18, structure=np.ones((5, 5)))
+            bridge_px = near_main & ndimage.binary_dilation(sec_mask, structure=np.ones((5, 5))) & (c_alpha >= 9) & (c_alpha < 18)
+            if np.any(bridge_px):
+                c_alpha[bridge_px] = 20
+            elif int(sizes18[sec_id - 1]) <= 6:
+                c_alpha[sec_mask] = 0
+        lbl18_post, num18_post = ndimage.label(c_alpha >= 18)
+        if num18_post > 1:
+            sizes_post = ndimage.sum(c_alpha >= 18, lbl18_post, range(1, num18_post + 1))
+            main_post = int(np.argmax(sizes_post)) + 1
+            for sid in range(1, num18_post + 1):
+                if sid != main_post:
+                    sm = lbl18_post == sid
+                    touch_bridge = ndimage.binary_dilation(lbl18_post == main_post, structure=np.ones((3, 3))) & (c_alpha > 8) & (c_alpha < 18)
+                    if int(sizes_post[sid - 1]) <= 4 and not np.any(touch_bridge):
+                        c_alpha[sm] = 0
+                    elif np.any(touch_bridge):
+                        c_alpha[touch_bridge] = 20
+
+    # 불투명(a >= 200) 내부에 갇힌 6px 이하 미세 닫힌 핀홀 복원
+    wall = c_alpha >= 200
+    h_lbl, h_num = ndimage.label(~wall)
+    if h_num > 1:
+        # 1px 투명 외곽 패딩 기준으로 테두리 연결 여부 판정 (발끝·어깨가 경계에 닿아도 내부 핀홀만 복원)
+        h_lbl_p, h_num_p = ndimage.label(~np.pad(wall, 1, constant_values=False))
+        border_lbl = int(h_lbl_p[0, 0])
+        padded_sizes = ndimage.sum(~np.pad(wall, 1, constant_values=False), h_lbl_p, range(1, h_num_p + 1))
+        for idx, sz in enumerate(padded_sizes, start=1):
+            if idx != border_lbl and 0 < sz <= 6:
+                ph = h_lbl_p[1:-1, 1:-1] == idx
+                nbr = ndimage.binary_dilation(ph, structure=np.ones((3, 3))) & wall
+                if np.any(nbr):
+                    c_arr[ph, :3] = np.round(c_arr[nbr, :3].mean(axis=0)).astype(np.uint8)
+                c_alpha[ph] = 255
+
+    c_arr[:, :, 3] = c_alpha
+    c_arr[c_alpha == 0, :3] = 0
+    cleaned_body = Image.fromarray(c_arr, mode="RGBA")
+    cleaned_body = cleaned_body.crop(alpha_bbox(cleaned_body))
+
     canvas = Image.new("RGBA", (FRAME_W, FRAME_H), (0, 0, 0, 0))
-    x = (FRAME_W - resized.width) // 2
-    y = FOOT_Y - resized.height
+    x = (FRAME_W - cleaned_body.width) // 2
+    y = FOOT_Y - cleaned_body.height
     if x < MIN_PADDING or y < MIN_PADDING:
-        raise ValueError(f"normalized body violates padding: size={resized.size}, offset=({x}, {y})")
-    canvas.alpha_composite(resized, (x, y))
+        raise ValueError(f"normalized body violates padding: size={cleaned_body.size}, offset=({x}, {y})")
+    canvas.alpha_composite(cleaned_body, (x, y))
     return canvas
 
 
@@ -920,9 +1208,19 @@ def build_motion_frames(
     poses: Mapping[str, Sequence[CleanPose]],
     source_root: Path = DEFAULT_SOURCE_ROOT,
 ) -> dict[str, MotionFrame]:
-    scale = common_pose_scale(poses)
+    per_track_scale = track_scales(poses)
     rendered: dict[str, list[Image.Image]] = {
-        track: [pose_to_frame(pose, scale) for pose in track_poses]
+        track: [
+            pose_to_frame(
+                pose,
+                min(
+                    per_track_scale[track],
+                    MAX_BODY_W / max(1, pose.image.width),
+                    MAX_BODY_H / max(1, pose.image.height),
+                ),
+            )
+            for pose in track_poses
+        ]
         for track, track_poses in poses.items()
     }
     for track, (track_scale, offset_x, offset_y) in profile.body_track_adjustments.items():
@@ -937,27 +1235,67 @@ def build_motion_frames(
         rendered[track] = adjusted
     frames: dict[str, MotionFrame] = {}
 
-    neutral_down = rendered["walk_down"][0]
+    # 4방향 대기 포즈는 각 방향 공격 준비 자세(또는 높이 부족 시 보행 첫 포즈)를 기준 사용
+    guard_by_direction: dict[str, Image.Image] = {}
+    for direction in ("down", "right", "up"):
+        guard_pose = rendered[f"attack_{direction}"][0]
+        walk_pose = rendered[f"walk_{direction}"][0]
+        guard_h = alpha_bbox(guard_pose)[3] - alpha_bbox(guard_pose)[1]
+        walk_h = alpha_bbox(walk_pose)[3] - alpha_bbox(walk_pose)[1]
+        guard_by_direction[direction] = guard_pose if guard_h >= walk_h * 0.85 else walk_pose
+
     idle_variants = (
         (1.000, 1.000),
-        (1.006, 0.994),
-        (1.000, 0.988),
-        (0.994, 0.994),
+        (1.005, 0.995),
+        (1.000, 0.990),
+        (0.996, 0.996),
     )
-    for index, (scale_x, scale_y) in enumerate(idle_variants):
+    for direction in ("down", "right", "up"):
+        base_idle = guard_by_direction[direction]
+        for index, (scale_x, scale_y) in enumerate(idle_variants):
+            add_frame(
+                frames,
+                profile,
+                f"idle_{direction}_{index}",
+                transform_rendered_body(base_idle, scale_x=scale_x, scale_y=scale_y),
+                f"attack_{direction}",
+                0,
+            )
+    for index in range(4):
+        right_idle = frames[f"idle_right_{index}"]
+        add_frame(
+            frames,
+            profile,
+            f"idle_left_{index}",
+            ImageOps.mirror(right_idle.image),
+            right_idle.source_track,
+            right_idle.source_pose,
+        )
+        down_idle = frames[f"idle_down_{index}"]
         add_frame(
             frames,
             profile,
             f"idle_{index}",
-            transform_rendered_body(neutral_down, scale_x=scale_x, scale_y=scale_y),
-            "walk_down",
-            0,
+            down_idle.image.copy(),
+            down_idle.source_track,
+            down_idle.source_pose,
         )
 
     for direction in ("down", "right", "up"):
         track = f"walk_{direction}"
-        for index, pose_index in enumerate(WALK_POSE_MAP):
-            add_frame(frames, profile, f"walk_{direction}_{index}", rendered[track][pose_index], track, pose_index)
+        base_poses = rendered[track]
+        walk_sequence = (
+            (0, base_poses[0]),
+            (0, transform_rendered_body(base_poses[0], scale_x=1.004, scale_y=0.994)),
+            (1, base_poses[1]),
+            (1, transform_rendered_body(base_poses[1], scale_x=0.997, scale_y=1.004)),
+            (2, base_poses[2]),
+            (2, transform_rendered_body(base_poses[2], scale_x=1.004, scale_y=0.994)),
+            (3, base_poses[3]),
+            (3, transform_rendered_body(base_poses[3], scale_x=0.997, scale_y=1.004)),
+        )
+        for index, (pose_index, image) in enumerate(walk_sequence):
+            add_frame(frames, profile, f"walk_{direction}_{index}", image, track, pose_index)
     for index in range(8):
         right = frames[f"walk_right_{index}"]
         add_frame(
@@ -969,15 +1307,19 @@ def build_motion_frames(
             right.source_pose,
         )
 
-    neutral_by_direction = {
-        "down": rendered["walk_down"][0],
-        "right": rendered["walk_right"][0],
-        "up": rendered["walk_up"][0],
-    }
     for direction in ("down", "right", "up"):
         track = f"attack_{direction}"
-        for index, pose_index in enumerate(ATTACK_POSE_MAP):
-            image = neutral_by_direction[direction] if pose_index is None else rendered[track][pose_index]
+        atk = rendered[track]
+        recoil_angle = -1.4 if direction == "right" else 0.8
+        attack_sequence: tuple[tuple[int | None, Image.Image], ...] = (
+            (0, atk[0]),
+            (1, atk[1]),
+            (2, transform_rendered_body(atk[2], brightness=1.03)),
+            (3, atk[3]),
+            (0, transform_rendered_body(atk[0], scale_x=0.993, scale_y=0.997, rotate=recoil_angle)),
+            (None, guard_by_direction[direction].copy()),
+        )
+        for index, (pose_index, image) in enumerate(attack_sequence):
             add_frame(frames, profile, f"attack_{direction}_{index}", image, track, pose_index)
 
     for index in range(6):
@@ -996,15 +1338,16 @@ def build_motion_frames(
         down = frames[f"attack_down_{index}"]
         add_frame(frames, profile, f"attack_{index}", down.image.copy(), down.source_track, down.source_pose)
 
+    neutral_down = guard_by_direction["down"]
     add_frame(
         frames,
         profile,
         "hit_0",
-        transform_rendered_body(neutral_down, scale_x=0.98, scale_y=0.98, rotate=4.0, brightness=0.92, hit_tint=0.18),
-        "walk_down",
+        transform_rendered_body(neutral_down, scale_x=0.98, scale_y=0.98, rotate=3.5, brightness=0.92, hit_tint=0.18),
+        "attack_down",
         0,
     )
-    add_frame(frames, profile, "hit_1", neutral_down.copy(), "walk_down", 0)
+    add_frame(frames, profile, "hit_1", neutral_down.copy(), "attack_down", 0)
 
     missing = set(EXPECTED_FRAME_NAMES) - set(frames)
     extra = set(frames) - set(EXPECTED_FRAME_NAMES)
@@ -1044,7 +1387,7 @@ def validate_frame_image(label: str, image: Image.Image) -> tuple[int, int, int,
 
 def validate_motion_frames(profile: CharacterProfile, frames: Mapping[str, MotionFrame]) -> None:
     if set(frames) != set(EXPECTED_FRAME_NAMES):
-        raise ValueError(f"{profile.character_id}: expected exactly 68 logical frames")
+        raise ValueError(f"{profile.character_id}: expected exactly 84 logical frames")
     for name in EXPECTED_FRAME_NAMES:
         validate_frame_image(f"{profile.character_id}/{name}", frames[name].image)
 
@@ -1065,13 +1408,22 @@ def validate_motion_frames(profile: CharacterProfile, frames: Mapping[str, Motio
                     f"{frame.weapon_visible_extent}px extent"
                 )
 
+    for index in range(4):
+        mirrored_idle = ImageOps.mirror(frames[f"idle_right_{index}"].image)
+        if ImageChops.difference(mirrored_idle, frames[f"idle_left_{index}"].image).getbbox():
+            raise ValueError(f"{profile.character_id}: idle_left_{index} is not an exact right-frame mirror")
+        if ImageChops.difference(frames[f"idle_{index}"].image, frames[f"idle_down_{index}"].image).getbbox():
+            raise ValueError(f"{profile.character_id}: idle_{index} does not match idle_down_{index}")
+
     for direction in DIRECTIONS:
         walk_unique = {frame_digest(frames[f"walk_{direction}_{index}"].image) for index in range(8)}
         if len(walk_unique) < 4:
             raise ValueError(f"{profile.character_id}: walk_{direction} has fewer than four distinct body poses")
         attack_unique = {frame_digest(frames[f"attack_{direction}_{index}"].image) for index in range(6)}
-        if len(attack_unique) < 4:
-            raise ValueError(f"{profile.character_id}: attack_{direction} has fewer than four distinct stages")
+        if len(attack_unique) < 5:
+            raise ValueError(f"{profile.character_id}: attack_{direction} has fewer than five distinct stages")
+        if frame_digest(frames[f"attack_{direction}_2"].image) == frame_digest(frames[f"attack_{direction}_3"].image):
+            raise ValueError(f"{profile.character_id}: attack_{direction}_2 and _3 must not be identical")
 
     for index in range(8):
         mirrored = ImageOps.mirror(frames[f"walk_right_{index}"].image)
@@ -1130,7 +1482,7 @@ def validate_written_motion(directory: Path, profile: CharacterProfile, *, stric
         if actual_png != expected_png or actual_webp != expected_webp:
             raise ValueError(
                 f"{directory}: unexpected asset set "
-                f"(png={len(actual_png)}, webp={len(actual_webp)}, expected 68 each)"
+                f"(png={len(actual_png)}, webp={len(actual_webp)}, expected 84 each)"
             )
     return frames
 
@@ -1172,6 +1524,7 @@ def checkerboard(size: tuple[int, int], tile: int = 8) -> Image.Image:
 
 def preview_rows() -> list[tuple[str, list[str]]]:
     rows = [("idle", [f"idle_{index}" for index in range(4)])]
+    rows.extend((f"idle {direction}", [f"idle_{direction}_{index}" for index in range(4)]) for direction in DIRECTIONS)
     rows.extend((f"walk {direction}", [f"walk_{direction}_{index}" for index in range(8)]) for direction in DIRECTIONS)
     rows.append(("attack", [f"attack_{index}" for index in range(6)]))
     rows.extend((f"attack {direction}", [f"attack_{direction}_{index}" for index in range(6)]) for direction in DIRECTIONS)
@@ -1215,8 +1568,7 @@ def write_preview(preview_dir: Path, profile: CharacterProfile, frames: Mapping[
 
 
 def source_is_complete(source_root: Path, character_id: str) -> bool:
-    character_dir = source_root / character_id
-    return all((character_dir / f"{track}_chroma.png").is_file() for track in SOURCE_TRACKS)
+    return all(resolve_track_source_path(source_root, character_id, track) is not None for track in SOURCE_TRACKS)
 
 
 def selected_profiles(args: argparse.Namespace, source_root: Path) -> list[CharacterProfile]:
@@ -1285,7 +1637,7 @@ def run_build(args: argparse.Namespace, profiles: Sequence[CharacterProfile], so
             write_motion_frames(stage_dir, profile, built[profile.character_id])
             validate_written_motion(stage_dir, profile, strict_count=True)
             stage_dirs[profile.character_id] = stage_dir
-            print(f"staged ok: {profile.character_id} / 68 PNG + 68 lossless WebP")
+            print(f"staged ok: {profile.character_id} / 84 PNG + 84 lossless WebP")
 
         if not args.dry_run:
             for profile in profiles:
@@ -1303,7 +1655,7 @@ def run_validate_only(profiles: Sequence[CharacterProfile], output_root: Path) -
     for profile in profiles:
         target_dir = output_root / profile.output_relative
         validated[profile.character_id] = validate_written_motion(target_dir, profile, strict_count=True)
-        print(f"validated: {profile.character_id} / 68 PNG + 68 lossless WebP")
+        print(f"validated: {profile.character_id} / 84 PNG + 84 lossless WebP")
     return validated
 
 

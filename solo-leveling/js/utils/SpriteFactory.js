@@ -191,6 +191,10 @@ export class SpriteFactory {
         if (!scene?.anims) return;
         const names = [
             'idle',
+            'idle_down',
+            'idle_right',
+            'idle_up',
+            'idle_left',
             'walk',
             'walk_down',
             'walk_right',
@@ -235,7 +239,7 @@ export class SpriteFactory {
 
     static _loadMotionPlayerTextures(scene) {
         const W = 112, H = 144;
-        const names = [
+        const coreNames = [
             ...Array.from({ length: 4 }, (_, i) => `player_idle_${i}`),
             ...['down', 'right', 'up', 'left'].flatMap(dir =>
                 Array.from({ length: 8 }, (_, i) => `player_walk_${dir}_${i}`)
@@ -246,20 +250,26 @@ export class SpriteFactory {
             ),
             ...Array.from({ length: 2 }, (_, i) => `player_hit_${i}`),
         ];
-        if (!names.every(name => scene.textures.exists(`motion_${name}`))) {
+        const directionalIdleNames = ['down', 'right', 'up', 'left'].flatMap(dir =>
+            Array.from({ length: 4 }, (_, i) => `player_idle_${dir}_${i}`)
+        );
+        if (!coreNames.every(name => scene.textures.exists(`motion_${name}`))) {
             return false;
         }
 
         this._clearPlayerAnimations(scene);
-        for (const name of names) {
+        let loadedCount = 0;
+        for (const name of [...coreNames, ...directionalIdleNames]) {
+            if (!scene.textures.exists(`motion_${name}`)) continue;
             this._copyTexture(scene, `motion_${name}`, name, W, H);
+            loadedCount++;
         }
         for (let i = 0; i < 8; i++) {
             this._copyTexture(scene, `motion_player_walk_down_${i}`, `player_walk_${i}`, W, H);
         }
         this._createPlayerAuraTexture(scene);
 
-        console.log(`[SpriteFactory] Motion player sprite set loaded (${names.length} frames)`);
+        console.log(`[SpriteFactory] Motion player sprite set loaded (${loadedCount} frames)`);
         return true;
     }
 

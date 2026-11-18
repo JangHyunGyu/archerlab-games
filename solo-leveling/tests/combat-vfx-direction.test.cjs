@@ -80,27 +80,27 @@ async function loadDirectionModule() {
         'flame arc must place its open side toward the player and convex edge toward the target'
     );
     assert.strictEqual(
-        resolveMirroredCombatVfxRotation(0, COMBAT_VFX_ORIENTATIONS.BODY_ARC, Math.PI / 4, false),
-        Math.PI / 4,
-        'the authored light slash aligns its up-right forward axis with +X'
+        resolveMirroredCombatVfxRotation(0, COMBAT_VFX_ORIENTATIONS.BODY_ARC, -Math.PI / 4, false),
+        -Math.PI / 4,
+        'the authored light slash convex edge (+45 deg) aligns with +X after -45 deg offset'
     );
     assert.strictEqual(
-        resolveMirroredCombatVfxRotation(0, COMBAT_VFX_ORIENTATIONS.BODY_ARC, Math.PI / 4, true),
-        -Math.PI / 4,
+        resolveMirroredCombatVfxRotation(0, COMBAT_VFX_ORIENTATIONS.BODY_ARC, -Math.PI / 4, true),
+        Math.PI / 4,
         'a vertically mirrored light slash must negate its authored offset to keep pointing +X'
     );
 
-    // The light sword source art points up-right (-45 degrees). Phaser mirrors
-    // its local Y axis before applying rotation, so verify both swing parities
-    // against spawn directions around the full circle, not only the +X case.
-    const lightSwordSourceAngle = -Math.PI / 4;
+    // The light sword arc convex cutting edge points down-right (+45 degrees).
+    // Phaser mirrors its local Y axis before applying rotation, so verify both
+    // swing parities against spawn directions around the full circle.
+    const lightSwordSourceAngle = Math.PI / 4;
     for (const aimAngle of Array.from({ length: 16 }, (_, index) => -Math.PI + index * Math.PI / 8)) {
         for (const flipY of [false, true]) {
             const localForwardAngle = flipY ? -lightSwordSourceAngle : lightSwordSourceAngle;
             const rotation = resolveMirroredCombatVfxRotation(
                 aimAngle,
                 COMBAT_VFX_ORIENTATIONS.BODY_ARC,
-                Math.PI / 4,
+                -Math.PI / 4,
                 flipY,
             );
             const worldForwardAngle = localForwardAngle + rotation;
