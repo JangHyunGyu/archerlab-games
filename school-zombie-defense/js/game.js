@@ -72,10 +72,10 @@
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
   const ZOMBIE_ASSET_VERSION = "20261004-proportions-v2";
-  const CHARACTER_ASSET_VERSION = "20260718-bow-video-directions-v14";
-  const CHARACTER_CONTINUITY_ASSET_VERSION = "20261004-character-continuity-v1";
-  const FIREBOMB_RECOVERY_ASSET_VERSION = "20261002-firebomb-recovery-v1";
-  const CROSSBOW_ASSET_VERSION = "20261004-crossbow-directions-v2";
+  const CHARACTER_ASSET_VERSION = "20261118-defenders-8f-v1";
+  const CHARACTER_CONTINUITY_ASSET_VERSION = "20261118-defender-continuity-8f-v1";
+  const FIREBOMB_RECOVERY_ASSET_VERSION = "20261118-firebomb-recovery-8f-v1";
+  const CROSSBOW_ASSET_VERSION = "20261118-crossbow-8f-v1";
   const CROSSBOW_AUDIO_VERSION = "20260719-freesound-crossbow-firing-v1";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const COMBAT_EFFECT_ASSET_VERSION = "20260712-combat-fx-v2";
@@ -183,22 +183,53 @@
   // The commercial character sheets do not share one circular muzzle arc, so
   // a single pivot/reach pair cannot keep effects attached in every pose.
   const CHARACTER_MUZZLE_OFFSETS = {
-    a: [[-57, -143], [-38, -176], [-38, -181], [-22, -185], [8, -175], [22, -185], [38, -181], [38, -176], [57, -143]],
-    b: [[-31, -176], [-37, -192], [-32, -198], [-23, -194], [2, -210], [24, -195], [34, -198], [39, -189], [32, -179]],
-    c: [[-28, -182], [-38, -209], [-24, -210], [-15, -215], [0, -215], [15, -215], [28, -212], [34, -210], [28, -183]],
-    d: [[-36, -172], [-30, -183], [-25, -193], [-15, -198], [2, -198], [18, -196], [30, -193], [31, -180], [41, -171]],
-    e: [[-33, -154], [-30, -160], [-40, -163], [-34, -172], [2, -180], [23, -175], [30, -167], [30, -158], [33, -151]],
-    f: [[-52, -150], [-58, -142], [-65, -158], [-31, -141], [32, -147], [32, -140], [64, -157], [58, -142], [52, -150]],
-    g: [[-36, -159], [-40, -198], [-21, -199], [-15, -204], [0, -205], [17, -203], [27, -200], [33, -192], [36, -161]],
-    h: [[-32, -174], [-39, -187], [-23, -203], [-14, -208], [0, -211], [21, -211], [32, -206], [39, -190], [36, -176]]
+    a: [[-54, -181], [-50, -188], [-49, -192], [-41, -197], [20, -204], [41, -197], [49, -192], [50, -188], [54, -181]],
+    b: [[-51, -202], [-45, -202], [-41, -205], [-45, -212], [16, -213], [45, -212], [41, -205], [45, -202], [51, -202]],
+    c: [[-42, -196], [-36, -195], [-31, -198], [-30, -203], [19, -204], [30, -203], [31, -198], [36, -195], [42, -196]],
+    d: [[-30, -179], [-33, -182], [-22, -191], [-22, -192], [12, -190], [22, -192], [22, -191], [33, -182], [30, -179]],
+    e: [[-50, -207], [-40, -219], [-46, -218], [-43, -216], [16, -218], [43, -216], [46, -218], [40, -219], [50, -207]],
+    f: [[-72, -202], [-66, -202], [-88, -204], [-72, -207], [43, -208], [72, -207], [88, -204], [66, -202], [72, -202]],
+    g: [[-48, -219], [-46, -216], [-51, -217], [-40, -219], [15, -231], [40, -219], [51, -217], [46, -216], [48, -219]],
+    h: [[-49, -216], [-37, -221], [-35, -220], [-30, -219], [12, -222], [30, -219], [35, -220], [37, -221], [49, -216]]
   };
-  // E's recoil frames swing the rifle sideways by up to ~17 px, so the release
-  // frame's muzzle would float in empty air while the flash is still alive.
-  // These per-frame barrel tips keep the flash on the rifle as the frames play.
+  // Per-frame barrel anchors keep muzzle flashes locked onto moving weapons
+  // throughout recoil and cycling frames.
   const CHARACTER_FRAME_MUZZLE_OFFSETS = {
+    b: {
+      1: [[-51, -202], [-45, -202], [-41, -205], [-45, -212], [16, -213], [45, -212], [41, -205], [45, -202], [51, -202]],
+      2: [[-38, -211], [-37, -216], [-31, -219], [-26, -220], [14, -220], [26, -220], [31, -219], [37, -216], [38, -211]],
+      3: [[-35, -204], [-42, -205], [-35, -209], [-26, -212], [16, -217], [26, -212], [35, -209], [42, -205], [35, -204]],
+      4: [[-42, -200], [-48, -194], [-41, -202], [-49, -200], [16, -213], [49, -200], [41, -202], [48, -194], [42, -200]]
+    },
+    c: {
+      1: [[-42, -196], [-36, -195], [-31, -198], [-30, -203], [19, -204], [30, -203], [31, -198], [36, -195], [42, -196]],
+      2: [[-37, -204], [-35, -205], [-37, -206], [-27, -206], [21, -206], [27, -206], [37, -206], [35, -205], [37, -204]],
+      3: [[-40, -195], [-37, -203], [-37, -199], [-32, -206], [20, -205], [32, -206], [37, -199], [37, -203], [40, -195]],
+      4: [[-40, -188], [-37, -194], [-36, -196], [-32, -202], [13, -206], [32, -202], [36, -196], [37, -194], [40, -188]]
+    },
+    d: {
+      1: [[-30, -179], [-33, -182], [-22, -191], [-22, -192], [12, -190], [22, -192], [22, -191], [33, -182], [30, -179]],
+      2: [[-15, -180], [-19, -194], [-12, -197], [-18, -194], [11, -198], [18, -194], [12, -197], [19, -194], [15, -180]],
+      3: [[-16, -176], [-24, -183], [-17, -191], [-14, -194], [12, -193], [14, -194], [17, -191], [24, -183], [16, -176]],
+      4: [[-28, -173], [-29, -186], [-32, -192], [-27, -192], [21, -191], [27, -192], [32, -192], [29, -186], [28, -173]]
+    },
     e: {
-      1: [[-34, -154], [-32, -160], [-42, -163], [-26, -172], [-15, -180], [30, -175], [41, -167], [30, -158], [36, -151]],
-      2: [[-23, -154], [-31, -160], [-42, -163], [-27, -172], [-15, -180], [23, -175], [30, -167], [30, -158], [34, -151]]
+      1: [[-50, -207], [-40, -219], [-46, -218], [-43, -216], [16, -218], [43, -216], [46, -218], [40, -219], [50, -207]],
+      2: [[-48, -216], [-46, -220], [-41, -222], [-40, -223], [20, -223], [40, -223], [41, -222], [46, -220], [48, -216]],
+      3: [[-48, -208], [-50, -213], [-46, -207], [-46, -207], [15, -221], [46, -207], [46, -207], [50, -213], [48, -208]],
+      4: [[-52, -200], [-54, -208], [-46, -203], [-46, -206], [16, -217], [46, -206], [46, -203], [54, -208], [52, -200]]
+    },
+    g: {
+      1: [[-48, -219], [-46, -216], [-51, -217], [-40, -219], [15, -231], [40, -219], [51, -217], [46, -216], [48, -219]],
+      2: [[-51, -228], [-41, -228], [-44, -233], [-33, -223], [12, -201], [33, -223], [44, -233], [41, -228], [51, -228]],
+      3: [[-51, -216], [-43, -214], [-47, -220], [-34, -216], [13, -181], [34, -216], [47, -220], [43, -214], [51, -216]],
+      4: [[-62, -207], [-53, -209], [-53, -211], [-45, -215], [15, -231], [45, -215], [53, -211], [53, -209], [62, -207]]
+    },
+    h: {
+      1: [[-49, -216], [-37, -221], [-35, -220], [-30, -219], [12, -222], [30, -219], [35, -220], [37, -221], [49, -216]],
+      2: [[-46, -231], [-32, -232], [-41, -231], [-26, -232], [11, -232], [26, -232], [41, -231], [32, -232], [46, -231]],
+      3: [[-47, -214], [-35, -214], [-38, -212], [-27, -217], [14, -224], [27, -217], [38, -212], [35, -214], [47, -214]],
+      4: [[-48, -207], [-42, -204], [-36, -211], [-25, -209], [12, -216], [25, -209], [36, -211], [42, -204], [48, -207]]
     }
   };
   // Some bullet art keeps transparent padding below its visible tail. Anchor
@@ -207,21 +238,18 @@
     "projectile-sniper": 0.83
   };
   const DIRECTIONAL_MUZZLE_EFFECT_DEFENDERS = new Set(["b", "c", "d", "e", "g", "h"]);
-  const CHARACTER_MUZZLE_EFFECT_ANGLE_OVERRIDES = {
-    // G's commercial cannon art intentionally has a tighter visible arc than
-    // its target-selection arc. These measured barrel axes keep the discharge
-    // flash attached to the cannon while projectile physics still aim true.
-    g: [-117.3, -116.2, -105.8, -100.8, -86.3, -81.9, -75.5, -66.8, -56.7]
-      .map((degrees) => degrees * Math.PI / 180)
-  };
-  const THROW_ANIMATION_FRAMES = 4;
-  const THROW_ANIMATION_FRAME_DURATION = 0.075;
+  const CHARACTER_MUZZLE_EFFECT_ANGLE_OVERRIDES = {};
+  const THROW_ANIMATION_FRAMES = 8;
+  const THROW_ANIMATION_FRAME_DURATION = 0.045;
   const CHARACTER_ATTACK_FRAME_DURATIONS = {
-    // Give the crossbow a readable aim, a crisp release, and a softer recovery
-    // while keeping the projectile release at roughly the original 150 ms beat.
-    a: [0.045, 0.11, 0.045, 0.09],
-    // Preserve the 150 ms release and add a shoulder-height return before ready.
-    f: [0.075, 0.075, 0.075, 0.075, 0.12]
+    a: [0.045, 0.055, 0.055, 0.05, 0.045, 0.045, 0.045, 0.045],
+    b: [0.03, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04],
+    c: [0.03, 0.04, 0.045, 0.04, 0.04, 0.035, 0.035, 0.035],
+    d: [0.045, 0.065, 0.07, 0.065, 0.06, 0.055, 0.05, 0.05],
+    e: [0.045, 0.06, 0.065, 0.07, 0.075, 0.07, 0.055, 0.05],
+    f: [0.05, 0.05, 0.05, 0.06, 0.065, 0.065, 0.06, 0.06],
+    g: [0.04, 0.06, 0.065, 0.06, 0.055, 0.05, 0.05, 0.045],
+    h: [0.035, 0.045, 0.05, 0.045, 0.045, 0.04, 0.04, 0.04]
   };
   const CHARACTER_RECOVERY_BLEND_DURATIONS = {
     a: 70,
@@ -244,9 +272,8 @@
     h: 55
   };
   const CHARACTER_TURN_BLEND_SCALE = 1.6;
-  // Use the same drawing for ready/attack transitions. In particular, F's
-  // old ready sheet holds the bottle in the opposite hand for leftward throws.
-  const CHARACTER_READY_SOURCE_FRAMES = { c: 0, f: 0, g: 1, h: 0 };
+  // Use frame 0 directly so ready and action stances stay aligned across all directions.
+  const CHARACTER_READY_SOURCE_FRAMES = { c: 0, f: 0, g: 0, h: 0 };
   const AIM_ALIASES = {
     idle: "aim-12",
     left: "aim-1030",
@@ -264,15 +291,19 @@
     h: "attack"
   };
   const CHARACTER_ATTACK_FRAME_ZERO_ALIASES = new Set(["a", "b", "d", "e"]);
-  const CHARACTER_ATTACK_DIRECTION_LOCKS = new Set(["a"]);
+  const CHARACTER_ATTACK_DIRECTION_LOCKS = new Set(["a", "b", "c", "d", "e", "f", "g", "h"]);
   const CHARACTER_ATTACK_RELEASE_FRAMES = {
-    a: 2,
+    a: 1,
+    b: 1,
+    c: 1,
     d: 1,
-    f: 2,
-    g: 1
+    e: 1,
+    f: 3,
+    g: 1,
+    h: 1
   };
   const CHARACTER_ACTION_HEIGHT_SCALE = {
-    a: 1.2,
+    a: 1,
     b: 1,
     c: 1,
     d: 1,
@@ -982,7 +1013,7 @@
       id: "a",
       x: 52,
       y: 926,
-      height: 222,
+      height: 224,
       damageScale: 1.08,
       role: "rally",
       projectile: "projectile-arrow",
@@ -992,7 +1023,7 @@
       critMultiplier: 2.05,
       markDuration: BOW_MARK_DURATION,
       markDamageBonus: BOW_MARK_DAMAGE_BONUS,
-      aim: { pivot: [0, -134], reach: 38 },
+      aim: { pivot: [0, -142], reach: 38 },
       recruit: {
         icon: "avatar-bow",
         portrait: "avatar-bow",
@@ -1006,7 +1037,7 @@
       id: "b",
       x: 158,
       y: 924,
-      height: 230,
+      height: 226,
       damageScale: 0.46,
       role: "barrage",
       projectile: "projectile-rifle",
@@ -1016,7 +1047,7 @@
       critMultiplier: 1.45,
       burstCount: 3,
       burstDelay: 70,
-      aim: { pivot: [2, -146], reach: 52 },
+      aim: { pivot: [2, -148], reach: 52 },
       recruit: {
         icon: "avatar-rifle",
         portrait: "avatar-rifle",
@@ -1030,7 +1061,7 @@
       id: "c",
       x: 270,
       y: 925,
-      height: 248,
+      height: 232,
       damageScale: 0.58,
       role: "player",
       projectile: "projectile-pistol",
@@ -1038,13 +1069,13 @@
       rate: 0.4,
       critChance: 0.12,
       critMultiplier: 1.6,
-      aim: { pivot: [0, -158], reach: 48 }
+      aim: { pivot: [0, -154], reach: 48 }
     },
     {
       id: "d",
       x: 382,
       y: 925,
-      height: 226,
+      height: 224,
       damageScale: 1.35,
       role: "frost",
       projectile: "projectile-rocket",
@@ -1054,7 +1085,7 @@
       critMultiplier: 1.35,
       splashRadius: 88,
       splashDamageScale: 0.55,
-      aim: { pivot: [2, -145], reach: 56 },
+      aim: { pivot: [2, -148], reach: 56 },
       recruit: {
         icon: "avatar-rocket",
         portrait: "avatar-rocket",
@@ -1068,7 +1099,7 @@
       id: "e",
       x: 488,
       y: 924,
-      height: 205,
+      height: 230,
       damageScale: 2.25,
       role: "repair",
       projectile: "projectile-sniper",
@@ -1077,7 +1108,7 @@
       critChance: 0.24,
       critMultiplier: 2.35,
       pierce: 2,
-      aim: { pivot: [2, -132], reach: 64 },
+      aim: { pivot: [2, -144], reach: 64 },
       recruit: {
         icon: "avatar-sniper",
         portrait: "avatar-sniper",
@@ -1091,7 +1122,7 @@
       id: "f",
       x: 270,
       y: 925,
-      height: 196,
+      height: 312,
       damageScale: 0.42,
       role: "fire",
       projectile: "projectile-firebomb",
@@ -1102,7 +1133,7 @@
       fireZoneRadius: 64,
       fireZoneDuration: FIREBOMB_FIRE_ZONE_DURATION_SECONDS / FIRE_ZONE_VISUAL_DURATION_MULTIPLIER,
       fireZoneDamageScale: 0.2,
-      aim: { pivot: [0, -121], reach: 39 },
+      aim: { pivot: [0, -142], reach: 39 },
       recruit: {
         icon: "avatar-fire",
         portrait: "avatar-fire",
@@ -1116,7 +1147,7 @@
       id: "g",
       x: 270,
       y: 925,
-      height: 222,
+      height: 244,
       damageScale: 0.74,
       role: "shock",
       projectile: "projectile-shock",
@@ -1130,7 +1161,7 @@
       chainJumps: 1,
       chainRadius: 118,
       chainDamageScale: 0.36,
-      aim: { pivot: [1, -138], reach: 48 },
+      aim: { pivot: [1, -148], reach: 48 },
       recruit: {
         icon: "avatar-shock",
         portrait: "avatar-shock",
@@ -1144,7 +1175,7 @@
       id: "h",
       x: 270,
       y: 925,
-      height: 226,
+      height: 238,
       damageScale: 0.34,
       role: "engineer",
       projectile: "projectile-nail",
@@ -1152,7 +1183,7 @@
       rate: 0.96,
       critChance: 0.07,
       critMultiplier: 1.45,
-      aim: { pivot: [0, -142], reach: 44 },
+      aim: { pivot: [0, -152], reach: 44 },
       recruit: {
         icon: "avatar-engineer",
         portrait: "avatar-engineer",
@@ -1369,7 +1400,7 @@
     // (CanvasTexture), it does not read every slice back with getImageData or
     // keep a CPU copy of its pixels alive.
     const upload = () => addCanvasImageTexture(scene, key, canvas);
-    const needsGrade = /^character-a(?:-attack-\d+)?$/.test(sourceKey);
+    const needsGrade = false;
     const grade = () => {
       harmonizeCrossbowPalette(ctx, canvas.width, canvas.height, Math.round(sx / sw));
       if (!deferred) {
@@ -2254,7 +2285,7 @@
         this.load.image(
           `character-${id}-${action}-${frame}`,
           versionedImageAsset(`assets/images/character-${id}-${action}-${frame}.png`,
-            id === "f" && frame === 4 ? FIREBOMB_RECOVERY_ASSET_VERSION : assetVersion)
+            id === "f" && frame === 7 ? FIREBOMB_RECOVERY_ASSET_VERSION : assetVersion)
         );
       }
     });
@@ -3304,20 +3335,27 @@
 
     startDefenderAttackAnimation(defender, pose, onRelease = null) {
       const action = CHARACTER_ATTACK_ACTIONS[defender.id];
-      const firstAttackFrame = action ? `character-${defender.id}-${action}-${pose}-0` : null;
       const releaseFrame = CHARACTER_ATTACK_RELEASE_FRAMES[defender.id];
+      const isBurstRetrigger = Boolean(
+        defender.attackAnimation
+        && defender.attackAnimation.pose === pose
+        && defender.attackAnimation.frame >= 1
+        && releaseFrame === 1
+      );
+      const startFrame = isBurstRetrigger ? 1 : 0;
+      const startFrameKey = action ? `character-${defender.id}-${action}-${pose}-${startFrame}` : null;
       const frameDurations = CHARACTER_ATTACK_FRAME_DURATIONS[defender.id]
         || Array(THROW_ANIMATION_FRAMES).fill(THROW_ANIMATION_FRAME_DURATION);
-      const delaysRelease = Number.isInteger(releaseFrame) && typeof onRelease === "function";
+      const delaysRelease = !isBurstRetrigger && Number.isInteger(releaseFrame) && typeof onRelease === "function";
       const previousPose = defender.pose;
-      if (action && defender.sprite && this.textures.exists(firstAttackFrame)) {
+      if (action && defender.sprite && this.textures.exists(startFrameKey)) {
         defender.pose = pose;
         defender.attackAnimation = {
           action,
           pose,
-          frame: 0,
+          frame: startFrame,
           frames: frameDurations.length,
-          timer: frameDurations[0],
+          timer: frameDurations[startFrame] || THROW_ANIMATION_FRAME_DURATION,
           frameDuration: THROW_ANIMATION_FRAME_DURATION,
           frameDurations,
           releaseFrame: delaysRelease ? releaseFrame : null,
@@ -3327,11 +3365,11 @@
           defender,
           (CHARACTER_FRAME_BLEND_DURATIONS[defender.id] || 0)
             * (previousPose && previousPose !== pose ? CHARACTER_TURN_BLEND_SCALE : 1),
-          firstAttackFrame
+          startFrameKey
         );
-        defender.sprite.setTexture(firstAttackFrame);
+        defender.sprite.setTexture(startFrameKey);
         this.fitDefenderActionHeight(defender);
-        defender.firePoseTimer = frameDurations.reduce((total, duration) => total + duration, 0);
+        defender.firePoseTimer = frameDurations.slice(startFrame).reduce((total, duration) => total + duration, 0);
         if (!delaysRelease && typeof onRelease === "function") {
           onRelease();
         }
@@ -7548,7 +7586,9 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
         initialArcHeight,
         0
       );
-      const pose = getShotAimPoseKey(initialAngle);
+      const pose = CHARACTER_ATTACK_DIRECTION_LOCKS.has(defender.id)
+        ? initialPose
+        : getShotAimPoseKey(initialAngle);
       this.startDefenderAttackAnimation(defender, pose, () => {
         if (this.disposed || this.mode !== "playing" || !defender.recruited || !target.active || target.hp <= 0) {
           return;

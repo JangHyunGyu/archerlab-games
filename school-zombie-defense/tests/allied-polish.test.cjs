@@ -45,7 +45,7 @@ for (const [id, frame] of Object.entries(sandbox.CHARACTER_READY_SOURCE_FRAMES))
 const sceneTextures = { textures: { exists: key => assets.has(key), get: key => ({ getSourceImage: () => assets.get(key) }) } };
 makeReady(sceneTextures);
 for (const id of "cfgh") {
-  const frame = { c: 0, f: 0, g: 1, h: 0 }[id];
+  const frame = 0;
   const key = `character-${id}-${id === "f" ? "throw" : "attack"}-${frame}`;
   poseKeys.forEach((pose, index) => {
     const slice = slices.get(`character-${id}-${pose}`);
@@ -61,12 +61,12 @@ assert.equal(slices.get("character-f-aim-1030").key, "character-f", "missing opt
 const attackFactoryEnd = source.indexOf("  function releaseCharacterSourceTextures(", factoryEnd);
 const makeAttacks = vm.runInNewContext("(" + source.slice(factoryEnd, attackFactoryEnd).trim() + ")", sandbox);
 sandbox.CHARACTER_ATTACK_FRAME_ZERO_ALIASES = constant("CHARACTER_ATTACK_FRAME_ZERO_ALIASES");
-assets.set("character-f-throw-4", { width: 4608, height: 640 });
+assets.set("character-f-throw-7", { width: 2880, height: 480 });
 sceneTextures.textures.remove = key => assets.delete(key);
 makeAttacks(sceneTextures);
 poseKeys.forEach((pose, index) => {
-  const slice = slices.get(`character-f-throw-${pose}-4`);
-  assert.deepEqual({ ...slice }, { key: "character-f-throw-4", x: index * 512, y: 0, width: 512, height: 640 });
+  const slice = slices.get(`character-f-throw-${pose}-7`);
+  assert.deepEqual({ ...slice }, { key: "character-f-throw-7", x: index * 320, y: 0, width: 320, height: 480 });
 });
 
 function sprite(key = "ready") {
@@ -92,9 +92,9 @@ for (const id of "abcdefgh") for (const dt of [1 / 60, 0.1, 0.5]) {
     setDefenderPose(d, pose) { d.attackAnimation = null; d.pose = pose; d.sprite.setTexture("ready-" + pose); }
   };
   startAttack.call(scene, defender, "aim-1030", () => releases++);
-  assert.equal(defender.attackAnimation.frames, id === "f" ? 5 : 4,
-    "only the firebomb thrower gets an extra recovery frame");
-  const duration = (sandbox.CHARACTER_ATTACK_FRAME_DURATIONS[id] || [0.075, 0.075, 0.075, 0.075]).reduce((a, b) => a + b, 0);
+  assert.equal(defender.attackAnimation.frames, 8,
+    "all defenders use smooth 8-frame attack or throw sequences");
+  const duration = (sandbox.CHARACTER_ATTACK_FRAME_DURATIONS[id] || Array(8).fill(sandbox.THROW_ANIMATION_FRAME_DURATION)).reduce((a, b) => a + b, 0);
   const ticks = Math.ceil((duration + 1e-8) / dt);
   for (let tick = 0; tick < ticks; tick++) update.call(scene, dt);
   assert.equal(releases, 1, `${id}: fire exactly once, including frame catch-up`);
@@ -119,9 +119,9 @@ for (const pose of poseKeys) {
   assert.equal(releases, 0, "firebomb cannot be released early");
   update.call(scene, 0.002);
   assert.equal(releases, 1, "firebomb still releases at 150 ms");
-  update.call(scene, 0.15);
-  assert.equal(defender.sprite.texture.key, `character-f-throw-${pose}-4`);
-  update.call(scene, 0.12);
+  update.call(scene, 0.25);
+  assert.equal(defender.sprite.texture.key, `character-f-throw-${pose}-7`);
+  update.call(scene, 0.065);
   assert.equal(defender.sprite.texture.key, "ready-" + pose);
   assert.equal(releases, 1);
 }
@@ -205,9 +205,9 @@ for (const id of "abcdefgh") {
   }
 }
 
-// The sniper's recoil frames swing the barrel, so a live flash must follow it.
+// Recoil frames swing the rifle away from its release-frame muzzle, so a live flash tracks it.
 {
-  const defender = { id: "e", x: 488, y: 878, aim: { pivot: [2, -132], reach: 64 }, pose: "aim-12" };
+  const defender = { id: "e", x: 488, y: 878, aim: { pivot: [2, -144], reach: 64 }, pose: "aim-12" };
   const moves = [];
   const flash = sprite();
   flash.setPosition = (x, y) => { moves.push([x, y]); return flash; };
@@ -216,15 +216,15 @@ for (const id of "abcdefgh") {
   flash.muzzleCore = core;
   defender.muzzleFlash = { flash, pose: "aim-12", shotOffset: 0 };
   const scene = { getDefenderMuzzle: getMuzzle };
-  syncMuzzleFlash.call(scene, defender, 3);
+  syncMuzzleFlash.call(scene, defender, 5);
   assert.equal(moves.length, 0, "frames without their own barrel position must not move the flash");
   const ready = getMuzzle.call(scene, defender, "aim-12");
-  syncMuzzleFlash.call(scene, defender, 1);
-  assert.deepEqual(moves[0], [488 - 15, 878 - 180], "recoil frame 1 moves the flash onto the swung barrel");
-  assert.notEqual(moves[0][0], ready.x);
-  assert.deepEqual(moves[1], ["core", 488 - 15, 878 - 180]);
-  flash.destroyed = true;
   syncMuzzleFlash.call(scene, defender, 2);
+  assert.deepEqual(moves[0], [488 + 20, 878 - 223], "recoil frame 2 moves the flash onto the swung barrel");
+  assert.notEqual(moves[0][0], ready.x);
+  assert.deepEqual(moves[1], ["core", 488 + 20, 878 - 223]);
+  flash.destroyed = true;
+  syncMuzzleFlash.call(scene, defender, 3);
   assert.equal(defender.muzzleFlash, null, "a destroyed flash must be released");
 }
 
@@ -239,13 +239,13 @@ const alphaCheck = spawnSync("python", ["-c", [
   "from PIL import Image",
   "import sys",
   "root=Path(sys.argv[1])/'assets/images'",
-  "recovery_png=Image.open(root/'character-f-throw-4.png').convert('RGBA')",
-  "recovery_webp=Image.open(root/'character-f-throw-4.webp').convert('RGBA')",
-  "assert recovery_png.size==(4608,640) and recovery_png.tobytes()==recovery_webp.tobytes(), 'recovery must retain lossless RGBA'",
+  "recovery_png=Image.open(root/'character-f-throw-7.png').convert('RGBA')",
+  "recovery_webp=Image.open(root/'character-f-throw-7.webp').convert('RGBA')",
+  "assert recovery_png.size==(2880,480) and recovery_png.tobytes()==recovery_webp.tobytes(), 'recovery must retain lossless RGBA'",
   "for i in range(9):",
-  " cell=recovery_png.crop((i*512,0,(i+1)*512,640))",
+  " cell=recovery_png.crop((i*320,0,(i+1)*320,480))",
   " box=cell.getchannel('A').point(lambda a: 255 if a>32 else 0).getbbox()",
-  " assert box and min(box[:2])>=6 and box[2]<=506 and box[3]<=634, f'recovery direction {i} clips'",
+  " assert box and min(box[:2])>=8 and box[2]<=312 and box[3]<=472, f'recovery direction {i} clips'",
   "for kind in ['pistol','rifle','sniper','shock']:",
   " a=Image.open(root/f'projectile-{kind}.png').convert('RGBA')",
   " b=Image.open(root/f'projectile-{kind}.webp').convert('RGBA')",

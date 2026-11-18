@@ -13,11 +13,16 @@ source = root/'design/source-assets/continuity-20261004'
 for path in images.glob('zombie-walk-*.png'):
     im = Image.open(path)
     assert im.width % 4 == 0 and im.height % 4 == 0, path.name
-rocket = Image.open(images/'character-d-attack-2.png').convert('RGBA')
-original = Image.open(source/'rocket-before.png').convert('RGBA')
-w = rocket.width//9
-assert rocket.size == original.size
-assert rocket.crop((w,0,rocket.width,rocket.height)).tobytes() == original.crop((w,0,original.width,original.height)).tobytes(), 'Other eight rocket directions must be unchanged'
+for f_idx in range(8):
+    sheet_name = 'character-d' if f_idx == 0 else f'character-d-attack-{f_idx}'
+    rocket = Image.open(images / f'{sheet_name}.png').convert('RGBA')
+    rocket_webp = Image.open(images / f'{sheet_name}.webp').convert('RGBA')
+    assert rocket.size == (2880, 480) == rocket_webp.size, sheet_name
+    assert rocket.getchannel('A').tobytes() == rocket_webp.getchannel('A').tobytes(), sheet_name
+    cw = rocket.width // 9
+    for c in range(9):
+        box = rocket.crop((c * cw, 0, (c + 1) * cw, rocket.height)).getchannel('A').point(lambda a: 255 if a > 8 else 0).getbbox()
+        assert box and min(box[0], box[1], cw - box[2], rocket.height - box[3]) >= 8, (sheet_name, c, box)
 volatile = Image.open(images/'zombie-walk-volatile.png').convert('RGBA')
 original = Image.open(source/'volatile-before.png').convert('RGBA')
 for row in range(4):
@@ -35,7 +40,7 @@ for character in ['brute','screamer']:
         new, old = bounds(atlas),bounds(original)
         assert abs(new[1]-old[1]) <= 2 and abs(new[3]-old[3]) <= 1, 'Preserve each collapse pose height and placement'
         assert min(new[0],new[1],512-new[2],512-new[3]) >= 6, 'No clipping'
-for name in ['character-d-attack-2','zombie-death-brute-sheet','zombie-death-screamer-sheet','zombie-walk-volatile']:
+for name in ['zombie-death-brute-sheet','zombie-death-screamer-sheet','zombie-walk-volatile']:
     png = Image.open(images/(name+'.png')).convert('RGBA')
     webp = Image.open(images/(name+'.webp')).convert('RGBA')
     assert png.size == webp.size and png.getchannel('A').tobytes() == webp.getchannel('A').tobytes(), name

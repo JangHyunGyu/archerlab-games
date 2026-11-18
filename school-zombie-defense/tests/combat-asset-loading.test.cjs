@@ -95,8 +95,8 @@ const textureReport = (page) => page.evaluate(() => {
   return {
     count: keys.length,
     sizes: Object.fromEntries([
-      "character-a-aim-12", "character-a-idle", "character-a-attack-aim-1330-2", "character-a-badge",
-      "character-f-throw-aim-12-4", "character-h-badge", "zombie-walk-normal-3-3", "projectile-frost",
+      "character-a-aim-12", "character-a-idle", "character-a-attack-aim-1330-2", "character-a-attack-aim-1330-7", "character-a-badge",
+      "character-f-throw-aim-12-3", "character-f-throw-aim-12-7", "character-h-badge", "zombie-walk-normal-3-3", "projectile-frost",
       "skill-frost", "skill-pierce", "skill-rally", "equipment-wrench", "engineer-turret-head"
     ].map((key) => [key, size(key)])),
     sheetsAsTextures: keys.filter((key) => /^(?:character-[a-h](?:-(?:attack|throw)-\d+)?|zombie-walk-[a-z]+)$/.test(key))

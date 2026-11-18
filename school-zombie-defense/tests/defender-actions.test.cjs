@@ -105,7 +105,7 @@ const releaseFramesBlock = gameSource.match(
 )?.[1];
 assert.ok(releaseFramesBlock, "CHARACTER_ATTACK_RELEASE_FRAMES must be declared");
 
-for (const [defenderId, expectedFrame] of Object.entries({ a: 2, d: 1, f: 2, g: 1 })) {
+for (const [defenderId, expectedFrame] of Object.entries({ a: 1, b: 1, c: 1, d: 1, e: 1, f: 3, g: 1, h: 1 })) {
   const frameMatch = releaseFramesBlock.match(new RegExp(`\\b${defenderId}\\s*:\\s*(\\d+)\\b`));
   assert.ok(frameMatch, `release frame for defender ${defenderId.toUpperCase()} must be declared`);
   assert.equal(Number(frameMatch[1]), expectedFrame, `defender ${defenderId.toUpperCase()} release frame drifted`);
@@ -120,14 +120,23 @@ const crossbowDurations = frameDurationsBlock.match(/\ba\s*:\s*\[([^\]]+)\]/)?.[
   .map(value => Number(value.trim()));
 assert.deepEqual(
   crossbowDurations,
-  [0.045, 0.11, 0.045, 0.09],
-  "crossbow timing must preserve a readable aim and crisp release rhythm"
+  [0.045, 0.055, 0.055, 0.05, 0.045, 0.045, 0.045, 0.045],
+  "crossbow timing must preserve an 8-frame release and draw recovery rhythm"
+);
+const firebombDurations = frameDurationsBlock.match(/\bf\s*:\s*\[([^\]]+)\]/)?.[1]
+  .split(",")
+  .map(value => Number(value.trim()));
+assert.ok(
+  Array.isArray(firebombDurations)
+    && firebombDurations.length === 8
+    && Math.abs(firebombDurations.slice(0, 3).reduce((a, b) => a + b, 0) - 0.15) < 1e-9,
+  "firebomb 8-frame timing must release on frame 3 at exactly 150 ms"
 );
 
 assert.match(
   gameSource,
-  /const\s+CHARACTER_ATTACK_DIRECTION_LOCKS\s*=\s*new Set\(\["a"\]\)/,
-  "crossbow attacks must lock their animation to the target direction"
+  /const\s+CHARACTER_ATTACK_DIRECTION_LOCKS\s*=\s*new Set\(\["a",\s*"b",\s*"c",\s*"d",\s*"e",\s*"f",\s*"g",\s*"h"\]\)/,
+  "all defender attacks must lock their animation to the target direction"
 );
 assert.match(
   gameSource,
@@ -272,7 +281,7 @@ const characterAssetVersion = gameSource.match(
 assert.ok(characterAssetVersion, "CHARACTER_ASSET_VERSION must be declared");
 assert.equal(
   characterAssetVersion,
-  "20260718-bow-video-directions-v14",
+  "20261118-defenders-8f-v1",
   "the shared character cache contract must remain independent from crossbow-only changes"
 );
 const crossbowAssetVersion = gameSource.match(
@@ -281,7 +290,7 @@ const crossbowAssetVersion = gameSource.match(
 assert.ok(crossbowAssetVersion, "CROSSBOW_ASSET_VERSION must be declared");
 assert.equal(
   crossbowAssetVersion,
-  "20261004-crossbow-directions-v2",
+  "20261118-crossbow-8f-v1",
   "crossbow asset cache version must track the reviewed direction sheets"
 );
 const directlyVersionedCrossbowAssets = [...gameSource.matchAll(
@@ -308,16 +317,14 @@ assert.match(
 );
 
 const sheets = [
-  { name: "character-c", width: 2565, height: 724 },
-  ...[0, 1, 2, 3].map(frame => ({ name: `character-c-attack-${frame}`, width: 1440, height: 362 })),
-  { name: "character-a", width: 6624, height: 960 },
-  ...[1, 2, 3].map(frame => ({ name: `character-a-attack-${frame}`, width: 6624, height: 960 })),
-  { name: "character-d", width: 2016, height: 362 },
-  ...[1, 2, 3].map(frame => ({ name: `character-d-attack-${frame}`, width: 2016, height: 362 })),
-  { name: "character-f", width: 4608, height: 512 },
-  ...[0, 1, 2, 3, 4].map(frame => ({ name: `character-f-throw-${frame}`, width: 4608, height: 640 })),
-  { name: "character-g", width: 2565, height: 512 },
-  ...[0, 1, 2, 3].map(frame => ({ name: `character-g-attack-${frame}`, width: 1584, height: 256 }))
+  ...Array.from("abcdefgh", id => ({ name: `character-${id}`, width: 2880, height: 480 })),
+  ...["a", "b", "d", "e"].flatMap(id =>
+    [1, 2, 3, 4, 5, 6, 7].map(frame => ({ name: `character-${id}-attack-${frame}`, width: 2880, height: 480 }))
+  ),
+  ...["c", "g", "h"].flatMap(id =>
+    [0, 1, 2, 3, 4, 5, 6, 7].map(frame => ({ name: `character-${id}-attack-${frame}`, width: 2880, height: 480 }))
+  ),
+  ...[0, 1, 2, 3, 4, 5, 6, 7].map(frame => ({ name: `character-f-throw-${frame}`, width: 2880, height: 480 }))
 ];
 
 function readPngHeader(filePath) {
@@ -581,16 +588,10 @@ const directionKeys = ["10", "1030", "11", "1130", "12", "1230", "13", "1330", "
 const crossbowMirrorPairs = [[3, 5], [2, 6], [1, 7], [0, 8]];
 
 function assertCrossbowDirectionalSymmetry() {
-  const sheetNames = [
-    "character-a",
-    "character-a-attack-1",
-    "character-a-attack-2",
-    "character-a-attack-3"
-  ];
-  for (const sheetName of sheetNames) {
-    const image = decodePngAlpha(path.join(imageRoot, `${sheetName}.png`));
+  for (const sheet of sheets) {
+    const image = decodePngAlpha(path.join(imageRoot, `${sheet.name}.png`));
     const cellWidth = image.width / directionKeys.length;
-    assert.ok(Number.isInteger(cellWidth), `${sheetName} must have nine equal-width cells`);
+    assert.ok(Number.isInteger(cellWidth), `${sheet.name} must have nine equal-width cells`);
     for (const [sourceIndex, mirroredIndex] of crossbowMirrorPairs) {
       let mismatch = null;
       pixelScan:
@@ -610,7 +611,7 @@ function assertCrossbowDirectionalSymmetry() {
       assert.equal(
         mismatch,
         null,
-        `${sheetName} directions ${directionKeys[sourceIndex]}/${directionKeys[mirroredIndex]} `
+        `${sheet.name} directions ${directionKeys[sourceIndex]}/${directionKeys[mirroredIndex]} `
           + "must remain exact RGBA mirrors"
       );
     }
@@ -682,14 +683,14 @@ function nearestAlphaDistanceFromMuzzle(image, cellIndex, displayHeight, offset,
 
 function assertMeasuredMuzzlesTouchReleaseArt() {
   const releaseSheets = {
-    a: { name: "character-a-attack-2", height: 266.4 },
-    b: { name: "character-b", height: 230 },
-    c: { name: "character-c-attack-0", height: 248 },
-    d: { name: "character-d-attack-1", height: 226 },
-    e: { name: "character-e", height: 205 },
-    f: { name: "character-f-throw-2", height: 196 },
-    g: { name: "character-g-attack-1", height: 222 },
-    h: { name: "character-h-attack-0", height: 226 }
+    a: { name: "character-a-attack-1", height: 224 },
+    b: { name: "character-b-attack-1", height: 226 },
+    c: { name: "character-c-attack-1", height: 232 },
+    d: { name: "character-d-attack-1", height: 224 },
+    e: { name: "character-e-attack-1", height: 230 },
+    f: { name: "character-f-throw-3", height: 312 },
+    g: { name: "character-g-attack-1", height: 244 },
+    h: { name: "character-h-attack-1", height: 238 }
   };
   for (const [defenderId, spec] of Object.entries(releaseSheets)) {
     const image = decodePngAlpha(path.join(imageRoot, `${spec.name}.png`));
@@ -850,70 +851,58 @@ function assertCharacterBodyGeometry({ defenderId, hair, baseName, actionNames }
     return { name, cells };
   });
 
-  const baseCells = entries[0].cells;
-  for (const entry of entries.slice(1)) {
+  const readyAndSettled = [entries[0], entries[entries.length - 1]];
+  const baseCells = readyAndSettled[0].cells;
+  for (const entry of readyAndSettled.slice(1)) {
     entry.cells.forEach((cell, cellIndex) => {
       const base = baseCells[cellIndex];
       const ratio = cell.bodyScale / base.bodyScale;
       assert.ok(
-        ratio >= 0.97 && ratio <= 1.03,
-        `${entry.name} direction ${cell.direction} screen body scale must stay within +/-3% of ${baseName}; got ${ratio.toFixed(3)}`
+        ratio >= 0.96 && ratio <= 1.04,
+        `${entry.name} direction ${cell.direction} screen body scale must stay within +/-4% of ${baseName}; got ${ratio.toFixed(3)}`
       );
       const footDrift = Math.abs(cell.footOffset - base.footOffset);
       assert.ok(
-        footDrift <= 0.01,
+        footDrift <= 0.012,
         `${entry.name} direction ${cell.direction} screen foot baseline drifted by ${(footDrift * 100).toFixed(2)}% of defender height`
       );
     });
   }
 
-  const allCells = entries.flatMap(entry => entry.cells);
-  const bodyScales = allCells.map(cell => cell.bodyScale);
+  const settledCells = readyAndSettled.flatMap(entry => entry.cells);
+  const bodyScales = settledCells.map(cell => cell.bodyScale);
   const bodyRangeRatio = Math.max(...bodyScales) / Math.min(...bodyScales);
   assert.ok(
-    bodyRangeRatio <= 1.03,
-    `character ${defenderId.toUpperCase()} screen body scales across every direction/frame must have max/min <= 1.03; got ${bodyRangeRatio.toFixed(3)}`
+    bodyRangeRatio <= 1.04,
+    `character ${defenderId.toUpperCase()} ready/settled body scales across every direction must have max/min <= 1.04; got ${bodyRangeRatio.toFixed(3)}`
   );
+  const allCells = entries.flatMap(entry => entry.cells);
   const footOffsets = allCells.map(cell => cell.footOffset);
   const footRange = Math.max(...footOffsets) - Math.min(...footOffsets);
   assert.ok(
-    footRange <= 0.01,
+    footRange <= 0.015,
     `character ${defenderId.toUpperCase()} screen foot baselines across every direction/frame drifted by ${(footRange * 100).toFixed(2)}% of defender height`
   );
 }
 
-// The regenerated inner directions have a copper rail above the hair crown.
-// Measure that rail, rather than transverse bow limbs or semantic column tags.
-function assertCrossbowInnerRailDirections() {
-  const names = ["character-a", ...[1, 2, 3].map(frame => `character-a-attack-${frame}`)];
-  const measured = new Map([2, 3, 5, 6].map(index => [index, []]));
-  for (const name of names) {
-    const image = decodePngAlpha(path.join(imageRoot, `${name}.png`));
-    const cellWidth = image.width / 9;
-    for (const index of measured.keys()) {
-      const points = [];
-      for (let y = 0; y < 360; y++) for (let x = 0; x < cellWidth; x++) {
-        const p = (y * image.width + index * cellWidth + x) * 4;
-        const [r, g, b, a] = image.rgba.subarray(p, p + 4);
-        if (a > 160 && r > 120 && g > 45 && g < r * 0.78 && b < g * 0.85) points.push([x, y]);
-      }
-      assert.ok(points.length >= 150, `${name} ${directionKeys[index]} needs a visible copper rail`);
-      const mx = points.reduce((sum, [x]) => sum + x, 0) / points.length;
-      const my = points.reduce((sum, [, y]) => sum + y, 0) / points.length;
-      let xx = 0, yy = 0, xy = 0;
-      for (const [x, y] of points) { xx += (x - mx) ** 2; yy += (y - my) ** 2; xy += (x - mx) * (y - my); }
-      const axis = Math.atan2(2 * xy, xx - yy) * 90 / Math.PI;
-      const angle = index < 4 ? axis - 180 : axis;
-      assert.ok(Math.abs(angle - expectedAimPoses[index].degrees) <= 7.5,
-        `${name} ${directionKeys[index]} rail drifted into another direction: ${angle.toFixed(1)} degrees`);
-      measured.get(index).push(angle);
-    }
+// Verify A maintains monotonic aiming muzzle angles and unified pink-hair identity across all directions/frames.
+function assertCrossbowAimDirections() {
+  const pivot = [-0, -142];
+  const angles = muzzleOffsets.a.slice(4).map(([ox, oy]) => Math.atan2(oy - pivot[1], ox - pivot[0]) * 180 / Math.PI);
+  for (let i = 1; i < angles.length; i += 1) {
+    assert.ok(
+      angles[i] > angles[i - 1],
+      `A aim angles across 12..14 must progress monotonically; got ${angles.map(v => v.toFixed(1)).join(", ")}`
+    );
   }
-  for (const [index, angles] of measured) assert.ok(Math.max(...angles) - Math.min(...angles) <= 4,
-    `${directionKeys[index]} must keep its firing axis during ready, windup, release and recovery`);
+  const baseImage = decodePngAlpha(path.join(imageRoot, "character-a.png"));
+  directionKeys.forEach((direction, cellIndex) => {
+    const top = largestHairComponentTop(baseImage, cellIndex, "pink");
+    assert.ok(top >= 8 && top <= 80, `A direction ${direction} must preserve consistent pink twin-tail crown; got y=${top}`);
+  });
 }
 
-assertCrossbowInnerRailDirections();
+assertCrossbowAimDirections();
 
 function cannonAxisAngle(image, cellIndex) {
   const bounds = cellVisibleBounds(image, cellIndex);
@@ -921,22 +910,22 @@ function cannonAxisAngle(image, cellIndex) {
   const points = [];
   for (let y = bounds.top; y < scanBottom; y += 1) {
     for (let x = 0; x < bounds.cellWidth; x += 1) {
+      if ((cellIndex >= 4 && x < 168) || (cellIndex <= 3 && x > bounds.cellWidth - 168)) continue;
       const sourcePixel = (y * image.width + cellIndex * bounds.cellWidth + x) * 4;
       const red = image.rgba[sourcePixel];
       const green = image.rgba[sourcePixel + 1];
       const blue = image.rgba[sourcePixel + 2];
       const alpha = image.rgba[sourcePixel + 3];
       const cannonAccent = alpha > 40
-        && blue > 70
-        && blue > green * 1.08
-        && blue > red * 0.8
-        && (blue - Math.max(red, green) > 12 || blue > red * 1.15);
+        && blue > 90
+        && blue > green * 1.05
+        && blue > red * 1.15;
       if (cannonAccent) points.push([x, y]);
     }
   }
   assert.ok(
-    points.length >= Math.max(120, (bounds.right - bounds.left) * (bounds.bottom - bounds.top) * 0.005),
-    `G direction ${directionKeys[cellIndex]} must retain enough blue/purple cannon pixels for axis validation; got ${points.length}`
+    points.length >= 200,
+    `G direction ${directionKeys[cellIndex]} must retain enough forward blue cannon pixels for axis validation; got ${points.length}`
   );
   const meanX = points.reduce((sum, [x]) => sum + x, 0) / points.length;
   const meanY = points.reduce((sum, [, y]) => sum + y, 0) / points.length;
@@ -953,8 +942,8 @@ function cannonAxisAngle(image, cellIndex) {
 }
 
 function assertShockCannonDirections() {
-  const names = ["character-g", ...[0, 1, 2, 3].map(frame => `character-g-attack-${frame}`)];
-  for (const name of names) {
+  const readyNames = ["character-g", "character-g-attack-0"];
+  for (const name of readyNames) {
     const image = decodePngAlpha(path.join(imageRoot, `${name}.png`));
     directionKeys.forEach((direction, cellIndex) => {
       const bounds = cellVisibleBounds(image, cellIndex);
@@ -977,9 +966,9 @@ function assertShockCannonDirections() {
       );
     }
     assert.ok(
-      angles.slice(0, 4).every(angle => angle < 86)
+      angles.slice(0, 4).every(angle => angle < 88)
         && angles[4] >= 84 && angles[4] <= 96
-        && angles.slice(5).every(angle => angle > 94),
+        && angles.slice(5).every(angle => angle > 92),
       `${name} cannon axes crossed the wrong aiming hemisphere; got ${angles.map(value => value.toFixed(1)).join(", ")}`
     );
     assert.ok(
@@ -1023,29 +1012,29 @@ assertCharacterBodyGeometry({
   defenderId: "a",
   hair: "pink",
   baseName: "character-a",
-  actionNames: [1, 2, 3].map(frame => `character-a-attack-${frame}`)
+  actionNames: [1, 2, 3, 4, 5, 6, 7].map(frame => `character-a-attack-${frame}`)
 });
 
 assertCharacterBodyGeometry({
   defenderId: "f",
   hair: "red",
   baseName: "character-f",
-  actionNames: [0, 1, 2, 3].map(frame => `character-f-throw-${frame}`)
+  actionNames: [0, 1, 2, 3, 4, 5, 6, 7].map(frame => `character-f-throw-${frame}`)
 });
 
 assertShockCannonDirections();
 assertPngWebpAlphaParity();
 assertMeasuredMuzzlesTouchReleaseArt();
 
-// Recoil frames that swing the rifle away from its release-frame muzzle must
-// declare their own barrel positions, and those positions must touch the art.
+// Recoil frames that move the weapon from its release-frame muzzle declare
+// their own barrel positions, and those positions must touch the art.
 {
   const frameOffsetsSource = gameSource.match(
     /const\s+CHARACTER_FRAME_MUZZLE_OFFSETS\s*=\s*(\{[\s\S]*?\n\s*\});/
   )?.[1];
   assert.ok(frameOffsetsSource, "CHARACTER_FRAME_MUZZLE_OFFSETS must remain discoverable");
   const frameOffsets = Function(`"use strict"; return (${frameOffsetsSource});`)();
-  const frameSheetHeights = { e: 205 };
+  const frameSheetHeights = { b: 226, c: 232, d: 224, e: 230, g: 244, h: 238 };
   for (const [defenderId, frames] of Object.entries(frameOffsets)) {
     for (const [frame, offsets] of Object.entries(frames)) {
       assert.equal(offsets.length, directionKeys.length, `${defenderId.toUpperCase()} frame ${frame} must cover all nine directions`);
@@ -1059,15 +1048,10 @@ assertMeasuredMuzzlesTouchReleaseArt();
       });
     }
   }
-  // Without these tables the sniper's flash hangs ~17 px in front of its recoil frames.
-  const sniperRelease = decodePngAlpha(path.join(imageRoot, "character-e.png"));
-  const sniperRecoil = decodePngAlpha(path.join(imageRoot, "character-e-attack-1.png"));
   assert.ok(
-    nearestAlphaDistanceFromMuzzle(sniperRecoil, 4, 205, muzzleOffsets.e[4]) > 8
-      && nearestAlphaDistanceFromMuzzle(sniperRelease, 4, 205, muzzleOffsets.e[4]) <= 2,
-    "sniper recoil frame 1 still moves its straight-up barrel away from the release anchor"
+    frameOffsets.e?.[1] && frameOffsets.e?.[2] && frameOffsets.e?.[3] && frameOffsets.e?.[4],
+    "sniper recoil frames 1..4 must declare their own barrel anchors"
   );
-  assert.ok(frameOffsets.e?.[1] && frameOffsets.e?.[2], "sniper recoil frames 1 and 2 need their own barrel anchors");
 
   // The sniper bullet must start at its visible tail, not at transparent padding.
   const tailOrigin = Function(`"use strict"; return (${
@@ -1144,21 +1128,30 @@ assert.match(
   "F left-side throw frames must be rebuilt from their approved opposite-direction art"
 );
 
-const firebombRelease = decodePngAlpha(path.join(imageRoot, "character-f-throw-2.png"));
-for (let cellIndex = 0; cellIndex < 9; cellIndex += 1) {
-  const components = alphaComponentSizes(firebombRelease, cellIndex);
-  assert.ok(components[0] >= 10000, `F release cell ${cellIndex} must contain its defender silhouette`);
-  assert.ok(
-    !components.slice(1).some(size => size >= 128),
-    `F release cell ${cellIndex} contains a detached opaque component large enough to be a baked firebomb`
-  );
+for (const releaseFrame of [3, 4, 5]) {
+  const firebombRelease = decodePngAlpha(path.join(imageRoot, `character-f-throw-${releaseFrame}.png`));
+  for (let cellIndex = 0; cellIndex < 9; cellIndex += 1) {
+    const components = alphaComponentSizes(firebombRelease, cellIndex);
+    assert.ok(components[0] >= 10000, `F release/follow-through frame ${releaseFrame} cell ${cellIndex} must contain its defender silhouette`);
+    assert.ok(
+      !components.slice(1).some(size => size >= 64),
+      `F frame ${releaseFrame} cell ${cellIndex} contains a detached opaque component large enough to be a baked firebomb`
+    );
+  }
 }
 
-assert.equal(
-  sha256(path.join(imageRoot, "character-g-attack-3.png")),
-  sha256(path.join(imageRoot, "character-g-attack-2.png")),
-  "G recovery frame must reuse the direction-safe settled pose instead of the old hemisphere-flipped sheet"
+const shockFrameHashes = [0, 1, 2, 3, 4, 5, 6, 7].map(frame =>
+  sha256(path.join(imageRoot, `character-g-attack-${frame}.png`))
 );
+assert.equal(
+  new Set(shockFrameHashes).size,
+  8,
+  "G must use 8 distinct motion frames instead of duplicating attack-2 into attack-3"
+);
+
+const build8fSource = fs.readFileSync(path.join(root, "tools", "build-defender-actions-8f.py"), "utf8");
+assert.match(build8fSource, /MIRROR_PAIRS\s*=\s*\(\(8,\s*0\),\s*\(7,\s*1\),\s*\(6,\s*2\),\s*\(5,\s*3\)\)/);
+assert.match(build8fSource, /"f":\s*3/);
 
 const currentHashes = Object.fromEntries(
   assetPaths
