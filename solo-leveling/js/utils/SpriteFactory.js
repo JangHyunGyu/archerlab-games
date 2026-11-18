@@ -238,7 +238,10 @@ export class SpriteFactory {
     }
 
     static _loadMotionPlayerTextures(scene) {
-        const W = 112, H = 144;
+        const sampleTex = scene.textures.get('motion_player_idle_0');
+        const sampleImg = sampleTex && sampleTex.getSourceImage ? sampleTex.getSourceImage() : null;
+        const W = (sampleImg && (sampleImg.naturalWidth || sampleImg.width)) || 168;
+        const H = (sampleImg && (sampleImg.naturalHeight || sampleImg.height)) || 144;
         const coreNames = [
             ...Array.from({ length: 4 }, (_, i) => `player_idle_${i}`),
             ...['down', 'right', 'up', 'left'].flatMap(dir =>

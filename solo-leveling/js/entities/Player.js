@@ -19,7 +19,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.setCollideWorldBounds(true);
         this.setScale(this.visualBaseScale);
         this.body.setSize(38, 56);
-        this.body.setOffset(37, 78);
+        this.body.setOffset(Math.round((this.width - 38) / 2), 78);
 
         // Stats
         this.stats = { ...this.baseStats };

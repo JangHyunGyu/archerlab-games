@@ -24,7 +24,7 @@ from build_character_motion_v2 import is_native_transparent_strip, split_strip a
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOT = ROOT / "assets" / "player" / "motion_v2_sources"
-FRAME_SIZE = (112, 144)
+FRAME_SIZE = (168, 144)
 WALK_FRAMES = 8
 ATTACK_FRAMES = 6
 SOURCE_TRACKS = (
@@ -125,7 +125,8 @@ def difference_score(left: Image.Image, right: Image.Image) -> float:
         raise AssertionError(f"cannot compare images of different sizes: {left.size} vs {right.size}")
     histogram = ImageChops.difference(left.convert("RGBA"), right.convert("RGBA")).histogram()
     total = sum((bin_index % 256) * count for bin_index, count in enumerate(histogram))
-    return total / (255 * 4 * left.width * left.height)
+    ref_w = 112 if left.size == FRAME_SIZE else left.width
+    return total / (255 * 4 * ref_w * left.height)
 
 
 def digest(image: Image.Image) -> bytes:
@@ -306,7 +307,7 @@ def verify_frame_pair(
     if not 133 <= bottom <= 140:
         raise AssertionError(f"{png_path} alpha bbox {bbox} has an implausible foot/root anchor")
     visible = sum(1 for value in image_pixels(png.getchannel("A")) if value > 12)
-    if not 300 <= visible <= 12_500:
+    if not 300 <= visible <= 18_000:
         raise AssertionError(f"{png_path} has implausible visible area: {visible} px")
     assert_component_attachment(
         str(png_path),

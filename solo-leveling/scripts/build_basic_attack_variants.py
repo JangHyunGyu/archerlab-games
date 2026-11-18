@@ -70,7 +70,7 @@ def main():
                 motion.validate_frame_image(name, im)
                 im.save(target / f'{profile.filename_prefix}{name}.png')
                 im.save(target / f'{profile.filename_prefix}{name}.webp', lossless=True, method=6, exact=True)
-            sheet = Image.new('RGB', (784, 656), (19, 27, 40))
+            sheet = Image.new('RGB', (7 * motion.FRAME_W, 656), (19, 27, 40))
             draw = ImageDraw.Draw(sheet)
             for row, direction in enumerate(('right', 'left', 'down', 'up')):
                 draw.text((5,row*164+4), f'{char} / {variant} / {direction}', fill='white')
@@ -79,7 +79,7 @@ def main():
                 sheet.paste(old, (0,row*164+20), old)
                 for i in range(6):
                     im=frames[f'attack_{variant}_{direction}_{i}']
-                    sheet.paste(im, ((i+1)*112,row*164+20), im)
+                    sheet.paste(im, ((i + 1) * motion.FRAME_W, row * 164 + 20), im)
             sheet.save(previews / f'{char}-{variant}.png')
 
 if __name__ == '__main__':

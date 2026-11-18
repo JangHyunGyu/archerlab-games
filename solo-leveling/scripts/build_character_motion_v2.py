@@ -55,7 +55,7 @@ def _load_clean_sprite_module():
 
 _CLEAN_SPRITE_MOD = _load_clean_sprite_module()
 
-FRAME_W = 112
+FRAME_W = 168
 FRAME_H = 144
 FOOT_Y = 138  # Alpha bbox bottom (exclusive), matching the current motion assets.
 MIN_PADDING = 4
@@ -921,8 +921,18 @@ def place_body(crop: Image.Image, *, scale: float | None = None) -> Image.Image:
     cleaned_body = Image.fromarray(c_arr, mode="RGBA")
     cleaned_body = cleaned_body.crop(alpha_bbox(cleaned_body))
 
+    # 무기/칼날 끝이 아니라 불투명 인체 코어의 수평 중앙값으로 X 앵커를 맞춰 긴 장검 착용 시 몸체 후퇴 방지
+    cb_alpha = np.array(cleaned_body)[:, :, 3]
+    edt = ndimage.distance_transform_edt(cb_alpha >= 140)
+    core_mask = (cb_alpha >= 200) & (edt >= 2.2)
+    if not np.any(core_mask):
+        core_mask = cb_alpha >= 180
+    if not np.any(core_mask):
+        core_mask = cb_alpha > 0
+    body_cx = int(round(float(np.median(np.where(core_mask)[1]))))
+
     canvas = Image.new("RGBA", (FRAME_W, FRAME_H), (0, 0, 0, 0))
-    x = (FRAME_W - cleaned_body.width) // 2
+    x = max(MIN_PADDING, min(FRAME_W - MIN_PADDING - cleaned_body.width, (FRAME_W // 2) - body_cx))
     y = FOOT_Y - cleaned_body.height
     if x < MIN_PADDING or y < MIN_PADDING:
         raise ValueError(f"normalized body violates padding: size={cleaned_body.size}, offset=({x}, {y})")
