@@ -52,7 +52,7 @@ for (const locale of ['ko', 'en']) {
       <span>ArcherLab</span>
     </a>
     <div class="header-controls">
-      <nav class="languages" aria-label="${text('language')}"><a href="./" lang="ko" ${!en ? 'aria-current="page"' : ''}>한국어</a><span aria-hidden="true">/</span><a href="index-en.html" lang="en" ${en ? 'aria-current="page"' : ''}>English</a></nav>
+      <nav class="languages" aria-label="${text('language')}"><a href="./" lang="ko" ${!en ? 'aria-current="page"' : ''}>한국어</a><span aria-hidden="true">/</span><a href="index-en" lang="en" ${en ? 'aria-current="page"' : ''}>English</a></nav>
       <button class="icon-button" id="ranking-open" aria-label="${text('ranking')}">${skinIcon('icon-trophy')}</button>
       <button class="icon-button" id="guide-open" aria-label="${text('guide')}">${skinIcon('icon-guide')}</button>
       <button class="icon-button" id="settings-open" aria-label="${text('settings')}">${skinIcon('icon-settings')}</button>
