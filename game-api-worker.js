@@ -314,6 +314,22 @@ function getTransientRuntimeScriptReason(body) {
     }
 }
 
+// Brave iOS (and similar wallet-aware browsers/extensions) inject a provider shim that runs
+// `window.ethereum.selectedAddress = undefined` as page "global code" at line 1. ArcherLab games
+// never touch wallet providers, so only that injected-script shape is ignored: the message must
+// reference a wallet provider property, and the report must come from Brave or carry a stack that
+// is just the page's own inline line-1 global code (no frames from our .js files).
+function getInjectedWalletProviderReason(body, userAgent) {
+    const message = String(body.message || '');
+    if (!/\bwindow\.ethereum\b[^\n]{0,40}\b(?:selectedAddress|isMetaMask|providers?|request)\b/i.test(message)) return '';
+    const stack = String(body.stack || '').trim();
+    if (/\.(?:js|mjs|cjs)(?:\?[^\s:]*)?:\d+/i.test(stack)) return '';
+    const isBrave = /\bBrave\b/i.test(String(userAgent || ''));
+    const isInlineGlobalCode = /^(?:global code@)?\S+:1:\d+$/i.test(stack);
+    if (!isBrave && !isInlineGlobalCode) return '';
+    return 'injected_wallet_provider_script';
+}
+
 async function insertErrorLog(db, request, payload) {
     if (!db) throw new Error('D1 DB binding is unavailable');
     await db.prepare(`
@@ -374,6 +390,11 @@ async function storeClientError(db, request, body) {
     const recoveredReason = getRecoveredClientErrorReason(body);
     if (recoveredReason) {
         return jsonResponse({ ok: true, ignored: true, reason: recoveredReason });
+    }
+
+    const walletProviderReason = getInjectedWalletProviderReason(body, request.headers.get('User-Agent'));
+    if (walletProviderReason) {
+        return jsonResponse({ ok: true, ignored: true, reason: walletProviderReason });
     }
 
     const gameId = limitText(body.game_id || body.gameId || body.appId || 'archerlab-games', 100)

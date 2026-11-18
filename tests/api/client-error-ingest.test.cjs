@@ -339,6 +339,51 @@ function createDb() {
   assert.equal(beaconDb.writes[0].values[0], 'blockpang');
   assert.equal(beaconDb.writes[0].values[2], '[error] beacon text/plain body');
 
+  // D1 6996: Brave iOS injects `window.ethereum.selectedAddress = undefined` as page global code (line 1).
+  const braveIosUa = 'Mozilla/5.0 (iPad; CPU OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.2 Mobile/15E148 Safari/604.1 Brave';
+  const walletMessage = "TypeError: undefined is not an object (evaluating 'window.ethereum.selectedAddress = undefined')";
+  const walletPayload = {
+    game_id: 'parking_escape', error_type: 'error', message: walletMessage,
+    stack: 'global code@https://game.archerlab.dev/parking-escape/index-en:1:16',
+    url: 'https://game.archerlab.dev/parking-escape/index-en', source: 'https://game.archerlab.dev/parking-escape/index-en',
+    lineno: 0, colno: 0, context: { language: 'en', name: 'TypeError' }
+  };
+  const walletDb = createDb();
+  const walletResponse = await context.__gameApiTest.worker.fetch(new Request(browserRequest.url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8', Origin: 'https://game.archerlab.dev', 'User-Agent': braveIosUa },
+    body: JSON.stringify(walletPayload)
+  }), { DB: walletDb });
+  assert.equal(walletResponse.status, 200);
+  assert.deepEqual(await walletResponse.json(), { ok: true, ignored: true, reason: 'injected_wallet_provider_script' });
+  assert.equal(walletDb.writes.length, 0);
+
+  const safariUa = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.7 Mobile/15E148 Safari/604.1';
+  for (const [userAgent, payload, expectIgnored] of [
+    // Non-Brave browser, same inline line-1 global code shape: still injected.
+    [safariUa, walletPayload, true],
+    // Brave without a stack: still the injected shim.
+    [braveIosUa, { ...walletPayload, stack: '' }, true],
+    // A wallet message thrown from our own game script must be stored, even on Brave.
+    [braveIosUa, { ...walletPayload, stack: 'start@https://game.archerlab.dev/parking-escape/js/game.js?v=1:120:9' }, false],
+    // Non-Brave with a non-inline stack is not the injected shape.
+    [safariUa, { ...walletPayload, stack: 'global code@https://game.archerlab.dev/parking-escape/index-en:42:3' }, false],
+    // Unrelated TypeError on Brave is a real bug and must be stored.
+    [braveIosUa, { ...walletPayload, message: "TypeError: undefined is not an object (evaluating 'state.level')" }, false]
+  ]) {
+    const db = createDb();
+    const response = await context.__gameApiTest.storeClientError(db, new Request(browserRequest.url, {
+      method: 'POST', headers: { 'User-Agent': userAgent }
+    }), payload);
+    if (expectIgnored) {
+      assert.deepEqual(await response.json(), { ok: true, ignored: true, reason: 'injected_wallet_provider_script' });
+      assert.equal(db.writes.length, 0);
+    } else {
+      assert.deepEqual(await response.json(), { ok: true });
+      assert.equal(db.writes.length, 1);
+    }
+  }
+
   console.log('✓ game API client-error automation filtering verified');
 })().catch((error) => {
   console.error(error);
