@@ -44,16 +44,16 @@ export class ShadowDagger extends WeaponBase {
         }
     }
 
-    _firePattern() {
+    _firePattern() { var __oc0;
         const fanCount = Math.max(1, this.config.fanCount || 1);
-        const fanSpread = this.config.fanSpread ?? 0.24;
+        const fanSpread = (((__oc0 = this.config.fanSpread) !== null && __oc0 !== void 0 ? __oc0 : 0.24));
         for (let i = 0; i < fanCount; i++) {
             const offset = (i - (fanCount - 1) / 2) * fanSpread;
             this._throwDagger(offset, i === 0);
         }
     }
 
-    _throwDagger(angleOffset = 0, playSound = true) {
+    _throwDagger(angleOffset = 0, playSound = true) { var __oc1, __oc2, __oc3, __oc4;
         const target = this.player.getClosestEnemy(this.config.acquireRange || 6000);
         if (!target) return;
 
@@ -69,17 +69,17 @@ export class ShadowDagger extends WeaponBase {
         const endX = px + Math.cos(angle) * range;
         const endY = py + Math.sin(angle) * range;
         const duration = this.config.projectileDuration || Phaser.Math.Clamp(range * 1.25, 650, 2500);
-        const dmg = Math.floor(this.getDamage() * (this.config.damageMult ?? 1));
+        const dmg = Math.floor(this.getDamage() * (((__oc1 = this.config.damageMult) !== null && __oc1 !== void 0 ? __oc1 : 1)));
         const effectTexture = this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;
         const useEffectAsset = !useCharacterEffect && this.scene.textures.exists('effect_shadow_dagger');
         const usesImageEffect = useCharacterEffect || useEffectAsset;
         const suppressTrailFx = this.config.imageOnlyVfx || usesImageEffect;
         const textureKey = effectTexture || (useEffectAsset ? 'effect_shadow_dagger' : 'proj_dagger');
-        const hitRadiusScale = this.config.hitRadiusScale ?? 0.35;
-        const minHitRadius = this.config.minHitRadius ?? 25;
+        const hitRadiusScale = (((__oc2 = this.config.hitRadiusScale) !== null && __oc2 !== void 0 ? __oc2 : 0.35));
+        const minHitRadius = (((__oc3 = this.config.minHitRadius) !== null && __oc3 !== void 0 ? __oc3 : 25));
         const explosionRadius = this.config.explosionRadius || 0;
-        const explosionDamageMult = this.config.explosionDamageMult ?? 0.65;
+        const explosionDamageMult = (((__oc4 = this.config.explosionDamageMult) !== null && __oc4 !== void 0 ? __oc4 : 0.65));
         const slowMultiplier = this.config.slowMultiplier;
         const slowDuration = this.config.slowDuration || 1400;
 
@@ -160,14 +160,14 @@ export class ShadowDagger extends WeaponBase {
             }
         };
 
-        const tryPierceTarget = (currentTarget) => {
+        const tryPierceTarget = (currentTarget) => { var __oc5;
             if (!currentTarget || !currentTarget.active) return false;
             if (currentTarget.isBoss && currentTarget.isInvincible) return false;
 
             const targetKey = getTargetKey(currentTarget);
             if (piercedTargets.has(targetKey)) return false;
 
-            const hitRadius = Math.max(minHitRadius, (currentTarget.body?.width || currentTarget.displayWidth || 50) * hitRadiusScale);
+            const hitRadius = Math.max(minHitRadius, ((((__oc5 = currentTarget.body) === null || __oc5 === void 0 ? void 0 : __oc5.width)) || currentTarget.displayWidth || 50) * hitRadiusScale);
             const dx = dagger.x - prevX;
             const dy = dagger.y - prevY;
             const segmentLengthSq = dx * dx + dy * dy;
@@ -252,8 +252,8 @@ export class ShadowDagger extends WeaponBase {
             trailInterval = this.scene.time.addEvent({
                 delay: TRAIL_INTERVAL_MS,
                 repeat: trailRepeatCount,
-                callback: () => {
-                    if (!dagger.active || !this.scene?.scene?.isActive()) return;
+                callback: () => { var __oc6, __oc7;
+                    if (!dagger.active || !(((__oc7 = (__oc6 = this.scene) === null || __oc6 === void 0 ? void 0 : __oc6.scene) === null || __oc7 === void 0 ? void 0 : __oc7.isActive()))) return;
                     const trail = this._getTrailCircle(dagger.x, dagger.y);
                     this.scene.tweens.add({
                         targets: trail,
@@ -268,12 +268,12 @@ export class ShadowDagger extends WeaponBase {
         }
     }
 
-    destroy() {
-        const tweens = this.scene?.tweens;
+    destroy() { var __oc8, __oc9;
+        const tweens = (((__oc8 = this.scene) === null || __oc8 === void 0 ? void 0 : __oc8.tweens));
         for (const entry of this._activeDaggers) {
             if (entry.trailInterval) entry.trailInterval.remove(false);
             if (tweens) tweens.killTweensOf(entry.dagger);
-            if (entry.dagger?.scene) entry.dagger.destroy();
+            if ((((__oc9 = entry.dagger) === null || __oc9 === void 0 ? void 0 : __oc9.scene))) entry.dagger.destroy();
         }
         this._activeDaggers = [];
         for (const trail of this._activeTrails) {

@@ -6,14 +6,14 @@ import {
 import { t } from '../utils/i18n.js';
 import { UIAssets } from './UIAssets.js?v=20260913-crafted-ui-v1';
 
-function cssPerGameUnit(scene) {
-    const scale = scene?.game?.scale?.displayScale;
-    const sx = Number(scale?.x);
-    const sy = Number(scale?.y);
+function cssPerGameUnit(scene) { var __oc0, __oc1;
+    const scale = (((__oc1 = (__oc0 = scene === null || scene === void 0 ? void 0 : scene.game) === null || __oc0 === void 0 ? void 0 : __oc0.scale) === null || __oc1 === void 0 ? void 0 : __oc1.displayScale));
+    const sx = Number(((scale === null || scale === void 0 ? void 0 : scale.x)));
+    const sy = Number(((scale === null || scale === void 0 ? void 0 : scale.y)));
     if (sx > 0.01 && sy > 0.01) return 1 / Math.max(sx, sy);
     const viewport = window.visualViewport;
-    const w = Math.max(1, viewport?.width || window.innerWidth || GAME_WIDTH);
-    const h = Math.max(1, viewport?.height || window.innerHeight || GAME_HEIGHT);
+    const w = Math.max(1, ((viewport === null || viewport === void 0 ? void 0 : viewport.width)) || window.innerWidth || GAME_WIDTH);
+    const h = Math.max(1, ((viewport === null || viewport === void 0 ? void 0 : viewport.height)) || window.innerHeight || GAME_HEIGHT);
     return Math.max(0.01, Math.min(w / GAME_WIDTH, h / GAME_HEIGHT));
 }
 
@@ -154,20 +154,20 @@ export class MobileControls {
         }
     }
 
-    _resetJoystick() {
+    _resetJoystick() { var __oc2, __oc3, __oc4, __oc5;
         this.joystick.active = false;
         this.joystick.x = 0;
         this.joystick.y = 0;
         this.pointerId = null;
 
-        this.joystickRing?.setVisible(false);
-        this.joystickBase?.setVisible(false);
-        this.joystickThumb?.setVisible(false);
-        this.joystickThumbDot?.setVisible(false);
+        (((__oc2 = this.joystickRing) === null || __oc2 === void 0 ? void 0 : __oc2.setVisible(false)));
+        (((__oc3 = this.joystickBase) === null || __oc3 === void 0 ? void 0 : __oc3.setVisible(false)));
+        (((__oc4 = this.joystickThumb) === null || __oc4 === void 0 ? void 0 : __oc4.setVisible(false)));
+        (((__oc5 = this.joystickThumbDot) === null || __oc5 === void 0 ? void 0 : __oc5.setVisible(false)));
     }
 
-    _isStatusModalOpen() {
-        return !!this.scene?.statusWindow?.isOpen;
+    _isStatusModalOpen() { var __oc6, __oc7;
+        return !!(((__oc7 = (__oc6 = this.scene) === null || __oc6 === void 0 ? void 0 : __oc6.statusWindow) === null || __oc7 === void 0 ? void 0 : __oc7.isOpen));
     }
 
     _isInActionButtonColumn(pointerX) {
@@ -184,16 +184,16 @@ export class MobileControls {
 
         this._modalOpen = modalOpen;
         this.buttonElements.forEach(el => {
-            if (el?.active) el.setVisible(!modalOpen);
+            if (((el === null || el === void 0 ? void 0 : el.active))) el.setVisible(!modalOpen);
         });
         this.buttonHitAreas.forEach(hit => {
-            if (!hit?.active) return;
+            if (!((hit === null || hit === void 0 ? void 0 : hit.active))) return;
             if (modalOpen) hit.disableInteractive();
             else hit.setInteractive({ useHandCursor: true });
         });
     }
 
-    _createButtons() {
+    _createButtons() { var __oc8;
         const isPortrait = GAME_HEIGHT > GAME_WIDTH;
         const cssPerUnit = cssPerGameUnit(this.scene);
         const minTouch = Math.ceil(46 / cssPerUnit);
@@ -237,7 +237,9 @@ export class MobileControls {
         statusHit.on('pointerdown', () => {
             if (this._isStatusModalOpen()) return;
             statusPanel.setUIState('hover');
-            this.scene.time.delayedCall(110, () => statusPanel?.active && statusPanel.setUIState('normal'));
+            this.scene.time.delayedCall(110, () => { return (
+((statusPanel === null || statusPanel === void 0 ? void 0 : statusPanel.active)) && statusPanel.setUIState('normal')
+); });
             if (this.scene.statusWindow) {
                 this.scene.statusWindow.toggle();
                 this._syncModalState(true);
@@ -263,7 +265,7 @@ export class MobileControls {
             hover: { fill: SYSTEM.BG_PANEL_HI, fillAlpha: 0.97, borderWidth: 2, glow: 6 },
         });
         const soundHit = UIAssets.createHitArea(this.scene, btnX, soundY, btnW, btnH, 601).setScrollFactor(0);
-        const soundEnabled = this.scene.soundManager?.enabled !== false;
+        const soundEnabled = (((__oc8 = this.scene.soundManager) === null || __oc8 === void 0 ? void 0 : __oc8.enabled)) !== false;
         this.soundBtnText = padText(this.scene.add.text(btnX + btnW / 2, soundY + btnH / 2, soundEnabled ? 'SND' : 'MUTE', {
             fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: soundEnabled ? SYSTEM.TEXT_CYAN : SYSTEM.TEXT_MUTED,
@@ -278,7 +280,9 @@ export class MobileControls {
         soundHit.on('pointerdown', () => {
             if (this._isStatusModalOpen()) return;
             soundPanel.setUIState('hover');
-            this.scene.time.delayedCall(110, () => soundPanel?.active && soundPanel.setUIState('normal'));
+            this.scene.time.delayedCall(110, () => { return (
+((soundPanel === null || soundPanel === void 0 ? void 0 : soundPanel.active)) && soundPanel.setUIState('normal')
+); });
             if (this.scene.soundManager) {
                 const enabled = this.scene.soundManager.toggleSound();
                 this.soundBtnText.setText(enabled ? 'SND' : 'MUTE');
@@ -306,21 +310,23 @@ export class MobileControls {
     updateLayout() {
         // GameScene rebuilds controls after a resize. Refresh visibility and keep the
         // exclusion strip tied to the live hit-area bounds in case this is called directly.
-        const activeHit = this.buttonHitAreas.find(hit => hit?.active);
-        if (activeHit?.getBounds) {
+        const activeHit = this.buttonHitAreas.find(hit => { return (
+(hit === null || hit === void 0 ? void 0 : hit.active)
+); });
+        if (((activeHit === null || activeHit === void 0 ? void 0 : activeHit.getBounds))) {
             const bounds = activeHit.getBounds();
             this.actionButtonBounds = { x: bounds.x, width: bounds.width };
         }
         this._syncModalState(true);
     }
 
-    destroy() {
+    destroy() { var __oc9;
         if (this.isMobile && this.scene && this.scene.input) {
             if (this._onPointerDown) this.scene.input.off('pointerdown', this._onPointerDown);
             if (this._onPointerMove) this.scene.input.off('pointermove', this._onPointerMove);
             if (this._onPointerUp) this.scene.input.off('pointerup', this._onPointerUp);
         }
-        if (this._onPostUpdate && this.scene?.events) {
+        if (this._onPostUpdate && (((__oc9 = this.scene) === null || __oc9 === void 0 ? void 0 : __oc9.events))) {
             this.scene.events.off('postupdate', this._onPostUpdate);
         }
         this.elements.forEach(el => { if (el && el.active) el.destroy(); });

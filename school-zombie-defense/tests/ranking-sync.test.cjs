@@ -16,7 +16,7 @@ assert.match(
   /for \(let stage = Math\.max\(1, \(this\.rankVerifiedStage \|\| 0\) \+ 1\); stage <= highestStage; stage \+= 1\)/,
   "final ranking submission must reconcile every missing cleared stage"
 );
-assert.match(gameSource, /data\?\.error \|\| `rank event \$\{response\.status\}`/);
+assert.match(gameSource, /(?:data\?\.error|\(\(data === null \|\| data === void 0 \? void 0 : data\.error\)\)) \|\| `rank event \$\{response\.status\}`/);
 
 assert.match(
   workerSource,

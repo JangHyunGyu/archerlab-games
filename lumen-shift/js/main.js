@@ -221,12 +221,12 @@ const PIECE_KEYS = Object.keys(PIECES);
 const KICKS = [[0, 0], [1, 0], [-1, 0], [2, 0], [-2, 0], [0, -1], [1, -1], [-1, -1]];
 
 function stageCountForMode(mode) {
-  return Math.max(1, Math.floor(Number(mode?.stageCount || STAGES.length)));
+  return Math.max(1, Math.floor(Number(((mode === null || mode === void 0 ? void 0 : mode.stageCount)) || STAGES.length)));
 }
 
 function stageLineGoalForMode(modeKey, mode) {
-  if (mode?.stageLineGoal) return Math.max(4, Math.floor(mode.stageLineGoal));
-  if (mode?.lineGoal) return Math.max(4, Math.ceil(mode.lineGoal / stageCountForMode(mode)));
+  if (((mode === null || mode === void 0 ? void 0 : mode.stageLineGoal))) return Math.max(4, Math.floor(mode.stageLineGoal));
+  if (((mode === null || mode === void 0 ? void 0 : mode.lineGoal))) return Math.max(4, Math.ceil(mode.lineGoal / stageCountForMode(mode)));
   if (modeKey === "ultra") return 12;
   return STAGE_LINE_GOAL;
 }
@@ -236,7 +236,7 @@ function stageWindowForLines(lines, modeKey, mode) {
   const stageCount = stageCountForMode(mode);
   const lineCount = Math.max(0, lines || 0);
   const rawStageOrdinal = Math.floor(lineCount / goal);
-  const terminalStageOrdinal = mode?.lineGoal && lineCount >= mode.lineGoal
+  const terminalStageOrdinal = ((mode === null || mode === void 0 ? void 0 : mode.lineGoal)) && lineCount >= mode.lineGoal
     ? stageCount - 1
     : rawStageOrdinal;
   const stageOrdinal = Math.max(0, terminalStageOrdinal);
@@ -254,22 +254,22 @@ function stageWindowForLines(lines, modeKey, mode) {
 }
 
 function stageFxColors(stage) {
-  return stage?.fxColors || stage?.colors || [stage?.accent || 0xffffff];
+  return ((stage === null || stage === void 0 ? void 0 : stage.fxColors)) || ((stage === null || stage === void 0 ? void 0 : stage.colors)) || [((stage === null || stage === void 0 ? void 0 : stage.accent)) || 0xffffff];
 }
 
 function stageFxColor(stage, index = 0) {
   const colors = stageFxColors(stage);
-  return colors[((index % colors.length) + colors.length) % colors.length] || stage?.accent || 0xffffff;
+  return colors[((index % colors.length) + colors.length) % colors.length] || ((stage === null || stage === void 0 ? void 0 : stage.accent)) || 0xffffff;
 }
 
-function stagePieceColor(stage, type, fallback = 0xffffff) {
-  if (type && stage?.pieceColors?.[type]) return stage.pieceColors[type];
-  if (type && PIECES[type]?.color) return PIECES[type].color;
-  return stage?.accent || fallback;
+function stagePieceColor(stage, type, fallback = 0xffffff) { var __oc0, __oc1;
+  if (type && (((__oc0 = stage === null || stage === void 0 ? void 0 : stage.pieceColors) === null || __oc0 === void 0 ? void 0 : __oc0[type]))) return stage.pieceColors[type];
+  if (type && (((__oc1 = PIECES[type]) === null || __oc1 === void 0 ? void 0 : __oc1.color))) return PIECES[type].color;
+  return ((stage === null || stage === void 0 ? void 0 : stage.accent)) || fallback;
 }
 
 function stageCellColor(stage, cell, fallback = 0xffffff) {
-  return stagePieceColor(stage, cell?.type, cell?.color || fallback);
+  return stagePieceColor(stage, ((cell === null || cell === void 0 ? void 0 : cell.type)), ((cell === null || cell === void 0 ? void 0 : cell.color)) || fallback);
 }
 
 function clamp(value, min, max) {
@@ -318,7 +318,7 @@ function rotateMatrix(matrix, dir) {
 function readStorage(key, fallback = "") {
   try {
     return localStorage.getItem(`${STORAGE_PREFIX}:${key}`) || fallback;
-  } catch {
+  } catch (_err) {
     return fallback;
   }
 }
@@ -326,7 +326,7 @@ function readStorage(key, fallback = "") {
 function writeStorage(key, value) {
   try {
     localStorage.setItem(`${STORAGE_PREFIX}:${key}`, String(value));
-  } catch {
+  } catch (_err) {
     // Ignore private-mode storage failures.
   }
 }
@@ -334,7 +334,7 @@ function writeStorage(key, value) {
 function removeStorage(key) {
   try {
     localStorage.removeItem(`${STORAGE_PREFIX}:${key}`);
-  } catch {
+  } catch (_err) {
     // Ignore private-mode storage failures.
   }
 }
@@ -356,7 +356,7 @@ function safeAreaInsets() {
 }
 
 class AudioDirector {
-  constructor() {
+  constructor() { var __oc2;
     this.ready = false;
     this.started = false;
     this.transportClockActive = false;
@@ -375,7 +375,7 @@ class AudioDirector {
     this.nativeStingers = this.createNativePools(STINGER_URLS, { defaultSize: 1 });
     this.nativeBackingUrl = this.stageBgmUrl(0);
     this.nativeBacking = this.createNativeAudio(this.nativeBackingUrl, { loop: true, volume: 0.22 });
-    this.nativeZoneLoop = this.nativeSfx.zoneLoop?.[0] || null;
+    this.nativeZoneLoop = (((__oc2 = this.nativeSfx.zoneLoop) === null || __oc2 === void 0 ? void 0 : __oc2[0])) || null;
     this.nativeUnlocked = false;
     this.nativeBackingStarted = false;
     this.nativeBackingError = "";
@@ -456,7 +456,7 @@ class AudioDirector {
           release: 0.16,
         }).connect(limiter);
         master = new Tone.Gain(0.62).connect(compressor);
-      } catch {
+      } catch (_err) {
         master = new Tone.Gain(0.58).toDestination();
       }
       const delay = new Tone.FeedbackDelay("8n", 0.22).connect(master);
@@ -480,7 +480,7 @@ class AudioDirector {
       try {
         this.backingFilter = new Tone.Filter({ type: "lowpass", frequency: 6200, Q: 0.45 }).connect(backingGain);
         backingInput = this.backingFilter;
-      } catch {
+      } catch (_err) {
         this.backingFilter = null;
       }
       const pad = new Tone.PolySynth(Tone.Synth, {
@@ -596,7 +596,7 @@ class AudioDirector {
         }).catch(() => null);
       }
       if (shouldStartMusic) this.startMusic();
-    } catch {
+    } catch (_err) {
       this.ready = false;
       if (shouldStartMusic) this.startNativeBackingTrack();
     }
@@ -633,31 +633,31 @@ class AudioDirector {
     }).filter(([, pool]) => pool.length > 0));
   }
 
-  createNativeAudio(url, options = {}) {
+  createNativeAudio(url, options = {}) { var __oc3;
     if (typeof Audio === "undefined") return null;
     try {
       const audio = new Audio(url);
       audio.preload = "auto";
       audio.loop = !!options.loop;
-      audio.volume = options.volume ?? 0.75;
+      audio.volume = (((__oc3 = options.volume) !== null && __oc3 !== void 0 ? __oc3 : 0.75));
       audio.crossOrigin = "anonymous";
       audio.playsInline = true;
       audio.setAttribute("playsinline", "");
       return audio;
-    } catch {
+    } catch (_err) {
       return null;
     }
   }
 
-  async unlockNativeAudio() {
+  async unlockNativeAudio() { var __oc4, __oc5, __oc6;
     if (this.nativeUnlocked) return;
     if (this.nativePrimePromise) return this.nativePrimePromise;
     const shouldPrimeBacking = this.nativeBacking && this.nativeBacking.paused !== false;
     const candidates = [
       shouldPrimeBacking ? this.nativeBacking : null,
-      this.nativeSfx.uiStart?.[0],
-      this.nativeSfx.uiClick?.[0],
-      this.nativeSfx.hardDrop?.[0],
+      (((__oc4 = this.nativeSfx.uiStart) === null || __oc4 === void 0 ? void 0 : __oc4[0])),
+      (((__oc5 = this.nativeSfx.uiClick) === null || __oc5 === void 0 ? void 0 : __oc5[0])),
+      (((__oc6 = this.nativeSfx.hardDrop) === null || __oc6 === void 0 ? void 0 : __oc6[0])),
     ].filter(Boolean);
     this.nativePrimePromise = Promise.all(candidates.map((audio) => this.primeNativeAudio(audio)))
       .catch(() => null)
@@ -676,14 +676,14 @@ class AudioDirector {
       audio.muted = true;
       audio.volume = 0;
       const result = audio.play();
-      if (result?.then) {
+      if (((result === null || result === void 0 ? void 0 : result.then))) {
         await Promise.race([result, new Promise((resolve) => setTimeout(resolve, 160))]);
       }
       if (audio.paused === false) {
         audio.pause();
         audio.currentTime = 0;
       }
-    } catch {
+    } catch (_err) {
       // Some mobile browsers only unlock on the first real play request.
     } finally {
       audio.muted = previousMuted;
@@ -696,21 +696,21 @@ class AudioDirector {
   }
 
   playNative(poolMap, key, volumeDb = 0, delay = 0) {
-    const pool = poolMap?.[key];
-    if (!pool?.length) return false;
+    const pool = ((poolMap === null || poolMap === void 0 ? void 0 : poolMap[key]));
+    if (!((pool === null || pool === void 0 ? void 0 : pool.length))) return false;
     const indexKey = `nativeIndex_${key}`;
     const index = this[indexKey] || 0;
     this[indexKey] = (index + 1) % pool.length;
     const audio = pool[index % pool.length];
-    const run = () => {
+    const run = () => { var __oc7;
       try {
         audio.pause();
         audio.currentTime = 0;
         audio.muted = false;
         audio.volume = this.dbToVolume(volumeDb);
         const result = audio.play();
-        result?.catch?.(() => null);
-      } catch {
+        (((__oc7 = result === null || result === void 0 ? void 0 : result.catch) === null || __oc7 === void 0 ? void 0 : __oc7.call(result, () => null)));
+      } catch (_err) {
         // Native audio fallback is best effort.
       }
     };
@@ -723,7 +723,7 @@ class AudioDirector {
     if (!audio) return;
     try {
       audio.volume = clamp(volume, 0, 1);
-    } catch {
+    } catch (_err) {
       // Native audio fallback is best effort.
     }
   }
@@ -733,11 +733,11 @@ class AudioDirector {
   }
 
   createStageStemPlayers(Tone, index = 0) {
-    if (!Tone?.Player || !this.musicStemOutputs) return;
+    if (!((Tone === null || Tone === void 0 ? void 0 : Tone.Player)) || !this.musicStemOutputs) return;
     this.disposeStageStemPlayers();
     const urls = this.stageStemUrls(index);
     this.musicStemStage = index;
-    this.musicStemPlayers = Object.fromEntries(MUSIC_STEM_KEYS.map((key) => {
+    this.musicStemPlayers = Object.fromEntries(MUSIC_STEM_KEYS.map((key) => { var __oc8;
       const output = this.musicStemOutputs[key];
       const url = urls[key];
       if (!output || !url) return [key, null];
@@ -748,9 +748,9 @@ class AudioDirector {
           fadeIn: 0.08,
           fadeOut: 0.18,
         }).connect(output);
-        player.volume.value = MUSIC_STEM_PLAYER_VOLUMES[key] ?? -16;
+        player.volume.value = (((__oc8 = MUSIC_STEM_PLAYER_VOLUMES[key]) !== null && __oc8 !== void 0 ? __oc8 : -16));
         return [key, player];
-      } catch {
+      } catch (_err) {
         return [key, null];
       }
     }).filter(([, player]) => !!player));
@@ -758,11 +758,11 @@ class AudioDirector {
   }
 
   disposeStageStemPlayers() {
-    Object.values(this.musicStemPlayers || {}).forEach((player) => {
+    Object.values(this.musicStemPlayers || {}).forEach((player) => { var __oc9;
       try {
         if (player.state === "started") player.stop();
-        player.dispose?.();
-      } catch {
+        (((__oc9 = player.dispose) === null || __oc9 === void 0 ? void 0 : __oc9.call(player)));
+      } catch (_err) {
         // Sample stems are decorative.
       }
     });
@@ -795,7 +795,7 @@ class AudioDirector {
         else player.start(at);
       });
       this.musicStemStarted = true;
-    } catch {
+    } catch (_err) {
       this.musicStemStarted = false;
     }
   }
@@ -918,15 +918,15 @@ class AudioDirector {
 
   resetTransportSchedule(Tone) {
     try {
-      this.musicLoops.forEach((loop) => {
+      this.musicLoops.forEach((loop) => { var __oc10, __oc11;
         try {
-          loop.stop?.(0);
-          loop.dispose?.();
-        } catch {
+          (((__oc10 = loop.stop) === null || __oc10 === void 0 ? void 0 : __oc10.call(loop, 0)));
+          (((__oc11 = loop.dispose) === null || __oc11 === void 0 ? void 0 : __oc11.call(loop)));
+        } catch (_err) {
           // Decorative music loops can be rebuilt.
         }
       });
-    } catch {
+    } catch (_err) {
       // Transport cleanup is best effort.
     }
     this.musicLoops = [];
@@ -934,7 +934,7 @@ class AudioDirector {
       Tone.Transport.stop();
       Tone.Transport.cancel(0);
       Tone.Transport.position = 0;
-    } catch {
+    } catch (_err) {
       // Some mobile browsers lock Transport state until audio is resumed.
     }
     this.transportClockActive = false;
@@ -961,28 +961,28 @@ class AudioDirector {
       }
       this.backingStarted = true;
       this.backingReady = true;
-    } catch {
+    } catch (_err) {
       this.backingReady = false;
     }
   }
 
-  isBackingLoaded() {
+  isBackingLoaded() { var __oc12, __oc13;
     const player = this.backingPlayer;
     if (!player) return false;
     if (player.loaded === true) return true;
-    if (player.buffer?.loaded === true) return true;
-    return Number(player.buffer?.duration || 0) > 0;
+    if ((((__oc12 = player.buffer) === null || __oc12 === void 0 ? void 0 : __oc12.loaded)) === true) return true;
+    return Number((((__oc13 = player.buffer) === null || __oc13 === void 0 ? void 0 : __oc13.duration)) || 0) > 0;
   }
 
   stageBgmUrl(index) {
     return STAGE_FULL_BGM_URLS[index] || FALLBACK_BGM_URL;
   }
 
-  beginUserGestureAudio(index = 0) {
+  beginUserGestureAudio(index = 0) { var __oc14;
     this.currentStage = index;
     const url = this.stageBgmUrl(index);
     const isSameTrack = this.nativeBackingUrl === url;
-    const isAlreadyPlaying = isSameTrack && this.nativeBacking?.paused === false;
+    const isAlreadyPlaying = isSameTrack && (((__oc14 = this.nativeBacking) === null || __oc14 === void 0 ? void 0 : __oc14.paused)) === false;
     if (isAlreadyPlaying) {
       this.nativeBacking.volume = Math.max(this.nativeBacking.volume || 0, 0.42);
     } else {
@@ -1014,7 +1014,7 @@ class AudioDirector {
     this.switchNativeBacking(this.stageBgmUrl(index), { resume: true, volume: 0.42 });
   }
 
-  switchNativeBacking(url, options = {}) {
+  switchNativeBacking(url, options = {}) { var __oc15;
     if (!url) return;
     if (!options.force && this.nativeBackingUrl === url) return;
     const audio = this.nativeBacking || this.createNativeAudio(url, { loop: true, volume: 0.22 });
@@ -1025,7 +1025,7 @@ class AudioDirector {
     if (existingHandler) {
       try {
         audio.removeEventListener("error", existingHandler);
-      } catch {
+      } catch (_err) {
         // Native backing is best effort.
       }
       audio._lumenBackingErrorHandler = null;
@@ -1034,14 +1034,14 @@ class AudioDirector {
       try {
         audio.removeEventListener("loadeddata", audio._lumenBackingResumeHandlers.loadeddata);
         audio.removeEventListener("canplay", audio._lumenBackingResumeHandlers.canplay);
-      } catch {
+      } catch (_err) {
         // Native backing is best effort.
       }
       audio._lumenBackingResumeHandlers = null;
     }
     try {
       audio.pause();
-    } catch {
+    } catch (_err) {
       // Native backing is best effort.
     }
     this.nativeBackingUrl = url;
@@ -1055,8 +1055,8 @@ class AudioDirector {
     audio.setAttribute("playsinline", "");
     try {
       audio.src = url;
-      audio.load?.();
-    } catch {
+      (((__oc15 = audio.load) === null || __oc15 === void 0 ? void 0 : __oc15.call(audio)));
+    } catch (_err) {
       // Native backing is best effort.
     }
     if (url !== FALLBACK_BGM_URL) {
@@ -1073,7 +1073,7 @@ class AudioDirector {
           try {
             audio.removeEventListener("loadeddata", audio._lumenBackingResumeHandlers.loadeddata);
             audio.removeEventListener("canplay", audio._lumenBackingResumeHandlers.canplay);
-          } catch {
+          } catch (_err) {
             // Native backing is best effort.
           }
           audio._lumenBackingResumeHandlers = null;
@@ -1095,7 +1095,7 @@ class AudioDirector {
     if (this.nativeBackingStarted && this.nativeBacking.paused === false) return;
     const handleFailure = (err) => {
       this.nativeBackingStarted = false;
-      const errorName = err?.name || "play_failed";
+      const errorName = ((err === null || err === void 0 ? void 0 : err.name)) || "play_failed";
       this.nativeBackingError = errorName;
       if (errorName === "AbortError") {
         this.scheduleNativeBackingRetry(220);
@@ -1116,7 +1116,7 @@ class AudioDirector {
         this.nativeBackingStarted = true;
         this.nativeBackingError = "";
       };
-      if (result?.then) {
+      if (((result === null || result === void 0 ? void 0 : result.then))) {
         result.then(handleSuccess, handleFailure);
       }
       this.nativeBackingStarted = true;
@@ -1132,27 +1132,27 @@ class AudioDirector {
     }).filter(([, player]) => !!player));
   }
 
-  createPlayer(Tone, url, output, options = {}) {
+  createPlayer(Tone, url, output, options = {}) { var __oc16, __oc17;
     if (!Tone.Player || !url || !output) return null;
     try {
       const player = new Tone.Player({
         url,
         loop: !!options.loop,
-        fadeIn: options.fadeIn ?? 0.005,
-        fadeOut: options.fadeOut ?? 0.035,
+        fadeIn: (((__oc16 = options.fadeIn) !== null && __oc16 !== void 0 ? __oc16 : 0.005)),
+        fadeOut: (((__oc17 = options.fadeOut) !== null && __oc17 !== void 0 ? __oc17 : 0.035)),
       }).connect(output);
       if (typeof options.volume === "number") player.volume.value = options.volume;
       return player;
-    } catch {
+    } catch (_err) {
       return null;
     }
   }
 
-  isPlayerLoaded(player) {
+  isPlayerLoaded(player) { var __oc18, __oc19;
     if (!player) return false;
     if (player.loaded === true) return true;
-    if (player.buffer?.loaded === true) return true;
-    return Number(player.buffer?.duration || 0) > 0;
+    if ((((__oc18 = player.buffer) === null || __oc18 === void 0 ? void 0 : __oc18.loaded)) === true) return true;
+    return Number((((__oc19 = player.buffer) === null || __oc19 === void 0 ? void 0 : __oc19.duration)) || 0) > 0;
   }
 
   playPlayer(player, volumeDb = 0, delay = 0) {
@@ -1163,34 +1163,34 @@ class AudioDirector {
       player.volume.value = volumeDb;
       player.start(time + 0.001);
       return true;
-    } catch {
+    } catch (_err) {
       try {
         player.start();
         return true;
-      } catch {
+      } catch (_err) {
         return false;
       }
     }
   }
 
-  playSfx(key, volumeDb = 0, delay = 0) {
+  playSfx(key, volumeDb = 0, delay = 0) { var __oc20;
     if (this.playNative(this.nativeSfx, key, volumeDb, delay)) return true;
-    return this.playPlayer(this.sfxPlayers?.[key], volumeDb, delay);
+    return this.playPlayer((((__oc20 = this.sfxPlayers) === null || __oc20 === void 0 ? void 0 : __oc20[key])), volumeDb, delay);
   }
 
-  playStinger(key, volumeDb = 0, delay = 0) {
+  playStinger(key, volumeDb = 0, delay = 0) { var __oc21;
     if (this.playNative(this.nativeStingers, key, volumeDb, delay)) return true;
-    return this.playPlayer(this.stingerPlayers?.[key], volumeDb, delay);
+    return this.playPlayer((((__oc21 = this.stingerPlayers) === null || __oc21 === void 0 ? void 0 : __oc21[key])), volumeDb, delay);
   }
 
-  startZoneLoop() {
+  startZoneLoop() { var __oc22, __oc23;
     if (this.nativeZoneLoop) {
       try {
         this.nativeZoneLoop.loop = true;
         this.nativeZoneLoop.currentTime = 0;
         this.nativeZoneLoop.volume = 0.18;
-        this.nativeZoneLoop.play()?.catch?.(() => null);
-      } catch {
+        (((__oc23 = (__oc22 = this.nativeZoneLoop.play()) === null || __oc22 === void 0 ? void 0 : __oc22.catch) === null || __oc23 === void 0 ? void 0 : __oc23.call(__oc22, () => null)));
+      } catch (_err) {
         // Native zone loop is decorative.
       }
     }
@@ -1198,7 +1198,7 @@ class AudioDirector {
     try {
       if (this.zoneLoopPlayer.state !== "started") this.zoneLoopPlayer.start(window.Tone.now() + 0.01);
       this.rampStem("zoneSample", 0.34);
-    } catch {
+    } catch (_err) {
       // Zone loop is decorative.
     }
   }
@@ -1209,7 +1209,7 @@ class AudioDirector {
         this.nativeZoneLoop.pause();
         this.nativeZoneLoop.currentTime = 0;
         this.nativeZoneLoop.volume = 0;
-      } catch {
+      } catch (_err) {
         // Native zone loop is decorative.
       }
     }
@@ -1219,12 +1219,12 @@ class AudioDirector {
       if (this.zoneLoopPlayer.state === "started") {
         this.zoneLoopPlayer.stop(window.Tone.now() + 0.42);
       }
-    } catch {
+    } catch (_err) {
       // Zone loop is decorative.
     }
   }
 
-  setStage(index) {
+  setStage(index) { var __oc24, __oc25, __oc26, __oc27;
     this.currentStage = index;
     this.switchStageBacking(index);
     this.switchStageStems(index);
@@ -1233,14 +1233,14 @@ class AudioDirector {
     this.playStageStinger(index);
     if (!this.transportClockActive || !window.Tone) return;
     try {
-      window.Tone.Transport.bpm.cancelScheduledValues?.(window.Tone.now());
-      window.Tone.Transport.bpm.rampTo(STAGES[index]?.bpm || 100, 0.8);
-    } catch {
-      window.Tone.Transport.bpm.value = STAGES[index]?.bpm || 100;
+      (((__oc25 = (__oc24 = window.Tone.Transport.bpm).cancelScheduledValues) === null || __oc25 === void 0 ? void 0 : __oc25.call(__oc24, window.Tone.now())));
+      window.Tone.Transport.bpm.rampTo((((__oc26 = STAGES[index]) === null || __oc26 === void 0 ? void 0 : __oc26.bpm)) || 100, 0.8);
+    } catch (_err) {
+      window.Tone.Transport.bpm.value = (((__oc27 = STAGES[index]) === null || __oc27 === void 0 ? void 0 : __oc27.bpm)) || 100;
     }
   }
 
-  playStageStinger(index) {
+  playStageStinger(index) { var __oc28;
     if (index > 0) this.playStinger(`stage${index + 1}`, -1);
     if (!this.ready || !this.synths || !window.Tone) return;
     const banks = [
@@ -1254,33 +1254,33 @@ class AudioDirector {
     try {
       const time = this.nextToneTime("4n");
       this.synths.stinger.triggerAttackRelease(chord, "2n", time, 0.18);
-      this.synths.sparkle?.triggerAttackRelease(chord[chord.length - 1], "16n", time, 0.08);
-    } catch {
+      (((__oc28 = this.synths.sparkle) === null || __oc28 === void 0 ? void 0 : __oc28.triggerAttackRelease(chord[chord.length - 1], "16n", time, 0.08)));
+    } catch (_err) {
       // Stage stingers are decorative.
     }
   }
 
-  updateMix(snapshot) {
+  updateMix(snapshot) { var __oc29, __oc30, __oc31, __oc32, __oc33, __oc34, __oc35, __oc36, __oc37, __oc38, __oc39, __oc40;
     if (!this.ready || !this.stemGains || !window.Tone || !snapshot) return;
     const stageCount = Math.max(1, STAGES.length - 1);
     const stageLift = clamp((snapshot.stageIndex || 0) / stageCount, 0, 1);
     const comboLift = clamp((snapshot.combo || 0) / 8, 0, 1);
     const lumenLift = clamp(snapshot.lumen || 0, 0, 1);
     const zoneLift = snapshot.zoneActive ? clamp(0.62 + (snapshot.zoneProgress || 0) * 0.38, 0, 1) : 0;
-    const arrangementTarget = clamp(snapshot.arrangement?.progress ?? 0, 0, 1);
+    const arrangementTarget = clamp((((__oc30 = (__oc29 = snapshot.arrangement) === null || __oc29 === void 0 ? void 0 : __oc29.progress) !== null && __oc30 !== void 0 ? __oc30 : 0)), 0, 1);
     const arrangement = smoothstep(arrangementTarget);
     this.arrangement += (arrangement - this.arrangement) * 0.22;
     this.gestureHeat = Math.max(0, this.gestureHeat - 0.045);
     this.backingPulse = Math.max(0, this.backingPulse - 0.05);
     this.backingDuck = Math.max(0, this.backingDuck - 0.045);
     this.musicTension = Math.max(0, this.musicTension - 0.035);
-    const layer = snapshot.arrangement?.layer || 0;
-    if (layer > this.lastLayer && this.synths?.sparkle) {
+    const layer = (((__oc31 = snapshot.arrangement) === null || __oc31 === void 0 ? void 0 : __oc31.layer)) || 0;
+    if (layer > this.lastLayer && (((__oc32 = this.synths) === null || __oc32 === void 0 ? void 0 : __oc32.sparkle))) {
       this.lastLayer = layer;
       const liftNotes = ["C6", "E6", "G6", "B6"].slice(0, Math.max(1, Math.min(4, layer)));
       try {
         this.synths.sparkle.triggerAttackRelease(liftNotes[layer % liftNotes.length], "16n", undefined, 0.12);
-      } catch {
+      } catch (_err) {
         // Ignore decorative lift failures.
       }
     } else if (layer < this.lastLayer) {
@@ -1295,74 +1295,74 @@ class AudioDirector {
     this.rampStem("rhythm", Math.max(0, this.arrangement - 0.12) * 0.16 + comboLift * 0.045 + zoneLift * 0.08);
     this.rampStem("lead", Math.max(0, this.arrangement - 0.44) * 0.16 + comboLift * 0.035 + zoneLift * 0.04);
     this.rampStem("stinger", 0.1 + stageLift * 0.04 + zoneLift * 0.05);
-    const beatLift = Math.max(this.lastBeatState?.pulse || 0, this.lastBeatState?.downbeat || 0) * 0.012;
+    const beatLift = Math.max((((__oc33 = this.lastBeatState) === null || __oc33 === void 0 ? void 0 : __oc33.pulse)) || 0, (((__oc34 = this.lastBeatState) === null || __oc34 === void 0 ? void 0 : __oc34.downbeat)) || 0) * 0.012;
     const backingDuck = 1 - Math.min(0.38, this.backingDuck * 0.22 + (this.clearPulse || 0) * 0.13 + (this.dropPulse || 0) * 0.09);
     const backingLevel = (0.14 + this.arrangement * 0.2 + zoneLift * 0.07 + beatLift + this.backingPulse * 0.035) * backingDuck;
     this.rampStem("backing", this.backingPlayer ? backingLevel : 0);
-    const nativeBackingAudible = this.nativeBackingStarted || this.nativeBacking?.paused === false;
+    const nativeBackingAudible = this.nativeBackingStarted || (((__oc35 = this.nativeBacking) === null || __oc35 === void 0 ? void 0 : __oc35.paused)) === false;
     if (nativeBackingAudible) this.nativeBackingStarted = true;
     this.setNativeVolume(this.nativeBacking, nativeBackingAudible ? clamp(0.28 + backingLevel * 1.05, 0, 0.58) : 0);
     this.rampStem("zone", zoneLift * 0.42);
     this.rampStem("hit", 0.22 + energy * 0.09);
-    this.rampParam(this.backingFilter?.frequency, 4200 + this.arrangement * 6200 + zoneLift * 2800 + this.backingPulse * 1600, 0.18);
+    this.rampParam((((__oc36 = this.backingFilter) === null || __oc36 === void 0 ? void 0 : __oc36.frequency)), 4200 + this.arrangement * 6200 + zoneLift * 2800 + this.backingPulse * 1600, 0.18);
     if (this.transportClockActive) {
-      const targetBpm = (snapshot.stage?.bpm || STAGES[this.currentStage]?.bpm || 100) + comboLift * 3 + zoneLift * 5 + this.arrangement * 1.6;
+      const targetBpm = ((((__oc37 = snapshot.stage) === null || __oc37 === void 0 ? void 0 : __oc37.bpm)) || (((__oc38 = STAGES[this.currentStage]) === null || __oc38 === void 0 ? void 0 : __oc38.bpm)) || 100) + comboLift * 3 + zoneLift * 5 + this.arrangement * 1.6;
       try {
-        window.Tone.Transport.bpm.cancelScheduledValues?.(window.Tone.now());
+        (((__oc40 = (__oc39 = window.Tone.Transport.bpm).cancelScheduledValues) === null || __oc40 === void 0 ? void 0 : __oc40.call(__oc39, window.Tone.now())));
         window.Tone.Transport.bpm.rampTo(targetBpm, 0.4);
-      } catch {
+      } catch (_err) {
         window.Tone.Transport.bpm.value = targetBpm;
       }
     }
   }
 
-  rampStem(key, value) {
-    const stem = this.stemGains?.[key];
+  rampStem(key, value) { var __oc41, __oc42, __oc43;
+    const stem = (((__oc41 = this.stemGains) === null || __oc41 === void 0 ? void 0 : __oc41[key]));
     if (!stem) return;
     try {
-      stem.gain.cancelScheduledValues?.(window.Tone.now());
+      (((__oc43 = (__oc42 = stem.gain).cancelScheduledValues) === null || __oc43 === void 0 ? void 0 : __oc43.call(__oc42, window.Tone.now())));
       stem.gain.rampTo(value, 0.24);
-    } catch {
+    } catch (_err) {
       stem.gain.value = value;
     }
   }
 
-  rampParam(param, value, time = 0.18) {
+  rampParam(param, value, time = 0.18) { var __oc44;
     if (!param || !window.Tone) return;
     try {
-      param.cancelScheduledValues?.(window.Tone.now());
+      (((__oc44 = param.cancelScheduledValues) === null || __oc44 === void 0 ? void 0 : __oc44.call(param, window.Tone.now())));
       if (typeof param.rampTo === "function") param.rampTo(value, time);
       else param.value = value;
-    } catch {
+    } catch (_err) {
       param.value = value;
     }
   }
 
-  nextToneTime(subdivision = "16n", offset = 0.012) {
+  nextToneTime(subdivision = "16n", offset = 0.012) { var __oc45, __oc46, __oc47, __oc48;
     if (!window.Tone) return undefined;
     try {
-      const scheduled = window.Tone.Transport?.nextSubdivision?.(subdivision);
+      const scheduled = (((__oc46 = (__oc45 = window.Tone.Transport) === null || __oc45 === void 0 ? void 0 : __oc45.nextSubdivision) === null || __oc46 === void 0 ? void 0 : __oc46.call(__oc45, subdivision)));
       if (Number.isFinite(scheduled)) return scheduled;
-    } catch {
+    } catch (_err) {
       // Fall back to a near-future absolute time when Transport is not ready.
     }
     try {
-      const now = window.Tone.now?.();
+      const now = (((__oc48 = (__oc47 = window.Tone).now) === null || __oc48 === void 0 ? void 0 : __oc48.call(__oc47)));
       if (Number.isFinite(now)) return now + offset;
-    } catch {
+    } catch (_err) {
       // Tone may exist before its clock is fully available on mobile.
     }
     return undefined;
   }
 
-  getBeatState(snapshot, dt = 16.67) {
-    const bpm = snapshot?.stage?.bpm || STAGES[this.currentStage]?.bpm || STAGES[0].bpm;
+  getBeatState(snapshot, dt = 16.67) { var __oc49, __oc50, __oc51, __oc52, __oc53, __oc54, __oc55;
+    const bpm = (((__oc49 = snapshot === null || snapshot === void 0 ? void 0 : snapshot.stage) === null || __oc49 === void 0 ? void 0 : __oc49.bpm)) || (((__oc50 = STAGES[this.currentStage]) === null || __oc50 === void 0 ? void 0 : __oc50.bpm)) || STAGES[0].bpm;
     let beatFloat = 0;
     let ready = false;
     if (this.ready && this.started && this.transportClockActive && window.Tone) {
       const Tone = window.Tone;
-      const transportBpm = Number(Tone.Transport?.bpm?.value || bpm);
-      const seconds = Number(Tone.Transport?.seconds || 0);
+      const transportBpm = Number((((__oc52 = (__oc51 = Tone.Transport) === null || __oc51 === void 0 ? void 0 : __oc51.bpm) === null || __oc52 === void 0 ? void 0 : __oc52.value)) || bpm);
+      const seconds = Number((((__oc53 = Tone.Transport) === null || __oc53 === void 0 ? void 0 : __oc53.seconds)) || 0);
       beatFloat = seconds * transportBpm / 60;
       ready = true;
     } else {
@@ -1403,7 +1403,7 @@ class AudioDirector {
       clear: this.clearPulse,
       drop: this.dropPulse,
       tension: this.musicTension,
-      bpm: ready ? Number(window.Tone.Transport?.bpm?.value || bpm) : bpm,
+      bpm: ready ? Number((((__oc55 = (__oc54 = window.Tone.Transport) === null || __oc54 === void 0 ? void 0 : __oc54.bpm) === null || __oc55 === void 0 ? void 0 : __oc55.value)) || bpm) : bpm,
     };
     return this.lastBeatState;
   }
@@ -1446,7 +1446,7 @@ class AudioDirector {
       const time = this.nextToneTime("16n");
       this.synths.impact.triggerAttackRelease("C2", "16n", time, 0.34);
       this.inputNote(4, "16n", 0.08, 0.36);
-    } catch {
+    } catch (_err) {
       // Audio can be interrupted on mobile when the page loses focus.
     }
   }
@@ -1456,7 +1456,7 @@ class AudioDirector {
     this.playSfx(cellCount >= 4 ? "lock" : "lockSoft", -9);
   }
 
-  clear(lines, combo = 0, zoneActive = false) {
+  clear(lines, combo = 0, zoneActive = false) { var __oc56, __oc57;
     if (!this.ready || !this.synths) return;
     const chords = {
       1: ["C5", "G5"],
@@ -1478,7 +1478,7 @@ class AudioDirector {
     this.backingDuck = Math.max(this.backingDuck, lines >= 4 ? 1 : 0.72);
     try {
       const time = this.nextToneTime("16n");
-      this.synths.clear.releaseAll?.();
+      (((__oc57 = (__oc56 = this.synths.clear).releaseAll) === null || __oc57 === void 0 ? void 0 : __oc57.call(__oc56)));
       this.synths.clear.triggerAttackRelease(chords[lines] || chords[1], "8n", time, lines >= 4 ? 0.27 : 0.16);
       if (this.synths.sparkle) {
         const lift = lines >= 4 ? ["C6", "E6", "G6", "C7"] : ["C6", "G6"];
@@ -1486,13 +1486,13 @@ class AudioDirector {
           setTimeout(() => {
             try {
               this.synths.sparkle.triggerAttackRelease(note, "32n", undefined, lines >= 4 ? 0.062 : 0.04);
-            } catch {
+            } catch (_err) {
               // Ignore late sparkle failures.
             }
           }, index * 42);
         });
       }
-    } catch {
+    } catch (_err) {
       // Keep gameplay responsive even if WebAudio rejects a rapid trigger.
     }
   }
@@ -1510,7 +1510,7 @@ class AudioDirector {
     setTimeout(() => this.note("G5", "4n", 0.22), 80);
   }
 
-  zoneEnd(lines) {
+  zoneEnd(lines) { var __oc58, __oc59;
     if (!this.ready || !this.synths) return;
     this.stopZoneLoop();
     this.eventPulse = Math.max(this.eventPulse, lines > 0 ? 1 : 0.42);
@@ -1526,10 +1526,10 @@ class AudioDirector {
     try {
       const time = this.nextToneTime("8n");
       this.rampStem("zone", 0.04);
-      this.synths.clear.releaseAll?.();
+      (((__oc59 = (__oc58 = this.synths.clear).releaseAll) === null || __oc59 === void 0 ? void 0 : __oc59.call(__oc58)));
       this.synths.clear.triggerAttackRelease(["C4", "G4", "C5", "E5", "G5"], "2n", time, lines > 0 ? 0.3 : 0.16);
       this.synths.impact.triggerAttackRelease("C2", "4n", time, 0.28);
-    } catch {
+    } catch (_err) {
       // Ignore mobile audio scheduling errors.
     }
   }
@@ -1538,12 +1538,12 @@ class AudioDirector {
     if (!this.ready || !this.synths) return;
     try {
       this.synths.pluck.triggerAttackRelease(note, duration, undefined, velocity);
-    } catch {
+    } catch (_err) {
       // Ignore rapid input audio errors.
     }
   }
 
-  inputNote(offset, duration, velocity, heat) {
+  inputNote(offset, duration, velocity, heat) { var __oc60, __oc61;
     if (!this.ready || !this.synths) return;
     const banks = [
       ["C5", "D5", "G5", "A5", "C6", "D6"],
@@ -1553,7 +1553,7 @@ class AudioDirector {
       ["C5", "E5", "G5", "B5", "D6", "G6"],
     ];
     const bank = banks[this.currentStage % banks.length];
-    const gridStep = this.lastBeatState?.sixteenth ?? this.timelineStep;
+    const gridStep = (((__oc61 = (__oc60 = this.lastBeatState) === null || __oc60 === void 0 ? void 0 : __oc60.sixteenth) !== null && __oc61 !== void 0 ? __oc61 : this.timelineStep));
     const note = bank[(gridStep + this.inputStep + offset) % bank.length];
     this.inputStep = (this.inputStep + 1) % 64;
     this.gestureHeat = Math.max(this.gestureHeat, heat);
@@ -1583,7 +1583,7 @@ class FallingBlockCore {
     this.reset("journey");
   }
 
-  reset(modeKey = "journey") {
+  reset(modeKey = "journey") { var __oc62, __oc63;
     this.modeKey = modeKey;
     this.mode = MODES[modeKey] || MODES.journey;
     this.grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
@@ -1612,7 +1612,7 @@ class FallingBlockCore {
     this.lastFallAt = 0;
     while (this.queue.length < VISIBLE_NEXT + 1) this.queue.push(this.nextType());
     this.spawn();
-    this.callbacks.onStage?.(0, STAGES[0]);
+    (((__oc63 = (__oc62 = this.callbacks).onStage) === null || __oc63 === void 0 ? void 0 : __oc63.call(__oc62, 0, STAGES[0])));
   }
 
   nextType() {
@@ -1639,7 +1639,7 @@ class FallingBlockCore {
     };
   }
 
-  spawn(forcedType = "") {
+  spawn(forcedType = "") { var __oc64, __oc65;
     const type = forcedType || this.queue.shift();
     while (this.queue.length < VISIBLE_NEXT + 1) this.queue.push(this.nextType());
     this.active = this.makePiece(type);
@@ -1648,7 +1648,7 @@ class FallingBlockCore {
       if (this.modeKey === "relax") {
         this.grid.splice(0, 5);
         while (this.grid.length < ROWS) this.grid.unshift(Array(COLS).fill(null));
-        this.callbacks.onEvent?.("BREATH");
+        (((__oc65 = (__oc64 = this.callbacks).onEvent) === null || __oc65 === void 0 ? void 0 : __oc65.call(__oc64, "BREATH")));
       } else {
         this.finish("Game Over");
       }
@@ -1711,21 +1711,21 @@ class FallingBlockCore {
     return false;
   }
 
-  move(dx) {
+  move(dx) { var __oc66, __oc67;
     if (this.status !== "playing") return false;
     if (!this.collides(this.active, dx, 0)) {
       this.active.x += dx;
       this.lockTimer = Math.max(0, this.lockTimer - 120);
-      this.callbacks.onMove?.();
+      (((__oc67 = (__oc66 = this.callbacks).onMove) === null || __oc67 === void 0 ? void 0 : __oc67.call(__oc66)));
       return true;
     }
     return false;
   }
 
-  rotate(dir = 1) {
+  rotate(dir = 1) { var __oc68, __oc69, __oc70, __oc71;
     if (this.status !== "playing") return false;
     if (this.active.type === "O") {
-      this.callbacks.onRotate?.();
+      (((__oc69 = (__oc68 = this.callbacks).onRotate) === null || __oc69 === void 0 ? void 0 : __oc69.call(__oc68)));
       return true;
     }
     const rotated = rotateMatrix(this.active.matrix, dir);
@@ -1735,19 +1735,19 @@ class FallingBlockCore {
         this.active.x += kx;
         this.active.y += ky;
         this.lockTimer = Math.max(0, this.lockTimer - 160);
-        this.callbacks.onRotate?.();
+        (((__oc71 = (__oc70 = this.callbacks).onRotate) === null || __oc71 === void 0 ? void 0 : __oc71.call(__oc70)));
         return true;
       }
     }
     return false;
   }
 
-  stepDown(manual = false) {
+  stepDown(manual = false) { var __oc72, __oc73;
     if (this.status !== "playing") return false;
     if (!this.collides(this.active, 0, 1)) {
       this.active.y += 1;
       this.lockTimer = 0;
-      if (manual) this.callbacks.onSoftDrop?.();
+      if (manual) (((__oc73 = (__oc72 = this.callbacks).onSoftDrop) === null || __oc73 === void 0 ? void 0 : __oc73.call(__oc72)));
       return true;
     }
     if (manual) this.lockTimer = Math.min(this.lockDelay, this.lockTimer + 85);
@@ -1764,19 +1764,19 @@ class FallingBlockCore {
     return false;
   }
 
-  hardDrop() {
+  hardDrop() { var __oc74, __oc75;
     if (this.status !== "playing") return;
     let distance = 0;
     while (!this.collides(this.active, 0, 1)) {
       this.active.y += 1;
       distance += 1;
     }
-    this.callbacks.onHardDrop?.(distance);
+    (((__oc75 = (__oc74 = this.callbacks).onHardDrop) === null || __oc75 === void 0 ? void 0 : __oc75.call(__oc74, distance)));
     this.lockTimer = 0;
     this.lock();
   }
 
-  hold() {
+  hold() { var __oc76, __oc77;
     if (this.status !== "playing" || !this.canHold) return false;
     const current = this.active.type;
     if (this.holdType) {
@@ -1789,11 +1789,11 @@ class FallingBlockCore {
       this.spawn();
     }
     this.canHold = false;
-    this.callbacks.onHold?.();
+    (((__oc77 = (__oc76 = this.callbacks).onHold) === null || __oc77 === void 0 ? void 0 : __oc77.call(__oc76)));
     return true;
   }
 
-  lock() {
+  lock() { var __oc78, __oc79;
     if (this.status !== "playing") return;
     const lockedCells = [];
     for (let y = 0; y < this.active.matrix.length; y += 1) {
@@ -1810,7 +1810,7 @@ class FallingBlockCore {
         lockedCells.push({ row: by, col: bx, color: cellColor, type: this.active.type });
       }
     }
-    this.callbacks.onLock?.({ cells: lockedCells, type: this.active.type });
+    (((__oc79 = (__oc78 = this.callbacks).onLock) === null || __oc79 === void 0 ? void 0 : __oc79.call(__oc78, { cells: lockedCells, type: this.active.type })));
     const cleared = this.clearLines();
     if (cleared === 0) this.combo = 0;
     this.updateStage();
@@ -1821,7 +1821,7 @@ class FallingBlockCore {
     this.spawn();
   }
 
-  clearLines() {
+  clearLines() { var __oc81, __oc82;
     const rows = [];
     for (let y = 0; y < ROWS; y += 1) {
       if (this.grid[y].every(Boolean)) rows.push(y);
@@ -1829,12 +1829,14 @@ class FallingBlockCore {
     if (rows.length === 0) return 0;
 
     const stageWindowBefore = stageWindowForLines(this.lines, this.modeKey, this.mode);
-    const cells = rows.flatMap((row) => this.grid[row].map((cell, col) => ({
+    const cells = rows.flatMap((row) => this.grid[row].map((cell, col) => { var __oc80; return (
+({
       row,
       col,
-      color: stageCellColor(STAGES[this.stageIndex], cell, STAGES[this.stageIndex]?.accent || 0xffffff),
-      type: cell?.type || "",
-    })));
+      color: stageCellColor(STAGES[this.stageIndex], cell, (((__oc80 = STAGES[this.stageIndex]) === null || __oc80 === void 0 ? void 0 : __oc80.accent)) || 0xffffff),
+      type: ((cell === null || cell === void 0 ? void 0 : cell.type)) || "",
+    })
+); }));
     this.grid = this.grid.filter((_, index) => !rows.includes(index));
     while (this.grid.length < ROWS) this.grid.unshift(Array(COLS).fill(null));
 
@@ -1854,38 +1856,38 @@ class FallingBlockCore {
       this.zoneLines += lineCount;
       this.totalZoneLines += lineCount;
     }
-    this.callbacks.onClear?.({
-      rows,
-      cells,
-      lines: lineCount,
-      delta,
-      combo: this.combo,
-      level: this.level,
-      score: this.score,
-      zoneActive: this.zoneActive,
-      lumenReady,
-      stageCleared: stageWindowAfter.stageOrdinal > stageWindowBefore.stageOrdinal,
-      stageWindowBefore,
-      stageWindowAfter,
-    });
+    (((__oc82 = (__oc81 = this.callbacks).onClear) === null || __oc82 === void 0 ? void 0 : __oc82.call(__oc81, {
+        rows,
+        cells,
+        lines: lineCount,
+        delta,
+        combo: this.combo,
+        level: this.level,
+        score: this.score,
+        zoneActive: this.zoneActive,
+        lumenReady,
+        stageCleared: stageWindowAfter.stageOrdinal > stageWindowBefore.stageOrdinal,
+        stageWindowBefore,
+        stageWindowAfter,
+    })));
     return lineCount;
   }
 
-  updateStage() {
+  updateStage() { var __oc83, __oc84, __oc85;
     const stageWindow = stageWindowForLines(this.lines, this.modeKey, this.mode);
     const nextStage = stageWindow.stageIndex;
     const nextStageOrdinal = stageWindow.stageOrdinal;
     if (nextStage !== this.stageIndex || nextStageOrdinal !== this.stageOrdinal) {
       this.stageIndex = nextStage;
       this.stageOrdinal = nextStageOrdinal;
-      if (this.active?.type) {
+      if ((((__oc83 = this.active) === null || __oc83 === void 0 ? void 0 : __oc83.type))) {
         this.active.color = stagePieceColor(STAGES[nextStage], this.active.type, this.active.color);
       }
-      this.callbacks.onStage?.(nextStage, STAGES[nextStage], stageWindow);
+      (((__oc85 = (__oc84 = this.callbacks).onStage) === null || __oc85 === void 0 ? void 0 : __oc85.call(__oc84, nextStage, STAGES[nextStage], stageWindow)));
     }
   }
 
-  activateZone() {
+  activateZone() { var __oc86, __oc87;
     if (this.status !== "playing" || this.zoneActive || this.lumen < 0.3) return false;
     this.zoneActive = true;
     this.zoneDuration = 5600 + this.lumen * 7600;
@@ -1893,11 +1895,11 @@ class FallingBlockCore {
     this.dropTimer = 0;
     this.lumen = 0;
     this.zoneLines = 0;
-    this.callbacks.onZoneStart?.();
+    (((__oc87 = (__oc86 = this.callbacks).onZoneStart) === null || __oc87 === void 0 ? void 0 : __oc87.call(__oc86)));
     return true;
   }
 
-  endZone() {
+  endZone() { var __oc88, __oc89, __oc90, __oc91;
     if (!this.zoneActive) return;
     this.zoneActive = false;
     const zoneLines = this.zoneLines;
@@ -1907,17 +1909,17 @@ class FallingBlockCore {
     if (zoneLines > 0) {
       const delta = zoneLines * zoneLines * 42 * this.level + zoneLines * 120;
       this.score += delta;
-      this.callbacks.onZoneEnd?.({ lines: zoneLines, delta, level: this.level, score: this.score });
+      (((__oc89 = (__oc88 = this.callbacks).onZoneEnd) === null || __oc89 === void 0 ? void 0 : __oc89.call(__oc88, { lines: zoneLines, delta, level: this.level, score: this.score })));
     } else {
-      this.callbacks.onZoneEnd?.({ lines: 0, delta: 0, level: this.level, score: this.score });
+      (((__oc91 = (__oc90 = this.callbacks).onZoneEnd) === null || __oc91 === void 0 ? void 0 : __oc91.call(__oc90, { lines: 0, delta: 0, level: this.level, score: this.score })));
     }
   }
 
-  finish(title) {
+  finish(title) { var __oc92, __oc93;
     if (this.status === "finished") return;
     if (this.zoneActive) this.endZone();
     this.status = "finished";
-    this.callbacks.onFinish?.(title, this.snapshot());
+    (((__oc93 = (__oc92 = this.callbacks).onFinish) === null || __oc93 === void 0 ? void 0 : __oc93.call(__oc92, title, this.snapshot())));
   }
 
   togglePause() {
@@ -2133,14 +2135,14 @@ class PixiView {
     this.app.ticker.remove(this.app.render, this.app);
   }
 
-  present() {
-    this.app?.render?.();
+  present() { var __oc94, __oc95;
+    (((__oc95 = (__oc94 = this.app) === null || __oc94 === void 0 ? void 0 : __oc94.render) === null || __oc95 === void 0 ? void 0 : __oc95.call(__oc94)));
   }
 
   makeParticleLayer() {
     const PIXI = window.PIXI;
     let layer = null;
-    if (PIXI?.ParticleContainer) {
+    if (((PIXI === null || PIXI === void 0 ? void 0 : PIXI.ParticleContainer))) {
       try {
         layer = new PIXI.ParticleContainer({
           dynamicProperties: {
@@ -2151,7 +2153,7 @@ class PixiView {
             alpha: true,
           },
         });
-      } catch {
+      } catch (_err) {
         try {
           layer = new PIXI.ParticleContainer(4096, {
             position: true,
@@ -2160,7 +2162,7 @@ class PixiView {
             tint: true,
             alpha: true,
           });
-        } catch {
+        } catch (_err) {
           layer = null;
         }
       }
@@ -2170,7 +2172,7 @@ class PixiView {
     return layer;
   }
 
-  makeStageTitleText() {
+  makeStageTitleText() { var __oc96, __oc97;
     const PIXI = window.PIXI;
     const style = {
       fontFamily: "Pretendard, Arial, sans-serif",
@@ -2189,26 +2191,26 @@ class PixiView {
     let text;
     try {
       text = new PIXI.Text({ text: "", style });
-    } catch {
+    } catch (_err) {
       text = new PIXI.Text("", style);
     }
-    text.anchor?.set?.(0.5);
+    (((__oc97 = (__oc96 = text.anchor) === null || __oc96 === void 0 ? void 0 : __oc96.set) === null || __oc97 === void 0 ? void 0 : __oc97.call(__oc96, 0.5)));
     text.eventMode = "none";
     text.visible = false;
     return text;
   }
 
-  async loadStagePlate() {
-    if (!this.bgPlate || !window.PIXI?.Assets) return;
+  async loadStagePlate() { var __oc98, __oc99, __oc100;
+    if (!this.bgPlate || !(((__oc98 = window.PIXI) === null || __oc98 === void 0 ? void 0 : __oc98.Assets))) return;
     try {
       this.bgPlateFallbackTexture = await window.PIXI.Assets.load("assets/images/stage-lumen-field-v2.webp?v=20260704-field-v1");
       if (!this.bgPlateTexture) {
         this.bgPlateTexture = this.bgPlateFallbackTexture;
         this.bgPlate.texture = this.bgPlateTexture;
-        this.bgPlate.anchor?.set?.(0.5);
+        (((__oc100 = (__oc99 = this.bgPlate.anchor) === null || __oc99 === void 0 ? void 0 : __oc99.set) === null || __oc100 === void 0 ? void 0 : __oc100.call(__oc99, 0.5)));
         this.bgPlate.visible = true;
       }
-    } catch {
+    } catch (_err) {
       this.bgPlate.visible = !!this.bgPlateTexture;
     }
   }
@@ -2236,18 +2238,18 @@ class PixiView {
     return PIXI.Texture.from(canvas);
   }
 
-  setAdditive(layer) {
+  setAdditive(layer) { var __oc101;
     if (!layer || !window.PIXI) return;
     try {
-      layer.blendMode = window.PIXI.BLEND_MODES?.ADD || "add";
-    } catch {
+      layer.blendMode = (((__oc101 = window.PIXI.BLEND_MODES) === null || __oc101 === void 0 ? void 0 : __oc101.ADD)) || "add";
+    } catch (_err) {
       layer.blendMode = "add";
     }
   }
 
-  applyBloomFilters() {
+  applyBloomFilters() { var __oc102;
     const PIXI = window.PIXI;
-    if (!PIXI?.BlurFilter) return;
+    if (!((PIXI === null || PIXI === void 0 ? void 0 : PIXI.BlurFilter))) return;
     const allowFilter = Math.min(window.innerWidth, window.innerHeight) >= (this.quality.coarse ? 360 : 560);
     if (!allowFilter) {
       this.bloomLayer.filters = null;
@@ -2260,7 +2262,7 @@ class PixiView {
     const makeBlur = (strength, quality) => {
       try {
         return new PIXI.BlurFilter({ strength, quality });
-      } catch {
+      } catch (_err) {
         const filter = new PIXI.BlurFilter();
         if ("strength" in filter) filter.strength = strength;
         if ("quality" in filter) filter.quality = quality;
@@ -2278,16 +2280,16 @@ class PixiView {
       if (PIXI.DisplacementFilter && this.distortionSprite && this.bgPlate) {
         try {
           this.distortionFilter = new PIXI.DisplacementFilter({ sprite: this.distortionSprite, scale: 0 });
-        } catch {
+        } catch (_err) {
           this.distortionFilter = new PIXI.DisplacementFilter(this.distortionSprite);
         }
-        if (this.distortionFilter?.scale) {
+        if ((((__oc102 = this.distortionFilter) === null || __oc102 === void 0 ? void 0 : __oc102.scale))) {
           this.distortionFilter.scale.x = 0;
           this.distortionFilter.scale.y = 0;
         }
         this.bgPlate.filters = [this.distortionFilter];
       }
-    } catch {
+    } catch (_err) {
       this.bloomLayer.filters = null;
       if (this.glow) this.glow.filters = null;
       this.sparkLayer.filters = null;
@@ -2307,9 +2309,9 @@ class PixiView {
     }
   }
 
-  createParticleNode(layer, texture) {
+  createParticleNode(layer, texture) { var __oc103, __oc104;
     const PIXI = window.PIXI;
-    const useParticle = typeof layer?.addParticle === "function" && PIXI?.Particle;
+    const useParticle = typeof ((layer === null || layer === void 0 ? void 0 : layer.addParticle)) === "function" && ((PIXI === null || PIXI === void 0 ? void 0 : PIXI.Particle));
     let node;
     if (useParticle) {
       node = new PIXI.Particle({
@@ -2322,7 +2324,7 @@ class PixiView {
       node.y = -9999;
     } else {
       node = new PIXI.Sprite(texture);
-      node.anchor?.set?.(0.5);
+      (((__oc104 = (__oc103 = node.anchor) === null || __oc103 === void 0 ? void 0 : __oc103.set) === null || __oc104 === void 0 ? void 0 : __oc104.call(__oc103, 0.5)));
       node.visible = false;
     }
     this.setAdditive(node);
@@ -2330,16 +2332,16 @@ class PixiView {
     return { node, isParticle: useParticle, active: false, texture };
   }
 
-  showParticleNode(ref, x, y, color, alpha, scale, rotation = 0) {
-    if (!ref?.node) return;
+  showParticleNode(ref, x, y, color, alpha, scale, rotation = 0) { var __oc105, __oc106;
+    if (!((ref === null || ref === void 0 ? void 0 : ref.node))) return;
     const node = ref.node;
     ref.active = true;
-    if (node.position?.set) node.position.set(x, y);
+    if ((((__oc105 = node.position) === null || __oc105 === void 0 ? void 0 : __oc105.set))) node.position.set(x, y);
     else {
       node.x = x;
       node.y = y;
     }
-    if (node.scale?.set) node.scale.set(scale);
+    if ((((__oc106 = node.scale) === null || __oc106 === void 0 ? void 0 : __oc106.set))) node.scale.set(scale);
     else {
       node.scaleX = scale;
       node.scaleY = scale;
@@ -2350,12 +2352,12 @@ class PixiView {
     if ("visible" in node) node.visible = true;
   }
 
-  hideParticleNode(ref) {
-    if (!ref?.node) return;
+  hideParticleNode(ref) { var __oc107;
+    if (!((ref === null || ref === void 0 ? void 0 : ref.node))) return;
     const node = ref.node;
     ref.active = false;
     node.alpha = 0;
-    if (node.position?.set) node.position.set(-9999, -9999);
+    if ((((__oc107 = node.position) === null || __oc107 === void 0 ? void 0 : __oc107.set))) node.position.set(-9999, -9999);
     else {
       node.x = -9999;
       node.y = -9999;
@@ -2364,11 +2366,11 @@ class PixiView {
   }
 
   setParticleTexture(ref, texture) {
-    if (!ref?.node || !texture || ref.texture === texture) return;
+    if (!((ref === null || ref === void 0 ? void 0 : ref.node)) || !texture || ref.texture === texture) return;
     try {
       ref.node.texture = texture;
       ref.texture = texture;
-    } catch {
+    } catch (_err) {
       // Some Pixi particle builds keep texture immutable; the original pooled texture is fine.
     }
   }
@@ -2408,7 +2410,7 @@ class PixiView {
     });
   }
 
-  makeStageArtTextures() {
+  makeStageArtTextures() { var __oc108, __oc109, __oc110;
     const PIXI = window.PIXI;
     if (!PIXI) return;
     const w = this.quality.coarse ? 900 : 1280;
@@ -2422,21 +2424,21 @@ class PixiView {
       this.paintStageArt(ctx, w, h, stage, index);
       this.stageArtTextures[stage.kind] = PIXI.Texture.from(canvas);
     });
-    const first = this.stageArtTextures[STAGES[0]?.kind] || null;
+    const first = this.stageArtTextures[(((__oc108 = STAGES[0]) === null || __oc108 === void 0 ? void 0 : __oc108.kind))] || null;
     if (first && this.bgPlate) {
       this.bgPlateTexture = first;
       this.bgPlate.texture = first;
-      this.bgPlate.anchor?.set?.(0.5);
+      (((__oc110 = (__oc109 = this.bgPlate.anchor) === null || __oc109 === void 0 ? void 0 : __oc109.set) === null || __oc110 === void 0 ? void 0 : __oc110.call(__oc109, 0.5)));
       this.bgPlate.visible = true;
     }
   }
 
-  paintStageArt(ctx, w, h, stage, index) {
+  paintStageArt(ctx, w, h, stage, index) { var __oc111, __oc112;
     const colors = stageFxColors(stage);
     ctx.clearRect(0, 0, w, h);
     const base = ctx.createLinearGradient(0, 0, w, h);
-    base.addColorStop(0, rgba(stage.bg?.[0] || 0x000006, 1));
-    base.addColorStop(0.48, rgba(stage.bg?.[1] || stage.accent, 0.68));
+    base.addColorStop(0, rgba((((__oc111 = stage.bg) === null || __oc111 === void 0 ? void 0 : __oc111[0])) || 0x000006, 1));
+    base.addColorStop(0.48, rgba((((__oc112 = stage.bg) === null || __oc112 === void 0 ? void 0 : __oc112[1])) || stage.accent, 0.68));
     base.addColorStop(1, "rgba(0,0,6,1)");
     ctx.fillStyle = base;
     ctx.fillRect(0, 0, w, h);
@@ -2569,10 +2571,10 @@ class PixiView {
     if (frame) {
       try {
         return new PIXI.Texture({ source: atlas.source, frame });
-      } catch {
+      } catch (_err) {
         try {
           return new PIXI.Texture(atlas.baseTexture, frame);
-        } catch {
+        } catch (_err) {
           // Fall through to a standalone canvas texture for older/newer Pixi builds.
         }
       }
@@ -2879,13 +2881,13 @@ class PixiView {
     });
   }
 
-  buildBlockSprites() {
+  buildBlockSprites() { var __oc113;
     const PIXI = window.PIXI;
-    if (!PIXI || !this.blockLayer || !this.blockTextures?.glass) return;
+    if (!PIXI || !this.blockLayer || !(((__oc113 = this.blockTextures) === null || __oc113 === void 0 ? void 0 : __oc113.glass))) return;
     const count = this.quality.coarse ? 280 : 360;
-    this.blockSprites = Array.from({ length: count }, (_, index) => {
+    this.blockSprites = Array.from({ length: count }, (_, index) => { var __oc114, __oc115;
       const sprite = new PIXI.Sprite(index % 5 === 0 ? this.blockTextures.core : this.blockTextures.glass);
-      sprite.anchor?.set?.(0.5);
+      (((__oc115 = (__oc114 = sprite.anchor) === null || __oc114 === void 0 ? void 0 : __oc114.set) === null || __oc115 === void 0 ? void 0 : __oc115.call(__oc114, 0.5)));
       sprite.visible = false;
       sprite.alpha = 0;
       this.setAdditive(sprite);
@@ -2898,8 +2900,8 @@ class PixiView {
     this.blockCursor = 0;
   }
 
-  showBlockSprite(x, y, size, color, alpha, hot) {
-    if (!this.blockSprites.length || !this.blockTextures?.glass) return;
+  showBlockSprite(x, y, size, color, alpha, hot) { var __oc116;
+    if (!this.blockSprites.length || !(((__oc116 = this.blockTextures) === null || __oc116 === void 0 ? void 0 : __oc116.glass))) return;
     const sprite = this.blockSprites[this.blockCursor];
     if (!sprite) return;
     this.blockCursor += 1;
@@ -2915,7 +2917,7 @@ class PixiView {
   endBlockSprites() {
     for (let i = this.blockCursor; i < this.blockSprites.length; i += 1) {
       const sprite = this.blockSprites[i];
-      if (!sprite?.visible) continue;
+      if (!((sprite === null || sprite === void 0 ? void 0 : sprite.visible))) continue;
       sprite.visible = false;
       sprite.alpha = 0;
     }
@@ -3116,18 +3118,18 @@ class PixiView {
     band.stroke({ color: state.accent, alpha: alpha * 0.34, width: Math.max(1, layout.cell * 0.05) });
   }
 
-  applyCamera(layout, beatState, dt) {
-    const root = this.app?.stage;
+  applyCamera(layout, beatState, dt) { var __oc117, __oc118, __oc119, __oc120, __oc121, __oc122, __oc123;
+    const root = (((__oc117 = this.app) === null || __oc117 === void 0 ? void 0 : __oc117.stage));
     if (!root) return;
     const cue = clamp(Math.max(
       this.cameraPulse,
-      (beatState?.stageCue || 0) * 0.92,
-      (beatState?.clear || 0) * 0.52,
-      (beatState?.drop || 0) * 0.34,
-      (beatState?.phrase || 0) * 0.22,
-      (beatState?.fill || 0) * 0.18,
+      (((beatState === null || beatState === void 0 ? void 0 : beatState.stageCue)) || 0) * 0.92,
+      (((beatState === null || beatState === void 0 ? void 0 : beatState.clear)) || 0) * 0.52,
+      (((beatState === null || beatState === void 0 ? void 0 : beatState.drop)) || 0) * 0.34,
+      (((beatState === null || beatState === void 0 ? void 0 : beatState.phrase)) || 0) * 0.22,
+      (((beatState === null || beatState === void 0 ? void 0 : beatState.fill)) || 0) * 0.18,
     ), 0, 1);
-    const tension = clamp(beatState?.tension || 0, 0, 1);
+    const tension = clamp(((beatState === null || beatState === void 0 ? void 0 : beatState.tension)) || 0, 0, 1);
     const t = performance.now() * 0.001;
     const micro = Math.max(0, this.shake * 0.12 + cue * 4.2);
     const driftX = Math.sin(t * 9.7) * micro + Math.sin(t * 1.1) * tension * 2.4;
@@ -3135,18 +3137,18 @@ class PixiView {
     const scale = 1 + cue * 0.012 + tension * 0.004 + this.zonePulse * 0.006;
     this.cameraRoll *= Math.max(0, 1 - dt * 0.006);
     this.cameraPulse = Math.max(0, this.cameraPulse - dt * 0.0027);
-    root.pivot?.set?.(layout.w / 2, layout.h / 2);
-    root.position?.set?.(layout.w / 2 + driftX, layout.h / 2 + driftY);
-    root.scale?.set?.(scale);
+    (((__oc119 = (__oc118 = root.pivot) === null || __oc118 === void 0 ? void 0 : __oc118.set) === null || __oc119 === void 0 ? void 0 : __oc119.call(__oc118, layout.w / 2, layout.h / 2)));
+    (((__oc121 = (__oc120 = root.position) === null || __oc120 === void 0 ? void 0 : __oc120.set) === null || __oc121 === void 0 ? void 0 : __oc121.call(__oc120, layout.w / 2 + driftX, layout.h / 2 + driftY)));
+    (((__oc123 = (__oc122 = root.scale) === null || __oc122 === void 0 ? void 0 : __oc122.set) === null || __oc123 === void 0 ? void 0 : __oc123.call(__oc122, scale)));
     root.rotation = clamp(this.cameraRoll + Math.sin(t * 5.4) * cue * 0.0028, -0.024, 0.024);
   }
 
-  drawBackground(layout, stage, dt, snapshot, beatState = null) {
+  drawBackground(layout, stage, dt, snapshot, beatState = null) { var __oc124, __oc125, __oc126, __oc127;
     const g = this.bg;
     const t = performance.now() * 0.001;
     const fxColors = stageFxColors(stage);
     let beatPosition;
-    if (beatState?.ready) {
+    if (((beatState === null || beatState === void 0 ? void 0 : beatState.ready))) {
       beatPosition = beatState.position || 0;
       this.beat = (beatState.bar || 0) * 4 + (beatState.beat || 0) + beatPosition;
       this.beatHit = Math.max(
@@ -3159,7 +3161,7 @@ class PixiView {
       );
       this.phrasePulse = Math.max(this.phrasePulse, beatState.phrase || 0, (beatState.stageCue || 0) * 0.75);
     } else {
-      const bpm = (snapshot.stage?.bpm || stage?.bpm || 100)
+      const bpm = ((((__oc124 = snapshot.stage) === null || __oc124 === void 0 ? void 0 : __oc124.bpm)) || ((stage === null || stage === void 0 ? void 0 : stage.bpm)) || 100)
         + Math.min(8, (snapshot.combo || 0) * 0.45)
         + (snapshot.zoneActive ? 8 : 0);
       const previousBeat = this.beat % 1;
@@ -3167,10 +3169,10 @@ class PixiView {
       beatPosition = this.beat % 1;
       if (beatPosition < previousBeat) this.beatHit = 1;
     }
-    const arrangementTarget = clamp(snapshot.arrangement?.progress ?? 0, 0, 1);
+    const arrangementTarget = clamp((((__oc126 = (__oc125 = snapshot.arrangement) === null || __oc125 === void 0 ? void 0 : __oc125.progress) !== null && __oc126 !== void 0 ? __oc126 : 0)), 0, 1);
     const arrangementEase = smoothstep(arrangementTarget);
     this.arrangement += (arrangementEase - this.arrangement) * clamp(dt * 0.003, 0.02, 0.18);
-    const nextLayer = snapshot.arrangement?.layer || 0;
+    const nextLayer = (((__oc127 = snapshot.arrangement) === null || __oc127 === void 0 ? void 0 : __oc127.layer)) || 0;
     if (nextLayer !== this.arrangementLayer) {
       this.arrangementLayer = nextLayer;
       this.phrasePulse = 1;
@@ -3186,10 +3188,10 @@ class PixiView {
     const maxDim = Math.max(layout.w, layout.h);
     const beatPulse = Math.max(
       this.beatHit,
-      beatState?.pulse || 0,
-      (beatState?.downbeat || 0) * 0.72,
-      (beatState?.clear || 0) * 0.68,
-      (beatState?.drop || 0) * 0.42,
+      ((beatState === null || beatState === void 0 ? void 0 : beatState.pulse)) || 0,
+      (((beatState === null || beatState === void 0 ? void 0 : beatState.downbeat)) || 0) * 0.72,
+      (((beatState === null || beatState === void 0 ? void 0 : beatState.clear)) || 0) * 0.68,
+      (((beatState === null || beatState === void 0 ? void 0 : beatState.drop)) || 0) * 0.42,
       Math.pow(1 - beatPosition, 7) * 0.56,
     );
     const energy = clamp(
@@ -3200,12 +3202,12 @@ class PixiView {
       + this.stagePulse * 0.46
       + this.worldSurge * 0.4
       + beatPulse * 0.12
-      + (beatState?.event || 0) * 0.09
-      + (beatState?.clear || 0) * 0.14
-      + (beatState?.phrase || 0) * 0.11
-      + (beatState?.fill || 0) * 0.08
-      + (beatState?.stageCue || 0) * 0.2
-      + (beatState?.tension || 0) * 0.1
+      + (((beatState === null || beatState === void 0 ? void 0 : beatState.event)) || 0) * 0.09
+      + (((beatState === null || beatState === void 0 ? void 0 : beatState.clear)) || 0) * 0.14
+      + (((beatState === null || beatState === void 0 ? void 0 : beatState.phrase)) || 0) * 0.11
+      + (((beatState === null || beatState === void 0 ? void 0 : beatState.fill)) || 0) * 0.08
+      + (((beatState === null || beatState === void 0 ? void 0 : beatState.stageCue)) || 0) * 0.2
+      + (((beatState === null || beatState === void 0 ? void 0 : beatState.tension)) || 0) * 0.1
       + this.inputHeat * 0.11,
       0.04,
       1,
@@ -3285,7 +3287,7 @@ class PixiView {
     }
   }
 
-  drawResonanceField(layout, stage, t, energy, beatPulse, snapshot, cx, cy) {
+  drawResonanceField(layout, stage, t, energy, beatPulse, snapshot, cx, cy) { var __oc128;
     const g = this.bg;
     const arrangement = this.arrangement;
     if (arrangement <= 0.04 && this.inputHeat <= 0.03 && this.phrasePulse <= 0.03) return;
@@ -3305,7 +3307,7 @@ class PixiView {
         const p = i / Math.max(1, meterCount - 1);
         const y = top + span * p;
         const wave = 0.5 + Math.sin(t * (2.8 + arrangement * 2.4) + i * 0.83 + side) * 0.5;
-        const phrase = snapshot.arrangement?.phrase || 0;
+        const phrase = (((__oc128 = snapshot.arrangement) === null || __oc128 === void 0 ? void 0 : __oc128.phrase)) || 0;
         const phraseLift = ((i + phrase) % 4 === 0 ? 0.34 : 0);
         const h = meterMax * (0.28 + wave * 0.56 + phraseLift + this.inputHeat * 0.42);
         const alpha = clamp(0.06 + arrangement * 0.3 + beatPulse * 0.18 + this.inputHeat * 0.16, 0, 0.64);
@@ -3522,7 +3524,7 @@ class PixiView {
     }
   }
 
-  drawStageDepthArchitecture(layout, stage, t, energy, beatPulse, snapshot, cx, cy) {
+  drawStageDepthArchitecture(layout, stage, t, energy, beatPulse, snapshot, cx, cy) { var __oc129, __oc130, __oc131;
     const g = this.bg;
     const colors = stageFxColors(stage);
     const lite = this.quality.coarse;
@@ -3560,8 +3562,7 @@ class PixiView {
         const phase = (t * 0.045 + i / (count + 4)) % 1;
         const rx = layout.boardW * (1.15 + phase * (2.4 + active) + i * 0.025);
         const ry = layout.boardH * (0.28 + phase * 0.8);
-        g.ellipse?.(cx, cy, rx, ry)
-          ?.stroke?.({ color: colors[i % colors.length] || stage.accent, alpha: active * (1 - phase) * 0.045, width: 1 + active * 2 });
+        (((__oc131 = (__oc130 = (__oc129 = g.ellipse) === null || __oc129 === void 0 ? void 0 : __oc129.call(g, cx, cy, rx, ry)) === null || __oc130 === void 0 ? void 0 : __oc130.stroke) === null || __oc131 === void 0 ? void 0 : __oc131.call(__oc130, { color: colors[i % colors.length] || stage.accent, alpha: active * (1 - phase) * 0.045, width: 1 + active * 2 })));
         if (!g.ellipse) {
           g.circle(cx, cy, Math.max(rx, ry)).stroke({ color: colors[i % colors.length] || stage.accent, alpha: active * (1 - phase) * 0.025, width: 1 + active * 2 });
         }
@@ -3669,14 +3670,14 @@ class PixiView {
     }
   }
 
-  updateDistortion(layout, t, energy, beatPulse, snapshot) {
+  updateDistortion(layout, t, energy, beatPulse, snapshot) { var __oc132;
     const sprite = this.distortionSprite;
     if (!sprite) return;
     const cover = Math.max(layout.w, layout.h) / 128;
     sprite.position.set(layout.w / 2 + Math.sin(t * 0.19) * layout.w * 0.08, layout.h / 2 + Math.cos(t * 0.16) * layout.h * 0.06);
     sprite.scale.set(cover * (1.65 + energy * 0.24));
     sprite.rotation = t * 0.045;
-    if (!this.distortionFilter?.scale) return;
+    if (!(((__oc132 = this.distortionFilter) === null || __oc132 === void 0 ? void 0 : __oc132.scale))) return;
     const strength = this.quality.coarse
       ? 0
       : clamp(0.35 + this.arrangement * 3.6 + this.worldSurge * 8.5 + this.zonePulse * 7 + beatPulse * 3.8 + (snapshot.combo || 0) * 0.24, 0, 16);
@@ -3684,19 +3685,19 @@ class PixiView {
     this.distortionFilter.scale.y = Math.cos(t * 0.61) * strength * 0.72;
   }
 
-  drawStagePlate(layout, stage, t, energy, beatPulse, cx, cy) {
+  drawStagePlate(layout, stage, t, energy, beatPulse, cx, cy) { var __oc133, __oc134, __oc135, __oc136, __oc137;
     const sprite = this.bgPlate;
-    const texture = this.stageArtTextures?.[stage?.kind] || this.bgPlateTexture || this.bgPlateFallbackTexture;
+    const texture = (((__oc133 = this.stageArtTextures) === null || __oc133 === void 0 ? void 0 : __oc133[stage === null || stage === void 0 ? void 0 : stage.kind])) || this.bgPlateTexture || this.bgPlateFallbackTexture;
     if (!sprite || !texture) return;
     if (sprite.texture !== texture) {
       sprite.texture = texture;
       this.bgPlateTexture = texture;
-      sprite.anchor?.set?.(0.5);
+      (((__oc135 = (__oc134 = sprite.anchor) === null || __oc134 === void 0 ? void 0 : __oc134.set) === null || __oc135 === void 0 ? void 0 : __oc135.call(__oc134, 0.5)));
       sprite.visible = true;
     }
     if (!sprite.visible) sprite.visible = true;
-    const tw = texture.width || sprite.texture?.width || 1;
-    const th = texture.height || sprite.texture?.height || 1;
+    const tw = texture.width || (((__oc136 = sprite.texture) === null || __oc136 === void 0 ? void 0 : __oc136.width)) || 1;
+    const th = texture.height || (((__oc137 = sprite.texture) === null || __oc137 === void 0 ? void 0 : __oc137.height)) || 1;
     const scale = Math.max(layout.w / tw, layout.h / th) * (1.018 + this.arrangement * 0.012 + energy * 0.03 + beatPulse * 0.015 + this.stagePulse * 0.018);
     const driftX = Math.sin(t * 0.055 + this.stagePulse) * layout.w * 0.018;
     const driftY = Math.cos(t * 0.047 + this.worldSurge) * layout.h * 0.014;
@@ -4032,7 +4033,7 @@ class PixiView {
     if (!piece) return;
     const t = performance.now() * 0.006;
     const pulse = 0.5 + Math.sin(t) * 0.5;
-    const color = stagePieceColor(stage, piece.type, piece.color || stage?.accent || 0xffffff);
+    const color = stagePieceColor(stage, piece.type, piece.color || ((stage === null || stage === void 0 ? void 0 : stage.accent)) || 0xffffff);
     for (let y = 0; y < piece.matrix.length; y += 1) {
       for (let x = 0; x < piece.matrix[y].length; x += 1) {
         if (!piece.matrix[y][x]) continue;
@@ -4141,7 +4142,7 @@ class PixiView {
   pieceLock(cells, stage, intense = false) {
     if (!this.app || !Array.isArray(cells) || cells.length === 0) return;
     const layout = this.layout();
-    const color = stageCellColor(stage, cells[0], stage?.accent || 0xffffff);
+    const color = stageCellColor(stage, cells[0], ((stage === null || stage === void 0 ? void 0 : stage.accent)) || 0xffffff);
     const cx = cells.reduce((sum, cell) => sum + (layout.boardX + cell.col * layout.cell + layout.cell / 2), 0) / cells.length;
     const cy = cells.reduce((sum, cell) => sum + (layout.boardY + cell.row * layout.cell + layout.cell / 2), 0) / cells.length;
     cells.forEach((cell) => {
@@ -4190,33 +4191,30 @@ class PixiView {
     const g = this.fx;
     const glow = this.glow;
     g.clear();
-    glow?.clear();
+    ((glow === null || glow === void 0 ? void 0 : glow.clear()));
     const decay = dt / 16.67;
-    this.lightFields = this.lightFields.filter((field) => {
+    this.lightFields = this.lightFields.filter((field) => { var __oc138;
       field.life -= decay;
       if (field.life <= 0) return false;
       const alpha = clamp(field.life / field.maxLife, 0, 1);
       const p = 1 - alpha;
-      const radius = field.radius * (1 + p * (field.growth ?? 0.55));
+      const radius = field.radius * (1 + p * (((__oc138 = field.growth) !== null && __oc138 !== void 0 ? __oc138 : 0.55)));
       const x = field.x + Math.sin(p * Math.PI) * (field.swayX || 0);
       const y = field.y + Math.sin(p * Math.PI) * (field.swayY || 0);
       const color = field.color || 0xffffff;
-      glow?.circle(x, y, radius)
-        .fill({ color, alpha: alpha * field.alpha * 0.18 });
-      glow?.circle(x, y, radius * 0.44)
-        .fill({ color: 0xffffff, alpha: alpha * field.alpha * 0.08 });
+      ((glow === null || glow === void 0 ? void 0 : glow.circle(x, y, radius).fill({ color, alpha: alpha * field.alpha * 0.18 })));
+      ((glow === null || glow === void 0 ? void 0 : glow.circle(x, y, radius * 0.44).fill({ color: 0xffffff, alpha: alpha * field.alpha * 0.08 })));
       return true;
     });
-    this.screenBursts = this.screenBursts.filter((burst) => {
+    this.screenBursts = this.screenBursts.filter((burst) => { var __oc139, __oc140;
       burst.life -= decay;
       if (burst.life <= 0) return false;
       const alpha = clamp(burst.life / burst.maxLife, 0, 1);
       const growth = 1 - alpha;
-      const cx = burst.x ?? (layout.boardX + layout.boardW / 2);
-      const cy = burst.y ?? (layout.boardY + layout.boardH / 2);
+      const cx = (((__oc139 = burst.x) !== null && __oc139 !== void 0 ? __oc139 : (layout.boardX + layout.boardW / 2)));
+      const cy = (((__oc140 = burst.y) !== null && __oc140 !== void 0 ? __oc140 : (layout.boardY + layout.boardH / 2)));
       const radius = burst.radius * (0.38 + growth * 1.85);
-      glow?.circle(cx, cy, radius * 0.92)
-        .fill({ color: burst.color, alpha: alpha * burst.alpha * 0.055 });
+      ((glow === null || glow === void 0 ? void 0 : glow.circle(cx, cy, radius * 0.92).fill({ color: burst.color, alpha: alpha * burst.alpha * 0.055 })));
       g.circle(cx, cy, radius)
         .stroke({ color: burst.color, alpha: alpha * burst.alpha, width: burst.width * (0.8 + growth * 2.4) });
       g.circle(cx, cy, radius * 0.62)
@@ -4240,9 +4238,9 @@ class PixiView {
       const y1 = cy - dy * length * 0.5;
       const x2 = cx + dx * length * 0.5;
       const y2 = cy + dy * length * 0.5;
-      glow?.moveTo(x1, y1);
-      glow?.lineTo(x2, y2);
-      glow?.stroke({ color: ray.color, alpha: alpha * ray.alpha * 0.12, width: width * 5.4 });
+      ((glow === null || glow === void 0 ? void 0 : glow.moveTo(x1, y1)));
+      ((glow === null || glow === void 0 ? void 0 : glow.lineTo(x2, y2)));
+      ((glow === null || glow === void 0 ? void 0 : glow.stroke({ color: ray.color, alpha: alpha * ray.alpha * 0.12, width: width * 5.4 })));
       g.moveTo(x1, y1);
       g.lineTo(x2, y2);
       g.stroke({ color: ray.color, alpha: alpha * ray.alpha * 0.58, width });
@@ -4259,15 +4257,13 @@ class PixiView {
       if (band.orientation === "vertical") {
         const x = band.x + Math.sin(p * Math.PI) * band.sway;
         const w = band.width * (0.4 + p * 2.2);
-        glow?.roundRect(x - w, -layout.cell, w * 2, layout.h + layout.cell * 2, w)
-          .fill({ color: band.color, alpha: alpha * band.alpha * 0.06 });
+        ((glow === null || glow === void 0 ? void 0 : glow.roundRect(x - w, -layout.cell, w * 2, layout.h + layout.cell * 2, w).fill({ color: band.color, alpha: alpha * band.alpha * 0.06 })));
         g.roundRect(x - w / 2, -layout.cell, w, layout.h + layout.cell * 2, w / 2)
           .fill({ color: band.color, alpha: alpha * band.alpha * 0.22 });
       } else {
         const y = band.y + Math.sin(p * Math.PI) * band.sway;
         const h = band.height * (0.4 + p * 2.4);
-        glow?.roundRect(-layout.cell, y - h, layout.w + layout.cell * 2, h * 2, h)
-          .fill({ color: band.color, alpha: alpha * band.alpha * 0.075 });
+        ((glow === null || glow === void 0 ? void 0 : glow.roundRect(-layout.cell, y - h, layout.w + layout.cell * 2, h * 2, h).fill({ color: band.color, alpha: alpha * band.alpha * 0.075 })));
         g.roundRect(-layout.cell, y - h / 2, layout.w + layout.cell * 2, h, h / 2)
           .fill({ color: band.color, alpha: alpha * band.alpha * 0.26 });
       }
@@ -4296,15 +4292,14 @@ class PixiView {
       const radius = pip.radius * (0.4 + p * 1.6);
       const x = pip.x + pip.vx * p;
       const y = pip.y + pip.vy * p;
-      glow?.circle(x, y, radius * 1.9)
-        .fill({ color: pip.color, alpha: alpha * pip.alpha * 0.05 });
+      ((glow === null || glow === void 0 ? void 0 : glow.circle(x, y, radius * 1.9).fill({ color: pip.color, alpha: alpha * pip.alpha * 0.05 })));
       g.circle(x, y, radius)
         .stroke({ color: pip.color, alpha: alpha * pip.alpha, width: 1.1 + p * 2.4 });
       g.circle(x, y, Math.max(1.4, radius * 0.1))
         .fill({ color: 0xffffff, alpha: alpha * pip.alpha * 0.56 });
       return true;
     });
-    this.dropTrails = this.dropTrails.filter((trail) => {
+    this.dropTrails = this.dropTrails.filter((trail) => { var __oc141, __oc142, __oc143;
       trail.life -= decay;
       if (trail.life <= 0) return false;
       const alpha = clamp(trail.life / trail.maxLife, 0, 1);
@@ -4312,15 +4307,14 @@ class PixiView {
       const top = Math.min(trail.y1, trail.y2);
       const height = Math.abs(trail.y2 - trail.y1);
       const width = trail.width * (0.45 + alpha * 1.2);
-      glow?.roundRect(x - width * 1.4, top, width * 2.8, height, width * 1.4)
-        .fill({ color: trail.color, alpha: alpha * 0.035 });
+      ((glow === null || glow === void 0 ? void 0 : glow.roundRect(x - width * 1.4, top, width * 2.8, height, width * 1.4).fill({ color: trail.color, alpha: alpha * 0.035 })));
       g.roundRect(x - width / 2, top, width, height, width / 2)
-        .fill({ color: trail.color, alpha: alpha * (trail.alpha ?? 0.12) });
+        .fill({ color: trail.color, alpha: alpha * (((__oc141 = trail.alpha) !== null && __oc141 !== void 0 ? __oc141 : 0.12)) });
       g.roundRect(x - width * 0.11, top, width * 0.22, height, width * 0.11)
-        .fill({ color: 0xffffff, alpha: alpha * (trail.coreAlpha ?? 0.34) });
+        .fill({ color: 0xffffff, alpha: alpha * (((__oc142 = trail.coreAlpha) !== null && __oc142 !== void 0 ? __oc142 : 0.34)) });
       g.moveTo(x, top);
       g.lineTo(x, top + height);
-      g.stroke({ color: 0xffffff, alpha: alpha * (trail.lineAlpha ?? 0.42), width: Math.max(0.8, width * 0.06) });
+      g.stroke({ color: 0xffffff, alpha: alpha * (((__oc143 = trail.lineAlpha) !== null && __oc143 !== void 0 ? __oc143 : 0.42)), width: Math.max(0.8, width * 0.06) });
       return true;
     });
     this.impactRings = this.impactRings.filter((ring) => {
@@ -4365,8 +4359,7 @@ class PixiView {
       const p = 1 - alpha;
       const height = core.height * (0.72 + p * 1.38);
       const glowH = height * (1.9 + p * 1.2);
-      glow?.roundRect(layout.boardX - layout.cell * 0.9, core.y - glowH * 0.8, layout.boardW + layout.cell * 1.8, glowH * 1.6, glowH * 0.8)
-        .fill({ color: core.color, alpha: alpha * core.alpha * 0.12 });
+      ((glow === null || glow === void 0 ? void 0 : glow.roundRect(layout.boardX - layout.cell * 0.9, core.y - glowH * 0.8, layout.boardW + layout.cell * 1.8, glowH * 1.6, glowH * 0.8).fill({ color: core.color, alpha: alpha * core.alpha * 0.12 })));
       g.roundRect(layout.boardX - layout.cell * 0.58, core.y - glowH / 2, layout.boardW + layout.cell * 1.16, glowH, glowH / 2)
         .fill({ color: core.color, alpha: alpha * core.alpha * 0.18 });
       g.roundRect(layout.boardX - layout.cell * 0.22, core.y - height / 2, layout.boardW + layout.cell * 0.44, height, height / 2)
@@ -4396,7 +4389,7 @@ class PixiView {
         x: tile.x + dx * ca - dy * sa,
         y: tile.y + dx * sa + dy * ca,
       }));
-      glow?.circle(tile.x, tile.y, size * 1.2).fill({ color: tile.color, alpha: alpha * 0.05 });
+      ((glow === null || glow === void 0 ? void 0 : glow.circle(tile.x, tile.y, size * 1.2).fill({ color: tile.color, alpha: alpha * 0.05 })));
       g.roundRect(tile.x - half - 4, tile.y - half - 4, size + 8, size + 8, Math.max(2, size * 0.08))
         .fill({ color: tile.color, alpha: alpha * 0.18 });
       g.moveTo(pts[0].x, pts[0].y);
@@ -4409,20 +4402,19 @@ class PixiView {
       g.stroke({ color: 0xffffff, alpha: alpha * 0.2, width: 1 });
       return true;
     });
-    this.beams = this.beams.filter((beam) => {
+    this.beams = this.beams.filter((beam) => { var __oc144, __oc145, __oc146, __oc147, __oc148;
       beam.life -= decay;
       if (beam.life <= 0) return false;
       const alpha = clamp(beam.life / beam.maxLife, 0, 1);
       if (beam.kind === "vertical") {
         if (beam.style === "drop") {
-          const top = beam.top ?? layout.boardY;
-          const bottom = beam.bottom ?? (layout.boardY + layout.boardH);
+          const top = (((__oc144 = beam.top) !== null && __oc144 !== void 0 ? __oc144 : layout.boardY));
+          const bottom = (((__oc145 = beam.bottom) !== null && __oc145 !== void 0 ? __oc145 : (layout.boardY + layout.boardH)));
           const h = Math.max(1, bottom - top);
           const w = beam.width * (0.45 + alpha * 0.7);
           const color = beam.color || 0xffffff;
-          const beamAlpha = beam.alpha ?? 1;
-          glow?.roundRect(beam.x - w * 2.2, top, w * 4.4, h, w * 2.2)
-            .fill({ color, alpha: alpha * 0.045 * beamAlpha });
+          const beamAlpha = (((__oc146 = beam.alpha) !== null && __oc146 !== void 0 ? __oc146 : 1));
+          ((glow === null || glow === void 0 ? void 0 : glow.roundRect(beam.x - w * 2.2, top, w * 4.4, h, w * 2.2).fill({ color, alpha: alpha * 0.045 * beamAlpha })));
           g.roundRect(beam.x - w * 1.2, top, w * 2.4, h, w)
             .fill({ color, alpha: alpha * 0.08 * beamAlpha });
           g.roundRect(beam.x - w * 0.22, top, w * 0.44, h, w * 0.22)
@@ -4435,19 +4427,17 @@ class PixiView {
         } else {
           const w = beam.width * (0.7 + alpha * 0.9);
           const color = beam.color || 0xffffff;
-          const beamAlpha = beam.alpha ?? 1;
-          glow?.roundRect(beam.x - w * 1.35, layout.boardY - layout.cell, w * 2.7, layout.boardH + layout.cell * 2, w)
-            .fill({ color, alpha: alpha * 0.12 * beamAlpha });
+          const beamAlpha = (((__oc147 = beam.alpha) !== null && __oc147 !== void 0 ? __oc147 : 1));
+          ((glow === null || glow === void 0 ? void 0 : glow.roundRect(beam.x - w * 1.35, layout.boardY - layout.cell, w * 2.7, layout.boardH + layout.cell * 2, w).fill({ color, alpha: alpha * 0.12 * beamAlpha })));
           g.roundRect(beam.x - w / 2, layout.boardY - layout.cell, w, layout.boardH + layout.cell * 2, w / 2)
             .fill({ color, alpha: (0.14 + alpha * 0.58) * beamAlpha });
           g.roundRect(beam.x - w * 0.18, layout.boardY - layout.cell, w * 0.36, layout.boardH + layout.cell * 2, w * 0.18)
             .fill({ color: 0xffffff, alpha: (0.3 + alpha * 0.82) * beamAlpha });
         }
       } else {
-        const beamAlpha = beam.alpha ?? 1;
+        const beamAlpha = (((__oc148 = beam.alpha) !== null && __oc148 !== void 0 ? __oc148 : 1));
         const beamColor = beam.color || 0xffffff;
-        glow?.roundRect(layout.boardX - layout.cell * 2.2, beam.y - beam.height * 1.05, layout.boardW + layout.cell * 4.4, beam.height * 2.1, beam.height)
-          .fill({ color: beamColor, alpha: alpha * 0.12 * beamAlpha });
+        ((glow === null || glow === void 0 ? void 0 : glow.roundRect(layout.boardX - layout.cell * 2.2, beam.y - beam.height * 1.05, layout.boardW + layout.cell * 4.4, beam.height * 2.1, beam.height).fill({ color: beamColor, alpha: alpha * 0.12 * beamAlpha })));
         g.roundRect(layout.boardX - layout.cell, beam.y - beam.height / 2, layout.boardW + layout.cell * 2, beam.height, beam.height / 2)
           .fill({ color: beamColor, alpha: (0.14 + alpha * 0.5) * beamAlpha });
         g.roundRect(layout.boardX - layout.cell * 0.55, beam.y - beam.height * 0.16, layout.boardW + layout.cell * 1.1, beam.height * 0.32, beam.height * 0.16)
@@ -4491,18 +4481,18 @@ class PixiView {
     });
   }
 
-  drawFlash(layout, dt, beatState = null, stage = STAGES[0]) {
+  drawFlash(layout, dt, beatState = null, stage = STAGES[0]) { var __oc149;
     this.flashLayer.clear();
-    this.glareLayer?.clear();
-    const stageCue = clamp(beatState?.stageCue || 0, 0, 1);
-    const phraseCue = clamp(beatState?.phrase || 0, 0, 1);
-    const fillCue = clamp(beatState?.fill || 0, 0, 1);
-    const tensionCue = clamp(beatState?.tension || 0, 0, 1);
+    (((__oc149 = this.glareLayer) === null || __oc149 === void 0 ? void 0 : __oc149.clear()));
+    const stageCue = clamp(((beatState === null || beatState === void 0 ? void 0 : beatState.stageCue)) || 0, 0, 1);
+    const phraseCue = clamp(((beatState === null || beatState === void 0 ? void 0 : beatState.phrase)) || 0, 0, 1);
+    const fillCue = clamp(((beatState === null || beatState === void 0 ? void 0 : beatState.fill)) || 0, 0, 1);
+    const tensionCue = clamp(((beatState === null || beatState === void 0 ? void 0 : beatState.tension)) || 0, 0, 1);
     this.drawScreenGlare(layout, stage, beatState, dt);
     this.drawStageTransitionCinematic(layout, stage, dt);
     const musicCue = Math.max(stageCue, phraseCue * 0.56, fillCue * 0.44);
     if (musicCue > 0.02 || tensionCue > 0.05) {
-      const color = stage?.accent || 0x68e9ff;
+      const color = ((stage === null || stage === void 0 ? void 0 : stage.accent)) || 0x68e9ff;
       const alpha = clamp(stageCue * 0.16 + phraseCue * 0.035 + fillCue * 0.05 + tensionCue * 0.026, 0, 0.2);
       this.flashLayer.rect(0, 0, layout.w, layout.h)
         .fill({ color, alpha });
@@ -4543,10 +4533,10 @@ class PixiView {
     const g = this.glareLayer;
     if (!g) return;
     const t = performance.now() * 0.001;
-    const clearCue = clamp(beatState?.clear || 0, 0, 1);
-    const dropCue = clamp(beatState?.drop || 0, 0, 1);
-    const stageCue = clamp(beatState?.stageCue || 0, 0, 1);
-    const phraseCue = clamp(beatState?.phrase || 0, 0, 1);
+    const clearCue = clamp(((beatState === null || beatState === void 0 ? void 0 : beatState.clear)) || 0, 0, 1);
+    const dropCue = clamp(((beatState === null || beatState === void 0 ? void 0 : beatState.drop)) || 0, 0, 1);
+    const stageCue = clamp(((beatState === null || beatState === void 0 ? void 0 : beatState.stageCue)) || 0, 0, 1);
+    const phraseCue = clamp(((beatState === null || beatState === void 0 ? void 0 : beatState.phrase)) || 0, 0, 1);
     const cuePulse = clamp(
       clearCue * 0.78
       + dropCue * 0.38
@@ -4564,7 +4554,7 @@ class PixiView {
       + this.arrangement * 0.05
       + this.inputHeat * 0.035
       + this.zonePulse * 0.04
-      + (beatState?.pulse || 0) * 0.035,
+      + (((beatState === null || beatState === void 0 ? void 0 : beatState.pulse)) || 0) * 0.035,
       0,
       0.14,
     );
@@ -4572,7 +4562,7 @@ class PixiView {
     if (pulse <= 0.015) return;
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH / 2;
-    const color = stage?.accent || 0x68e9ff;
+    const color = ((stage === null || stage === void 0 ? void 0 : stage.accent)) || 0x68e9ff;
     const white = pulse > 0.48 ? 0xffffff : color;
     const h = Math.max(layout.cell * 0.8, layout.h * (0.035 + pulse * 0.035));
     const y = cy + Math.sin(t * 1.7) * layout.cell * 0.8;
@@ -4615,7 +4605,7 @@ class PixiView {
     const easeIn = smoothstep(clamp(p * 1.7, 0, 1));
     const easeOut = 1 - smoothstep(clamp((p - 0.26) / 0.74, 0, 1));
     const alpha = clamp(easeIn * easeOut, 0, 1);
-    const color = transition.color || stage?.accent || 0xffffff;
+    const color = transition.color || ((stage === null || stage === void 0 ? void 0 : stage.accent)) || 0xffffff;
     const accent = transition.accent || stageFxColor(stage, 2);
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH / 2;
@@ -5239,7 +5229,7 @@ class PixiView {
     }
   }
 
-  stageShift(stage) {
+  stageShift(stage) { var __oc150, __oc151, __oc152;
     if (!this.app) return;
     const layout = this.layout();
     const color = stageFxColor(stage, 0);
@@ -5261,11 +5251,11 @@ class PixiView {
     };
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH * 0.28;
-    const texture = this.stageArtTextures?.[stage?.kind];
+    const texture = (((__oc150 = this.stageArtTextures) === null || __oc150 === void 0 ? void 0 : __oc150[stage === null || stage === void 0 ? void 0 : stage.kind]));
     if (texture && this.bgPlate && this.bgPlate.texture !== texture) {
       this.bgPlate.texture = texture;
       this.bgPlateTexture = texture;
-      this.bgPlate.anchor?.set?.(0.5);
+      (((__oc152 = (__oc151 = this.bgPlate.anchor) === null || __oc151 === void 0 ? void 0 : __oc151.set) === null || __oc152 === void 0 ? void 0 : __oc152.call(__oc151, 0.5)));
       this.bgPlate.visible = true;
     }
     this.lightFields.push({
@@ -5463,11 +5453,11 @@ class PixiView {
     }
   }
 
-  actionPulse(kind, snapshot, amount = 1) {
-    if (!this.app || !snapshot?.active) return;
+  actionPulse(kind, snapshot, amount = 1) { var __oc153;
+    if (!this.app || !((snapshot === null || snapshot === void 0 ? void 0 : snapshot.active))) return;
     const layout = this.layout();
     const piece = snapshot.active;
-    const color = stagePieceColor(snapshot.stage, piece.type, piece.color || snapshot.stage?.accent || 0xffffff);
+    const color = stagePieceColor(snapshot.stage, piece.type, piece.color || (((__oc153 = snapshot.stage) === null || __oc153 === void 0 ? void 0 : __oc153.accent)) || 0xffffff);
     const cx = layout.boardX + (piece.x + piece.matrix[0].length / 2) * layout.cell;
     const cy = layout.boardY + (piece.y + piece.matrix.length / 2) * layout.cell;
     const count = kind === "drop" ? 46 + Math.min(42, amount * 1.7) : kind === "rotate" ? 28 : 12;
@@ -5720,15 +5710,15 @@ class PixiView {
     if (kind === "rotate") this.comboPulse = Math.max(this.comboPulse, 0.22);
   }
 
-  spawnParticle(x, y, color, size, vx, vy, life, alpha, textureKind = "") {
+  spawnParticle(x, y, color, size, vx, vy, life, alpha, textureKind = "") { var __oc154;
     while (this.particles.length >= this.quality.maxParticles) {
       const old = this.particles.shift();
-      this.hideParticleNode(old?.sprite);
+      this.hideParticleNode(((old === null || old === void 0 ? void 0 : old.sprite)));
     }
     const sprite = this.acquireSparkSprite();
     const rotation = Math.random() * Math.PI * 2;
     if (sprite) {
-      this.setParticleTexture(sprite, this.particleTextures?.[textureKind] || sprite.texture);
+      this.setParticleTexture(sprite, (((__oc154 = this.particleTextures) === null || __oc154 === void 0 ? void 0 : __oc154[textureKind])) || sprite.texture);
       this.showParticleNode(sprite, x, y, color, alpha, Math.max(0.04, size / 18), rotation);
     }
     this.particles.push({
@@ -5760,7 +5750,7 @@ class PixiView {
       }
     }
     const old = this.particles.shift();
-    this.hideParticleNode(old?.sprite);
+    this.hideParticleNode(((old === null || old === void 0 ? void 0 : old.sprite)));
     const sprite = this.sparkSprites[this.sparkCursor % this.sparkSprites.length];
     this.sparkCursor = (this.sparkCursor + 1) % this.sparkSprites.length;
     return sprite;
@@ -5768,7 +5758,7 @@ class PixiView {
 }
 
 class InputController {
-  constructor(root, buttons, dispatch) {
+  constructor(root, buttons, dispatch) { var __oc155, __oc156, __oc157, __oc158;
     this.root = root;
     this.buttons = buttons;
     this.dispatch = dispatch;
@@ -5777,10 +5767,10 @@ class InputController {
     this.pointerStart = null;
     this.listeners = [];
     this.controlDrag = null;
-    this.controlDragHandle = this.buttons?.querySelector("[data-control-drag]") || null;
-    this.controlDragLabel = this.controlDragHandle?.querySelector("span") || null;
-    this.controlResetButton = this.buttons?.querySelector("[data-control-reset]") || null;
-    this.keyButtons = Array.from(this.buttons?.querySelectorAll("button[data-action]") || []);
+    this.controlDragHandle = (((__oc155 = this.buttons) === null || __oc155 === void 0 ? void 0 : __oc155.querySelector("[data-control-drag]"))) || null;
+    this.controlDragLabel = (((__oc156 = this.controlDragHandle) === null || __oc156 === void 0 ? void 0 : __oc156.querySelector("span"))) || null;
+    this.controlResetButton = (((__oc157 = this.buttons) === null || __oc157 === void 0 ? void 0 : __oc157.querySelector("[data-control-reset]"))) || null;
+    this.keyButtons = Array.from((((__oc158 = this.buttons) === null || __oc158 === void 0 ? void 0 : __oc158.querySelectorAll("button[data-action]"))) || []);
     this.keyDrag = null;
     this.layoutEditMode = false;
     this.layoutChangedInEdit = false;
@@ -5816,15 +5806,15 @@ class InputController {
 
     this.keyButtons.forEach((button) => {
       const action = button.dataset.action;
-      this.on(button, "pointerdown", (event) => {
+      this.on(button, "pointerdown", (event) => { var __oc159;
         if (this.layoutEditMode) {
           this.startKeyDrag(event, button);
           return;
         }
         event.preventDefault();
         try {
-          button.setPointerCapture?.(event.pointerId);
-        } catch {
+          (((__oc159 = button.setPointerCapture) === null || __oc159 === void 0 ? void 0 : __oc159.call(button, event.pointerId)));
+        } catch (_err) {
           // Some synthetic or interrupted pointer streams cannot be captured.
         }
         this.dispatch(action);
@@ -5832,8 +5822,8 @@ class InputController {
           this.startRepeat(action);
         }
       });
-      const stop = (event) => {
-        if (this.keyDrag?.button === button) {
+      const stop = (event) => { var __oc160;
+        if ((((__oc160 = this.keyDrag) === null || __oc160 === void 0 ? void 0 : __oc160.button)) === button) {
           this.endKeyDrag(event);
           return;
         }
@@ -5907,7 +5897,7 @@ class InputController {
   }
 
   on(target, type, handler, options) {
-    if (!target?.addEventListener) return;
+    if (!((target === null || target === void 0 ? void 0 : target.addEventListener))) return;
     target.addEventListener(type, handler, options);
     this.listeners.push(() => target.removeEventListener(type, handler, options));
   }
@@ -5928,17 +5918,17 @@ class InputController {
     return "";
   }
 
-  getLayoutViewport() {
+  getLayoutViewport() { var __oc161, __oc162, __oc163, __oc164;
     const width = Math.round(
-      window.visualViewport?.width
+      (((__oc161 = window.visualViewport) === null || __oc161 === void 0 ? void 0 : __oc161.width))
       || window.innerWidth
-      || document.documentElement?.clientWidth
+      || (((__oc162 = document.documentElement) === null || __oc162 === void 0 ? void 0 : __oc162.clientWidth))
       || 1,
     );
     const height = Math.round(
-      window.visualViewport?.height
+      (((__oc163 = window.visualViewport) === null || __oc163 === void 0 ? void 0 : __oc163.height))
       || window.innerHeight
-      || document.documentElement?.clientHeight
+      || (((__oc164 = document.documentElement) === null || __oc164 === void 0 ? void 0 : __oc164.clientHeight))
       || 1,
     );
     return {
@@ -5953,14 +5943,14 @@ class InputController {
     if (!saved) return null;
     try {
       return JSON.parse(saved);
-    } catch {
+    } catch (_err) {
       return null;
     }
   }
 
   normalizeViewport(viewport) {
-    const w = Number(viewport?.w);
-    const h = Number(viewport?.h);
+    const w = Number(((viewport === null || viewport === void 0 ? void 0 : viewport.w)));
+    const h = Number(((viewport === null || viewport === void 0 ? void 0 : viewport.h)));
     if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
     return { w, h };
   }
@@ -5980,7 +5970,7 @@ class InputController {
 
   readControlPositionStore() {
     const stored = this.readJsonStorage(TOUCH_CONTROL_POSITION_KEY);
-    if (stored?.layouts && typeof stored.layouts === "object") {
+    if (((stored === null || stored === void 0 ? void 0 : stored.layouts)) && typeof stored.layouts === "object") {
       return { layouts: stored.layouts };
     }
     return { layouts: {} };
@@ -5988,7 +5978,7 @@ class InputController {
 
   readLegacyControlPosition() {
     const point = this.readJsonStorage(TOUCH_CONTROL_POSITION_LEGACY_KEY);
-    if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y)) return null;
+    if (!Number.isFinite(((point === null || point === void 0 ? void 0 : point.x))) || !Number.isFinite(((point === null || point === void 0 ? void 0 : point.y)))) return null;
     return {
       x: Number(point.x),
       y: Number(point.y),
@@ -5998,7 +5988,7 @@ class InputController {
 
   readKeyLayoutStore() {
     const stored = this.readJsonStorage(TOUCH_CONTROL_KEY_LAYOUT_KEY);
-    if (stored?.layouts && typeof stored.layouts === "object") {
+    if (((stored === null || stored === void 0 ? void 0 : stored.layouts)) && typeof stored.layouts === "object") {
       return { layouts: stored.layouts };
     }
     return { layouts: {} };
@@ -6006,7 +5996,7 @@ class InputController {
 
   readLegacyKeyLayout() {
     const layout = this.readJsonStorage(TOUCH_CONTROL_KEY_LAYOUT_LEGACY_KEY);
-    if (!layout?.items || typeof layout.items !== "object") return null;
+    if (!((layout === null || layout === void 0 ? void 0 : layout.items)) || typeof layout.items !== "object") return null;
     return {
       items: layout.items,
       viewport: this.normalizeViewport(layout.viewport),
@@ -6014,7 +6004,7 @@ class InputController {
   }
 
   writeOrientationStore(key, store) {
-    const layouts = store?.layouts || {};
+    const layouts = ((store === null || store === void 0 ? void 0 : store.layouts)) || {};
     if (Object.keys(layouts).length === 0) {
       removeStorage(key);
       return;
@@ -6025,21 +6015,21 @@ class InputController {
     }));
   }
 
-  restoreControlPosition(allowLegacy = true) {
+  restoreControlPosition(allowLegacy = true) { var __oc165;
     if (this.restoreKeyLayout(allowLegacy)) return;
     const viewport = this.getLayoutViewport();
     const store = this.readControlPositionStore();
-    const stored = store.layouts?.[viewport.orientation];
+    const stored = (((__oc165 = store.layouts) === null || __oc165 === void 0 ? void 0 : __oc165[viewport.orientation]));
     const legacy = allowLegacy && !stored ? this.readLegacyControlPosition() : null;
     const saved = stored || legacy;
     if (!saved || !Number.isFinite(saved.x) || !Number.isFinite(saved.y)) return;
     const savedViewport = this.normalizeViewport(saved.viewport);
     const x = Number.isFinite(saved.xRatio)
       ? saved.xRatio * viewport.w
-      : this.scaleFromSavedViewport(Number(saved.x), savedViewport?.w, viewport.w);
+      : this.scaleFromSavedViewport(Number(saved.x), ((savedViewport === null || savedViewport === void 0 ? void 0 : savedViewport.w)), viewport.w);
     const y = Number.isFinite(saved.yRatio)
       ? saved.yRatio * viewport.h
-      : this.scaleFromSavedViewport(Number(saved.y), savedViewport?.h, viewport.h);
+      : this.scaleFromSavedViewport(Number(saved.y), ((savedViewport === null || savedViewport === void 0 ? void 0 : savedViewport.h)), viewport.h);
     this.applyControlPosition(x, y, false);
     if (legacy) this.saveControlPosition();
   }
@@ -6071,7 +6061,7 @@ class InputController {
     this.updateControlEditLabel();
   }
 
-  startControlDrag(event) {
+  startControlDrag(event) { var __oc166, __oc167;
     if (!this.buttons) return;
     event.preventDefault();
     event.stopPropagation();
@@ -6088,8 +6078,8 @@ class InputController {
     };
     this.buttons.classList.add("is-dragging");
     try {
-      this.controlDragHandle?.setPointerCapture?.(event.pointerId);
-    } catch {
+      (((__oc167 = (__oc166 = this.controlDragHandle) === null || __oc166 === void 0 ? void 0 : __oc166.setPointerCapture) === null || __oc167 === void 0 ? void 0 : __oc167.call(__oc166, event.pointerId)));
+    } catch (_err) {
       // Drag still works without capture when the browser rejects it.
     }
   }
@@ -6108,7 +6098,7 @@ class InputController {
     );
   }
 
-  endControlDrag(event) {
+  endControlDrag(event) { var __oc168, __oc169, __oc170;
     if (!this.controlDrag || event.pointerId !== this.controlDrag.pointerId) return;
     event.preventDefault();
     event.stopPropagation();
@@ -6123,10 +6113,10 @@ class InputController {
     }
     const wasTap = !this.controlDrag.moved;
     const freeLayout = this.controlDrag.freeLayout;
-    this.buttons?.classList.remove("is-dragging");
+    (((__oc168 = this.buttons) === null || __oc168 === void 0 ? void 0 : __oc168.classList.remove("is-dragging")));
     try {
-      this.controlDragHandle?.releasePointerCapture?.(event.pointerId);
-    } catch {
+      (((__oc170 = (__oc169 = this.controlDragHandle) === null || __oc169 === void 0 ? void 0 : __oc169.releasePointerCapture) === null || __oc170 === void 0 ? void 0 : __oc170.call(__oc169, event.pointerId)));
+    } catch (_err) {
       // Pointer capture may already be gone after cancellation.
     }
     this.controlDrag = null;
@@ -6137,13 +6127,13 @@ class InputController {
     }
   }
 
-  clampControlPosition(x, y) {
-    const rect = this.buttons?.getBoundingClientRect?.();
+  clampControlPosition(x, y) { var __oc171, __oc172, __oc173, __oc174;
+    const rect = (((__oc172 = (__oc171 = this.buttons) === null || __oc171 === void 0 ? void 0 : __oc171.getBoundingClientRect) === null || __oc172 === void 0 ? void 0 : __oc172.call(__oc171)));
     if (!rect || rect.width <= 0 || rect.height <= 0) return { x, y };
     const padding = 8;
     const safeArea = safeAreaInsets();
-    const vw = window.visualViewport?.width || window.innerWidth || rect.width;
-    const vh = window.visualViewport?.height || window.innerHeight || rect.height;
+    const vw = (((__oc173 = window.visualViewport) === null || __oc173 === void 0 ? void 0 : __oc173.width)) || window.innerWidth || rect.width;
+    const vh = (((__oc174 = window.visualViewport) === null || __oc174 === void 0 ? void 0 : __oc174.height)) || window.innerHeight || rect.height;
     const minX = padding + safeArea.left;
     const maxX = Math.max(minX, vw - rect.width - padding - safeArea.right);
     const minY = padding + safeArea.top;
@@ -6166,8 +6156,8 @@ class InputController {
     if (persist) this.saveControlPosition();
   }
 
-  saveControlPosition() {
-    if (!this.buttons?.classList.contains("is-custom-position")) return;
+  saveControlPosition() { var __oc175;
+    if (!(((__oc175 = this.buttons) === null || __oc175 === void 0 ? void 0 : __oc175.classList.contains("is-custom-position")))) return;
     const rect = this.buttons.getBoundingClientRect();
     const viewport = this.getLayoutViewport();
     const store = this.readControlPositionStore();
@@ -6184,19 +6174,19 @@ class InputController {
     }));
   }
 
-  reclampControlPosition() {
-    if (this.buttons?.classList.contains("is-free-layout")) {
+  reclampControlPosition() { var __oc176, __oc177, __oc178;
+    if ((((__oc176 = this.buttons) === null || __oc176 === void 0 ? void 0 : __oc176.classList.contains("is-free-layout")))) {
       if (!this.restoreKeyLayout(false)) {
         const wasEditing = this.layoutEditMode;
         this.clearFreeLayout();
         if (wasEditing) {
           this.ensureFreeLayout();
-          this.buttons?.classList.add("is-layout-editing");
+          (((__oc177 = this.buttons) === null || __oc177 === void 0 ? void 0 : __oc177.classList.add("is-layout-editing")));
         }
       }
       return;
     }
-    if (!this.buttons?.classList.contains("is-custom-position")) return;
+    if (!(((__oc178 = this.buttons) === null || __oc178 === void 0 ? void 0 : __oc178.classList.contains("is-custom-position")))) return;
     const rect = this.buttons.getBoundingClientRect();
     this.applyControlPosition(rect.left, rect.top, false);
   }
@@ -6232,7 +6222,7 @@ class InputController {
     this.controlDragHandle.setAttribute("aria-pressed", this.layoutEditMode ? "true" : "false");
   }
 
-  ensureFreeLayout(savedItems = null, savedViewport = null) {
+  ensureFreeLayout(savedItems = null, savedViewport = null) { var __oc179, __oc180;
     if (!this.buttons || this.buttons.classList.contains("is-free-layout")) return;
     this.preFreeContainerStyle = {
       classIsCustom: this.buttons.classList.contains("is-custom-position"),
@@ -6243,7 +6233,7 @@ class InputController {
       transform: this.buttons.style.transform,
     };
     const buttonRects = new Map(this.keyButtons.map((button) => [button.dataset.action, button.getBoundingClientRect()]));
-    const handleRect = this.controlDragHandle?.getBoundingClientRect?.();
+    const handleRect = (((__oc180 = (__oc179 = this.controlDragHandle) === null || __oc179 === void 0 ? void 0 : __oc179.getBoundingClientRect) === null || __oc180 === void 0 ? void 0 : __oc180.call(__oc179)));
     this.buttons.classList.add("is-free-layout");
     this.buttons.classList.remove("is-custom-position");
     this.buttons.style.left = "0px";
@@ -6257,7 +6247,7 @@ class InputController {
     this.keyButtons.forEach((button) => {
       const action = button.dataset.action;
       const fallback = buttonRects.get(action);
-      const saved = savedItems?.[action];
+      const saved = ((savedItems === null || savedItems === void 0 ? void 0 : savedItems[action]));
       const box = this.resolveKeyBox(saved, fallback, savedViewport);
       this.applyKeyPosition(button, box.x, box.y, box.w, box.h, false);
     });
@@ -6278,62 +6268,62 @@ class InputController {
       });
     }
     const previous = this.preFreeContainerStyle;
-    if (previous?.classIsCustom) this.buttons.classList.add("is-custom-position");
+    if (((previous === null || previous === void 0 ? void 0 : previous.classIsCustom))) this.buttons.classList.add("is-custom-position");
     else this.buttons.classList.remove("is-custom-position");
-    this.buttons.style.left = previous?.left || "";
-    this.buttons.style.top = previous?.top || "";
-    this.buttons.style.right = previous?.right || "";
-    this.buttons.style.bottom = previous?.bottom || "";
-    this.buttons.style.transform = previous?.transform || "";
+    this.buttons.style.left = ((previous === null || previous === void 0 ? void 0 : previous.left)) || "";
+    this.buttons.style.top = ((previous === null || previous === void 0 ? void 0 : previous.top)) || "";
+    this.buttons.style.right = ((previous === null || previous === void 0 ? void 0 : previous.right)) || "";
+    this.buttons.style.bottom = ((previous === null || previous === void 0 ? void 0 : previous.bottom)) || "";
+    this.buttons.style.transform = ((previous === null || previous === void 0 ? void 0 : previous.transform)) || "";
   }
 
   resolveKeyBox(saved, fallback, savedViewport = null) {
     const viewport = this.getLayoutViewport();
-    const sourceViewport = this.normalizeViewport(savedViewport || saved?.viewport);
-    const savedX = Number(saved?.x);
-    const savedY = Number(saved?.y);
-    const savedW = Number(saved?.w);
-    const savedH = Number(saved?.h);
-    const x = Number.isFinite(Number(saved?.xRatio))
+    const sourceViewport = this.normalizeViewport(savedViewport || ((saved === null || saved === void 0 ? void 0 : saved.viewport)));
+    const savedX = Number(((saved === null || saved === void 0 ? void 0 : saved.x)));
+    const savedY = Number(((saved === null || saved === void 0 ? void 0 : saved.y)));
+    const savedW = Number(((saved === null || saved === void 0 ? void 0 : saved.w)));
+    const savedH = Number(((saved === null || saved === void 0 ? void 0 : saved.h)));
+    const x = Number.isFinite(Number(((saved === null || saved === void 0 ? void 0 : saved.xRatio))))
       ? Number(saved.xRatio) * viewport.w
       : Number.isFinite(savedX)
-        ? this.scaleFromSavedViewport(savedX, sourceViewport?.w, viewport.w)
-        : fallback?.left;
-    const y = Number.isFinite(Number(saved?.yRatio))
+        ? this.scaleFromSavedViewport(savedX, ((sourceViewport === null || sourceViewport === void 0 ? void 0 : sourceViewport.w)), viewport.w)
+        : ((fallback === null || fallback === void 0 ? void 0 : fallback.left));
+    const y = Number.isFinite(Number(((saved === null || saved === void 0 ? void 0 : saved.yRatio))))
       ? Number(saved.yRatio) * viewport.h
       : Number.isFinite(savedY)
-        ? this.scaleFromSavedViewport(savedY, sourceViewport?.h, viewport.h)
-        : fallback?.top;
+        ? this.scaleFromSavedViewport(savedY, ((sourceViewport === null || sourceViewport === void 0 ? void 0 : sourceViewport.h)), viewport.h)
+        : ((fallback === null || fallback === void 0 ? void 0 : fallback.top));
     return {
       x: Number.isFinite(x) ? x : 0,
       y: Number.isFinite(y) ? y : 0,
-      w: savedW > 0 ? savedW : fallback?.width || 54,
-      h: savedH > 0 ? savedH : fallback?.height || 52,
+      w: savedW > 0 ? savedW : ((fallback === null || fallback === void 0 ? void 0 : fallback.width)) || 54,
+      h: savedH > 0 ? savedH : ((fallback === null || fallback === void 0 ? void 0 : fallback.height)) || 52,
     };
   }
 
-  restoreKeyLayout(allowLegacy = true) {
+  restoreKeyLayout(allowLegacy = true) { var __oc181, __oc182, __oc183;
     const viewport = this.getLayoutViewport();
     const store = this.readKeyLayoutStore();
-    const stored = store.layouts?.[viewport.orientation];
+    const stored = (((__oc181 = store.layouts) === null || __oc181 === void 0 ? void 0 : __oc181[viewport.orientation]));
     const legacy = allowLegacy && !stored ? this.readLegacyKeyLayout() : null;
     const layout = stored || legacy;
-    if (!layout?.items || typeof layout.items !== "object") return false;
+    if (!((layout === null || layout === void 0 ? void 0 : layout.items)) || typeof layout.items !== "object") return false;
     const wasEditing = this.layoutEditMode;
-    if (this.buttons?.classList.contains("is-free-layout")) this.clearFreeLayout();
+    if ((((__oc182 = this.buttons) === null || __oc182 === void 0 ? void 0 : __oc182.classList.contains("is-free-layout")))) this.clearFreeLayout();
     this.ensureFreeLayout(layout.items, this.normalizeViewport(layout.viewport));
-    if (wasEditing) this.buttons?.classList.add("is-layout-editing");
+    if (wasEditing) (((__oc183 = this.buttons) === null || __oc183 === void 0 ? void 0 : __oc183.classList.add("is-layout-editing")));
     this.hasSavedKeyLayout = true;
     this.reclampKeyPositions(false);
     if (legacy) this.saveKeyLayout();
     return true;
   }
 
-  clampKeyPosition(x, y, width, height) {
+  clampKeyPosition(x, y, width, height) { var __oc184, __oc185;
     const padding = 8;
     const safeArea = safeAreaInsets();
-    const vw = window.visualViewport?.width || window.innerWidth || width;
-    const vh = window.visualViewport?.height || window.innerHeight || height;
+    const vw = (((__oc184 = window.visualViewport) === null || __oc184 === void 0 ? void 0 : __oc184.width)) || window.innerWidth || width;
+    const vh = (((__oc185 = window.visualViewport) === null || __oc185 === void 0 ? void 0 : __oc185.height)) || window.innerHeight || height;
     const minX = padding + safeArea.left;
     const minY = padding + safeArea.top;
     const maxX = Math.max(minX, vw - width - padding - safeArea.right);
@@ -6359,8 +6349,8 @@ class InputController {
     if (persist) this.saveKeyLayout();
   }
 
-  saveKeyLayout() {
-    if (!this.buttons?.classList.contains("is-free-layout")) return;
+  saveKeyLayout() { var __oc186;
+    if (!(((__oc186 = this.buttons) === null || __oc186 === void 0 ? void 0 : __oc186.classList.contains("is-free-layout")))) return;
     const viewport = this.getLayoutViewport();
     const store = this.readKeyLayoutStore();
     const items = {};
@@ -6387,8 +6377,8 @@ class InputController {
     }));
   }
 
-  reclampKeyPositions(persist = true) {
-    if (!this.buttons?.classList.contains("is-free-layout")) return;
+  reclampKeyPositions(persist = true) { var __oc187;
+    if (!(((__oc187 = this.buttons) === null || __oc187 === void 0 ? void 0 : __oc187.classList.contains("is-free-layout")))) return;
     this.keyButtons.forEach((button) => {
       const rect = button.getBoundingClientRect();
       this.applyKeyPosition(button, rect.left, rect.top, rect.width, rect.height, false);
@@ -6400,7 +6390,7 @@ class InputController {
     if (persist) this.saveKeyLayout();
   }
 
-  startKeyDrag(event, button) {
+  startKeyDrag(event, button) { var __oc188;
     if (!button || !this.layoutEditMode) return;
     event.preventDefault();
     event.stopPropagation();
@@ -6417,8 +6407,8 @@ class InputController {
     };
     button.classList.add("is-key-dragging");
     try {
-      button.setPointerCapture?.(event.pointerId);
-    } catch {
+      (((__oc188 = button.setPointerCapture) === null || __oc188 === void 0 ? void 0 : __oc188.call(button, event.pointerId)));
+    } catch (_err) {
       // Individual key dragging still works without pointer capture.
     }
   }
@@ -6438,15 +6428,15 @@ class InputController {
     );
   }
 
-  endKeyDrag(event) {
+  endKeyDrag(event) { var __oc189;
     if (!this.keyDrag || event.pointerId !== this.keyDrag.pointerId) return;
     event.preventDefault();
     event.stopPropagation();
     const button = this.keyDrag.button;
     button.classList.remove("is-key-dragging");
     try {
-      button.releasePointerCapture?.(event.pointerId);
-    } catch {
+      (((__oc189 = button.releasePointerCapture) === null || __oc189 === void 0 ? void 0 : __oc189.call(button, event.pointerId)));
+    } catch (_err) {
       // Pointer capture may already be gone after cancellation.
     }
     this.keyDrag = null;
@@ -6477,7 +6467,7 @@ class InputController {
     this.listeners.splice(0).reverse().forEach((dispose) => {
       try {
         dispose();
-      } catch {
+      } catch (_err) {
         // Listener cleanup is best effort.
       }
     });
@@ -6581,51 +6571,51 @@ class LumenShiftApp {
 
   makeCallbacks() {
     return {
-      onMove: () => {
+      onMove: () => { var __oc190, __oc191;
         this.audio.move();
-        this.view.actionPulse("move", this.core?.snapshot?.());
+        this.view.actionPulse("move", (((__oc191 = (__oc190 = this.core) === null || __oc190 === void 0 ? void 0 : __oc190.snapshot) === null || __oc191 === void 0 ? void 0 : __oc191.call(__oc190))));
         this.haptic(4);
       },
-      onRotate: () => {
+      onRotate: () => { var __oc192, __oc193;
         this.audio.rotate();
-        this.view.actionPulse("rotate", this.core?.snapshot?.());
+        this.view.actionPulse("rotate", (((__oc193 = (__oc192 = this.core) === null || __oc192 === void 0 ? void 0 : __oc192.snapshot) === null || __oc193 === void 0 ? void 0 : __oc193.call(__oc192))));
         this.haptic(7);
       },
-      onSoftDrop: () => {
+      onSoftDrop: () => { var __oc194, __oc195;
         this.audio.softDrop();
-        this.view.actionPulse("move", this.core?.snapshot?.());
+        this.view.actionPulse("move", (((__oc195 = (__oc194 = this.core) === null || __oc194 === void 0 ? void 0 : __oc194.snapshot) === null || __oc195 === void 0 ? void 0 : __oc195.call(__oc194))));
         this.haptic(3);
       },
-      onHardDrop: (distance) => {
+      onHardDrop: (distance) => { var __oc196, __oc197;
         this.hardDropLockPending = true;
         this.audio.drop();
-        this.view.actionPulse("drop", this.core?.snapshot?.(), distance);
+        this.view.actionPulse("drop", (((__oc197 = (__oc196 = this.core) === null || __oc196 === void 0 ? void 0 : __oc196.snapshot) === null || __oc197 === void 0 ? void 0 : __oc197.call(__oc196))), distance);
         this.haptic([16, 26, 20]);
       },
-      onHold: () => {
+      onHold: () => { var __oc198, __oc199;
         this.audio.playSfx("hold", -8);
-        this.view.actionPulse("rotate", this.core?.snapshot?.());
+        this.view.actionPulse("rotate", (((__oc199 = (__oc198 = this.core) === null || __oc198 === void 0 ? void 0 : __oc198.snapshot) === null || __oc199 === void 0 ? void 0 : __oc199.call(__oc198))));
         this.haptic(8);
       },
-      onLock: (info) => {
+      onLock: (info) => { var __oc200;
         const stage = STAGES[this.core.stageIndex] || STAGES[0];
         const intense = this.hardDropLockPending;
         this.hardDropLockPending = false;
-        this.audio.lock(info.cells?.length || 0);
+        this.audio.lock((((__oc200 = info.cells) === null || __oc200 === void 0 ? void 0 : __oc200.length)) || 0);
         this.view.pieceLock(info.cells, stage, intense);
       },
-      onStage: (index, stage, stageWindow = null) => {
+      onStage: (index, stage, stageWindow = null) => { var __oc201;
         this.audio.setStage(index);
         this.view.stageShift(stage);
-        const stageNumber = stageWindow?.stageNumber ?? index + 1;
-        this.showStageSplash(stageNumber > 1 ? `STAGE ${String(stageNumber).padStart(2, "0")}\n${stage?.name || ""}` : "");
+        const stageNumber = (((__oc201 = stageWindow === null || stageWindow === void 0 ? void 0 : stageWindow.stageNumber) !== null && __oc201 !== void 0 ? __oc201 : index + 1));
+        this.showStageSplash(stageNumber > 1 ? `STAGE ${String(stageNumber).padStart(2, "0")}\n${((stage === null || stage === void 0 ? void 0 : stage.name)) || ""}` : "");
       },
-      onClear: (info) => {
+      onClear: (info) => { var __oc202;
         const stage = STAGES[this.core.stageIndex] || STAGES[0];
         this.audio.clear(info.lines, info.combo, info.zoneActive);
         this.view.lineClear(info.rows, info.lines, stage, info.cells);
         if (info.stageCleared) {
-          const nextStage = STAGES[info.stageWindowAfter?.stageIndex] || STAGES[0];
+          const nextStage = STAGES[(((__oc202 = info.stageWindowAfter) === null || __oc202 === void 0 ? void 0 : __oc202.stageIndex))] || STAGES[0];
           this.view.stageClearTransition(stage, nextStage, info);
         }
         this.showEvent(this.clearLabel(info.lines, info.combo, info.zoneActive));
@@ -6671,7 +6661,7 @@ class LumenShiftApp {
   haptic(pattern) {
     try {
       if (navigator.vibrate) navigator.vibrate(pattern);
-    } catch {
+    } catch (_err) {
       // Haptics are optional and browser/device dependent.
     }
   }
@@ -6698,7 +6688,7 @@ class LumenShiftApp {
     this.audio.ui(kind);
   }
 
-  async startGame(modeKey) {
+  async startGame(modeKey) { var __oc203;
     this.modeKey = modeKey || this.modeKey || "journey";
     writeStorage("mode", this.modeKey);
     this.audio.beginUserGestureAudio(0);
@@ -6707,7 +6697,7 @@ class LumenShiftApp {
     await this.audio.unlock({ startMusic: true });
     this.rank = new RankClient();
     this.hardDropLockPending = false;
-    if (MODES[this.modeKey]?.ranked) this.rank.start().catch(() => null);
+    if ((((__oc203 = MODES[this.modeKey]) === null || __oc203 === void 0 ? void 0 : __oc203.ranked))) this.rank.start().catch(() => null);
     this.core.callbacks = this.makeCallbacks();
     this.core.reset(this.modeKey);
   }
@@ -6766,17 +6756,17 @@ class LumenShiftApp {
     await this.renderRanks();
   }
 
-  openResult(title, snapshot) {
+  openResult(title, snapshot) { var __oc204, __oc205, __oc206;
     this.hideAllScreens();
     this.rankOnly = false;
     this.elements.result.classList.remove("is-hidden");
     this.audio.ui("gameOver");
     this.audio.playStinger("gameOver", -4);
-    this.elements.nickname.parentElement.classList.toggle("is-hidden", !MODES[snapshot.modeKey]?.ranked || snapshot.score <= 0);
+    this.elements.nickname.parentElement.classList.toggle("is-hidden", !(((__oc204 = MODES[snapshot.modeKey]) === null || __oc204 === void 0 ? void 0 : __oc204.ranked)) || snapshot.score <= 0);
     this.elements.resultTitle.textContent = title;
-    this.elements.resultMode.textContent = MODES[snapshot.modeKey]?.label || "Journey";
+    this.elements.resultMode.textContent = (((__oc205 = MODES[snapshot.modeKey]) === null || __oc205 === void 0 ? void 0 : __oc205.label)) || "Journey";
     this.elements.finalScore.textContent = formatScore(snapshot.score);
-    this.elements.submitStatus.textContent = MODES[snapshot.modeKey]?.ranked ? "" : "Relax records stay local.";
+    this.elements.submitStatus.textContent = (((__oc206 = MODES[snapshot.modeKey]) === null || __oc206 === void 0 ? void 0 : __oc206.ranked)) ? "" : "Relax records stay local.";
     this.renderRanks().catch(() => null);
   }
 
@@ -6791,11 +6781,11 @@ class LumenShiftApp {
     this.root.classList.toggle("is-menu-mode", !!active);
   }
 
-  async submitScore() {
+  async submitScore() { var __oc207;
     const name = this.elements.nickname.value.trim().slice(0, 20) || "Player";
     writeStorage("nickname", name);
     const snapshot = this.core.snapshot();
-    if (!MODES[snapshot.modeKey]?.ranked) {
+    if (!(((__oc207 = MODES[snapshot.modeKey]) === null || __oc207 === void 0 ? void 0 : __oc207.ranked))) {
       this.elements.submitStatus.textContent = "Relax mode is not ranked.";
       return;
     }
@@ -6832,12 +6822,12 @@ class LumenShiftApp {
       this.elements.ranking.innerHTML = rows.map((row, index) => (
         `<div class="rank-row"><span>${index + 1}</span><strong>${this.escape(row.player_name || "Player")}</strong><span>${formatScore(row.score)}</span></div>`
       )).join("");
-    } catch {
+    } catch (_err) {
       this.elements.ranking.innerHTML = '<div class="rank-row"><span>!</span><strong>Ranking offline</strong><span></span></div>';
     }
   }
 
-  updateHud(snapshot) {
+  updateHud(snapshot) { var __oc208, __oc209, __oc210;
     const layout = this.view.app ? this.view.layout() : null;
     if (layout) {
       const safeArea = safeAreaInsets();
@@ -6882,19 +6872,19 @@ class LumenShiftApp {
       if (element) element.textContent = value;
     };
     const mode = snapshot.mode || MODES[snapshot.modeKey] || MODES.journey;
-    const areaGoal = snapshot.stageLineGoal ?? stageLineGoalForMode(snapshot.modeKey, mode);
+    const areaGoal = (((__oc208 = snapshot.stageLineGoal) !== null && __oc208 !== void 0 ? __oc208 : stageLineGoalForMode(snapshot.modeKey, mode)));
     setText(this.elements.score, formatScore(snapshot.score));
     setText(this.elements.lines, snapshot.lines);
     setText(this.elements.level, snapshot.level);
     setText(this.elements.combo, snapshot.combo);
     setText(this.elements.speedLv, snapshot.speedLevel || snapshot.level);
-    setText(this.elements.areaLines, snapshot.stageLines ?? snapshot.lines);
+    setText(this.elements.areaLines, (((__oc209 = snapshot.stageLines) !== null && __oc209 !== void 0 ? __oc209 : snapshot.lines)));
     setText(this.elements.areaLinesGoal, Number.isFinite(areaGoal) ? areaGoal : STAGE_LINE_GOAL);
     if (this.elements.time) this.elements.time.textContent = this.formatTime(snapshot.elapsed);
     if (this.elements.areaScore) this.elements.areaScore.textContent = formatScore(snapshot.score);
     if (this.elements.maxRing) this.elements.maxRing.classList.toggle("is-ready", snapshot.lumen >= 0.3 || snapshot.zoneActive);
     if (this.elements.stage) this.elements.stage.textContent = "Score";
-    if (this.elements.lumenFill) this.elements.lumenFill.style.width = `${clamp(snapshot.stageProgress ?? 0, 0, 1) * 100}%`;
+    if (this.elements.lumenFill) this.elements.lumenFill.style.width = `${clamp((((__oc210 = snapshot.stageProgress) !== null && __oc210 !== void 0 ? __oc210 : 0)), 0, 1) * 100}%`;
   }
 
   formatTime(ms) {

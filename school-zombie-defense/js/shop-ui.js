@@ -2,9 +2,11 @@
   "use strict";
 
   const SchoolI18n = root.SchoolI18n;
-  const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
+  const escape = (value) => { return (
+String(((value !== null && value !== void 0 ? value : ""))).replace(/[&<>"']/g, (char) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  })[char]);
+  })[char])
+); };
 
   function create({ host, getView, onSelect, onBuy, onReset, onExit, onLocale, initialOpen = false }) {
     const layer = document.createElement("section");
@@ -66,12 +68,12 @@
       layer.querySelector(".school-shop__status").textContent = dialog.open ? "" : message;
     }
 
-    function refresh() {
+    function refresh() { var __oc0, __oc1, __oc2;
       if (destroyed) return;
       const view = getView();
       layer.querySelectorAll("[data-credit]").forEach((item) => { item.textContent = `$${view.coins}`; });
       // Keep focus and scroll position when the server refreshes a purchase.
-      const focusKey = document.activeElement?.dataset?.focusKey;
+      const focusKey = (((__oc1 = (__oc0 = document.activeElement) === null || __oc0 === void 0 ? void 0 : __oc0.dataset) === null || __oc1 === void 0 ? void 0 : __oc1.focusKey));
       dialog.querySelector(".school-shop-dialog__characters").innerHTML = view.characters.map((character) => `
         <button type="button" data-character="${escape(character.id)}" data-focus-key="character-${escape(character.id)}"
           aria-label="${escape(character.name)}" aria-pressed="${character.id === view.selectedId}">
@@ -97,7 +99,7 @@
         ? SchoolI18n.t("shop.resetRefund", { refund: `$${view.refund}` })
         : SchoolI18n.t("shop.reset");
       updateBusyControls();
-      if (focusKey) Array.from(dialog.querySelectorAll("[data-focus-key]")).find((item) => item.dataset.focusKey === focusKey)?.focus({ preventScroll: true });
+      if (focusKey) (((__oc2 = Array.from(dialog.querySelectorAll("[data-focus-key]")).find((item) => item.dataset.focusKey === focusKey)) === null || __oc2 === void 0 ? void 0 : __oc2.focus({ preventScroll: true })));
     }
 
     function localize() {
@@ -136,16 +138,16 @@
       if (destroyed) return;
       updateBusyControls();
       notify(message);
-      if (!busy && busyFocus?.isConnected && !busyFocus.disabled) busyFocus.focus({ preventScroll: true });
+      if (!busy && ((busyFocus === null || busyFocus === void 0 ? void 0 : busyFocus.isConnected)) && !busyFocus.disabled) busyFocus.focus({ preventScroll: true });
       if (!busy) busyFocus = null;
     }
 
-    function open() {
+    function open() { var __oc3;
       if (destroyed || dialog.open) return;
       refresh();
       layer.classList.add("is-maintaining");
       dialog.showModal();
-      dialog.querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
+      (((__oc3 = dialog.querySelector('[aria-pressed="true"]')) === null || __oc3 === void 0 ? void 0 : __oc3.focus({ preventScroll: true })));
     }
 
     function closeConfirmation() {
@@ -164,7 +166,7 @@
       openButton.focus({ preventScroll: true });
     }
 
-    function confirmReset(refund, confirm) {
+    function confirmReset(refund, confirm) { var __oc4;
       if (destroyed || busy || confirmation) return;
       confirmRefund = refund;
       confirmAction = confirm;
@@ -178,7 +180,7 @@
       confirmation.addEventListener("keydown", (event) => containKeys(event, confirmation));
       confirmation.addEventListener("cancel", (event) => { event.preventDefault(); closeConfirmation(); });
       confirmation.querySelector("[data-cancel]").addEventListener("click", closeConfirmation);
-      confirmation.querySelector("[data-confirm]")?.addEventListener("click", () => { closeConfirmation(); confirm(); });
+      (((__oc4 = confirmation.querySelector("[data-confirm]")) === null || __oc4 === void 0 ? void 0 : __oc4.addEventListener("click", () => { closeConfirmation(); confirm(); })));
       confirmation.showModal();
       confirmation.querySelector("[data-cancel]").focus();
     }
@@ -188,8 +190,8 @@
       const buttons = Array.from(container.querySelectorAll("button:not(:disabled)")).filter((button) => button.getClientRects().length);
       const index = buttons.indexOf(document.activeElement);
       const target = buttons[(index + direction + buttons.length) % buttons.length];
-      target?.focus();
-      target?.scrollIntoView({ block: "nearest" });
+      ((target === null || target === void 0 ? void 0 : target.focus()));
+      ((target === null || target === void 0 ? void 0 : target.scrollIntoView({ block: "nearest" })));
     }
 
     function containKeys(event, container) {
@@ -221,12 +223,12 @@
     dialog.addEventListener("cancel", (event) => { event.preventDefault(); close(); });
     dialog.addEventListener("click", (event) => {
       const button = event.target.closest("button");
-      if (button?.dataset.lang) return;
+      if (((button === null || button === void 0 ? void 0 : button.dataset.lang))) return;
       if (busy) return;
-      if (button?.hasAttribute("data-close")) return close();
-      if (button?.dataset.character) { onSelect(button.dataset.character); refresh(); notify(""); return; }
-      if (button?.dataset.upgrade) { onBuy(button.dataset.upgrade); return; }
-      if (button?.hasAttribute("data-reset")) { onReset(); return; }
+      if (((button === null || button === void 0 ? void 0 : button.hasAttribute("data-close")))) return close();
+      if (((button === null || button === void 0 ? void 0 : button.dataset.character))) { onSelect(button.dataset.character); refresh(); notify(""); return; }
+      if (((button === null || button === void 0 ? void 0 : button.dataset.upgrade))) { onBuy(button.dataset.upgrade); return; }
+      if (((button === null || button === void 0 ? void 0 : button.hasAttribute("data-reset")))) { onReset(); return; }
       const bounds = dialog.getBoundingClientRect();
       if (event.target === dialog && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) close();
     });
@@ -253,16 +255,16 @@
         else if (action === "previous" || action === "next") moveFocus(action === "previous" ? -1 : 1);
         else if (action === "accept" && !busy) {
           const focused = document.activeElement;
-          if (focused?.tagName === "BUTTON" && layer.contains(focused)) focused.click();
+          if (((focused === null || focused === void 0 ? void 0 : focused.tagName)) === "BUTTON" && layer.contains(focused)) focused.click();
           else if (!dialog.open) open();
         }
       },
-      destroy() {
+      destroy() { var __oc5;
         destroyed = true;
         if (confirmation) { confirmation.close(); confirmation.remove(); confirmation = null; }
         dialog.close();
         layer.remove();
-        host.querySelector("canvas")?.focus({ preventScroll: true });
+        (((__oc5 = host.querySelector("canvas")) === null || __oc5 === void 0 ? void 0 : __oc5.focus({ preventScroll: true })));
       }
     };
   }

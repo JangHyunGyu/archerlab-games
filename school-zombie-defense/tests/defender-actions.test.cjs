@@ -257,7 +257,7 @@ assert.doesNotMatch(
 );
 assert.match(
   animationUpdate,
-  /animation\.frameDurations\?\.\[animation\.frame\]\s*\|\|\s*animation\.frameDuration/,
+  /(?:animation\.frameDurations\?\.\[animation\.frame\]|\(\(\(__oc\d+ = animation\.frameDurations\) === null \|\| __oc\d+ === void 0 \? void 0 : __oc\d+\[animation\.frame\]\)\))\s*\|\|\s*animation\.frameDuration/,
   "attack animation updates must honor per-frame timing"
 );
 assert.match(
@@ -1086,7 +1086,7 @@ assertMeasuredMuzzlesTouchReleaseArt();
   );
   assert.match(
     gameSource,
-    /\.setOrigin\(0\.5, usesHorizontalProjectile \? 0\.5 : \(PROJECTILE_TAIL_ORIGINS\[defender\.projectile\] \?\? 1\)\)/,
+    /\.setOrigin\(0\.5, usesHorizontalProjectile \? 0\.5 : (?:\(PROJECTILE_TAIL_ORIGINS\[defender\.projectile\] \?\? 1\)|\(\(\(__oc\d+ = PROJECTILE_TAIL_ORIGINS\[defender\.projectile\]\) !== null && __oc\d+ !== void 0 \? __oc\d+ : 1\)\))\)/,
     "bullets must use their visible-tail origin"
   );
 }
@@ -1134,7 +1134,7 @@ assert.match(
 );
 assert.match(
   gameSource,
-  /createMuzzle\(x,\s*y,\s*muzzle\.effectAngle\s*\?\?\s*angle,\s*defender\.projectile\)/,
+  /createMuzzle\(x,\s*y,\s*(?:muzzle\.effectAngle\s*\?\?\s*angle|\(\(\(__oc\d+ = muzzle\.effectAngle\) !== null && __oc\d+ !== void 0 \? __oc\d+ : angle\)\)),\s*defender\.projectile\)/,
   "directional weapon muzzle effects must use their measured barrel angle"
 );
 const rebuildSource = fs.readFileSync(path.join(root, "tools", "rebuild-character-actions.py"), "utf8");

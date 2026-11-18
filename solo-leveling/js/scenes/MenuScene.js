@@ -200,12 +200,12 @@ export class MenuScene extends Phaser.Scene {
 
         if (hasSave) {
             const summary = GameScene.getSavedSummary();
-            const savedText = getCharacterText(getCharacter(summary?.characterId));
-            const min = Math.floor((summary?.timeSec || 0) / 60).toString().padStart(2, '0');
-            const sec = ((summary?.timeSec || 0) % 60).toString().padStart(2, '0');
+            const savedText = getCharacterText(getCharacter(((summary === null || summary === void 0 ? void 0 : summary.characterId))));
+            const min = Math.floor((((summary === null || summary === void 0 ? void 0 : summary.timeSec)) || 0) / 60).toString().padStart(2, '0');
+            const sec = ((((summary === null || summary === void 0 ? void 0 : summary.timeSec)) || 0) % 60).toString().padStart(2, '0');
             this._makeResumeButton(centerX - btnW / 2, nextActionY, btnW, resumeH, {
                 title: t('continueGame'),
-                meta: `${savedText.name}  LV.${String(summary?.level || 1).padStart(2, '0')}  ·  ${min}:${sec}`.trim(),
+                meta: `${savedText.name}  LV.${String(((summary === null || summary === void 0 ? void 0 : summary.level)) || 1).padStart(2, '0')}  ·  ${min}:${sec}`.trim(),
                 isNarrow,
                 onClick: () => startGame(true),
             });
@@ -286,16 +286,16 @@ export class MenuScene extends Phaser.Scene {
         });
     }
 
-    _createCleanMenu() {
+    _createCleanMenu() { var __oc0, __oc1, __oc10;
         const alLink = document.getElementById('archerlab-link');
         if (alLink) alLink.style.display = '';
         const container = document.getElementById('game-container');
-        const cssW = container?.clientWidth || window.innerWidth;
-        const cssH = container?.clientHeight || window.innerHeight;
+        const cssW = ((container === null || container === void 0 ? void 0 : container.clientWidth)) || window.innerWidth;
+        const cssH = ((container === null || container === void 0 ? void 0 : container.clientHeight)) || window.innerHeight;
         const px = GAME_WIDTH / cssW;
         const hasSave = GameScene.hasSavedGame();
         const layout = getShadowMenuLayout(cssW, cssH, hasSave);
-        const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
+        const reduceMotion = (((__oc1 = (__oc0 = window.matchMedia) === null || __oc0 === void 0 ? void 0 : __oc0.call(window, '(prefers-reduced-motion: reduce)')) === null || __oc1 === void 0 ? void 0 : __oc1.matches)) === true;
         this._modalElements = [];
         this._dropdownElements = [];
         this._startingGame = false;
@@ -321,11 +321,11 @@ export class MenuScene extends Phaser.Scene {
         this._fitText(title, layout.contentW * px, layout.titleSize * 2.3 * px);
         this._createPremiumHero(layout, px);
 
-        const startGame = async (resume = false, characterIdOverride = null) => {
+        const startGame = async (resume = false, characterIdOverride = null) => { var __oc2, __oc3, __oc4;
             if (this._startingGame) return;
             this._startingGame = true;
             const characterId = resume
-                ? (GameScene.getSavedSummary()?.characterId || characterIdOverride || this.selectedCharacterId)
+                ? ((((__oc2 = GameScene.getSavedSummary()) === null || __oc2 === void 0 ? void 0 : __oc2.characterId)) || characterIdOverride || this.selectedCharacterId)
                 : setStoredCharacterId(characterIdOverride || this.selectedCharacterId);
             this.selectedCharacterId = characterId;
             if (!this.game._soundManager) {
@@ -336,7 +336,7 @@ export class MenuScene extends Phaser.Scene {
             sm.stopIntroMusic();
             await sm.resume(true);
             const assetsReady = await this._ensureGameplayAssetsLoaded(characterId);
-            if (!assetsReady || !this.sys?.isActive?.()) { this._startingGame = false; return; }
+            if (!assetsReady || !(((__oc4 = (__oc3 = this.sys) === null || __oc3 === void 0 ? void 0 : __oc3.isActive) === null || __oc4 === void 0 ? void 0 : __oc4.call(__oc3)))) { this._startingGame = false; return; }
             const duration = reduceMotion ? 0 : 300;
             if (duration) this.cameras.main.fadeOut(duration, 0, 0, 0);
             this.time.delayedCall(duration, () => this.scene.start('GameScene', { resume, characterId }));
@@ -346,11 +346,11 @@ export class MenuScene extends Phaser.Scene {
         let actionY = layout.actionsY;
         if (hasSave) {
             const summary = GameScene.getSavedSummary();
-            const characterText = getCharacterText(getCharacter(summary?.characterId));
-            const minutes = Math.floor((summary?.timeSec || 0) / 60);
-            const seconds = String((summary?.timeSec || 0) % 60).padStart(2, '0');
+            const characterText = getCharacterText(getCharacter(((summary === null || summary === void 0 ? void 0 : summary.characterId))));
+            const minutes = Math.floor((((summary === null || summary === void 0 ? void 0 : summary.timeSec)) || 0) / 60);
+            const seconds = String((((summary === null || summary === void 0 ? void 0 : summary.timeSec)) || 0) % 60).padStart(2, '0');
             this._makePremiumAction(btnX, actionY, btnW, layout.buttonH, px, {
-                label: t('continueGame'), meta: `${characterText.name} · LV.${summary?.level || 1} · ${minutes}:${seconds}`,
+                label: t('continueGame'), meta: `${characterText.name} · LV.${((summary === null || summary === void 0 ? void 0 : summary.level)) || 1} · ${minutes}:${seconds}`,
                 onClick: () => startGame(true),
             });
             actionY += layout.buttonH + layout.gap;
@@ -364,22 +364,22 @@ export class MenuScene extends Phaser.Scene {
         });
         this._createLanguageDropdown(layout.portrait);
         let focusIndex = hasSave ? 1 : 0;
-        const onMenuKey = (event) => {
-            if (event.target?.closest?.('a, button, input, select, textarea, [contenteditable]')) return;
+        const onMenuKey = (event) => { var __oc5, __oc6, __oc7, __oc8, __oc9;
+            if ((((__oc6 = (__oc5 = event.target) === null || __oc5 === void 0 ? void 0 : __oc5.closest) === null || __oc6 === void 0 ? void 0 : __oc6.call(__oc5, 'a, button, input, select, textarea, [contenteditable]')))) return;
             if (this._startingGame || this._characterSelectOpen || this._modalElements.some(el => el.active)) return;
             if (!['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key)) return;
             event.preventDefault();
-            if (event.key === 'Enter') { this._menuKeyboardActions[focusIndex]?.emit('pointerdown'); return; }
-            this._menuKeyboardActions[focusIndex]?.emit('pointerout');
+            if (event.key === 'Enter') { (((__oc7 = this._menuKeyboardActions[focusIndex]) === null || __oc7 === void 0 ? void 0 : __oc7.emit('pointerdown'))); return; }
+            (((__oc8 = this._menuKeyboardActions[focusIndex]) === null || __oc8 === void 0 ? void 0 : __oc8.emit('pointerout')));
             focusIndex = (focusIndex + (event.key === 'ArrowDown' ? 1 : -1) + this._menuKeyboardActions.length) % this._menuKeyboardActions.length;
-            this._menuKeyboardActions[focusIndex]?.emit('pointerover');
+            (((__oc9 = this._menuKeyboardActions[focusIndex]) === null || __oc9 === void 0 ? void 0 : __oc9.emit('pointerover')));
         };
-        this.input.keyboard?.on('keydown', onMenuKey);
+        (((__oc10 = this.input.keyboard) === null || __oc10 === void 0 ? void 0 : __oc10.on('keydown', onMenuKey)));
         if (!reduceMotion) this.cameras.main.fadeIn(300, 0, 0, 0);
-        this.events.once('shutdown', () => {
-            this.input.keyboard?.off('keydown', onMenuKey);
+        this.events.once('shutdown', () => { var __oc11;
+            (((__oc11 = this.input.keyboard) === null || __oc11 === void 0 ? void 0 : __oc11.off('keydown', onMenuKey)));
             this._menuKeyboardActions = [];
-            [...this._dropdownElements, ...this._modalElements].forEach(el => { if (el?.active) el.destroy(); });
+            [...this._dropdownElements, ...this._modalElements].forEach(el => { if (((el === null || el === void 0 ? void 0 : el.active))) el.destroy(); });
             this._dropdownElements = [];
             this._modalElements = [];
         });
@@ -420,7 +420,7 @@ export class MenuScene extends Phaser.Scene {
             .setDepth(8).setInteractive({ useHandCursor: true });
         hit.on('pointerover', () => draw(true));
         hit.on('pointerout', () => draw(false));
-        hit.on('pointerdown', () => { if (!this._startingGame) onClick?.(); });
+        hit.on('pointerdown', () => { if (!this._startingGame) ((onClick === null || onClick === void 0 ? void 0 : onClick())); });
         this._menuKeyboardActions.push(hit);
     }
 
@@ -569,12 +569,12 @@ export class MenuScene extends Phaser.Scene {
 
         if (hasSave) {
             const summary = GameScene.getSavedSummary();
-            const savedText = getCharacterText(getCharacter(summary?.characterId));
-            const min = Math.floor((summary?.timeSec || 0) / 60).toString().padStart(2, '0');
-            const sec = ((summary?.timeSec || 0) % 60).toString().padStart(2, '0');
+            const savedText = getCharacterText(getCharacter(((summary === null || summary === void 0 ? void 0 : summary.characterId))));
+            const min = Math.floor((((summary === null || summary === void 0 ? void 0 : summary.timeSec)) || 0) / 60).toString().padStart(2, '0');
+            const sec = ((((summary === null || summary === void 0 ? void 0 : summary.timeSec)) || 0) % 60).toString().padStart(2, '0');
             this._makeMenuResumeButton(btnX, actionY, btnW, resumeH, {
                 title: t('continueGame'),
-                meta: `${savedText.name}  LV.${String(summary?.level || 1).padStart(2, '0')}  |  ${min}:${sec}`.trim(),
+                meta: `${savedText.name}  LV.${String(((summary === null || summary === void 0 ? void 0 : summary.level)) || 1).padStart(2, '0')}  |  ${min}:${sec}`.trim(),
                 isNarrow: isCompactMenu,
                 onClick: () => startGame(true),
             });
@@ -815,11 +815,11 @@ export class MenuScene extends Phaser.Scene {
                 this.load.off('loaderror', onError);
                 if (onComplete) this.load.off('complete', onComplete);
                 if (onShutdown) this.events.off('shutdown', onShutdown);
-                if (loadingIcon?.active) this.tweens.killTweensOf(loadingIcon);
+                if (((loadingIcon === null || loadingIcon === void 0 ? void 0 : loadingIcon.active))) this.tweens.killTweensOf(loadingIcon);
                 if (dim.active) dim.destroy();
-                if (panel?.active) panel.destroy();
+                if (((panel === null || panel === void 0 ? void 0 : panel.active))) panel.destroy();
                 if (innerShade.active) innerShade.destroy();
-                if (loadingIcon?.active) loadingIcon.destroy();
+                if (((loadingIcon === null || loadingIcon === void 0 ? void 0 : loadingIcon.active))) loadingIcon.destroy();
                 if (loading.active) loading.destroy();
                 if (barBg.active) barBg.destroy();
                 if (barFill.active) barFill.destroy();
@@ -899,7 +899,7 @@ export class MenuScene extends Phaser.Scene {
         this._fitText(meta, textW, h * 0.3);
     }
 
-    _makeMenuResumeButton(x, y, w, h, { title, meta, isNarrow = false, onClick }) {
+    _makeMenuResumeButton(x, y, w, h, { title, meta, isNarrow = false, onClick }) { var __oc12;
         const normalKey = this.textures.exists('start_button_primary')
             ? 'start_button_primary'
             : (this.textures.exists('start_button_primary_wide') ? 'start_button_primary_wide' : 'ui_panel_gold');
@@ -912,7 +912,7 @@ export class MenuScene extends Phaser.Scene {
             depth: 4.5,
             tint: 0x7be5ff,
         });
-        glow.setBlendMode?.(Phaser.BlendModes.ADD);
+        (((__oc12 = glow.setBlendMode) === null || __oc12 === void 0 ? void 0 : __oc12.call(glow, Phaser.BlendModes.ADD)));
         const bg = this._addBitmapPanel(x, y, w, h, {
             key: normalKey,
             alpha: 0.98,
@@ -948,26 +948,26 @@ export class MenuScene extends Phaser.Scene {
         const titleScale = this._fitText(titleText, w - uv(86), h * 0.36);
         const metaScale = this._fitText(metaText, w - uv(104), h * 0.22);
 
-        hit.on('pointerover', () => {
+        hit.on('pointerover', () => { var __oc13;
             if (this.textures.exists(hoverKey)) bg.setTexture(hoverKey).setDisplaySize(w, h);
             bg.setAlpha(1);
-            if (icon?.active) icon.setAlpha(1);
+            if (((icon === null || icon === void 0 ? void 0 : icon.active))) icon.setAlpha(1);
             titleText.setScale(titleScale * 1.02);
             metaText.setScale(metaScale * 1.02);
-            glow.setAlpha?.(0.22);
+            (((__oc13 = glow.setAlpha) === null || __oc13 === void 0 ? void 0 : __oc13.call(glow, 0.22)));
         });
-        hit.on('pointerout', () => {
+        hit.on('pointerout', () => { var __oc14;
             bg.setTexture(normalKey).setDisplaySize(w, h);
             bg.setAlpha(0.98);
-            if (icon?.active) icon.setAlpha(0.88);
+            if (((icon === null || icon === void 0 ? void 0 : icon.active))) icon.setAlpha(0.88);
             titleText.setScale(titleScale);
             metaText.setScale(metaScale);
-            glow.setAlpha?.(0.12);
+            (((__oc14 = glow.setAlpha) === null || __oc14 === void 0 ? void 0 : __oc14.call(glow, 0.12)));
         });
         hit.on('pointerdown', () => onClick && onClick());
     }
 
-    _makeMenuButton(x, y, w, h, { label, labelColor, labelSize = 16, labelFont = UI_FONT_KR, primary = false, onClick }) {
+    _makeMenuButton(x, y, w, h, { label, labelColor, labelSize = 16, labelFont = UI_FONT_KR, primary = false, onClick }) { var __oc15;
         const preferredNormal = primary ? 'start_button_primary' : 'start_button_secondary';
         const preferredHover = primary ? 'start_button_primary_hover' : 'start_button_secondary_hover';
         const normalKey = this.textures.exists(preferredNormal)
@@ -988,7 +988,7 @@ export class MenuScene extends Phaser.Scene {
                 tint: 0x8cecff,
             })
             : null;
-        glow?.setBlendMode?.(Phaser.BlendModes.ADD);
+        (((__oc15 = glow === null || glow === void 0 ? void 0 : glow.setBlendMode) === null || __oc15 === void 0 ? void 0 : __oc15.call(glow, Phaser.BlendModes.ADD)));
         const bg = this._addBitmapPanel(x, y, w, h, {
             key: normalKey,
             alpha: primary ? 0.99 : 0.94,
@@ -1016,19 +1016,19 @@ export class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(7);
         const baseScale = this._fitText(txt, w - uv(primary ? 128 : 98), h * (primary ? 0.38 : 0.34));
 
-        hit.on('pointerover', () => {
+        hit.on('pointerover', () => { var __oc16;
             if (this.textures.exists(hoverKey)) bg.setTexture(hoverKey).setDisplaySize(w, h);
             bg.setAlpha(1);
-            if (icon?.active) icon.setAlpha(1);
+            if (((icon === null || icon === void 0 ? void 0 : icon.active))) icon.setAlpha(1);
             txt.setScale(baseScale * 1.02);
-            glow?.setAlpha?.(0.28);
+            (((__oc16 = glow === null || glow === void 0 ? void 0 : glow.setAlpha) === null || __oc16 === void 0 ? void 0 : __oc16.call(glow, 0.28)));
         });
-        hit.on('pointerout', () => {
+        hit.on('pointerout', () => { var __oc17;
             bg.setTexture(normalKey).setDisplaySize(w, h);
             bg.setAlpha(primary ? 0.99 : 0.94);
-            if (icon?.active) icon.setAlpha(primary ? 0.96 : 0.82);
+            if (((icon === null || icon === void 0 ? void 0 : icon.active))) icon.setAlpha(primary ? 0.96 : 0.82);
             txt.setScale(baseScale);
-            glow?.setAlpha?.(0.16);
+            (((__oc17 = glow === null || glow === void 0 ? void 0 : glow.setAlpha) === null || __oc17 === void 0 ? void 0 : __oc17.call(glow, 0.16)));
         });
         hit.on('pointerdown', () => onClick && onClick());
     }
@@ -1274,11 +1274,11 @@ export class MenuScene extends Phaser.Scene {
         }
     }
 
-    _coverImage(key, x, y, w, h, { focusX = 0.5, focusY = 0.5, targetX = 0.5, targetY = 0.5 } = {}) {
+    _coverImage(key, x, y, w, h, { focusX = 0.5, focusY = 0.5, targetX = 0.5, targetY = 0.5 } = {}) { var __oc18, __oc19;
         const img = this.add.image(x, y, key).setOrigin(0.5);
-        const source = this.textures.get(key)?.getSourceImage?.();
-        const iw = Math.max(source?.width || w, 1);
-        const ih = Math.max(source?.height || h, 1);
+        const source = (((__oc19 = (__oc18 = this.textures.get(key)) === null || __oc18 === void 0 ? void 0 : __oc18.getSourceImage) === null || __oc19 === void 0 ? void 0 : __oc19.call(__oc18)));
+        const iw = Math.max(((source === null || source === void 0 ? void 0 : source.width)) || w, 1);
+        const ih = Math.max(((source === null || source === void 0 ? void 0 : source.height)) || h, 1);
         const scale = Math.max(w / iw, h / ih);
         const renderW = iw * scale;
         const renderH = ih * scale;
@@ -1395,10 +1395,10 @@ export class MenuScene extends Phaser.Scene {
         }
     }
 
-    _refreshHeroPreview(character = getCharacter(this.selectedCharacterId)) {
+    _refreshHeroPreview(character = getCharacter(this.selectedCharacterId)) { var __oc20, __oc21, __oc22, __oc23, __oc24, __oc25, __oc26;
         const texture = this._getCharacterHeroTexture(character);
         const characterText = getCharacterText(character);
-        if (this._heroPreviewSprite?.active && this.textures.exists(texture)) {
+        if ((((__oc20 = this._heroPreviewSprite) === null || __oc20 === void 0 ? void 0 : __oc20.active)) && this.textures.exists(texture)) {
             this._heroPreviewSprite.setTexture(texture);
             this._heroPreviewSprite.setAlpha(0.98);
             this._fitImageDisplay(
@@ -1409,10 +1409,10 @@ export class MenuScene extends Phaser.Scene {
             );
             this._applyHeroPreviewMask(this._heroPreviewSprite, this._heroPreviewSprite.x, this._heroPreviewSprite.y, this._heroPreviewMaxW || uv(280));
         }
-        if (this._heroPreviewCaption?.active) {
+        if ((((__oc21 = this._heroPreviewCaption) === null || __oc21 === void 0 ? void 0 : __oc21.active))) {
             this._heroPreviewCaption.setText(characterText.name);
         }
-        if (this._heroPreviewCaptionMeta?.active) {
+        if ((((__oc22 = this._heroPreviewCaptionMeta) === null || __oc22 === void 0 ? void 0 : __oc22.active))) {
             const hasStats = this._heroPreviewCaptionMeta.text.includes('HP ');
             this._heroPreviewCaptionMeta.setText(hasStats
                 ? `${characterText.archetype}  ·  HP ${character.stats.hp}  ·  ATK ${character.stats.attack}`
@@ -1420,15 +1420,15 @@ export class MenuScene extends Phaser.Scene {
             );
             this._heroPreviewCaptionMeta.setColor(character.accentText || SYSTEM.TEXT_CYAN);
         }
-        if (this._heroPreviewAura?.active && this._heroPreviewAura.setFillStyle) {
+        if ((((__oc23 = this._heroPreviewAura) === null || __oc23 === void 0 ? void 0 : __oc23.active)) && this._heroPreviewAura.setFillStyle) {
             this._heroPreviewAura.setFillStyle(character.accent, 0.04);
             this._heroPreviewAura.setStrokeStyle(1, character.accent, 0.2);
-        } else if (this._heroPreviewAura?.active && this._heroPreviewAura.setTint) {
+        } else if ((((__oc24 = this._heroPreviewAura) === null || __oc24 === void 0 ? void 0 : __oc24.active)) && this._heroPreviewAura.setTint) {
             this._heroPreviewAura.setTint(character.accent);
         }
-        if (this._heroPreviewRing?.active && this._heroPreviewRing.setStrokeStyle) {
+        if ((((__oc25 = this._heroPreviewRing) === null || __oc25 === void 0 ? void 0 : __oc25.active)) && this._heroPreviewRing.setStrokeStyle) {
             this._heroPreviewRing.setStrokeStyle(2, character.accent, 0.28);
-        } else if (this._heroPreviewRing?.active && this._heroPreviewRing.setTint) {
+        } else if ((((__oc26 = this._heroPreviewRing) === null || __oc26 === void 0 ? void 0 : __oc26.active)) && this._heroPreviewRing.setTint) {
             this._heroPreviewRing.setTint(character.accent);
         }
     }
@@ -1437,10 +1437,10 @@ export class MenuScene extends Phaser.Scene {
         return this._getCharacterPortraitTexture(character);
     }
 
-    _fitImageDisplay(image, textureKey, maxW, maxH) {
-        const source = this.textures.get(textureKey)?.getSourceImage?.();
-        const iw = Math.max(source?.width || maxW, 1);
-        const ih = Math.max(source?.height || maxH, 1);
+    _fitImageDisplay(image, textureKey, maxW, maxH) { var __oc27, __oc28;
+        const source = (((__oc28 = (__oc27 = this.textures.get(textureKey)) === null || __oc27 === void 0 ? void 0 : __oc27.getSourceImage) === null || __oc28 === void 0 ? void 0 : __oc28.call(__oc27)));
+        const iw = Math.max(((source === null || source === void 0 ? void 0 : source.width)) || maxW, 1);
+        const ih = Math.max(((source === null || source === void 0 ? void 0 : source.height)) || maxH, 1);
         const scale = Math.min(maxW / iw, maxH / ih);
         image.setDisplaySize(iw * scale, ih * scale);
     }
@@ -1698,8 +1698,8 @@ export class MenuScene extends Phaser.Scene {
         return cardTop + cardH;
     }
 
-    _createLanguageDropdown(isMobile) {
-        const current = (LANGUAGES.find(l => l.code === LANG)?.code || 'ko').toUpperCase();
+    _createLanguageDropdown(isMobile) { var __oc29;
+        const current = ((((__oc29 = LANGUAGES.find(l => l.code === LANG)) === null || __oc29 === void 0 ? void 0 : __oc29.code)) || 'ko').toUpperCase();
         const viewportW = window.innerWidth || GAME_WIDTH;
         const viewportH = window.innerHeight || GAME_HEIGHT;
         const cssPerUnit = Math.max(0.01, Math.min(viewportW / GAME_WIDTH, viewportH / GAME_HEIGHT));
@@ -1772,7 +1772,7 @@ export class MenuScene extends Phaser.Scene {
         this._dropdownElements.push(triggerG, triggerHit, triggerText, dismiss, ...items);
     }
 
-    _showCharacterSelectModal(onSelect) {
+    _showCharacterSelectModal(onSelect) { var __oc30, __oc31, __oc36;
         if (this._startingGame || this._characterSelectOpen) return;
         this._characterSelectOpen = true;
 
@@ -1780,8 +1780,8 @@ export class MenuScene extends Phaser.Scene {
         const cx = GAME_WIDTH / 2;
         const cy = GAME_HEIGHT / 2;
         const isPortrait = GAME_HEIGHT > GAME_WIDTH;
-        const cssW = document.getElementById('game-container')?.clientWidth || window.innerWidth;
-        const cssH = document.getElementById('game-container')?.clientHeight || window.innerHeight;
+        const cssW = (((__oc30 = document.getElementById('game-container')) === null || __oc30 === void 0 ? void 0 : __oc30.clientWidth)) || window.innerWidth;
+        const cssH = (((__oc31 = document.getElementById('game-container')) === null || __oc31 === void 0 ? void 0 : __oc31.clientHeight)) || window.innerHeight;
         const px = GAME_WIDTH / cssW;
         const isShortLandscape = !isPortrait && cssH <= 500;
         const depth = 140;
@@ -1872,10 +1872,10 @@ export class MenuScene extends Phaser.Scene {
         };
         const redrawCards = () => cardRefs.forEach(ref => redrawCard(ref, false));
 
-        const closeAll = () => {
+        const closeAll = () => { var __oc32;
             if (!this._characterSelectOpen) return;
             this._characterSelectOpen = false;
-            this.input.keyboard?.off('keydown', onSelectKey);
+            (((__oc32 = this.input.keyboard) === null || __oc32 === void 0 ? void 0 : __oc32.off('keydown', onSelectKey)));
             elements.forEach(el => { if (el && el.destroy) el.destroy(); });
             this._modalElements = this._modalElements.filter(el => !elements.includes(el));
         };
@@ -1954,20 +1954,22 @@ export class MenuScene extends Phaser.Scene {
         redrawCards();
 
         let focusedCard = Math.max(0, characters.findIndex(character => character.id === this.selectedCharacterId));
-        const onSelectKey = (event) => {
-            if (event.target?.closest?.('a, button, input, select, textarea, [contenteditable]')) return;
+        const onSelectKey = (event) => { var __oc33, __oc34, __oc35;
+            if ((((__oc34 = (__oc33 = event.target) === null || __oc33 === void 0 ? void 0 : __oc33.closest) === null || __oc34 === void 0 ? void 0 : __oc34.call(__oc33, 'a, button, input, select, textarea, [contenteditable]')))) return;
             if (!this._characterSelectOpen || this._startingGame) return;
             if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', 'Escape'].includes(event.key)) return;
             event.preventDefault();
             if (event.key === 'Escape') { closeAll(); return; }
-            if (event.key === 'Enter') { cardRefs[focusedCard]?.hit.emit('pointerdown'); return; }
+            if (event.key === 'Enter') { (((__oc35 = cardRefs[focusedCard]) === null || __oc35 === void 0 ? void 0 : __oc35.hit.emit('pointerdown'))); return; }
             const step = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowUp' ? -columns : event.key === 'ArrowDown' ? columns : 1;
             focusedCard = (focusedCard + step + cardRefs.length) % cardRefs.length;
             redrawCards();
             redrawCard(cardRefs[focusedCard], true);
         };
-        this.input.keyboard?.on('keydown', onSelectKey);
-        this.events.once('shutdown', () => this.input.keyboard?.off('keydown', onSelectKey));
+        (((__oc36 = this.input.keyboard) === null || __oc36 === void 0 ? void 0 : __oc36.on('keydown', onSelectKey)));
+        this.events.once('shutdown', () => { var __oc37; return (
+((__oc37 = this.input.keyboard) === null || __oc37 === void 0 ? void 0 : __oc37.off('keydown', onSelectKey))
+); });
 
         const closeBtn = this.add.text(cx, by + boxH - (isShortLandscape ? 30 * px : uv(46)), t('close'), {
             fontSize: `${14 * px}px`,
@@ -2097,7 +2099,9 @@ export class MenuScene extends Phaser.Scene {
         const elements = [];
         let closed = false;
         const markClosed = () => { closed = true; };
-        const isClosed = () => closed || (this.scene?.isActive && !this.scene.isActive());
+        const isClosed = () => { var __oc38; return (
+closed || ((((__oc38 = this.scene) === null || __oc38 === void 0 ? void 0 : __oc38.isActive)) && !this.scene.isActive())
+); };
         this.events.once('shutdown', markClosed);
 
         const cx = GAME_WIDTH / 2;
@@ -2327,8 +2331,8 @@ export class MenuScene extends Phaser.Scene {
             elements.push(g, hit, txt);
         };
 
-        const onRankingKey = (event) => {
-            if (event.target?.closest?.('a, button, input, select, textarea, [contenteditable]')) return;
+        const onRankingKey = (event) => { var __oc39, __oc40;
+            if ((((__oc40 = (__oc39 = event.target) === null || __oc39 === void 0 ? void 0 : __oc39.closest) === null || __oc40 === void 0 ? void 0 : __oc40.call(__oc39, 'a, button, input, select, textarea, [contenteditable]')))) return;
             if (event.key === 'Escape') {
                 event.preventDefault();
                 closeAll();
@@ -2403,7 +2407,7 @@ export class MenuScene extends Phaser.Scene {
                 .catch(() => {
                     if (isClosed() || seq !== requestSeq) return;
                     if (loadingTween) loadingTween.stop();
-                    if (loadingIcon?.active && this.textures.exists('icon_error')) {
+                    if (((loadingIcon === null || loadingIcon === void 0 ? void 0 : loadingIcon.active)) && this.textures.exists('icon_error')) {
                         loadingIcon.setTexture('icon_error').setDisplaySize(uv(46), uv(46));
                         loadingIcon.setAngle(0);
                     }

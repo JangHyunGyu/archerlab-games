@@ -293,7 +293,7 @@ async function processMatches(initialMatches, originCells, generation = playGene
     const resolution = state.board.buildResolution(matches, originCells);
     const removalCells = resolution.remove.map((cell) => {
       const gem = state.board.get(cell.row, cell.col);
-      return { ...cell, type: gem?.type || null, special: gem?.special || null };
+      return { ...cell, type: ((gem === null || gem === void 0 ? void 0 : gem.type)) || null, special: ((gem === null || gem === void 0 ? void 0 : gem.special)) || null };
     });
     const removedGems = removalCells.filter((cell) => cell.type);
     if (removedGems.length === 0 && resolution.specials.length === 0) break;
@@ -362,7 +362,7 @@ async function ensurePlayableBoard() {
 }
 
 function repairPlayableBoard({ announce = true } = {}) {
-  if (!state?.board) return false;
+  if (!((state === null || state === void 0 ? void 0 : state.board))) return false;
   if (state.board.findMatches().length > 0) return false;
   if (state.board.findPossibleMove()) return false;
 
@@ -393,7 +393,7 @@ function finishTurn() {
 
 function unlockBoard() {
   resolving = false;
-  if (state?.status === 'paused') {
+  if (((state === null || state === void 0 ? void 0 : state.status)) === 'paused') {
     locked = true;
     input.setEnabled(false);
     return;
@@ -407,15 +407,15 @@ function unlockBoard() {
   input.setEnabled(true);
 }
 
-function getFallAnimationWait(moves) {
-  if (!moves?.length) return 190;
+function getFallAnimationWait(moves) { var __oc0, __oc1, __oc2, __oc3, __oc4;
+  if (!((moves === null || moves === void 0 ? void 0 : moves.length))) return 190;
   let longest = 0;
   for (const move of moves) {
-    const fromRow = Number(move.from?.row ?? move.to.row);
-    const toRow = Number(move.to?.row ?? fromRow);
+    const fromRow = Number((((__oc1 = (__oc0 = move.from) === null || __oc0 === void 0 ? void 0 : __oc0.row) !== null && __oc1 !== void 0 ? __oc1 : move.to.row)));
+    const toRow = Number((((__oc3 = (__oc2 = move.to) === null || __oc2 === void 0 ? void 0 : __oc2.row) !== null && __oc3 !== void 0 ? __oc3 : fromRow)));
     const distance = Math.max(1, fromRow < 0 ? toRow + 1.6 : toRow - fromRow);
     const duration = Math.min(920, 380 + distance * 72);
-    const stagger = Math.min(160, Number(move.to?.col || 0) * 12 + Math.max(0, 7 - toRow) * 4);
+    const stagger = Math.min(160, Number((((__oc4 = move.to) === null || __oc4 === void 0 ? void 0 : __oc4.col)) || 0) * 12 + Math.max(0, 7 - toRow) * 4);
     longest = Math.max(longest, duration + stagger);
   }
   return Math.min(1120, Math.max(520, longest + 70));
@@ -463,8 +463,8 @@ async function submitRank() {
       time_limit: TIME_LIMIT
     });
     submitted = true;
-    ui.setSubmitStatus(result?.pending ? ui.text('기록을 보관했어요. 연결되면 자동으로 등록합니다.', 'Score saved. It will submit automatically when connected.', 'スコアを保存しました。接続が戻ると自動で登録されます。') : `${ui.text('등록 완료', 'Submitted', '登録完了')}${result?.rank ? ` (#${result.rank})` : ''}`, 'ok');
-  } catch {
+    ui.setSubmitStatus(((result === null || result === void 0 ? void 0 : result.pending)) ? ui.text('기록을 보관했어요. 연결되면 자동으로 등록합니다.', 'Score saved. It will submit automatically when connected.', 'スコアを保存しました。接続が戻ると自動で登録されます。') : `${ui.text('등록 완료', 'Submitted', '登録完了')}${((result === null || result === void 0 ? void 0 : result.rank)) ? ` (#${result.rank})` : ''}`, 'ok');
+  } catch (_err) {
     ui.setSubmitStatus(ui.text('등록 실패. 다시 시도해 주세요.', 'Submission failed. Please try again.', '登録できませんでした。もう一度お試しください。'), 'fail');
   } finally {
     rankSubmitInFlight = false;
@@ -486,7 +486,7 @@ async function openRanks() {
   try {
     const rows = await ranking.fetchTopRanks();
     ui.renderRanks(rows.length ? rows : localRowsWithRank(), myName);
-  } catch {
+  } catch (_err) {
     const localRows = localRowsWithRank();
     if (localRows.length) ui.renderRanks(localRows, myName);
     else ui.showRankError();
@@ -507,11 +507,11 @@ function samePlay(generation) {
   return generation === playGeneration && !!state && state.status !== 'result';
 }
 
-function vibrateMatch(combo, resolution) {
+function vibrateMatch(combo, resolution) { var __oc5;
   if (!navigator.vibrate) return;
-  const lineCount = Number(resolution?.lineCount || 1);
-  const longest = Number(resolution?.longest || 3);
-  const hasSpecial = (resolution?.activated?.length || 0) > 0;
+  const lineCount = Number(((resolution === null || resolution === void 0 ? void 0 : resolution.lineCount)) || 1);
+  const longest = Number(((resolution === null || resolution === void 0 ? void 0 : resolution.longest)) || 3);
+  const hasSpecial = ((((__oc5 = resolution === null || resolution === void 0 ? void 0 : resolution.activated) === null || __oc5 === void 0 ? void 0 : __oc5.length)) || 0) > 0;
   let pattern = [28, 18, 46];
 
   if (lineCount > 1 || longest >= 4) pattern = [38, 18, 58, 26, 74];
@@ -520,11 +520,11 @@ function vibrateMatch(combo, resolution) {
 
   try {
     navigator.vibrate(pattern);
-  } catch {}
+  } catch (_err) {}
 }
 
-function on(id, eventName, handler) {
-  document.getElementById(id)?.addEventListener(eventName, handler);
+function on(id, eventName, handler) { var __oc6;
+  (((__oc6 = document.getElementById(id)) === null || __oc6 === void 0 ? void 0 : __oc6.addEventListener(eventName, handler)));
 }
 
 function localRowsWithRank() {
@@ -569,9 +569,9 @@ class RankingClient {
       if (token !== this.rankRunToken) return null;
       this.sessionId = data.session_id || null;
       return this.sessionId;
-    }).catch((error) => {
+    }).catch((error) => { var __oc7, __oc8;
       if (token !== this.rankRunToken) return null;
-      window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-session' }, 'ranking_client_exception');
+      (((__oc8 = (__oc7 = window.ArcherLabClientErrorReporter) === null || __oc7 === void 0 ? void 0 : __oc7.reportCodeException) === null || __oc8 === void 0 ? void 0 : __oc8.call(__oc7, error, { phase: 'rank-session' }, 'ranking_client_exception')));
       if (!this.unsupported) this.syncFailed = true;
       return null;
     });
@@ -597,9 +597,9 @@ class RankingClient {
     this.syncFailed = false;
   }
 
-  queueScoreEvent(event) {
+  queueScoreEvent(event) { var __oc9;
     if (this.unsupported || this.syncFailed || !event) return;
-    window.ArcherRanking?.track(GAME_ID, event, this.sessionId);
+    (((__oc9 = window.ArcherRanking) === null || __oc9 === void 0 ? void 0 : __oc9.track(GAME_ID, event, this.sessionId)));
     this.queue.push(event);
     this.flush();
   }
@@ -634,9 +634,9 @@ class RankingClient {
         this.queue.splice(0, batch.length);
       }
       return true;
-    })().catch((error) => {
+    })().catch((error) => { var __oc10, __oc11;
       if (token !== this.rankRunToken) return false;
-      window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-sync' }, 'ranking_client_exception');
+      (((__oc11 = (__oc10 = window.ArcherLabClientErrorReporter) === null || __oc10 === void 0 ? void 0 : __oc10.reportCodeException) === null || __oc11 === void 0 ? void 0 : __oc11.call(__oc10, error, { phase: 'rank-sync' }, 'ranking_client_exception')));
       if (!this.unsupported) this.syncFailed = true;
       return false;
     }).finally(() => {
@@ -645,7 +645,7 @@ class RankingClient {
     return this.flushPromise;
   }
 
-  async submit(playerName, score, extraData = {}) {
+  async submit(playerName, score, extraData = {}) { var __oc12, __oc13;
     if (window.ArcherRanking) {
       this.queue.forEach(event => window.ArcherRanking.track(GAME_ID, event, this.sessionId));
       return window.ArcherRanking.submit({ game_id: GAME_ID, player_name: playerName,
@@ -675,7 +675,7 @@ class RankingClient {
     });
     if (!res.ok) throw new Error(`rank submit ${res.status}`);
     const result = await res.json();
-    const verifiedScore = Number(result?.score ?? result?.best_score ?? submittedScore);
+    const verifiedScore = Number((((__oc13 = (__oc12 = result === null || result === void 0 ? void 0 : result.score) !== null && __oc12 !== void 0 ? __oc12 : result === null || result === void 0 ? void 0 : result.best_score) !== null && __oc13 !== void 0 ? __oc13 : submittedScore)));
     saveLocalRank(playerName, Number.isFinite(verifiedScore) ? verifiedScore : submittedScore, extraData);
     return result;
   }

@@ -2,22 +2,22 @@ import { COLORS, BOSS_TYPES } from '../utils/Constants.js';
 import { ShadowSoldier } from '../entities/ShadowSoldier.js';
 
 export class ShadowArmyManager {
-    constructor(scene) {
+    constructor(scene) { var __oc0;
         this.scene = scene;
         this.soldiers = [];
         this.maxSoldiers = 5;
-        this.enabled = scene?.player?.characterId === 'shadowMonarch';
+        this.enabled = (((__oc0 = scene === null || scene === void 0 ? void 0 : scene.player) === null || __oc0 === void 0 ? void 0 : __oc0.characterId)) === 'shadowMonarch';
         this.isPerformingArise = false;
         this._ariseElements = []; // Track all created elements for cleanup
         this._ariseTimers = new Set();
         this._destroyed = false;
     }
 
-    onBossKilled(boss) {
+    onBossKilled(boss) { var __oc1, __oc2, __oc3, __oc4, __oc5, __oc6, __oc7, __oc8;
         if (!this.enabled || this._destroyed) return;
         if (this.soldiers.length >= this.maxSoldiers) return;
         if (this.isPerformingArise) return;
-        if (!this.scene.scene.isActive() || this.scene.isGameOver || this.scene.statusWindow?.isOpen) return;
+        if (!this.scene.scene.isActive() || this.scene.isGameOver || (((__oc1 = this.scene.statusWindow) === null || __oc1 === void 0 ? void 0 : __oc1.isOpen))) return;
 
         // Capture boss data immediately (boss will be destroyed soon)
         const bossData = {
@@ -44,15 +44,15 @@ export class ShadowArmyManager {
             useBounds: camera.useBounds, target: camera._follow,
             lerpX: camera.lerp.x, lerpY: camera.lerp.y,
             roundPixels: camera.roundPixels,
-            bloomActive: this.scene._bloomFilter?.active === true,
-            messageVisible: this.scene.systemMessage?.visible !== false,
+            bloomActive: (((__oc2 = this.scene._bloomFilter) === null || __oc2 === void 0 ? void 0 : __oc2.active)) === true,
+            messageVisible: (((__oc3 = this.scene.systemMessage) === null || __oc3 === void 0 ? void 0 : __oc3.visible)) !== false,
         };
-        this.scene.systemMessage?.setVisible(false);
-        this.scene._bloomFilter?.setActive(false);
+        (((__oc4 = this.scene.systemMessage) === null || __oc4 === void 0 ? void 0 : __oc4.setVisible(false)));
+        (((__oc5 = this.scene._bloomFilter) === null || __oc5 === void 0 ? void 0 : __oc5.setActive(false)));
         camera.stopFollow();
-        camera.shakeEffect?.reset();
+        (((__oc6 = camera.shakeEffect) === null || __oc6 === void 0 ? void 0 : __oc6.reset()));
         this._focusAriseMap();
-        this.scene.mobileControls?._resetJoystick?.();
+        (((__oc8 = (__oc7 = this.scene.mobileControls) === null || __oc7 === void 0 ? void 0 : __oc7._resetJoystick) === null || __oc8 === void 0 ? void 0 : __oc8.call(__oc7)));
         try {
             this.scene.scene.pause();
             this.scene.scene.launch('AriseScene', { manager: this, bossData });
@@ -80,12 +80,12 @@ export class ShadowArmyManager {
         }
     }
 
-    _cleanupArise() {
+    _cleanupArise() { var __oc9, __oc10, __oc11, __oc12, __oc13, __oc14, __oc15, __oc16, __oc17, __oc18;
         if (!this.isPerformingArise) return;
         const presentation = this._presentationScene;
         this._presentationScene = null;
         // Kill tweens then destroy all tracked elements
-        const tweens = presentation?.tweens;
+        const tweens = ((presentation === null || presentation === void 0 ? void 0 : presentation.tweens));
         for (const el of this._ariseElements) {
             try {
                 if (tweens && el && el.active !== false) {
@@ -109,32 +109,32 @@ export class ShadowArmyManager {
         }
         const recruit = this._pendingRecruit;
         this._pendingRecruit = null;
-        const camera = this.scene?.cameras?.main;
+        const camera = (((__oc10 = (__oc9 = this.scene) === null || __oc9 === void 0 ? void 0 : __oc9.cameras) === null || __oc10 === void 0 ? void 0 : __oc10.main));
         const previous = this._cameraState;
         this._cameraState = null;
-        if (previous) this.scene.systemMessage?.setVisible(previous.messageVisible);
+        if (previous) (((__oc11 = this.scene.systemMessage) === null || __oc11 === void 0 ? void 0 : __oc11.setVisible(previous.messageVisible)));
         if (camera && previous) {
-            if (previous.bloomActive) this.scene._bloomFilter?.setActive(true);
+            if (previous.bloomActive) (((__oc12 = this.scene._bloomFilter) === null || __oc12 === void 0 ? void 0 : __oc12.setActive(true)));
             camera.useBounds = previous.useBounds;
             camera.setScroll(previous.scrollX, previous.scrollY);
-            if (previous.target?.active) {
+            if ((((__oc13 = previous.target) === null || __oc13 === void 0 ? void 0 : __oc13.active))) {
                 camera.startFollow(previous.target, previous.roundPixels, previous.lerpX, previous.lerpY);
                 camera.centerOn(previous.target.x, previous.target.y);
             }
         }
         try {
-            if (!this._destroyed && !this.scene?.isGameOver && recruit) {
+            if (!this._destroyed && !(((__oc14 = this.scene) === null || __oc14 === void 0 ? void 0 : __oc14.isGameOver)) && recruit) {
                 this.soldiers.push(new ShadowSoldier(this.scene, recruit.x, recruit.y, recruit.bossKey));
             }
         } finally {
             // Never leave combat suspended after either success or a VFX error.
-            if (!this._destroyed && !this.scene?.isGameOver && this.scene?.scene?.isPaused()) this.scene.scene.resume();
-            if (presentation?.scene?.isActive()) presentation.scene.stop();
+            if (!this._destroyed && !(((__oc15 = this.scene) === null || __oc15 === void 0 ? void 0 : __oc15.isGameOver)) && (((__oc17 = (__oc16 = this.scene) === null || __oc16 === void 0 ? void 0 : __oc16.scene) === null || __oc17 === void 0 ? void 0 : __oc17.isPaused()))) this.scene.scene.resume();
+            if ((((__oc18 = presentation === null || presentation === void 0 ? void 0 : presentation.scene) === null || __oc18 === void 0 ? void 0 : __oc18.isActive()))) presentation.scene.stop();
         }
     }
 
-    _focusAriseMap() {
-        const camera = this.scene?.cameras?.main;
+    _focusAriseMap() { var __oc19, __oc20;
+        const camera = (((__oc20 = (__oc19 = this.scene) === null || __oc19 === void 0 ? void 0 : __oc19.cameras) === null || __oc20 === void 0 ? void 0 : __oc20.main));
         const boss = this._pendingRecruit;
         if (!camera || !boss) return;
         camera.useBounds = false; // Edge-of-map bosses must also sit in the center.
@@ -146,12 +146,12 @@ export class ShadowArmyManager {
         return el;
     }
 
-    syncScreenLayout() {
+    syncScreenLayout() { var __oc21, __oc22;
         this._focusAriseMap();
-        const cam = this._presentationScene?.cameras?.main;
+        const cam = (((__oc22 = (__oc21 = this._presentationScene) === null || __oc21 === void 0 ? void 0 : __oc21.cameras) === null || __oc22 === void 0 ? void 0 : __oc22.main));
         if (!cam || !this._ariseElements) return;
         for (const el of this._ariseElements) {
-            const orient = el?._screenOrient;
+            const orient = ((el === null || el === void 0 ? void 0 : el._screenOrient));
             if (!orient || !el.active) continue;
             if (orient.mode === 'fill') {
                 el.setPosition(0, 0);
@@ -164,10 +164,10 @@ export class ShadowArmyManager {
 
     _delay(ms, callback) {
         const scene = this._presentationScene;
-        if (!scene?.time) return null;
-        const timer = scene.time.delayedCall(ms, () => {
+        if (!((scene === null || scene === void 0 ? void 0 : scene.time))) return null;
+        const timer = scene.time.delayedCall(ms, () => { var __oc23, __oc24;
             this._ariseTimers.delete(timer);
-            if (this._destroyed || !this.isPerformingArise || !scene.scene?.isActive?.()) return;
+            if (this._destroyed || !this.isPerformingArise || !(((__oc24 = (__oc23 = scene.scene) === null || __oc23 === void 0 ? void 0 : __oc23.isActive) === null || __oc24 === void 0 ? void 0 : __oc24.call(__oc23)))) return;
             callback();
         });
         this._ariseTimers.add(timer);
@@ -205,9 +205,9 @@ export class ShadowArmyManager {
         });
 
         // System message
-        this._delay(300, () => {
+        this._delay(300, () => { var __oc25;
             try {
-                if (!scene.scene?.isActive()) return;
+                if (!(((__oc25 = scene.scene) === null || __oc25 === void 0 ? void 0 : __oc25.isActive()))) return;
                 if (scene.systemMessage) {
                     scene.systemMessage.show('[시스템]', [
                         '그림자 추출이 가능한 대상을 감지했습니다.',
@@ -269,8 +269,8 @@ export class ShadowArmyManager {
 
                 // Purple particles (reduced count for performance)
                 for (let i = 0; i < 12; i++) {
-                    this._delay(i * 80, () => {
-                        if (!scene.scene?.isActive()) return;
+                    this._delay(i * 80, () => { var __oc26;
+                        if (!(((__oc26 = scene.scene) === null || __oc26 === void 0 ? void 0 : __oc26.isActive()))) return;
                         try {
                             const px = bossX + Phaser.Math.Between(-50, 50);
                             const p = this._trackElement(
@@ -364,8 +364,8 @@ export class ShadowArmyManager {
 
                                         // Multi-flash sequence (3 bursts)
                                         for (let f = 0; f < (scene.reducedMotion ? 0 : 3); f++) {
-                                            this._delay(f * 150, () => {
-                                                if (!scene.scene?.isActive()) return;
+                                            this._delay(f * 150, () => { var __oc27;
+                                                if (!(((__oc27 = scene.scene) === null || __oc27 === void 0 ? void 0 : __oc27.isActive()))) return;
                                                 try {
                                                     const fl = this._trackElement(scene.add.rectangle(0, 0, camW, camH,
                                                         f === 1 ? 0x7b2fff : COLORS.SHADOW_PRIMARY, 0
@@ -417,8 +417,8 @@ export class ShadowArmyManager {
 
                                         // Shadow particle explosion (massive burst)
                                         for (let i = 0; i < (scene.reducedMotion ? 8 : 25); i++) {
-                                            this._delay(i * 30, () => {
-                                                if (!scene.scene?.isActive()) return;
+                                            this._delay(i * 30, () => { var __oc28;
+                                                if (!(((__oc28 = scene.scene) === null || __oc28 === void 0 ? void 0 : __oc28.isActive()))) return;
                                                 try {
                                                     const angle = Math.random() * Math.PI * 2;
                                                     const dist = 20 + Math.random() * 40;
@@ -443,8 +443,8 @@ export class ShadowArmyManager {
 
                                         // Shadow ring waves (expanding outward)
                                         for (let r = 0; r < 3; r++) {
-                                            this._delay(r * 200, () => {
-                                                if (!scene.scene?.isActive()) return;
+                                            this._delay(r * 200, () => { var __oc29;
+                                                if (!(((__oc29 = scene.scene) === null || __oc29 === void 0 ? void 0 : __oc29.isActive()))) return;
                                                 try {
                                                     const ring = this._trackElement(scene.add.circle(bossX, bossY, 10,
                                                         0x7b2fff, 0
@@ -524,9 +524,9 @@ export class ShadowArmyManager {
                                                 });
 
                                                 // Success message
-                                                this._delay(300, () => {
+                                                this._delay(300, () => { var __oc30;
                                                     try {
-                                                        if (!scene.scene?.isActive()) return;
+                                                        if (!(((__oc30 = scene.scene) === null || __oc30 === void 0 ? void 0 : __oc30.isActive()))) return;
                                                         if (scene.systemMessage) {
                                                             scene.systemMessage.show('[시스템]', [
                                                                 '그림자 추출에 성공했습니다.',
@@ -538,8 +538,8 @@ export class ShadowArmyManager {
                                                 });
 
                                                 // Phase 6: Cleanup (delayed)
-                                                this._delay(1800, () => {
-                                                    if (!scene.scene?.isActive()) return;
+                                                this._delay(1800, () => { var __oc31;
+                                                    if (!(((__oc31 = scene.scene) === null || __oc31 === void 0 ? void 0 : __oc31.isActive()))) return;
                                                     this._cleanupArise();
                                                 });
                                             } catch (e) {
@@ -569,10 +569,10 @@ export class ShadowArmyManager {
         });
     }
 
-    update(time, delta) {
+    update(time, delta) { var __oc32, __oc33;
         if (!this.enabled) return;
         const player = this.scene.player;
-        const enemies = player?.getAllEnemies?.() || this.scene.enemyManager?.getActiveEnemies() || [];
+        const enemies = (((__oc32 = player === null || player === void 0 ? void 0 : player.getAllEnemies) === null || __oc32 === void 0 ? void 0 : __oc32.call(player))) || (((__oc33 = this.scene.enemyManager) === null || __oc33 === void 0 ? void 0 : __oc33.getActiveEnemies())) || [];
 
         for (let i = this.soldiers.length - 1; i >= 0; i--) {
             const soldier = this.soldiers[i];

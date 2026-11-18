@@ -972,8 +972,8 @@ class SlimeVolleyGame {
     }
 
     // === Fullscreen ===
-    enterFullscreen() {
-        window.ArcherImmersive?.autoEnter();
+    enterFullscreen() { var __oc0;
+        (((__oc0 = window.ArcherImmersive) === null || __oc0 === void 0 ? void 0 : __oc0.autoEnter()));
     }
 
     // === Sound ===
@@ -1047,16 +1047,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (!window.ArcherLabClientErrorReporter) {
-    window.addEventListener('error', function(e) {
+    window.addEventListener('error', function(e) { var __oc1, __oc2;
         var src = (e.filename || '') + ':' + e.lineno + ':' + e.colno;
         if (window.__slimeVolleyIgnoreError && window.__slimeVolleyIgnoreError(e.message, e.filename, e.lineno, e.colno, e.error)) return;
-        _sendError(e.error?.name || 'Error', e.message, e.error?.stack || '', src);
+        _sendError((((__oc1 = e.error) === null || __oc1 === void 0 ? void 0 : __oc1.name)) || 'Error', e.message, (((__oc2 = e.error) === null || __oc2 === void 0 ? void 0 : __oc2.stack)) || '', src);
     });
 
     window.addEventListener('unhandledrejection', function(e) {
         var reason = e.reason;
-        var msg = reason?.message || String(reason || 'Unhandled rejection');
-        _sendError('UnhandledRejection', msg, reason?.stack || '', location.href);
+        var msg = ((reason === null || reason === void 0 ? void 0 : reason.message)) || String(reason || 'Unhandled rejection');
+        _sendError('UnhandledRejection', msg, ((reason === null || reason === void 0 ? void 0 : reason.stack)) || '', location.href);
     });
     }
 })();

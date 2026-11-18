@@ -210,7 +210,7 @@ export class BoardModel {
     for (let r = 0; r < this.size; r += 1) {
       for (let c = 0; c < this.size; c += 1) {
         const gem = this.get(r, c);
-        if (!preserveSpecials || !gem?.special) {
+        if (!preserveSpecials || !((gem === null || gem === void 0 ? void 0 : gem.special))) {
           this.set(r, c, gems[index]);
           index += 1;
         }
@@ -223,7 +223,7 @@ export class BoardModel {
       const b = { row: Math.floor(this.rng() * this.size), col: Math.floor(this.rng() * this.size) };
       const first = this.get(a.row, a.col);
       const second = this.get(b.row, b.col);
-      if (preserveSpecials && (first?.special || second?.special)) continue;
+      if (preserveSpecials && (((first === null || first === void 0 ? void 0 : first.special)) || ((second === null || second === void 0 ? void 0 : second.special)))) continue;
       this.set(a.row, a.col, second);
       this.set(b.row, b.col, first);
     }

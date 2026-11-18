@@ -1,3 +1,4 @@
+var __oc0;
 // ─── Grid ───
 const GRID_SIZE = 10;
 
@@ -282,7 +283,7 @@ function easeOutBack(t) {
 const LANGUAGES = ['ko', 'en', 'ja'];
 const _browserLang = (navigator.language || '').slice(0, 2);
 const _documentLang = typeof document !== 'undefined'
-    ? (document.documentElement?.lang || '').slice(0, 2)
+    ? ((((__oc0 = document.documentElement) === null || __oc0 === void 0 ? void 0 : __oc0.lang)) || '').slice(0, 2)
     : '';
 let _storedLang = null;
 try { _storedLang = localStorage.getItem('blockpang_lang'); } catch (_) {}
@@ -388,8 +389,8 @@ const I18N = {
     },
 };
 
-function getText(key) {
-    return I18N[currentLang]?.[key] || I18N['en'][key] || key;
+function getText(key) { var __oc1;
+    return (((__oc1 = I18N[currentLang]) === null || __oc1 === void 0 ? void 0 : __oc1[key])) || I18N['en'][key] || key;
 }
 
 const LANG_LABELS = { ko: '한국어', en: 'English', ja: '日本語' };

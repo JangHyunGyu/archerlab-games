@@ -39,7 +39,7 @@ export class UI {
     if (this.lang === 'ja') this._localizeJapanese();
   }
 
-  _localizeJapanese() {
+  _localizeJapanese() { var __oc0, __oc1;
     const labels = {
       '.title-plaque h1': 'ジュエルリア',
       '.record-strip > div:first-child > span': '制限時間',
@@ -84,11 +84,11 @@ export class UI {
     };
     for (const [selector, label] of Object.entries(accessible)) {
       const node = document.querySelector(selector);
-      node?.setAttribute('aria-label', label);
-      if (node?.hasAttribute('title')) node.setAttribute('title', label);
+      ((node === null || node === void 0 ? void 0 : node.setAttribute('aria-label', label)));
+      if (((node === null || node === void 0 ? void 0 : node.hasAttribute('title')))) node.setAttribute('title', label);
     }
-    this.refs.nicknameInput?.setAttribute('placeholder', 'ニックネーム（20文字まで）');
-    this.refs.app?.setAttribute('data-lang', 'ja');
+    (((__oc0 = this.refs.nicknameInput) === null || __oc0 === void 0 ? void 0 : __oc0.setAttribute('placeholder', 'ニックネーム（20文字まで）')));
+    (((__oc1 = this.refs.app) === null || __oc1 === void 0 ? void 0 : __oc1.setAttribute('data-lang', 'ja')));
     document.title = 'Jewelria - 無料マッチ3ジュエルパズル | ArcherLab Games';
   }
 
@@ -97,10 +97,12 @@ export class UI {
     await this.pixi.init();
   }
 
-  createInput(callbacks) {
-    this.pixi?.setInputCallbacks(callbacks);
+  createInput(callbacks) { var __oc2;
+    (((__oc2 = this.pixi) === null || __oc2 === void 0 ? void 0 : __oc2.setInputCallbacks(callbacks)));
     return {
-      setEnabled: (enabled) => this.pixi?.setEnabled(enabled)
+      setEnabled: (enabled) => { var __oc3; return (
+((__oc3 = this.pixi) === null || __oc3 === void 0 ? void 0 : __oc3.setEnabled(enabled))
+); }
     };
   }
 
@@ -174,7 +176,7 @@ export class UI {
 
   _animateModalOut(modal, onComplete) {
     if (!this._motionEnabled() || !modal) {
-      onComplete?.();
+      ((onComplete === null || onComplete === void 0 ? void 0 : onComplete()));
       return;
     }
     const gsap = window.gsap;
@@ -195,13 +197,13 @@ export class UI {
       duration: 0.16,
       ease: 'power2.in',
       onComplete: () => {
-        onComplete?.();
+        ((onComplete === null || onComplete === void 0 ? void 0 : onComplete()));
         gsap.set(targets, { clearProps: 'opacity,visibility,transform' });
       }
     });
   }
 
-  _countText(el, value, duration = 0.58) {
+  _countText(el, value, duration = 0.58) { var __oc4;
     if (!el) return;
     const target = Number(value) || 0;
     if (!this._motionEnabled()) {
@@ -209,7 +211,7 @@ export class UI {
       return;
     }
     const state = { value: 0 };
-    el._countTween?.kill();
+    (((__oc4 = el._countTween) === null || __oc4 === void 0 ? void 0 : __oc4.kill()));
     el._countTween = window.gsap.to(state, {
       value: target,
       duration,
@@ -270,34 +272,34 @@ export class UI {
   }
 
   // 남은 시간을 갱신하고 막바지에는 경고 표시를 준다.
-  updateTime(timeLeft) {
+  updateTime(timeLeft) { var __oc5;
     const left = Math.max(0, Number(timeLeft) || 0);
     if (this.refs.hudTime) this.refs.hudTime.textContent = formatTime(left);
-    const timeStat = this.refs.hudTime?.closest('.hud-stat');
+    const timeStat = (((__oc5 = this.refs.hudTime) === null || __oc5 === void 0 ? void 0 : __oc5.closest('.hud-stat')));
     if (timeStat) {
       timeStat.classList.toggle('moves-critical', left > 0 && left <= 10);
       timeStat.classList.toggle('moves-warn', left > 10 && left <= 30);
     }
   }
 
-  renderBoard(grid, selected = null, fallMoves = []) {
-    this.pixi?.renderBoard(grid, selected, fallMoves);
+  renderBoard(grid, selected = null, fallMoves = []) { var __oc6;
+    (((__oc6 = this.pixi) === null || __oc6 === void 0 ? void 0 : __oc6.renderBoard(grid, selected, fallMoves)));
   }
 
   markCells(cells, className, duration = 320, stagger = 0) {
     return this.pixi ? this.pixi.markCells(cells, className, duration, stagger) : delay(duration);
   }
 
-  showCombo(combo, lineCount = 1, longest = 3) {
-    this.pixi?.showCombo(combo, lineCount, longest);
+  showCombo(combo, lineCount = 1, longest = 3) { var __oc7;
+    (((__oc7 = this.pixi) === null || __oc7 === void 0 ? void 0 : __oc7.showCombo(combo, lineCount, longest)));
   }
 
-  spawnMatchEffects(cells, options = {}) {
-    this.pixi?.spawnMatchEffects(cells, options);
+  spawnMatchEffects(cells, options = {}) { var __oc8;
+    (((__oc8 = this.pixi) === null || __oc8 === void 0 ? void 0 : __oc8.spawnMatchEffects(cells, options)));
   }
 
-  spawnParticles(cells) {
-    this.pixi?.spawnMatchEffects(cells);
+  spawnParticles(cells) { var __oc9;
+    (((__oc9 = this.pixi) === null || __oc9 === void 0 ? void 0 : __oc9.spawnMatchEffects(cells)));
   }
 
   showResult({ score, bestScore, nickname }) {

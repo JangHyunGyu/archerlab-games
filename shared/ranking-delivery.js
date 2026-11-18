@@ -59,10 +59,10 @@
         global.crypto.getRandomValues(bytes);
         return Array.from(bytes, function (byte) { return byte.toString(16).padStart(2, '0'); }).join('');
     }
-    function pendingText(reward) {
-        var language = String(global.document?.documentElement?.lang || 'ko').slice(0, 2);
+    function pendingText(reward) { var __oc0, __oc1, __oc2, __oc3;
+        var language = String((((__oc1 = (__oc0 = global.document) === null || __oc0 === void 0 ? void 0 : __oc0.documentElement) === null || __oc1 === void 0 ? void 0 : __oc1.lang)) || 'ko').slice(0, 2);
         if (reward) {
-            if (global.navigator?.onLine !== false) {
+            if ((((__oc2 = global.navigator) === null || __oc2 === void 0 ? void 0 : __oc2.onLine)) !== false) {
                 return language === 'en' ? 'Saving your rewards. Please wait a moment.'
                     : language === 'ja' ? '報酬を保存しています。少々お待ちください。'
                         : '보상을 정산하고 있어요. 잠시만 기다려 주세요.';
@@ -71,7 +71,7 @@
                 : language === 'ja' ? '報酬の記録を保存しました。接続が戻ると自動で反映します。'
                     : '보상 기록을 보관했어요. 연결되면 자동으로 정산합니다.';
         }
-        if (global.navigator?.onLine !== false) {
+        if ((((__oc3 = global.navigator) === null || __oc3 === void 0 ? void 0 : __oc3.onLine)) !== false) {
             return language === 'en' ? 'Saving your ranking. Please wait a moment.'
                 : language === 'ja' ? 'ランキングに登録しています。少々お待ちください。'
                     : '랭킹에 등록하고 있어요. 잠시만 기다려 주세요.';
@@ -143,12 +143,12 @@
         });
         // Only this tab's interrupted runs are finalized. Another live tab's
         // checkpoint must not be paid while that player is still earning coins.
-        await Promise.all(Array.from(recoveredDrafts).map(async function (id) {
+        await Promise.all(Array.from(recoveredDrafts).map(async function (id) { var __oc4, __oc5;
             var entry = entries.get(id);
             if (!entry || entry.state !== 'draft') return;
             if (Array.from(sessions.values()).includes(entry.sessionId)) return;
             var finalize = function () { enqueue(entry.path, entry.body, entry.sessionId, entry.id); };
-            if (global.navigator?.locks?.request) {
+            if ((((__oc5 = (__oc4 = global.navigator) === null || __oc4 === void 0 ? void 0 : __oc4.locks) === null || __oc5 === void 0 ? void 0 : __oc5.request))) {
                 // An active tab holds this lease. Copied sessionStorage in a new
                 // tab must not finalize the original tab's ongoing battle.
                 await global.navigator.locks.request('archer-reward-' + entry.sessionId,
@@ -171,7 +171,7 @@
             id: id, path: path, gameId: body.game_id, sessionId: sessionId,
             body: clone(body), after: tails.get(sessionId) || null,
             createdAt: Math.max(Date.now(), lastCreatedAt + 1), state: 'pending', accepted: false, attempts: 0,
-            updatedAt: Math.max(Date.now(), (existing?.updatedAt || 0) + 1),
+            updatedAt: Math.max(Date.now(), (((existing === null || existing === void 0 ? void 0 : existing.updatedAt)) || 0) + 1),
         };
         remember(entry);
         entry.localSaved = putLocal(entry);
@@ -185,9 +185,9 @@
         renderStatus();
         return entry;
     }
-    function checkpointRun(body) {
+    function checkpointRun(body) { var __oc6, __oc7, __oc8, __oc9;
         var sessionId = body.session_id || sessions.get(body.game_id);
-        if (!sessionId || (!ownerId && !global.navigator?.locks?.request)) return Promise.resolve(false);
+        if (!sessionId || (!ownerId && !(((__oc7 = (__oc6 = global.navigator) === null || __oc6 === void 0 ? void 0 : __oc6.locks) === null || __oc7 === void 0 ? void 0 : __oc7.request)))) return Promise.resolve(false);
         var id = 'bank_' + sessionId;
         var entry = entries.get(id);
         if (entry && entry.state !== 'draft') return Promise.resolve(true);
@@ -196,7 +196,7 @@
                 createdAt:Math.max(Date.now(),lastCreatedAt+1), state:'draft', ownerId:ownerId,
                 accepted:false, attempts:0 };
             remember(entry);
-            if (global.navigator?.locks?.request && !rewardLeases.has(sessionId)) {
+            if ((((__oc9 = (__oc8 = global.navigator) === null || __oc8 === void 0 ? void 0 : __oc8.locks) === null || __oc9 === void 0 ? void 0 : __oc9.request)) && !rewardLeases.has(sessionId)) {
                 var markReady;
                 var ready = new Promise(function (resolve) { markReady = resolve; });
                 rewardLeases.set(sessionId, { release:null, ready:ready });
@@ -213,7 +213,7 @@
         entry.after = tails.get(sessionId) || null;
         entry.updatedAt = Math.max(Date.now(), (entry.updatedAt || 0) + 1);
         var lease = rewardLeases.get(sessionId);
-        entry.durable = Promise.resolve(lease?.ready).then(async function () {
+        entry.durable = Promise.resolve(((lease === null || lease === void 0 ? void 0 : lease.ready))).then(async function () {
             // Do not expose a live checkpoint until its lease is actually held.
             // A final claim may have replaced this draft while acquisition waited.
             if (entries.get(id) !== entry || entry.state !== 'draft') return true;
@@ -375,10 +375,10 @@
     }
     function submit(body) { return durableMutation('/rankings', body, 'submit_'); }
     function bankRun(body) { return durableMutation(BANK_RUN_PATH, body, 'bank_'); }
-    async function deliveryFetch(url, options) {
+    async function deliveryFetch(url, options) { var __oc10;
         var path;
         try {
-            var parsed = new URL(typeof url === 'string' ? url : url.url, global.location?.href);
+            var parsed = new URL(typeof url === 'string' ? url : url.url, (((__oc10 = global.location) === null || __oc10 === void 0 ? void 0 : __oc10.href)));
             if (parsed.origin !== API) return originalFetch(url, options);
             path = parsed.pathname;
         } catch (_) { return originalFetch(url, options); }
@@ -413,10 +413,10 @@
         var failed = completed.find(function (entry) { return entry.state === 'review'; });
         return responseFor(failed || completed[completed.length - 1]);
     }
-    function renderStatus() {
+    function renderStatus() { var __oc11;
         var document = global.document;
         if (!document || !document.body) return;
-        var language = String(document.documentElement?.lang || 'ko').slice(0, 2);
+        var language = String((((__oc11 = document.documentElement) === null || __oc11 === void 0 ? void 0 : __oc11.lang)) || 'ko').slice(0, 2);
         var copy = language === 'en' ? {
             label: 'Record save status', close: 'Dismiss notice. Your record will keep syncing.',
             unsafe: 'This record could not be stored. Please keep this page open.',

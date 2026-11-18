@@ -6,7 +6,7 @@ const params = new URLSearchParams(window.location.search);
 const langParam = params.get('lang');
 const pathLang = /\/index-en(?:\.html)?\/?$/.test(window.location.pathname) ? 'en' : null;
 let savedLang = null;
-try { savedLang = localStorage.getItem('shadow_survival_lang'); } catch { /* Storage may be blocked. */ }
+try { savedLang = localStorage.getItem('shadow_survival_lang'); } catch (_err) { /* Storage may be blocked. */ }
 const _supportedLangs = ['ko', 'en', 'ja'];
 const _browserLang = (navigator.language || '').slice(0, 2);
 export let LANG = pathLang
@@ -21,13 +21,13 @@ export const LANGUAGES = [
     { code: 'ja', label: '日本語' },
 ];
 
-export function setLang(code) {
+export function setLang(code) { var __oc0;
     if (!_supportedLangs.includes(code)) return;
     LANG = code;
-    try { localStorage.setItem('shadow_survival_lang', code); } catch { /* Keep the in-memory language. */ }
+    try { localStorage.setItem('shadow_survival_lang', code); } catch (_err) { /* Keep the in-memory language. */ }
     if (typeof document !== 'undefined') document.documentElement.lang = code;
     // Keep the selected language on reload without interrupting the current game.
-    if (window.history?.replaceState) {
+    if ((((__oc0 = window.history) === null || __oc0 === void 0 ? void 0 : __oc0.replaceState))) {
         const url = new URL(window.location.href);
         url.pathname = code === 'en' ? '/solo-leveling/index-en' : '/solo-leveling/';
         url.searchParams.delete('lang');
@@ -375,12 +375,12 @@ apply_toasts(TEXTS);
 export const GAME_API_URL = 'https://game-api.yama5993.workers.dev';
 export const GAME_ID_SHADOW = 'shadow-survival-character-v1';
 
-export function t(key) {
-    return TEXTS[LANG]?.[key] ?? TEXTS.ko[key] ?? key;
+export function t(key) { var __oc1, __oc2, __oc3;
+    return (((__oc3 = (__oc2 = (__oc1 = TEXTS[LANG]) === null || __oc1 === void 0 ? void 0 : __oc1[key]) !== null && __oc2 !== void 0 ? __oc2 : TEXTS.ko[key]) !== null && __oc3 !== void 0 ? __oc3 : key));
 }
 
-export function tNested(category, key) {
-    return TEXTS[LANG]?.[category]?.[key] ?? TEXTS.ko[category]?.[key] ?? key;
+export function tNested(category, key) { var __oc4, __oc5, __oc6, __oc7, __oc8;
+    return (((__oc8 = (__oc6 = (__oc5 = (__oc4 = TEXTS[LANG]) === null || __oc4 === void 0 ? void 0 : __oc4[category]) === null || __oc5 === void 0 ? void 0 : __oc5[key]) !== null && __oc6 !== void 0 ? __oc6 : (__oc7 = TEXTS.ko[category]) === null || __oc7 === void 0 ? void 0 : __oc7[key]) !== null && __oc8 !== void 0 ? __oc8 : key));
 }
 
 export function tf(key, vars = {}) {
@@ -398,9 +398,9 @@ export function questLine(quest) {
 }
 
 /** Resolve localized skill card copy; falls back to config strings. */
-export function tSkill(kind, key, field, fallback = '') {
-    const entry = TEXTS[LANG]?.[kind]?.[key] ?? TEXTS.ko?.[kind]?.[key];
+export function tSkill(kind, key, field, fallback = '') { var __oc9, __oc10, __oc11, __oc12, __oc13;
+    const entry = (((__oc11 = (__oc10 = (__oc9 = TEXTS[LANG]) === null || __oc9 === void 0 ? void 0 : __oc9[kind]) === null || __oc10 === void 0 ? void 0 : __oc10[key]) !== null && __oc11 !== void 0 ? __oc11 : (__oc13 = (__oc12 = TEXTS.ko) === null || __oc12 === void 0 ? void 0 : __oc12[kind]) === null || __oc13 === void 0 ? void 0 : __oc13[key]));
     if (entry && typeof entry === 'object' && entry[field] != null) return entry[field];
     if (typeof entry === 'string') return entry;
-    return fallback ?? key;
+    return ((fallback !== null && fallback !== void 0 ? fallback : key));
 }

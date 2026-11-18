@@ -14,18 +14,20 @@
   let leavingHome = false;
 
   const isFullscreen = () => Boolean(doc.fullscreenElement || doc.webkitFullscreenElement || doc.msFullscreenElement);
-  const isStandalone = () => Boolean(root.navigator.standalone || root.matchMedia?.('(display-mode: standalone)').matches || root.matchMedia?.('(display-mode: fullscreen)').matches);
+  const isStandalone = () => { var __oc0, __oc1; return (
+Boolean(root.navigator.standalone || (((__oc0 = root.matchMedia) === null || __oc0 === void 0 ? void 0 : __oc0.call(root, '(display-mode: standalone)').matches)) || (((__oc1 = root.matchMedia) === null || __oc1 === void 0 ? void 0 : __oc1.call(root, '(display-mode: fullscreen)').matches)))
+); };
   const supported = () => Boolean(doc.documentElement.requestFullscreen || doc.documentElement.webkitRequestFullscreen || doc.documentElement.msRequestFullscreen);
 
-  function isEditing() {
+  function isEditing() { var __oc2, __oc3;
     const el = doc.activeElement;
     if (!el || el === doc.body || el === doc.documentElement) return false;
-    if (el.matches?.('input, textarea, select, [contenteditable="true"], [contenteditable=""]')) return true;
-    return Boolean(el.closest?.('[contenteditable="true"]'));
+    if ((((__oc2 = el.matches) === null || __oc2 === void 0 ? void 0 : __oc2.call(el, 'input, textarea, select, [contenteditable="true"], [contenteditable=""]')))) return true;
+    return Boolean((((__oc3 = el.closest) === null || __oc3 === void 0 ? void 0 : __oc3.call(el, '[contenteditable="true"]'))));
   }
 
   function keyboardOverlapFrom(metrics) {
-    if (!metrics?.editing) return 0;
+    if (!((metrics === null || metrics === void 0 ? void 0 : metrics.editing))) return 0;
     const layout = Math.max(metrics.innerHeight || 0, metrics.clientHeight || 0);
     const vvOverlap = metrics.vvHeight == null
       ? 0
@@ -34,7 +36,7 @@
     return Math.max(vk > 80 ? vk : 0, vvOverlap > 80 ? vvOverlap : 0);
   }
 
-  function keyboardOverlap() {
+  function keyboardOverlap() { var __oc4, __oc5, __oc6;
     const vv = root.visualViewport;
     return keyboardOverlapFrom({
       editing: isEditing(),
@@ -42,12 +44,12 @@
       clientHeight: doc.documentElement.clientHeight || 0,
       vvHeight: vv ? vv.height : null,
       vvOffsetTop: vv ? vv.offsetTop || 0 : 0,
-      vkHeight: root.navigator?.virtualKeyboard?.boundingRect?.height || 0
+      vkHeight: (((__oc6 = (__oc5 = (__oc4 = root.navigator) === null || __oc4 === void 0 ? void 0 : __oc4.virtualKeyboard) === null || __oc5 === void 0 ? void 0 : __oc5.boundingRect) === null || __oc6 === void 0 ? void 0 : __oc6.height)) || 0
     });
   }
 
-  function bindKeyboard() {
-    const vk = root.navigator?.virtualKeyboard;
+  function bindKeyboard() { var __oc7;
+    const vk = (((__oc7 = root.navigator) === null || __oc7 === void 0 ? void 0 : __oc7.virtualKeyboard));
     if (vk && !vkBound && vk.addEventListener) {
       vkBound = true;
       vk.addEventListener('geometrychange', syncLayout);
@@ -77,24 +79,24 @@
     }
   }
 
-  function syncLayout() {
+  function syncLayout() { var __oc8, __oc9, __oc10, __oc11, __oc12, __oc13, __oc14, __oc15;
     const el = doc.documentElement;
     const fs = isFullscreen();
     const keyboard = keyboardOverlap();
     const hintActive = fs && keyboard === 0 && Date.now() < hintUntil;
     const hint = hintActive ? HINT_PX : 0;
-    el.classList?.toggle('archer-immersive-fs', fs);
-    el.classList?.toggle('archer-immersive-hint', hint > 0);
-    el.style.setProperty?.('--immersive-bottom-inset', `${hint}px`);
-    el.style.setProperty?.('--immersive-keyboard-inset', `${keyboard}px`);
-    el.style.setProperty?.('--immersive-top-shift', `${hint}px`);
+    (((__oc8 = el.classList) === null || __oc8 === void 0 ? void 0 : __oc8.toggle('archer-immersive-fs', fs)));
+    (((__oc9 = el.classList) === null || __oc9 === void 0 ? void 0 : __oc9.toggle('archer-immersive-hint', hint > 0)));
+    (((__oc11 = (__oc10 = el.style).setProperty) === null || __oc11 === void 0 ? void 0 : __oc11.call(__oc10, '--immersive-bottom-inset', `${hint}px`)));
+    (((__oc13 = (__oc12 = el.style).setProperty) === null || __oc13 === void 0 ? void 0 : __oc13.call(__oc12, '--immersive-keyboard-inset', `${keyboard}px`)));
+    (((__oc15 = (__oc14 = el.style).setProperty) === null || __oc15 === void 0 ? void 0 : __oc15.call(__oc14, '--immersive-top-shift', `${hint}px`)));
     // Never transform <html>: it turns position:fixed into a broken hit target.
     el.style.transform = '';
     hardenHomeLinks();
   }
 
-  function installStyle() {
-    if (doc.getElementById?.('archer-immersive-style') || !doc.createElement || !doc.head?.appendChild) return;
+  function installStyle() { var __oc16, __oc17;
+    if ((((__oc16 = doc.getElementById) === null || __oc16 === void 0 ? void 0 : __oc16.call(doc, 'archer-immersive-style'))) || !doc.createElement || !(((__oc17 = doc.head) === null || __oc17 === void 0 ? void 0 : __oc17.appendChild))) return;
     const style = doc.createElement('style');
     style.id = 'archer-immersive-style';
     style.textContent = [
@@ -116,10 +118,10 @@
     syncLayout();
   }
 
-  function enter() {
+  function enter() { var __oc18;
     if (pending) return pending;
     if (isFullscreen() || isStandalone()) return Promise.resolve(true);
-    if (!supported() || root.navigator.userActivation?.isActive === false) return Promise.resolve(false);
+    if (!supported() || (((__oc18 = root.navigator.userActivation) === null || __oc18 === void 0 ? void 0 : __oc18.isActive)) === false) return Promise.resolve(false);
     const element = doc.documentElement;
     try {
       const result = element.requestFullscreen
@@ -135,7 +137,7 @@
     }
   }
 
-  function autoEnter() {
+  function autoEnter() { var __oc19;
     if (attempted) return Promise.resolve(false);
     if (isFullscreen() || isStandalone()) {
       attempted = true;
@@ -145,7 +147,7 @@
       attempted = true;
       return Promise.resolve(false);
     }
-    if (root.navigator.userActivation?.isActive === false) return Promise.resolve(false);
+    if ((((__oc19 = root.navigator.userActivation) === null || __oc19 === void 0 ? void 0 : __oc19.isActive)) === false) return Promise.resolve(false);
     return enter().then((ok) => {
       if (ok) attempted = true;
       return ok;
@@ -156,14 +158,14 @@
     if (!isFullscreen()) return Promise.resolve(false);
     try {
       const leave = doc.exitFullscreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
-      return Promise.resolve(leave?.call(doc)).then(() => true, () => false);
+      return Promise.resolve(((leave === null || leave === void 0 ? void 0 : leave.call(doc)))).then(() => true, () => false);
     } catch (_) {
       return Promise.resolve(false);
     }
   }
 
-  function homeHref(anchor) {
-    const raw = String(anchor?.getAttribute?.('href') || anchor?.href || '').trim();
+  function homeHref(anchor) { var __oc20;
+    const raw = String((((__oc20 = anchor === null || anchor === void 0 ? void 0 : anchor.getAttribute) === null || __oc20 === void 0 ? void 0 : __oc20.call(anchor, 'href'))) || ((anchor === null || anchor === void 0 ? void 0 : anchor.href)) || '').trim();
     const path = raw.replace(/https?:\/\/(?:www\.)?archerlab\.dev/i, '');
     if (!/^https?:\/\/(?:www\.)?archerlab\.dev/i.test(raw)) return '';
     if (path && path !== '/' && path !== '') return '';
@@ -205,7 +207,7 @@
     else fallback();
   }
 
-  function goHome(href) {
+  function goHome(href) { var __oc21;
     leavingHome = false;
     href = href || 'https://archerlab.dev/';
     if (isFramed()) {
@@ -213,12 +215,12 @@
       else leaveFrame(href);
       return;
     }
-    if (root.location?.assign) root.location.assign(href);
+    if ((((__oc21 = root.location) === null || __oc21 === void 0 ? void 0 : __oc21.assign))) root.location.assign(href);
     else root.location.href = href;
   }
 
-  function hardenHomeLinks() {
-    const nodes = doc.querySelectorAll?.('a[href]') || [];
+  function hardenHomeLinks() { var __oc22;
+    const nodes = (((__oc22 = doc.querySelectorAll) === null || __oc22 === void 0 ? void 0 : __oc22.call(doc, 'a[href]'))) || [];
     for (const a of nodes) {
       if (!homeHref(a)) continue;
       if (a.style.pointerEvents === 'none') a.style.pointerEvents = 'auto';
@@ -229,8 +231,8 @@
     }
   }
 
-  function onHomeClick(event) {
-    const anchor = event.target?.closest?.('a');
+  function onHomeClick(event) { var __oc23, __oc24, __oc25, __oc26;
+    const anchor = (((__oc24 = (__oc23 = event.target) === null || __oc23 === void 0 ? void 0 : __oc23.closest) === null || __oc24 === void 0 ? void 0 : __oc24.call(__oc23, 'a')));
     const href = homeHref(anchor);
     if (!event.isTrusted || !href) return false;
     if (isFramed()) {
@@ -239,12 +241,12 @@
         if (handledFrameEvents.has(event)) return true;
         handledFrameEvents.add(event);
       }
-      event.preventDefault?.();
+      (((__oc25 = event.preventDefault) === null || __oc25 === void 0 ? void 0 : __oc25.call(event)));
       goHome(href);
       return true;
     }
     if (!isFullscreen() && !event.defaultPrevented) return false;
-    event.preventDefault?.();
+    (((__oc26 = event.preventDefault) === null || __oc26 === void 0 ? void 0 : __oc26.call(event)));
     if (leavingHome) {
       goHome(href);
       return true;
@@ -261,20 +263,20 @@
   function onGesture(event) {
     if (onHomeClick(event)) return;
     const target = event.target;
-    if (!event.isTrusted || !target?.closest || target.closest('a, input, textarea, select, [contenteditable], [data-ranking-scroll], [data-no-fullscreen]')) return;
+    if (!event.isTrusted || !((target === null || target === void 0 ? void 0 : target.closest)) || target.closest('a, input, textarea, select, [contenteditable], [data-ranking-scroll], [data-no-fullscreen]')) return;
     if (target.closest('[data-fullscreen-start], canvas, [data-fullscreen-play], [data-fullscreen-force], button, [role="button"]')) autoEnter();
   }
 
   doc.addEventListener('click', onGesture, true);
-  doc.addEventListener('pointerup', event => {
+  doc.addEventListener('pointerup', event => { var __oc27, __oc28, __oc29, __oc30;
     // Touch/pen activation is pointerup; pointerdown is not a fullscreen gesture on Chrome Android.
     if (event.pointerType === 'mouse') return;
-    if (event.target?.closest?.('a[href]')) return;
-    if (event.target?.closest?.('canvas, [data-fullscreen-start], [data-fullscreen-play], button, [role="button"]')) onGesture(event);
+    if ((((__oc28 = (__oc27 = event.target) === null || __oc27 === void 0 ? void 0 : __oc27.closest) === null || __oc28 === void 0 ? void 0 : __oc28.call(__oc27, 'a[href]')))) return;
+    if ((((__oc30 = (__oc29 = event.target) === null || __oc29 === void 0 ? void 0 : __oc29.closest) === null || __oc30 === void 0 ? void 0 : __oc30.call(__oc29, 'canvas, [data-fullscreen-start], [data-fullscreen-play], button, [role="button"]')))) onGesture(event);
   }, true);
-  doc.addEventListener('keydown', event => {
+  doc.addEventListener('keydown', event => { var __oc31;
     if (event.isTrusted && event.key === 'Enter' && !event.repeat &&
-        ['BODY', 'CANVAS', 'BUTTON'].includes(event.target?.tagName)) autoEnter();
+        ['BODY', 'CANVAS', 'BUTTON'].includes((((__oc31 = event.target) === null || __oc31 === void 0 ? void 0 : __oc31.tagName)))) autoEnter();
   }, true);
   doc.addEventListener('fullscreenchange', onFullscreenChange);
   doc.addEventListener('webkitfullscreenchange', onFullscreenChange);

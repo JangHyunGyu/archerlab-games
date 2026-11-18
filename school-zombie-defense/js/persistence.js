@@ -11,16 +11,16 @@
       profileAuthKey
     } = options;
     let storage = options.storage;
-    if (!storage) { try { storage = global.localStorage; } catch {} }
+    if (!storage) { try { storage = global.localStorage; } catch (_err) {} }
     let databaseFactory = options.databaseFactory;
-    if (!databaseFactory) { try { databaseFactory = global.indexedDB; } catch {} }
+    if (!databaseFactory) { try { databaseFactory = global.indexedDB; } catch (_err) {} }
     let memoryAuth = null;
     let database;
     let authWrite = Promise.resolve(false);
 
     function normalizeAuth(auth) {
-      const profileId = String(auth?.profile_id || "").trim();
-      const profileSecret = String(auth?.profile_secret || "").trim();
+      const profileId = String(((auth === null || auth === void 0 ? void 0 : auth.profile_id)) || "").trim();
+      const profileSecret = String(((auth === null || auth === void 0 ? void 0 : auth.profile_secret)) || "").trim();
       return profileId && profileSecret ? { profile_id: profileId, profile_secret: profileSecret } : null;
     }
 
@@ -32,7 +32,7 @@
           request.onupgradeneeded = () => request.result.createObjectStore("credentials");
           request.onsuccess = () => resolve(request.result);
           request.onerror = request.onblocked = () => resolve(null);
-        } catch { resolve(null); }
+        } catch (_err) { resolve(null); }
       });
       return database;
     }
@@ -47,7 +47,7 @@
           if (auth) store.put(auth, profileAuthKey); else store.delete(profileAuthKey);
           transaction.oncomplete = () => resolve(true);
           transaction.onerror = transaction.onabort = () => resolve(false);
-        } catch { resolve(false); }
+        } catch (_err) { resolve(false); }
       });
     }
 
@@ -61,7 +61,7 @@
             resolve(normalizeAuth(request.result));
           };
           request.onerror = () => resolve(null);
-        } catch { resolve(null); }
+        } catch (_err) { resolve(null); }
       });
     }
 
@@ -69,13 +69,15 @@
       const auth = loadProfileAuth();
       if (auth) return auth;
       memoryAuth = await readProfileAuthBackup();
-      if (memoryAuth) { try { storage.setItem(profileAuthKey, JSON.stringify(memoryAuth)); } catch {} }
+      if (memoryAuth) { try { storage.setItem(profileAuthKey, JSON.stringify(memoryAuth)); } catch (_err) {} }
       return memoryAuth;
     }
 
     async function isProfileAuthSaved(auth) {
-      const matches = (saved) => saved?.profile_id === auth?.profile_id && saved?.profile_secret === auth?.profile_secret;
-      try { if (matches(normalizeAuth(JSON.parse(storage.getItem(profileAuthKey) || "{}")))) return true; } catch {}
+      const matches = (saved) => { return (
+((saved === null || saved === void 0 ? void 0 : saved.profile_id)) === ((auth === null || auth === void 0 ? void 0 : auth.profile_id)) && ((saved === null || saved === void 0 ? void 0 : saved.profile_secret)) === ((auth === null || auth === void 0 ? void 0 : auth.profile_secret))
+); };
+      try { if (matches(normalizeAuth(JSON.parse(storage.getItem(profileAuthKey) || "{}")))) return true; } catch (_err) {}
       return matches(await readProfileAuthBackup());
     }
 
@@ -87,18 +89,18 @@
       return save;
     }
 
-    function normalizeMetaSave(save) {
+    function normalizeMetaSave(save) { var __oc1, __oc2, __oc3;
       const defaults = createDefaultMetaSave();
       const next = {
-        coins: Math.max(0, Math.floor(Number(save?.coins) || 0)),
+        coins: Math.max(0, Math.floor(Number(((save === null || save === void 0 ? void 0 : save.coins))) || 0)),
         upgrades: { ...defaults.upgrades }
       };
-      Object.keys(defaults.upgrades).forEach((id) => {
-        next.upgrades[id] = clamp(Math.floor(Number(save?.upgrades?.[id]) || 0), 0, maxLevel);
+      Object.keys(defaults.upgrades).forEach((id) => { var __oc0;
+        next.upgrades[id] = clamp(Math.floor(Number((((__oc0 = save === null || save === void 0 ? void 0 : save.upgrades) === null || __oc0 === void 0 ? void 0 : __oc0[id]))) || 0), 0, maxLevel);
       });
-      const oldGunLevel = clamp(Math.floor(Number(save?.upgrades?.gun) || 0), 0, maxLevel);
-      const oldBowLevel = clamp(Math.floor(Number(save?.upgrades?.bow) || 0), 0, maxLevel);
-      const oldLauncherLevel = clamp(Math.floor(Number(save?.upgrades?.launcher) || 0), 0, maxLevel);
+      const oldGunLevel = clamp(Math.floor(Number((((__oc1 = save === null || save === void 0 ? void 0 : save.upgrades) === null || __oc1 === void 0 ? void 0 : __oc1.gun))) || 0), 0, maxLevel);
+      const oldBowLevel = clamp(Math.floor(Number((((__oc2 = save === null || save === void 0 ? void 0 : save.upgrades) === null || __oc2 === void 0 ? void 0 : __oc2.bow))) || 0), 0, maxLevel);
+      const oldLauncherLevel = clamp(Math.floor(Number((((__oc3 = save === null || save === void 0 ? void 0 : save.upgrades) === null || __oc3 === void 0 ? void 0 : __oc3.launcher))) || 0), 0, maxLevel);
       if (oldGunLevel > 0) {
         ["c_power", "b_power", "e_power"].forEach((id) => {
           next.upgrades[id] = Math.max(next.upgrades[id], oldGunLevel);
@@ -116,7 +118,7 @@
     function loadMetaSave() {
       try {
         return normalizeMetaSave(JSON.parse(storage.getItem(cacheKey) || "{}"));
-      } catch {
+      } catch (_err) {
         return createDefaultMetaSave();
       }
     }
@@ -126,7 +128,7 @@
         const normalized = normalizeMetaSave(save);
         storage.setItem(cacheKey, JSON.stringify(normalized));
         storage.removeItem(legacySaveKey);
-      } catch {
+      } catch (_err) {
         // Storage can be unavailable in private or embedded browser modes.
       }
     }
@@ -134,7 +136,7 @@
     function loadProfileAuth() {
       try {
         return normalizeAuth(JSON.parse(storage.getItem(profileAuthKey) || "{}")) || memoryAuth;
-      } catch {
+      } catch (_err) {
         return memoryAuth;
       }
     }
@@ -149,7 +151,7 @@
           storage.setItem(profileAuthKey, JSON.stringify(memoryAuth));
         }
         saved = true;
-      } catch {
+      } catch (_err) {
         // Storage can be unavailable in private or embedded browser modes.
       }
       const snapshot = memoryAuth;

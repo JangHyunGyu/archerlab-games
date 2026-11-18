@@ -1,11 +1,11 @@
-(() => {
+(() => { var __oc0, __oc1, __oc2, __oc3, __oc4, __oc5;
   const GAME_ID = "jelly-pang-2048";
   const RANK_API_BASE = "https://game-api.yama5993.workers.dev";
   const RANK_LIMIT = 20;
   const SIZE = 4;
   const STAGE = 900;
-  const IS_TOUCH_DEVICE = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
-  const PREFERS_REDUCED_MOTION = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+  const IS_TOUCH_DEVICE = (((__oc2 = (__oc1 = (__oc0 = window.matchMedia) === null || __oc0 === void 0 ? void 0 : __oc0.call(window, "(pointer: coarse)")) === null || __oc1 === void 0 ? void 0 : __oc1.matches) !== null && __oc2 !== void 0 ? __oc2 : false));
+  const PREFERS_REDUCED_MOTION = (((__oc5 = (__oc4 = (__oc3 = window.matchMedia) === null || __oc3 === void 0 ? void 0 : __oc3.call(window, "(prefers-reduced-motion: reduce)")) === null || __oc4 === void 0 ? void 0 : __oc4.matches) !== null && __oc5 !== void 0 ? __oc5 : false));
   const RENDER_RESOLUTION = Math.min(window.devicePixelRatio || 1, IS_TOUCH_DEVICE ? 1.2 : 1.5);
   const MAX_FX_CHILDREN = IS_TOUCH_DEVICE ? 72 : 120;
   const MAX_ACTIVE_MERGE_PARTICLES = IS_TOUCH_DEVICE ? 60 : 104;
@@ -30,7 +30,7 @@
       canvas.width = 1;
       canvas.height = 1;
       return canvas.toDataURL("image/webp").startsWith("data:image/webp");
-    } catch {
+    } catch (_err) {
       return false;
     }
   })();
@@ -92,13 +92,13 @@
     try {
       const value = localStorage.getItem(key);
       return value === null ? fallback : value;
-    } catch {
+    } catch (_err) {
       return fallback;
     }
   }
 
   function writeStorage(key, value) {
-    try { localStorage.setItem(key, String(value)); } catch {}
+    try { localStorage.setItem(key, String(value)); } catch (_err) {}
   }
 
   const RANK_COLORS = [
@@ -294,10 +294,10 @@
     showTitle();
   }
 
-  function showLoadError() {
+  function showLoadError() { var __oc6, __oc7;
     serverTripCount = 0;
-    refs.shell?.classList.remove("is-server-loading");
-    refs.serverLoader?.classList.add("hidden");
+    (((__oc6 = refs.shell) === null || __oc6 === void 0 ? void 0 : __oc6.classList.remove("is-server-loading")));
+    (((__oc7 = refs.serverLoader) === null || __oc7 === void 0 ? void 0 : __oc7.classList.add("hidden")));
     refs.titleScreen.classList.add("hidden");
     setGameSurfaceActive(true);
     refs.modal.classList.remove("hidden");
@@ -338,7 +338,9 @@
   }
 
   function focusGameBoard() {
-    window.setTimeout(() => appCanvas?.focus({ preventScroll: true }), 0);
+    window.setTimeout(() => { return (
+(appCanvas === null || appCanvas === void 0 ? void 0 : appCanvas.focus({ preventScroll: true }))
+); }, 0);
   }
 
   function resumeGame() {
@@ -368,7 +370,7 @@
     });
   }
 
-  function beginServerTrip() {
+  function beginServerTrip() { var __oc8, __oc9, __oc10;
     serverTripCount += 1;
     if (serverTripCount === 1) {
       serverLoaderShownAt = Date.now();
@@ -376,9 +378,9 @@
         window.clearTimeout(serverLoaderHideTimer);
         serverLoaderHideTimer = null;
       }
-      refs.shell?.classList.add("is-server-loading");
-      refs.serverLoader?.classList.remove("hidden");
-      refs.serverLoader?.setAttribute("aria-hidden", "false");
+      (((__oc8 = refs.shell) === null || __oc8 === void 0 ? void 0 : __oc8.classList.add("is-server-loading")));
+      (((__oc9 = refs.serverLoader) === null || __oc9 === void 0 ? void 0 : __oc9.classList.remove("hidden")));
+      (((__oc10 = refs.serverLoader) === null || __oc10 === void 0 ? void 0 : __oc10.setAttribute("aria-hidden", "false")));
     }
 
     let ended = false;
@@ -390,11 +392,11 @@
 
       const elapsed = Date.now() - serverLoaderShownAt;
       const delay = Math.max(0, 420 - elapsed);
-      serverLoaderHideTimer = window.setTimeout(() => {
+      serverLoaderHideTimer = window.setTimeout(() => { var __oc11, __oc12, __oc13;
         if (serverTripCount > 0) return;
-        refs.serverLoader?.classList.add("hidden");
-        refs.serverLoader?.setAttribute("aria-hidden", "true");
-        refs.shell?.classList.remove("is-server-loading");
+        (((__oc11 = refs.serverLoader) === null || __oc11 === void 0 ? void 0 : __oc11.classList.add("hidden")));
+        (((__oc12 = refs.serverLoader) === null || __oc12 === void 0 ? void 0 : __oc12.setAttribute("aria-hidden", "true")));
+        (((__oc13 = refs.shell) === null || __oc13 === void 0 ? void 0 : __oc13.classList.remove("is-server-loading")));
         serverLoaderHideTimer = null;
       }, delay);
     };
@@ -440,7 +442,7 @@
           if (preferred !== url) {
             try {
               return await PIXI.Assets.load(url);
-            } catch {
+            } catch (_err) {
               return await PIXI.Assets.load(retryAssetUrl(url));
             }
           }
@@ -586,9 +588,9 @@
 
     const firstRun = readStorage(STORAGE.guide) !== "1";
     const session = await ranking.startSession();
-    if (Array.isArray(session?.tiles) && session.tiles.length > 0) {
+    if (Array.isArray(((session === null || session === void 0 ? void 0 : session.tiles))) && session.tiles.length > 0) {
       session.tiles.forEach((tile) => {
-        if (Number.isInteger(tile?.row) && Number.isInteger(tile?.col) && Number.isInteger(tile?.rank)) {
+        if (Number.isInteger(((tile === null || tile === void 0 ? void 0 : tile.row))) && Number.isInteger(((tile === null || tile === void 0 ? void 0 : tile.col))) && Number.isInteger(((tile === null || tile === void 0 ? void 0 : tile.rank)))) {
           placeTile(makeTile(tile.rank, tile.row, tile.col), true);
         }
       });
@@ -734,7 +736,7 @@
   }
 
   function createJellyBridge(sourceVisuals, nextVisual, horizontal) {
-    if (PREFERS_REDUCED_MOTION || sourceVisuals.length !== 2 || !nextVisual || !app?.ticker) return null;
+    if (PREFERS_REDUCED_MOTION || sourceVisuals.length !== 2 || !nextVisual || !((app === null || app === void 0 ? void 0 : app.ticker))) return null;
 
     const bridge = new PIXI.Container();
     const body = new PIXI.Graphics();
@@ -754,10 +756,10 @@
     let lastAngle = horizontal ? 0 : Math.PI * 0.5;
     let stopped = false;
 
-    const stopTicker = () => {
+    const stopTicker = () => { var __oc14;
       if (stopped) return;
       stopped = true;
-      app?.ticker?.remove(update);
+      (((__oc14 = app === null || app === void 0 ? void 0 : app.ticker) === null || __oc14 === void 0 ? void 0 : __oc14.remove(update)));
     };
 
     const destroy = () => {
@@ -1015,9 +1017,9 @@
 
   function applyMoveState(result) {
     grid = result.grid;
-    result.moves.forEach((moveItem) => {
+    result.moves.forEach((moveItem) => { var __oc15;
       if (moveItem.remove) return;
-      const tile = visuals.get(moveItem.id)?.tile;
+      const tile = (((__oc15 = visuals.get(moveItem.id)) === null || __oc15 === void 0 ? void 0 : __oc15.tile));
       if (!tile) return;
       tile.row = moveItem.to.row;
       tile.col = moveItem.to.col;
@@ -1081,7 +1083,7 @@
     });
     moveTimeline = tl;
 
-    result.moves.forEach((moveItem) => {
+    result.moves.forEach((moveItem) => { var __oc16;
       const visual = visuals.get(moveItem.id);
       if (!visual) return;
       gsap.killTweensOf(visual.container);
@@ -1093,7 +1095,7 @@
       const contactPos = mergeContactById.get(moveItem.id) || pos;
       tl.to(visual.container, { x: contactPos.x, y: contactPos.y, duration: slideDuration }, 0);
       if (moveItem.remove) {
-        const horizontal = mergeAxisById.get(moveItem.id) ?? true;
+        const horizontal = (((__oc16 = mergeAxisById.get(moveItem.id)) !== null && __oc16 !== void 0 ? __oc16 : true));
         if (PREFERS_REDUCED_MOTION) {
           tl.to(visual.container, { alpha: 0.18, duration: blendDuration, ease: "sine.inOut" }, mergeStart);
           tl.to(visual.container.scale, { x: 0.88, y: 0.88, duration: blendDuration, ease: "sine.inOut" }, mergeStart);
@@ -1172,9 +1174,9 @@
     const highestRank = orderedMerges.reduce((max, merge) => Math.max(max, merge.tile.rank), 0);
     const impactPositions = [];
 
-    orderedMerges.forEach((merge, mergeIndex) => {
+    orderedMerges.forEach((merge, mergeIndex) => { var __oc17;
       const preparedVisual = visuals.get(merge.tile.id);
-      preparedVisual?.mergeBridge?.destroy();
+      (((__oc17 = preparedVisual === null || preparedVisual === void 0 ? void 0 : preparedVisual.mergeBridge) === null || __oc17 === void 0 ? void 0 : __oc17.destroy()));
       if (preparedVisual) preparedVisual.mergeBridge = null;
 
       merge.from.forEach((id) => {
@@ -1184,7 +1186,7 @@
         visuals.delete(id);
       });
 
-      const continuedFromMorph = Boolean(preparedVisual?.mergeMorphPrepared);
+      const continuedFromMorph = Boolean(((preparedVisual === null || preparedVisual === void 0 ? void 0 : preparedVisual.mergeMorphPrepared)));
       if (!preparedVisual) createTileVisual(merge.tile, false, true);
       const pos = cellCenter(merge.tile.row, merge.tile.col);
       const delay = Math.min(0.09, mergeIndex * 0.03);
@@ -1283,7 +1285,7 @@
     }
   }
 
-  function canMove() {
+  function canMove() { var __oc18;
     if (emptyCells().length) return true;
     for (let row = 0; row < SIZE; row++) {
       for (let col = 0; col < SIZE; col++) {
@@ -1293,7 +1295,7 @@
           const nr = row + dr;
           const nc = col + dc;
           if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) continue;
-          if (grid[nr][nc]?.rank === tile.rank) return true;
+          if ((((__oc18 = grid[nr][nc]) === null || __oc18 === void 0 ? void 0 : __oc18.rank)) === tile.rank) return true;
         }
       }
     }
@@ -1523,12 +1525,12 @@
     refs.modal.setAttribute("aria-hidden", "false");
     const card = refs.modal.querySelector(".message-card");
     gsap.fromTo(card, { scale: 0.78, y: 26, opacity: 0 }, { scale: 1, y: 0, opacity: 1, duration: 0.54, ease: "elastic.out(1, 0.42)" });
-    window.setTimeout(() => {
-      const prefersTextFocus = window.matchMedia?.("(pointer: fine)")?.matches === true;
+    window.setTimeout(() => { var __oc19, __oc20;
+      const prefersTextFocus = (((__oc20 = (__oc19 = window.matchMedia) === null || __oc19 === void 0 ? void 0 : __oc19.call(window, "(pointer: fine)")) === null || __oc20 === void 0 ? void 0 : __oc20.matches)) === true;
       const target = canSubmitRank && score > 0
         ? prefersTextFocus ? refs.nicknameInput : refs.skipRank
         : canKeepPlaying ? refs.keepPlaying : refs.tryAgain;
-      target?.focus({ preventScroll: true });
+      ((target === null || target === void 0 ? void 0 : target.focus({ preventScroll: true })));
     }, 80);
   }
 
@@ -1579,7 +1581,7 @@
     try {
       const rows = await ranking.fetchTopRanks();
       renderRanks(rows);
-    } catch {
+    } catch (_err) {
       refs.rankContent.innerHTML = `<div class="rank-error">${t("rank.error")}</div>`;
     }
   }
@@ -1590,7 +1592,7 @@
     refs.rankModal.setAttribute("aria-hidden", "true");
     if (!wasOpen) return;
     const target = refs.titleScreen.classList.contains("hidden") ? refs.homeGame : refs.rankOpen;
-    target?.focus({ preventScroll: true });
+    ((target === null || target === void 0 ? void 0 : target.focus({ preventScroll: true })));
   }
 
   async function submitRank() {
@@ -1615,9 +1617,9 @@
     try {
       const result = await withServerTrip(() => ranking.submit(name, score, extra));
       playSound("rankSubmit");
-      completeRankSubmit(result?.pending ? t("rank.pending") : t("rank.submitted", { rank: result?.rank ? ` (#${result.rank})` : "" }), "ok");
+      completeRankSubmit(((result === null || result === void 0 ? void 0 : result.pending)) ? t("rank.pending") : t("rank.submitted", { rank: ((result === null || result === void 0 ? void 0 : result.rank)) ? ` (#${result.rank})` : "" }), "ok");
     } catch (err) {
-      const message = err?.message === "rank score verification mismatch"
+      const message = ((err === null || err === void 0 ? void 0 : err.message)) === "rank score verification mismatch"
         ? t("rank.mismatch")
         : t("rank.failed");
       setSubmitStatus(message, "fail");
@@ -1707,11 +1709,11 @@
   }
 
   function loadNickname() {
-    try { return localStorage.getItem(STORAGE.nick) || ""; } catch { return ""; }
+    try { return localStorage.getItem(STORAGE.nick) || ""; } catch (_err) { return ""; }
   }
 
   function saveNickname(name) {
-    try { localStorage.setItem(STORAGE.nick, name); } catch {}
+    try { localStorage.setItem(STORAGE.nick, name); } catch (_err) {}
   }
 
   function shakeBoard(duration = 0.42) {
@@ -2176,7 +2178,7 @@
   }
 
   function kickMergeScene(intensity, mergeCount) {
-    if (PREFERS_REDUCED_MOTION || !app?.stage) return;
+    if (PREFERS_REDUCED_MOTION || !((app === null || app === void 0 ? void 0 : app.stage))) return;
     const strength = Math.min(IS_TOUCH_DEVICE ? 9 : 15, 4 + intensity * 5 + (mergeCount - 1) * 1.1);
     const angle = Math.random() * Math.PI * 2;
     gsap.killTweensOf(app.stage.position);
@@ -2355,10 +2357,10 @@
     soundCursor = {};
     Object.entries(SOUND_ASSETS).forEach(([type, src]) => {
       const poolSize = type === "slide" || type === "merge" || type === "bump" ? 4 : 2;
-      soundPools[type] = Array.from({ length: poolSize }, () => {
+      soundPools[type] = Array.from({ length: poolSize }, () => { var __oc21;
         const audio = new Audio(src);
         audio.preload = "auto";
-        audio.volume = SOUND_VOLUME[type] ?? 0.55;
+        audio.volume = (((__oc21 = SOUND_VOLUME[type]) !== null && __oc21 !== void 0 ? __oc21 : 0.55));
         audio.muted = !soundEnabled;
         return audio;
       });
@@ -2373,16 +2375,16 @@
       if (!AudioCtor) return;
       if (!audioCtx) audioCtx = new AudioCtor();
       if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
-    } catch {
+    } catch (_err) {
       audioCtx = null;
     }
   }
 
-  function canUseHaptics() {
+  function canUseHaptics() { var __oc22, __oc23;
     const nav = window.navigator;
     if (!nav || typeof nav.vibrate !== "function") return false;
     if (nav.maxTouchPoints > 0) return true;
-    return window.matchMedia?.("(hover: none) and (pointer: coarse)")?.matches === true;
+    return (((__oc23 = (__oc22 = window.matchMedia) === null || __oc22 === void 0 ? void 0 : __oc22.call(window, "(hover: none) and (pointer: coarse)")) === null || __oc23 === void 0 ? void 0 : __oc23.matches)) === true;
   }
 
   function playHaptic(type) {
@@ -2391,7 +2393,7 @@
     if (!pattern) return;
     try {
       window.navigator.vibrate(pattern);
-    } catch {}
+    } catch (_err) {}
   }
 
   function playSound(type) {
@@ -2414,7 +2416,7 @@
     Object.values(soundPools).flat().forEach((audio) => {
       audio.muted = !soundEnabled;
       if (!soundEnabled) {
-        try { audio.pause(); } catch {}
+        try { audio.pause(); } catch (_err) {}
       }
     });
     syncSoundToggle();
@@ -2439,7 +2441,7 @@
         playing.catch(() => playSynthSound(type));
       }
       return true;
-    } catch {
+    } catch (_err) {
       return false;
     }
   }
@@ -2523,9 +2525,9 @@
         this.rngState = this.normalizeUint32(data.rng_state);
         this.sessionData = data;
         return data;
-      }).catch((error) => {
+      }).catch((error) => { var __oc24, __oc25;
         if (token !== this.rankRunToken) return null;
-        window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-session' }, 'ranking_client_exception');
+        (((__oc25 = (__oc24 = window.ArcherLabClientErrorReporter) === null || __oc24 === void 0 ? void 0 : __oc24.reportCodeException) === null || __oc25 === void 0 ? void 0 : __oc25.call(__oc24, error, { phase: 'rank-session' }, 'ranking_client_exception')));
         if (!this.unsupported) this.syncFailed = true;
         return null;
       });
@@ -2537,7 +2539,7 @@
       if (this.sessionId) return this.sessionId;
       if (!this.sessionPromise) this.startSession();
       const data = await this.sessionPromise;
-      return data?.session_id || null;
+      return ((data === null || data === void 0 ? void 0 : data.session_id)) || null;
     }
 
     normalizeUint32(value) {
@@ -2562,13 +2564,13 @@
       return { row: spot.row, col: spot.col, rank };
     }
 
-    recordMove(dir) {
+    recordMove(dir) { var __oc26;
       if (this.unsupported || this.syncFailed) return null;
 
       const nextSeq = this.moveSeq + 1;
       this.moveSeq = nextSeq;
       const event = { type: "move", dir, move_seq: nextSeq };
-      window.ArcherRanking?.track(GAME_ID, event, this.sessionId);
+      (((__oc26 = window.ArcherRanking) === null || __oc26 === void 0 ? void 0 : __oc26.track(GAME_ID, event, this.sessionId)));
       this.pendingEvents.push(event);
       return event;
     }
@@ -2659,14 +2661,14 @@
     }
   }
 
-  function refreshLocalizedUi() {
+  function refreshLocalizedUi() { var __oc27, __oc28, __oc29;
     syncTitleActions();
     syncSoundToggle();
-    const loading = refs.rankContent?.querySelector(".rank-loading");
+    const loading = (((__oc27 = refs.rankContent) === null || __oc27 === void 0 ? void 0 : __oc27.querySelector(".rank-loading")));
     if (loading) loading.textContent = t("rank.loading");
-    const error = refs.rankContent?.querySelector(".rank-error");
+    const error = (((__oc28 = refs.rankContent) === null || __oc28 === void 0 ? void 0 : __oc28.querySelector(".rank-error")));
     if (error) error.textContent = t("rank.error");
-    const empty = refs.rankContent?.querySelector(".rank-empty");
+    const empty = (((__oc29 = refs.rankContent) === null || __oc29 === void 0 ? void 0 : __oc29.querySelector(".rank-empty")));
     if (empty) empty.textContent = t("rank.empty");
   }
 

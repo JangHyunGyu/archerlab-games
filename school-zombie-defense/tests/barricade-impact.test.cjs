@@ -31,7 +31,7 @@ assert.deepEqual([metalMin, metalMax], [1, 2], "each full hit needs only a small
 assert.match(gameSource, /this\.activeBarricadeFragments\s*=\s*new Set\(\)/);
 assert.match(
   gameSource,
-  /if \(object\?\.barricadeFragment\)[\s\S]*?this\.activeBarricadeFragments\.delete\(object\)/,
+  /if \((?:object\?\.barricadeFragment|\(\(object === null \|\| object === void 0 \? void 0 : object\.barricadeFragment\)\))\)[\s\S]*?this\.activeBarricadeFragments\.delete\(object\)/,
   "destroyed debris must leave the active fragment budget"
 );
 assert.match(

@@ -59,15 +59,15 @@ export class BasicDagger extends WeaponBase {
         const style = this.config.attackStyle || 'daggerThrust';
         const stepDelay = style === 'fireball' ? 145 : 110;
         for (let i = 0; i < this.count; i++) {
-            this._delay(i * stepDelay, () => {
-                if (!this.player?.active || this.player.isDead) return;
+            this._delay(i * stepDelay, () => { var __oc0;
+                if (!(((__oc0 = this.player) === null || __oc0 === void 0 ? void 0 : __oc0.active)) || this.player.isDead) return;
                 const pattern = this.config.basicAttackPattern;
-                const variant = pattern?.length ? pattern[this._basicAttackIndex++ % pattern.length] : null;
+                const variant = ((pattern === null || pattern === void 0 ? void 0 : pattern.length)) ? pattern[this._basicAttackIndex++ % pattern.length] : null;
                 this._currentMotionDuration = (this.count > 1 && i < this.count - 1)
                     ? Math.max(155, stepDelay + 35)
                     : BASIC_ATTACK_MOTION_DURATION;
                 try {
-                    this._attackByStyle(variant?.style || style, variant);
+                    this._attackByStyle(((variant === null || variant === void 0 ? void 0 : variant.style)) || style, variant);
                 } finally {
                     this._currentMotionDuration = BASIC_ATTACK_MOTION_DURATION;
                 }
@@ -102,23 +102,22 @@ export class BasicDagger extends WeaponBase {
         }
     }
 
-    _getConfiguredEffectTexture(prop = 'basicAttackEffectKey') {
+    _getConfiguredEffectTexture(prop = 'basicAttackEffectKey') { var __oc1, __oc2;
         const key = this.config[prop] || (prop === 'basicAttackEffectKey' ? null : this.config.effectKey);
         const prefix = prop === 'basicAttackEffectKey' ? 'basic_attack_' : 'char_skill_';
         const textureKey = key ? `${prefix}${key}` : null;
-        return textureKey && this.scene?.textures?.exists(textureKey) ? textureKey : null;
+        return textureKey && (((__oc2 = (__oc1 = this.scene) === null || __oc1 === void 0 ? void 0 : __oc1.textures) === null || __oc2 === void 0 ? void 0 : __oc2.exists(textureKey))) ? textureKey : null;
     }
 
-    _getTargetAcquireRange(rangeBonus) {
+    _getTargetAcquireRange(rangeBonus) { var __oc3;
         const baseRange = this.attackRange + this.extraRange + rangeBonus;
-        return baseRange * (this.config.targetAcquireMultiplier ?? 1);
+        return baseRange * (((__oc3 = this.config.targetAcquireMultiplier) !== null && __oc3 !== void 0 ? __oc3 : 1));
     }
 
-    _getAttackSetup({ rangeBonus = 50, duration = 240, variant = null } = {}) {
+    _getAttackSetup({ rangeBonus = 50, duration = 240, variant = null } = {}) { var __oc4, __oc5;
         const target = this.player.getClosestEnemy(this._getTargetAcquireRange(rangeBonus));
         const dirAngles = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
-        const idleAngle = dirAngles[this.player.facingDirection]
-            ?? (this.player.facingRight ? 0 : Math.PI);
+        const idleAngle = (((__oc4 = dirAngles[this.player.facingDirection]) !== null && __oc4 !== void 0 ? __oc4 : (this.player.facingRight ? 0 : Math.PI)));
         const fallbackAngle = this.player.moveIntensity > 0.12
             ? this.player.lastMoveAngle
             : idleAngle;
@@ -132,21 +131,20 @@ export class BasicDagger extends WeaponBase {
         }
 
         this._stabSide *= -1;
-        const side = variant?.side ?? this._stabSide;
+        const side = (((__oc5 = variant === null || variant === void 0 ? void 0 : variant.side) !== null && __oc5 !== void 0 ? __oc5 : this._stabSide));
         if (this.player.playAttackMotion) {
-            this.player.playAttackMotion(baseAngle, duration, side, variant?.motion);
+            this.player.playAttackMotion(baseAngle, duration, side, ((variant === null || variant === void 0 ? void 0 : variant.motion)));
         }
         return { target, baseAngle, side };
     }
 
-    _getMovementPriorityAttackSetup({ rangeBonus = 50, duration = 240, variant = null } = {}) {
+    _getMovementPriorityAttackSetup({ rangeBonus = 50, duration = 240, variant = null } = {}) { var __oc6, __oc7;
         const isMoving = this.player.moveIntensity > 0.12;
         const target = isMoving
             ? null
             : this.player.getClosestEnemy(this._getTargetAcquireRange(rangeBonus));
         const dirAngles = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
-        const idleAngle = dirAngles[this.player.facingDirection]
-            ?? (this.player.facingRight ? 0 : Math.PI);
+        const idleAngle = (((__oc6 = dirAngles[this.player.facingDirection]) !== null && __oc6 !== void 0 ? __oc6 : (this.player.facingRight ? 0 : Math.PI)));
         const fallbackAngle = isMoving
             ? this.player.lastMoveAngle
             : idleAngle;
@@ -160,9 +158,9 @@ export class BasicDagger extends WeaponBase {
         }
 
         this._stabSide *= -1;
-        const side = variant?.side ?? this._stabSide;
+        const side = (((__oc7 = variant === null || variant === void 0 ? void 0 : variant.side) !== null && __oc7 !== void 0 ? __oc7 : this._stabSide));
         if (this.player.playAttackMotion) {
-            this.player.playAttackMotion(baseAngle, duration, side, variant?.motion);
+            this.player.playAttackMotion(baseAngle, duration, side, ((variant === null || variant === void 0 ? void 0 : variant.motion)));
         }
         return { target, baseAngle, side };
     }
@@ -222,11 +220,10 @@ export class BasicDagger extends WeaponBase {
         }
     }
 
-    _thrust(variant = null) {
-        const target = this.player.getClosestEnemy(this._getTargetAcquireRange(this.config.targetRangeBonus ?? 50));
+    _thrust(variant = null) { var __oc8, __oc9, __oc10;
+        const target = this.player.getClosestEnemy(this._getTargetAcquireRange((((__oc8 = this.config.targetRangeBonus) !== null && __oc8 !== void 0 ? __oc8 : 50))));
         const dirAngles = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
-        const idleAngle = dirAngles[this.player.facingDirection]
-            ?? (this.player.facingRight ? 0 : Math.PI);
+        const idleAngle = (((__oc9 = dirAngles[this.player.facingDirection]) !== null && __oc9 !== void 0 ? __oc9 : (this.player.facingRight ? 0 : Math.PI)));
         const fallbackAngle = this.player.moveIntensity > 0.12
             ? this.player.lastMoveAngle
             : idleAngle;
@@ -240,9 +237,9 @@ export class BasicDagger extends WeaponBase {
         }
 
         this._stabSide *= -1;
-        const side = variant?.side ?? this._stabSide;
+        const side = (((__oc10 = variant === null || variant === void 0 ? void 0 : variant.side) !== null && __oc10 !== void 0 ? __oc10 : this._stabSide));
         if (this.player.playAttackMotion) {
-            this.player.playAttackMotion(baseAngle, this._currentMotionDuration || BASIC_ATTACK_MOTION_DURATION, side, variant?.motion);
+            this.player.playAttackMotion(baseAngle, this._currentMotionDuration || BASIC_ATTACK_MOTION_DURATION, side, ((variant === null || variant === void 0 ? void 0 : variant.motion)));
         }
         const effectTexture = this._getConfiguredEffectTexture() || this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;
@@ -483,8 +480,8 @@ export class BasicDagger extends WeaponBase {
             },
         });
 
-        this._delay(132, () => {
-            if (!this.scene?.scene?.isActive() || !this.player?.active) return;
+        this._delay(132, () => { var __oc11, __oc12, __oc13, __oc14, __oc15;
+            if (!(((__oc12 = (__oc11 = this.scene) === null || __oc11 === void 0 ? void 0 : __oc11.scene) === null || __oc12 === void 0 ? void 0 : __oc12.isActive())) || !(((__oc13 = this.player) === null || __oc13 === void 0 ? void 0 : __oc13.active))) return;
 
             const hitOriginX = this.player.x;
             const hitOriginY = this.player.y - 16;
@@ -515,8 +512,8 @@ export class BasicDagger extends WeaponBase {
             }
 
             const enemies = this.player.getAllEnemies();
-            const hitRange = this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 0);
-            const hitAngleTol = this.config.hitAngle ?? 0.62;
+            const hitRange = this.attackRange + this.extraRange + (((__oc14 = this.config.hitRangeBonus) !== null && __oc14 !== void 0 ? __oc14 : 0));
+            const hitAngleTol = (((__oc15 = this.config.hitAngle) !== null && __oc15 !== void 0 ? __oc15 : 0.62));
             for (const enemy of enemies) {
                 if (!enemy.active) continue;
 
@@ -539,21 +536,21 @@ export class BasicDagger extends WeaponBase {
         this.playConfiguredSound('dagger');
     }
 
-    _daggerSlash(variant = null) {
+    _daggerSlash(variant = null) { var __oc16, __oc17, __oc18;
         const texture = 'basic_attack_shadow_dagger_cut';
         if (!this.scene.textures.exists(texture)) {
             this._dualDaggerCrossThrust(variant);
             return;
         }
         const { baseAngle, side } = this._getAttackSetup({
-            rangeBonus: this.config.targetRangeBonus ?? 50,
+            rangeBonus: (((__oc16 = this.config.targetRangeBonus) !== null && __oc16 !== void 0 ? __oc16 : 50)),
             duration: this._currentMotionDuration || BASIC_ATTACK_MOTION_DURATION,
             variant,
         });
-        const hitRange = this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 0);
+        const hitRange = this.attackRange + this.extraRange + (((__oc17 = this.config.hitRangeBonus) !== null && __oc17 !== void 0 ? __oc17 : 0));
         const flipY = side < 0;
         const fit = this.getEffectForwardFit(texture, {
-            innerReach: 18, outerReach: hitRange * (this.config.visualRangeRatio ?? 0.9),
+            innerReach: 18, outerReach: hitRange * (((__oc18 = this.config.visualRangeRatio) !== null && __oc18 !== void 0 ? __oc18 : 0.9)),
             rotationOffset: 0, flipY,
         });
         const arc = this.createEffectSprite(this.player.x, this.player.y - 16, texture, { frameMs: 46 })
@@ -572,16 +569,16 @@ export class BasicDagger extends WeaponBase {
             onComplete: () => this._destroyAttackObjects(entry),
         });
         // Same one hit, 132 ms contact, range, cone and knockback as the stab.
-        this._delay(132, () => {
-            if (!this.scene?.scene?.isActive() || !this.player?.active) return;
-            this._damageEnemiesInCone(baseAngle, hitRange, this.config.hitAngle ?? 0.42,
+        this._delay(132, () => { var __oc19, __oc20, __oc21, __oc22;
+            if (!(((__oc20 = (__oc19 = this.scene) === null || __oc19 === void 0 ? void 0 : __oc19.scene) === null || __oc20 === void 0 ? void 0 : __oc20.isActive())) || !(((__oc21 = this.player) === null || __oc21 === void 0 ? void 0 : __oc21.active))) return;
+            this._damageEnemiesInCone(baseAngle, hitRange, (((__oc22 = this.config.hitAngle) !== null && __oc22 !== void 0 ? __oc22 : 0.42)),
                 this.player.x + Math.cos(baseAngle) * 159.5,
                 this.player.y - 16 + Math.sin(baseAngle) * 159.5);
         });
         this.playConfiguredSound('dagger');
     }
 
-    _dualDaggerCrossThrust(variant = null) {
+    _dualDaggerCrossThrust(variant = null) { var __oc23, __oc24, __oc25, __oc26;
         const effectTexture = this._getConfiguredEffectTexture();
         if (!effectTexture) {
             this._thrust(variant);
@@ -589,7 +586,7 @@ export class BasicDagger extends WeaponBase {
         }
 
         const { baseAngle, side } = this._getAttackSetup({
-            rangeBonus: this.config.targetRangeBonus ?? 50,
+            rangeBonus: (((__oc23 = this.config.targetRangeBonus) !== null && __oc23 !== void 0 ? __oc23 : 50)),
             duration: this._currentMotionDuration || BASIC_ATTACK_MOTION_DURATION,
             variant,
         });
@@ -602,12 +599,12 @@ export class BasicDagger extends WeaponBase {
             y: this.player.y - 16,
         });
         const initialOrigin = getOrigin();
-        const hitRange = this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 0);
-        const desiredOuterReach = hitRange * (this.config.visualRangeRatio ?? 0.9);
+        const hitRange = this.attackRange + this.extraRange + (((__oc24 = this.config.hitRangeBonus) !== null && __oc24 !== void 0 ? __oc24 : 0));
+        const desiredOuterReach = hitRange * (((__oc25 = this.config.visualRangeRatio) !== null && __oc25 !== void 0 ? __oc25 : 0.9));
         const effectFit = this.getEffectForwardFit(effectTexture, {
             innerReach: 18,
             outerReach: desiredOuterReach,
-            rotationOffset: this.config.effectRotationOffset ?? 0,
+            rotationOffset: (((__oc26 = this.config.effectRotationOffset) !== null && __oc26 !== void 0 ? __oc26 : 0)),
         });
         const baseScale = effectFit.scale;
         const frameCount = 6;
@@ -676,8 +673,8 @@ export class BasicDagger extends WeaponBase {
             onComplete: () => this._destroyAttackObjects(entry),
         });
 
-        this._delay(132, () => {
-            if (!this.scene?.scene?.isActive() || !this.player?.active) return;
+        this._delay(132, () => { var __oc27, __oc28, __oc29, __oc30;
+            if (!(((__oc28 = (__oc27 = this.scene) === null || __oc27 === void 0 ? void 0 : __oc27.scene) === null || __oc28 === void 0 ? void 0 : __oc28.isActive())) || !(((__oc29 = this.player) === null || __oc29 === void 0 ? void 0 : __oc29.active))) return;
 
             const origin = getOrigin();
             // Preserve the old embedded-dagger thrust tip as the knockback
@@ -688,7 +685,7 @@ export class BasicDagger extends WeaponBase {
             this._damageEnemiesInCone(
                 baseAngle,
                 hitRange,
-                this.config.hitAngle ?? 0.42,
+                (((__oc30 = this.config.hitAngle) !== null && __oc30 !== void 0 ? __oc30 : 0.42)),
                 hitX,
                 hitY
             );
@@ -697,20 +694,20 @@ export class BasicDagger extends WeaponBase {
         this.playConfiguredSound('dagger');
     }
 
-    _swordSlash(variant = null) {
+    _swordSlash(variant = null) { var __oc31, __oc32, __oc33, __oc34, __oc35, __oc36, __oc37, __oc38, __oc39, __oc40;
         const { baseAngle, side } = this._getAttackSetup({
-            rangeBonus: this.config.targetRangeBonus ?? 65,
+            rangeBonus: (((__oc31 = this.config.targetRangeBonus) !== null && __oc31 !== void 0 ? __oc31 : 65)),
             duration: this._currentMotionDuration || BASIC_ATTACK_MOTION_DURATION,
             variant,
         });
         const originX = this.player.x;
         const originY = this.player.y - 18;
         const effectTexture = this._getConfiguredEffectTexture();
-        const hitRange = this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 35);
+        const hitRange = this.attackRange + this.extraRange + (((__oc32 = this.config.hitRangeBonus) !== null && __oc32 !== void 0 ? __oc32 : 35));
         const flipY = side < 0;
-        const authoredOffset = this.config.effectRotationOffset ?? 0;
+        const authoredOffset = (((__oc33 = this.config.effectRotationOffset) !== null && __oc33 !== void 0 ? __oc33 : 0));
         const mirroredOffset = flipY ? -authoredOffset : authoredOffset;
-        const desiredOuterReach = hitRange * (this.config.visualRangeRatio ?? 0.9);
+        const desiredOuterReach = hitRange * (((__oc34 = this.config.visualRangeRatio) !== null && __oc34 !== void 0 ? __oc34 : 0.9));
         const effectFit = effectTexture
             ? this.getEffectCenteredFit(effectTexture, {
                 outerReach: desiredOuterReach,
@@ -718,13 +715,13 @@ export class BasicDagger extends WeaponBase {
                 flipY,
             })
             : null;
-        const targetScale = effectFit?.scale ?? (this.config.effectScale || 0.44);
+        const targetScale = (((__oc35 = effectFit === null || effectFit === void 0 ? void 0 : effectFit.scale) !== null && __oc35 !== void 0 ? __oc35 : (this.config.effectScale || 0.44)));
 
-        const peakAlpha = this.config.effectPeakAlpha ?? 0.82;
+        const peakAlpha = (((__oc36 = this.config.effectPeakAlpha) !== null && __oc36 !== void 0 ? __oc36 : 0.82));
         const slashEcho = effectTexture
             ? this.createEffectSprite(originX, originY, effectTexture, {
-                frameMs: this.config.effectFrameMs ?? 42,
-                loopStart: this.config.effectStartFrame ?? 0,
+                frameMs: (((__oc37 = this.config.effectFrameMs) !== null && __oc37 !== void 0 ? __oc37 : 42)),
+                loopStart: (((__oc38 = this.config.effectStartFrame) !== null && __oc38 !== void 0 ? __oc38 : 0)),
             })
                 .setDepth(13)
                 .setAlpha(peakAlpha * 0.45)
@@ -735,8 +732,8 @@ export class BasicDagger extends WeaponBase {
             : null;
         const slash = effectTexture
             ? this.createEffectSprite(originX, originY, effectTexture, {
-                frameMs: this.config.effectFrameMs ?? 42,
-                loopStart: this.config.effectStartFrame ?? 0,
+                frameMs: (((__oc39 = this.config.effectFrameMs) !== null && __oc39 !== void 0 ? __oc39 : 42)),
+                loopStart: (((__oc40 = this.config.effectStartFrame) !== null && __oc40 !== void 0 ? __oc40 : 0)),
             })
                 .setDepth(14)
                 .setAlpha(peakAlpha)
@@ -784,11 +781,11 @@ export class BasicDagger extends WeaponBase {
             onComplete: () => this._destroyAttackObjects(entry),
         });
 
-        this._delay(118, () => {
+        this._delay(118, () => { var __oc41;
             this._damageEnemiesInCone(
                 baseAngle,
                 hitRange,
-                this.config.hitAngle ?? 0.92,
+                (((__oc41 = this.config.hitAngle) !== null && __oc41 !== void 0 ? __oc41 : 0.92)),
                 originX,
                 originY
             );
@@ -797,9 +794,9 @@ export class BasicDagger extends WeaponBase {
         this.playConfiguredSound('slash');
     }
 
-    _clawSwipe(variant = null) {
+    _clawSwipe(variant = null) { var __oc42, __oc43, __oc44, __oc45, __oc46;
         const { baseAngle, side } = this._getAttackSetup({
-            rangeBonus: this.config.targetRangeBonus ?? 35,
+            rangeBonus: (((__oc42 = this.config.targetRangeBonus) !== null && __oc42 !== void 0 ? __oc42 : 35)),
             duration: this._currentMotionDuration || BASIC_ATTACK_MOTION_DURATION,
             variant,
         });
@@ -812,10 +809,10 @@ export class BasicDagger extends WeaponBase {
         const effectColor = this.getEffectColor(0xbfeaff);
         const glowColor = this.getEffectGlowColor(0xffffff);
         const effectTexture = this._getConfiguredEffectTexture();
-        const hitRange = this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 0);
+        const hitRange = this.attackRange + this.extraRange + (((__oc43 = this.config.hitRangeBonus) !== null && __oc43 !== void 0 ? __oc43 : 0));
         const flipY = side < 0;
-        const swipeRotationOffset = side * 0.08 + (flipY ? -1 : 1) * (this.config.effectRotationOffset ?? 0);
-        const desiredOuterReach = hitRange * (this.config.visualRangeRatio ?? 0.9);
+        const swipeRotationOffset = side * 0.08 + (flipY ? -1 : 1) * (((__oc44 = this.config.effectRotationOffset) !== null && __oc44 !== void 0 ? __oc44 : 0));
+        const desiredOuterReach = hitRange * (((__oc45 = this.config.visualRangeRatio) !== null && __oc45 !== void 0 ? __oc45 : 0.9));
         const effectFit = effectTexture
             ? this.getEffectCenteredFit(effectTexture, {
                 outerReach: desiredOuterReach,
@@ -823,7 +820,7 @@ export class BasicDagger extends WeaponBase {
                 flipY,
             })
             : null;
-        const targetScale = effectFit?.scale ?? (this.config.effectScale || 0.42);
+        const targetScale = (((__oc46 = effectFit === null || effectFit === void 0 ? void 0 : effectFit.scale) !== null && __oc46 !== void 0 ? __oc46 : (this.config.effectScale || 0.42)));
         const fx = effectTexture ? null : this.scene.add.graphics().setDepth(15);
         const swipeEcho = effectTexture
             ? this.createEffectSprite(originX, originY, effectTexture, { frameMs: 40 })
@@ -910,11 +907,11 @@ export class BasicDagger extends WeaponBase {
             onComplete: () => this._destroyAttackObjects(entry),
         });
 
-        this._delay(112, () => {
+        this._delay(112, () => { var __oc47;
             this._damageEnemiesInCone(
                 baseAngle,
                 hitRange,
-                this.config.hitAngle ?? 0.78,
+                (((__oc47 = this.config.hitAngle) !== null && __oc47 !== void 0 ? __oc47 : 0.78)),
                 originX,
                 originY
             );
@@ -923,9 +920,9 @@ export class BasicDagger extends WeaponBase {
         this.playConfiguredSound('slash');
     }
 
-    _sanctuaryBurst(variant = null) {
+    _sanctuaryBurst(variant = null) { var __oc48, __oc49, __oc50, __oc51;
         const { target, baseAngle, side } = this._getAttackSetup({
-            rangeBonus: this.config.targetRangeBonus ?? 25,
+            rangeBonus: (((__oc48 = this.config.targetRangeBonus) !== null && __oc48 !== void 0 ? __oc48 : 25)),
             duration: this._currentMotionDuration || BASIC_ATTACK_MOTION_DURATION,
             variant,
         });
@@ -935,14 +932,14 @@ export class BasicDagger extends WeaponBase {
         const perpY = cosA;
         const originX = this.player.x;
         const originY = this.player.y - 22;
-        const maxDist = this.attackRange + this.extraRange + (this.config.impactRangeBonus ?? -18);
+        const maxDist = this.attackRange + this.extraRange + (((__oc49 = this.config.impactRangeBonus) !== null && __oc49 !== void 0 ? __oc49 : -18));
         const targetDist = target
             ? Math.min(maxDist, Phaser.Math.Distance.Between(originX, originY, target.x, target.y))
-            : Math.min(maxDist, this.config.fallbackImpactDistance ?? 118);
+            : Math.min(maxDist, (((__oc50 = this.config.fallbackImpactDistance) !== null && __oc50 !== void 0 ? __oc50 : 118)));
         const impactX = originX + cosA * targetDist;
         const impactY = originY + sinA * targetDist;
         const effectTexture = this._getConfiguredEffectTexture();
-        const impactRadius = this.config.impactRadius ?? 56;
+        const impactRadius = (((__oc51 = this.config.impactRadius) !== null && __oc51 !== void 0 ? __oc51 : 56));
         const fittedScale = effectTexture
             ? this.getEffectScaleForVisibleSize(effectTexture, impactRadius * 2)
             : null;
@@ -958,7 +955,7 @@ export class BasicDagger extends WeaponBase {
         const progress = { t: 0 };
         const entry = this._trackAttackObjects([slamSprite].filter(Boolean));
 
-        const draw = (t) => {
+        const draw = (t) => { var __oc52, __oc53;
             const k = Phaser.Math.Clamp(t, 0, 1);
             const charge = Phaser.Math.Easing.Cubic.Out(Phaser.Math.Clamp(k / 0.28, 0, 1));
             const burstRaw = Phaser.Math.Clamp((k - 0.2) / 0.46, 0, 1);
@@ -971,8 +968,8 @@ export class BasicDagger extends WeaponBase {
                 const lateral = side * 6 * (1 - burst);
                 const alpha = charge * (0.3 + burst * 0.68) * remaining;
                 const scaleRatio = 0.38 + burst * 0.62 + fade * 0.1;
-                const scaleX = (fittedScale?.x ?? (this.config.effectScale || 0.46)) * scaleRatio;
-                const scaleY = (fittedScale?.y ?? (this.config.effectScale || 0.46)) * scaleRatio;
+                const scaleX = (((__oc52 = fittedScale === null || fittedScale === void 0 ? void 0 : fittedScale.x) !== null && __oc52 !== void 0 ? __oc52 : (this.config.effectScale || 0.46))) * scaleRatio;
+                const scaleY = (((__oc53 = fittedScale === null || fittedScale === void 0 ? void 0 : fittedScale.y) !== null && __oc53 !== void 0 ? __oc53 : (this.config.effectScale || 0.46))) * scaleRatio;
 
                 slamSprite
                     .setPosition(impactX - perpX * lateral, impactY - perpY * lateral)
@@ -992,22 +989,22 @@ export class BasicDagger extends WeaponBase {
             onComplete: () => this._destroyAttackObjects(entry),
         });
 
-        this._delay(220, () => {
+        this._delay(220, () => { var __oc54;
             this._damageEnemiesInRadius(
                 impactX,
                 impactY,
                 impactRadius,
                 baseAngle
             );
-            if (this.scene.cameras?.main) this.scene.cameras.main.shake(55, 0.0008);
+            if ((((__oc54 = this.scene.cameras) === null || __oc54 === void 0 ? void 0 : __oc54.main))) this.scene.cameras.main.shake(55, 0.0008);
         });
 
         this.playConfiguredSound('groundSlam');
     }
 
-    _fireball(variant = null) {
+    _fireball(variant = null) { var __oc55, __oc56, __oc57;
         const { target, baseAngle, side } = this._getAttackSetup({
-            rangeBonus: this.config.targetRangeBonus ?? 130,
+            rangeBonus: (((__oc55 = this.config.targetRangeBonus) !== null && __oc55 !== void 0 ? __oc55 : 130)),
             duration: this._currentMotionDuration || BASIC_ATTACK_MOTION_DURATION,
             variant,
         });
@@ -1017,7 +1014,7 @@ export class BasicDagger extends WeaponBase {
         const perpY = cosA;
         const originX = this.player.x;
         const originY = this.player.y - 18;
-        const maxDist = this.attackRange + this.extraRange + (this.config.projectileRangeBonus ?? 80);
+        const maxDist = this.attackRange + this.extraRange + (((__oc56 = this.config.projectileRangeBonus) !== null && __oc56 !== void 0 ? __oc56 : 80));
         const targetDist = target
             ? Math.min(maxDist, Phaser.Math.Distance.Between(originX, originY, target.x, target.y) + 18)
             : maxDist;
@@ -1027,7 +1024,7 @@ export class BasicDagger extends WeaponBase {
         const endY = originY + sinA * targetDist;
         const effectTexture = this._getConfiguredEffectTexture();
         const usesImageEffect = !!effectTexture;
-        const impactRadius = this.config.impactRadius ?? 38;
+        const impactRadius = (((__oc57 = this.config.impactRadius) !== null && __oc57 !== void 0 ? __oc57 : 38));
         const projectileScale = effectTexture
             ? this.getEffectScaleForVisibleSize(effectTexture, impactRadius * 2).x
             : (this.config.effectScale || 0.32);
@@ -1228,8 +1225,8 @@ export class BasicDagger extends WeaponBase {
         }
     }
 
-    destroy() {
-        const tweens = this.scene?.tweens;
+    destroy() { var __oc58;
+        const tweens = (((__oc58 = this.scene) === null || __oc58 === void 0 ? void 0 : __oc58.tweens));
         for (const entry of this._activeThrusts) {
             if (entry.tween && tweens) tweens.remove(entry.tween);
             for (const object of entry.objects) {

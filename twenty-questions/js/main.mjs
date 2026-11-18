@@ -138,12 +138,12 @@ function spawnBurst(x, y, { count, colors, speedMin, speedMax, ringMax, ringWidt
 // 추측 근접도와 정답 여부에 따라 스프라이트·캔버스·흔들림 복합 이펙트 실행
 function triggerGameVfx(event, game) {
     if (reducedMotion.matches || !event || event.replayed) return;
-    const anchor = (game?.status === 'won' ? $('result-banner') : $('resonance-strip')) || $('guess-form');
-    const rect = anchor?.getBoundingClientRect();
+    const anchor = (((game === null || game === void 0 ? void 0 : game.status)) === 'won' ? $('result-banner') : $('resonance-strip')) || $('guess-form');
+    const rect = ((anchor === null || anchor === void 0 ? void 0 : anchor.getBoundingClientRect()));
     const cx = rect && rect.width ? rect.left + rect.width / 2 : window.innerWidth / 2;
     const cy = rect && rect.height ? rect.top + rect.height / 2 : window.innerHeight * 0.34;
 
-    if (game?.status === 'won' && event.code === 'won') {
+    if (((game === null || game === void 0 ? void 0 : game.status)) === 'won' && event.code === 'won') {
         const burst = $('vfx-burst');
         if (burst) {
             burst.classList.remove('is-active');
@@ -211,7 +211,7 @@ function triggerGameVfx(event, game) {
     }
 }
 
-try { pendingCommand = JSON.parse(storage.get('pending') || 'null'); } catch { pendingCommand = null; }
+try { pendingCommand = JSON.parse(storage.get('pending') || 'null'); } catch (_err) { pendingCommand = null; }
 
 const settings = {
     darkMode: storage.get('darkMode') !== 'false',
@@ -227,7 +227,7 @@ applyTheme();
 
 function notify(key, values = {}, permanent = false) {
     clearTimeout(noticeTimer);
-    const text = Object.hasOwn(messages[locale], key) ? t(key, values) : t('network_error');
+    const text = Object.prototype.hasOwnProperty.call(messages[locale], key) ? t(key, values) : t('network_error');
     $('notice').textContent = text;
     $('notice').hidden = false;
     if (!permanent) noticeTimer = setTimeout(() => { $('notice').hidden = true; }, 5500);
@@ -263,7 +263,7 @@ function startGuessLoading() {
     guessLoadingHideTimer = 0;
     const slot = $('composer-status-slot');
     const gl = $('guess-loading');
-    slot?.classList.add('is-loading');
+    ((slot === null || slot === void 0 ? void 0 : slot.classList.add('is-loading')));
     if (gl) {
         gl.hidden = false;
         gl.dataset.phase = 'idle';
@@ -281,14 +281,14 @@ function finishGuessLoading(immediate = false) {
             gl.dataset.phase = 'idle';
             gl.hidden = true;
         }
-        slot?.classList.remove('is-loading');
+        ((slot === null || slot === void 0 ? void 0 : slot.classList.remove('is-loading')));
         return;
     }
     gl.dataset.phase = 'done';
     guessLoadingHideTimer = setTimeout(() => {
         gl.dataset.phase = 'idle';
         gl.hidden = true;
-        slot?.classList.remove('is-loading');
+        ((slot === null || slot === void 0 ? void 0 : slot.classList.remove('is-loading')));
     }, 240);
 }
 
@@ -304,8 +304,8 @@ function setBusy(value) {
 }
 
 // 서버 기준 경과 시간(ms)을 계산해 백그라운드·새로고침 뒤에도 끊기지 않게 표시
-function activeElapsedMs() {
-    const createdAt = state.game?.createdAt;
+function activeElapsedMs() { var __oc0;
+    const createdAt = (((__oc0 = state.game) === null || __oc0 === void 0 ? void 0 : __oc0.createdAt));
     if (!Number.isFinite(createdAt)) return 0;
     return Math.max(0, Date.now() + serverClockOffset - createdAt);
 }
@@ -354,8 +354,8 @@ function tickTimer() {
     }
 }
 
-function syncStopwatchLoop() {
-    if (state.game?.status === 'active') {
+function syncStopwatchLoop() { var __oc1;
+    if ((((__oc1 = state.game) === null || __oc1 === void 0 ? void 0 : __oc1.status)) === 'active') {
         tickTimer();
         if (!stopwatchTimer) stopwatchTimer = setInterval(tickTimer, 100);
     } else {
@@ -376,13 +376,13 @@ function thermalClass(entry) {
     return 'tier-cold';
 }
 
-function closenessLabel(entry) {
+function closenessLabel(entry) { var __oc2, __oc3, __oc4;
     if (entry.rank === 0) return t('rank_exact');
     if (entry.rank !== null) {
         const tierKey = entry.rank <= 10 ? 'tier_molten' : entry.rank <= 100 ? 'tier_hot' : 'tier_warm';
         return `${t('rank_badge', { rank: entry.rank })} · ${t(tierKey)}`;
     }
-    const cutoff = state.game?.benchmarks?.top1000 ?? 30;
+    const cutoff = (((__oc4 = (__oc3 = (__oc2 = state.game) === null || __oc2 === void 0 ? void 0 : __oc2.benchmarks) === null || __oc3 === void 0 ? void 0 : __oc3.top1000) !== null && __oc4 !== void 0 ? __oc4 : 30));
     const feelKey = entry.similarity >= cutoff * 0.65
         ? 'tier_lukewarm'
         : entry.similarity >= 0
@@ -538,13 +538,13 @@ function renderResonanceBar(game) {
     label.textContent = t('resonance_best', { word: best.word, sim: best.similarity.toFixed(2), rank: rankStr });
 }
 
-function render(data, { navigate = true, effects = false } = {}) {
-    if (data.game && state.game?.id === data.game.id && data.game.version < state.game.version) return;
+function render(data, { navigate = true, effects = false } = {}) { var __oc5, __oc6, __oc7, __oc8, __oc9;
+    if (data.game && (((__oc5 = state.game) === null || __oc5 === void 0 ? void 0 : __oc5.id)) === data.game.id && data.game.version < state.game.version) return;
     if (Number.isFinite(data.serverNow)) {
         serverClockOffset = data.serverNow - Date.now();
     }
-    effects = effects && !data.event?.replayed;
-    const prevGameId = state.game?.id;
+    effects = effects && !(((__oc6 = data.event) === null || __oc6 === void 0 ? void 0 : __oc6.replayed));
+    const prevGameId = (((__oc7 = state.game) === null || __oc7 === void 0 ? void 0 : __oc7.id));
     state = data;
     const profile = data.profile || blankProfile;
 
@@ -569,7 +569,7 @@ function render(data, { navigate = true, effects = false } = {}) {
         showTurnFeedback(null);
     }
 
-    if (data.event?.word && ['guess', 'duplicate', 'won'].includes(data.event.code)) {
+    if ((((__oc8 = data.event) === null || __oc8 === void 0 ? void 0 : __oc8.word)) && ['guess', 'duplicate', 'won'].includes(data.event.code)) {
         latestHighlightWord = data.event.word;
     }
 
@@ -590,7 +590,7 @@ function render(data, { navigate = true, effects = false } = {}) {
     }
 
     renderResonanceBar(game);
-    renderGuessesTable(game, effects && ['guess', 'won'].includes(data.event?.code));
+    renderGuessesTable(game, effects && ['guess', 'won'].includes((((__oc9 = data.event) === null || __oc9 === void 0 ? void 0 : __oc9.code))));
     syncStopwatchLoop();
 
     $('guess-input').placeholder = t(active ? 'guess_placeholder' : 'explore_placeholder');
@@ -625,15 +625,15 @@ function render(data, { navigate = true, effects = false } = {}) {
     requestAnimationFrame(syncKeyboard);
 }
 
-async function recover() {
+async function recover() { var __oc10;
     const epoch = mutationEpoch;
-    const gameId = state.game?.id || storage.get('game');
+    const gameId = (((__oc10 = state.game) === null || __oc10 === void 0 ? void 0 : __oc10.id)) || storage.get('game');
     const data = gameId ? await request(`games/${gameId}`) : await request('profile');
     if (epoch === mutationEpoch) render(data, { navigate: screen !== 'title' });
     return data;
 }
 
-async function action(callback) {
+async function action(callback) { var __oc11, __oc12;
     if (busy) return;
     mutationEpoch++;
     audio.unlock();
@@ -646,13 +646,13 @@ async function action(callback) {
         if (['stale_state', 'game_finished', 'network_error'].includes(error.code)) {
             try {
                 const recovered = await recover();
-                if (pendingCommand && recovered.game?.guesses?.some(g => g.requestId === pendingCommand.body.requestId)) {
+                if (pendingCommand && (((__oc12 = (__oc11 = recovered.game) === null || __oc11 === void 0 ? void 0 : __oc11.guesses) === null || __oc12 === void 0 ? void 0 : __oc12.some(g => g.requestId === pendingCommand.body.requestId)))) {
                     if ($('guess-input').value.trim() === pendingCommand.body.text) $('guess-input').value = '';
                     pendingCommand = null;
                     storage.remove('pending');
                     storage.remove('draft');
                 }
-            } catch { /* 서버 재연결 실패 시 대기 중인 요청 보존 */ }
+            } catch (_err) { /* 서버 재연결 실패 시 대기 중인 요청 보존 */ }
         }
         if (error.code === 'stale_state') {
             pendingCommand = null;
@@ -687,8 +687,8 @@ async function start() {
     });
 }
 
-async function submitGuess(wordText) {
-    const text = String(wordText ?? $('guess-input').value).normalize('NFC').trim();
+async function submitGuess(wordText) { var __oc15;
+    const text = String(((wordText !== null && wordText !== void 0 ? wordText : $('guess-input').value))).normalize('NFC').trim();
     if (!text) {
         $('guess-input').focus();
         return;
@@ -726,9 +726,9 @@ async function submitGuess(wordText) {
 
     startGuessLoading();
     try {
-        await action(async () => {
+        await action(async () => { var __oc13, __oc14;
             const path = `games/${game.id}/guesses`;
-            const samePending = pendingCommand?.path === path && pendingCommand.body.text === text;
+            const samePending = ((pendingCommand === null || pendingCommand === void 0 ? void 0 : pendingCommand.path)) === path && pendingCommand.body.text === text;
             const body = samePending ? pendingCommand.body : { text, locale, requestId: requestId(), expectedVersion: game.version };
             if (!samePending) {
                 pendingCommand = { path, body };
@@ -739,12 +739,12 @@ async function submitGuess(wordText) {
             pendingCommand = null;
             storage.remove('pending');
 
-            if (data.event?.code === 'unknown_word') {
+            if ((((__oc13 = data.event) === null || __oc13 === void 0 ? void 0 : __oc13.code)) === 'unknown_word') {
                 audio.result(data.event, data.game);
                 showTurnFeedback('unknown_word', { word: data.event.word }, 'error');
                 return;
             }
-            if (data.event?.code === 'duplicate') {
+            if ((((__oc14 = data.event) === null || __oc14 === void 0 ? void 0 : __oc14.code)) === 'duplicate') {
                 $('guess-input').value = '';
                 storage.remove('draft');
                 latestHighlightWord = data.event.word;
@@ -761,7 +761,7 @@ async function submitGuess(wordText) {
         finishGuessLoading();
     }
 
-    if (state.game?.status === 'active') $('guess-input').focus({ preventScroll: true });
+    if ((((__oc15 = state.game) === null || __oc15 === void 0 ? void 0 : __oc15.status)) === 'active') $('guess-input').focus({ preventScroll: true });
 }
 
 function buildShareText() {
@@ -788,16 +788,16 @@ function buildShareText() {
     return lines.join('\n');
 }
 
-async function copyShare() {
+async function copyShare() { var __oc16;
     const text = buildShareText();
     if (!text) return;
     try {
-        if (navigator.clipboard?.writeText) {
+        if ((((__oc16 = navigator.clipboard) === null || __oc16 === void 0 ? void 0 : __oc16.writeText))) {
             await navigator.clipboard.writeText(text);
             notify('copied');
             return;
         }
-    } catch { /* 클립보드 미지원 환경 처리 */ }
+    } catch (_err) { /* 클립보드 미지원 환경 처리 */ }
     notify('copy_failed');
 }
 
@@ -861,11 +861,11 @@ function openDialog(id) {
     $(id).showModal();
 }
 
-async function showRanking() {
+async function showRanking() { var __oc17, __oc18, __oc19;
     openDialog('ranking-dialog');
     $('leaderboard').textContent = t('loading');
     $('own-rank').textContent = '';
-    $('name-input').value = state.profile?.name || '';
+    $('name-input').value = (((__oc17 = state.profile) === null || __oc17 === void 0 ? void 0 : __oc17.name)) || '';
     $('name-status').textContent = '';
     try {
         const data = await request('leaderboard');
@@ -888,7 +888,7 @@ async function showRanking() {
                 String(entry.rank),
                 entry.name,
                 formatRecordTime(entry.bestTimeMs),
-                t('guesses_unit', { count: entry.guesses ?? entry.turns ?? 0 }),
+                t('guesses_unit', { count: (((__oc19 = (__oc18 = entry.guesses) !== null && __oc18 !== void 0 ? __oc18 : entry.turns) !== null && __oc19 !== void 0 ? __oc19 : 0)) }),
             ];
             for (const value of cells) {
                 const td = document.createElement('td');
@@ -904,7 +904,7 @@ async function showRanking() {
         }
     } catch (error) {
         reportException(error, 'leaderboard');
-        $('leaderboard').textContent = t(Object.hasOwn(messages[locale], error.code) ? error.code : 'network_error');
+        $('leaderboard').textContent = t(Object.prototype.hasOwnProperty.call(messages[locale], error.code) ? error.code : 'network_error');
     }
 }
 
@@ -949,8 +949,8 @@ $('guess-input').addEventListener('keydown', event => {
 });
 
 for (const chip of document.querySelectorAll('.starter-chip')) {
-    chip.addEventListener('click', () => {
-        if (busy || state.game?.status !== 'active') return;
+    chip.addEventListener('click', () => { var __oc20;
+        if (busy || (((__oc20 = state.game) === null || __oc20 === void 0 ? void 0 : __oc20.status)) !== 'active') return;
         submitGuess(chip.dataset.word);
     });
 }
@@ -1000,7 +1000,7 @@ $('name-form').addEventListener('submit', async event => {
         $('name-status').textContent = t('saved_name');
         await showRanking();
     } catch (error) {
-        $('name-status').textContent = t(Object.hasOwn(messages[locale], error.code) ? error.code : 'network_error');
+        $('name-status').textContent = t(Object.prototype.hasOwnProperty.call(messages[locale], error.code) ? error.code : 'network_error');
     }
 });
 
@@ -1059,9 +1059,9 @@ window.addEventListener('online', () => {
 window.addEventListener('offline', () => notify('offline', {}, true));
 
 // 백그라운드·잠금·탭 전환 복귀 즉시 서버 기준 시간으로 타이머 동기화
-function handleForeground() {
+function handleForeground() { var __oc21;
     tickTimer();
-    if (!document.hidden && !busy && (screen === 'game' || state.game?.status === 'active')) {
+    if (!document.hidden && !busy && (screen === 'game' || (((__oc21 = state.game) === null || __oc21 === void 0 ? void 0 : __oc21.status)) === 'active')) {
         recover().catch(() => {});
     }
 }
@@ -1078,11 +1078,11 @@ window.addEventListener('focus', tickTimer);
 
     const update = () => {
         frame = 0;
-        const height = viewport?.height || window.innerHeight;
-        const top = viewport?.offsetTop || 0;
+        const height = ((viewport === null || viewport === void 0 ? void 0 : viewport.height)) || window.innerHeight;
+        const top = ((viewport === null || viewport === void 0 ? void 0 : viewport.offsetTop)) || 0;
         const focused = document.activeElement === $('guess-input');
         const wasOpen = document.body.classList.contains('keyboard-open');
-        const unzoomed = Math.abs((viewport?.scale || 1) - 1) < 0.05;
+        const unzoomed = Math.abs((((viewport === null || viewport === void 0 ? void 0 : viewport.scale)) || 1) - 1) < 0.05;
         if (Math.abs(window.innerWidth - fullWidth) > 80) {
             fullWidth = window.innerWidth;
             fullHeight = window.innerHeight;
@@ -1101,8 +1101,8 @@ window.addEventListener('focus', tickTimer);
     };
 
     syncKeyboard = () => { if (!frame) frame = requestAnimationFrame(update); };
-    viewport?.addEventListener('resize', syncKeyboard);
-    viewport?.addEventListener('scroll', syncKeyboard);
+    ((viewport === null || viewport === void 0 ? void 0 : viewport.addEventListener('resize', syncKeyboard)));
+    ((viewport === null || viewport === void 0 ? void 0 : viewport.addEventListener('scroll', syncKeyboard)));
     window.addEventListener('resize', syncKeyboard);
     $('guess-input').addEventListener('focus', () => {
         focusTimers.forEach(clearTimeout);

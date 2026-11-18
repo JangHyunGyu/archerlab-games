@@ -79,7 +79,7 @@ export class SpriteFactory {
     // Uses nearest-neighbor scaling to keep pixel art crisp
     // Flips horizontally so sprites face right (DCSS tiles face left by default)
     // Applies NEAREST filter so upscaled pixel tiles stay crisp instead of blurry
-    static _scaleExtTexture(scene, extKey, targetKey, w, h) {
+    static _scaleExtTexture(scene, extKey, targetKey, w, h) { var __oc0;
         if (!scene.textures.exists(extKey)) return false;
         try {
             const src = scene.textures.get(extKey).getSourceImage();
@@ -106,7 +106,7 @@ export class SpriteFactory {
             // Pixel-perfect upscale: keep sharp edges on retro tiles
             try {
                 const tex = scene.textures.get(targetKey);
-                if (tex && tex.setFilter && Phaser.Textures?.FilterMode) {
+                if (tex && tex.setFilter && (((__oc0 = Phaser.Textures) === null || __oc0 === void 0 ? void 0 : __oc0.FilterMode))) {
                     tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
                 }
             } catch (_) { /* filter mode optional */ }
@@ -188,7 +188,7 @@ export class SpriteFactory {
     }
 
     static _clearPlayerAnimations(scene) {
-        if (!scene?.anims) return;
+        if (!((scene === null || scene === void 0 ? void 0 : scene.anims))) return;
         const names = [
             'idle',
             'idle_down',

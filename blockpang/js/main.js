@@ -167,7 +167,9 @@ async function createBlockpangApplication(options) {
     window.__blockpangGame = game;
     app.start();
     updateLoading(1, currentLang === 'ko' ? '준비 완료' : 'Ready');
-    requestAnimationFrame(() => loading?.classList.add('is-hidden'));
+    requestAnimationFrame(() => { return (
+(loading === null || loading === void 0 ? void 0 : loading.classList.add('is-hidden'))
+); });
 
     // Build the sound graph and start decoding WAVs while the title is idle,
     // so the first tap only has to resume the AudioContext.
@@ -448,9 +450,9 @@ async function createBlockpangApplication(options) {
     window._sendGameError = _sendError;
 
     if (!window.ArcherLabClientErrorReporter) {
-    window.addEventListener('error', function(e) {
+    window.addEventListener('error', function(e) { var __oc0, __oc1;
         var src = (e.filename || '') + ':' + e.lineno + ':' + e.colno;
-        _sendError(e.error?.name || 'Error', e.message, e.error?.stack || '', src, {
+        _sendError((((__oc0 = e.error) === null || __oc0 === void 0 ? void 0 : __oc0.name)) || 'Error', e.message, (((__oc1 = e.error) === null || __oc1 === void 0 ? void 0 : __oc1.stack)) || '', src, {
             handler: 'window.error',
             filename: e.filename || '',
             line: e.lineno || 0,
@@ -460,10 +462,10 @@ async function createBlockpangApplication(options) {
 
     window.addEventListener('unhandledrejection', function(e) {
         var reason = e.reason;
-        var msg = reason?.message || String(reason || 'Unhandled rejection');
-        _sendError('UnhandledRejection', msg, reason?.stack || '', location.href, {
+        var msg = ((reason === null || reason === void 0 ? void 0 : reason.message)) || String(reason || 'Unhandled rejection');
+        _sendError('UnhandledRejection', msg, ((reason === null || reason === void 0 ? void 0 : reason.stack)) || '', location.href, {
             handler: 'window.unhandledrejection',
-            reasonType: reason?.name || typeof reason,
+            reasonType: ((reason === null || reason === void 0 ? void 0 : reason.name)) || typeof reason,
         });
     });
     }

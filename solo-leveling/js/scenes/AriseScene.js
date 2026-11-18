@@ -5,13 +5,13 @@ import { SystemMessage } from '../ui/SystemMessage.js?v=20261009-orient-v1';
 export class AriseScene extends Phaser.Scene {
     constructor() { super({ key: 'AriseScene' }); }
 
-    create({ manager, bossData }) {
+    create({ manager, bossData }) { var __oc0, __oc1;
         this.manager = manager;
         this.bossData = bossData;
         this.player = manager.scene.player;
         this.soundManager = manager.scene.soundManager;
         this.systemMessage = new SystemMessage(this, { placement: 'bottom' });
-        this.reducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+        this.reducedMotion = (((__oc1 = (__oc0 = (typeof globalThis !== 'undefined' ? globalThis : window)).matchMedia) === null || __oc1 === void 0 ? void 0 : __oc1.call(__oc0, '(prefers-reduced-motion: reduce)').matches)) === true;
         this._onResize = () => {
             this.cameras.main.centerOn(bossData.x, bossData.y);
             this.systemMessage.relayout();

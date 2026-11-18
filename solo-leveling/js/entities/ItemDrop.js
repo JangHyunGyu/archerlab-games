@@ -13,10 +13,10 @@ const ITEM_TYPES = {
         asset: 'item_hp_potion',
         sound: 'potion',
         dropRate: 0.08,
-        effect: (player, scene) => {
+        effect: (player, scene) => { var __oc0;
             const healAmount = Math.floor(player.stats.maxHp * 0.08);
             player.heal(healAmount);
-            scene.systemMessage?.show(t('sysSystem'), [tf('itemHpRestored', { n: healAmount })], { duration: 1500 });
+            (((__oc0 = scene.systemMessage) === null || __oc0 === void 0 ? void 0 : __oc0.show(t('sysSystem'), [tf('itemHpRestored', { n: healAmount })], { duration: 1500 })));
         },
     },
     manaCrystal: {
@@ -25,17 +25,19 @@ const ITEM_TYPES = {
         asset: 'item_mana_crystal',
         sound: 'mana',
         dropRate: 0.05,
-        effect: (player, scene) => {
+        effect: (player, scene) => { var __oc1, __oc2, __oc3;
             // Temporary cooldown reduction for 10 seconds
             const bonus = 0.2;
             player._tempCooldownReduction = Math.max(0, (player._tempCooldownReduction || 0) + bonus);
-            player._recalcStat?.('cooldownReduction');
-            scene.systemMessage?.show(t('sysSystem'), [t('itemManaCrystal')], { duration: 1500 });
-            scene.itemDropManager?._delay(10000, () => {
-                if (!player?.scene) return;
-                player._tempCooldownReduction = Math.max(0, (player._tempCooldownReduction || 0) - bonus);
-                player._recalcStat?.('cooldownReduction');
-            });
+            (((__oc1 = player._recalcStat) === null || __oc1 === void 0 ? void 0 : __oc1.call(player, 'cooldownReduction')));
+            (((__oc2 = scene.systemMessage) === null || __oc2 === void 0 ? void 0 : __oc2.show(t('sysSystem'), [t('itemManaCrystal')], { duration: 1500 })));
+            (((__oc3 = scene.itemDropManager) === null || __oc3 === void 0 ? void 0 : __oc3._delay(10000, () => {
+        var __oc203;
+        if (!((player === null || player === void 0 ? void 0 : player.scene)))
+            return;
+        player._tempCooldownReduction = Math.max(0, (player._tempCooldownReduction || 0) - bonus);
+        (((__oc203 = player._recalcStat) === null || __oc203 === void 0 ? void 0 : __oc203.call(player, 'cooldownReduction')));
+    })));
         },
     },
     shadowEssence: {
@@ -44,13 +46,14 @@ const ITEM_TYPES = {
         asset: 'item_shadow_essence',
         sound: 'essence',
         dropRate: 0.03,
-        effect: (player, scene) => {
+        effect: (player, scene) => { var __oc4, __oc5;
             // Temporary attack boost for 15 seconds
             player._tempAtkBuff = (player._tempAtkBuff || 0) + 0.5;
-            scene.systemMessage?.show(t('sysSystem'), [t('itemShadowEssence')], { duration: 1500, type: 'arise' });
-            scene.itemDropManager?._delay(15000, () => {
-                if (player?.scene) player._tempAtkBuff = Math.max(0, (player._tempAtkBuff || 0) - 0.5);
-            });
+            (((__oc4 = scene.systemMessage) === null || __oc4 === void 0 ? void 0 : __oc4.show(t('sysSystem'), [t('itemShadowEssence')], { duration: 1500, type: 'arise' })));
+            (((__oc5 = scene.itemDropManager) === null || __oc5 === void 0 ? void 0 : __oc5._delay(15000, () => {
+        if (((player === null || player === void 0 ? void 0 : player.scene)))
+            player._tempAtkBuff = Math.max(0, (player._tempAtkBuff || 0) - 0.5);
+    })));
         },
     },
 };
@@ -62,11 +65,11 @@ export class ItemDropManager {
         this._timers = new Set();
     }
 
-    _delay(ms, callback) {
-        if (!this.scene?.time) return null;
-        const timer = this.scene.time.delayedCall(ms, () => {
+    _delay(ms, callback) { var __oc6;
+        if (!(((__oc6 = this.scene) === null || __oc6 === void 0 ? void 0 : __oc6.time))) return null;
+        const timer = this.scene.time.delayedCall(ms, () => { var __oc7, __oc8, __oc9;
             this._timers.delete(timer);
-            if (this.scene?.scene?.isActive?.() !== false) callback();
+            if ((((__oc9 = (__oc8 = (__oc7 = this.scene) === null || __oc7 === void 0 ? void 0 : __oc7.scene) === null || __oc8 === void 0 ? void 0 : __oc8.isActive) === null || __oc9 === void 0 ? void 0 : __oc9.call(__oc8))) !== false) callback();
         });
         this._timers.add(timer);
         return timer;
@@ -210,12 +213,12 @@ export class ItemDropManager {
         this.items.splice(index, 1);
     }
 
-    destroy() {
+    destroy() { var __oc10;
         for (const timer of this._timers) {
             try { timer.remove(false); } catch (e) { /* already removed */ }
         }
         this._timers.clear();
-        const tweens = this.scene?.tweens;
+        const tweens = (((__oc10 = this.scene) === null || __oc10 === void 0 ? void 0 : __oc10.tweens));
         this.items.forEach(item => {
             if (tweens) tweens.killTweensOf(item);
             if (item._glow) { if (tweens) tweens.killTweensOf(item._glow); item._glow.destroy(); }

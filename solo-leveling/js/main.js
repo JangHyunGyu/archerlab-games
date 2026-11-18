@@ -1,3 +1,4 @@
+var __oc3, __oc4, __oc5;
 // 그림자 서바이벌: 서바이버즈 - Phaser 기반 뱀서라이크 게임
 import { setGameDimensions, GAME_WIDTH, GAME_HEIGHT } from './utils/Constants.js';
 import { BootScene } from './scenes/BootScene.js';
@@ -20,10 +21,10 @@ const MIN_H = 768;
 function visualViewportBox() {
     const viewport = window.visualViewport;
     return {
-        w: Math.max(1, Math.round(viewport?.width || window.innerWidth || 1)),
-        h: Math.max(1, Math.round(viewport?.height || window.innerHeight || 1)),
-        top: Math.round(viewport?.offsetTop || 0),
-        left: Math.round(viewport?.offsetLeft || 0),
+        w: Math.max(1, Math.round(((viewport === null || viewport === void 0 ? void 0 : viewport.width)) || window.innerWidth || 1)),
+        h: Math.max(1, Math.round(((viewport === null || viewport === void 0 ? void 0 : viewport.height)) || window.innerHeight || 1)),
+        top: Math.round(((viewport === null || viewport === void 0 ? void 0 : viewport.offsetTop)) || 0),
+        left: Math.round(((viewport === null || viewport === void 0 ? void 0 : viewport.offsetLeft)) || 0),
     };
 }
 
@@ -48,8 +49,8 @@ function lockDocumentToVisualViewport() {
 function getViewportSize() {
     const visual = visualViewportBox();
     const container = document.getElementById('game-container');
-    const boxW = Math.round(container?.clientWidth || 0);
-    const boxH = Math.round(container?.clientHeight || 0);
+    const boxW = Math.round(((container === null || container === void 0 ? void 0 : container.clientWidth)) || 0);
+    const boxH = Math.round(((container === null || container === void 0 ? void 0 : container.clientHeight)) || 0);
     const visualPortrait = visual.h > visual.w;
     const boxPortrait = boxH > boxW;
     // A stale container stays on the previous orientation and would lay the
@@ -87,7 +88,7 @@ function calcGameSize() {
 }
 
 function syncCanvasDisplaySize(viewport = getViewportSize()) {
-    const canvas = game?.canvas || document.querySelector('#game-container canvas');
+    const canvas = ((game === null || game === void 0 ? void 0 : game.canvas)) || document.querySelector('#game-container canvas');
     if (!canvas) return;
 
     const scale = Math.min(viewport.w / GAME_WIDTH, viewport.h / GAME_HEIGHT);
@@ -169,10 +170,10 @@ function clearOrientationFollowups() {
     while (orientationFollowups.length) clearTimeout(orientationFollowups.pop());
 }
 
-function syncSceneCameras(width, height) {
-    const scenes = game.scene?.scenes || [];
+function syncSceneCameras(width, height) { var __oc0, __oc1;
+    const scenes = (((__oc0 = game.scene) === null || __oc0 === void 0 ? void 0 : __oc0.scenes)) || [];
     for (const scene of scenes) {
-        const cameras = scene.cameras?.cameras || [];
+        const cameras = (((__oc1 = scene.cameras) === null || __oc1 === void 0 ? void 0 : __oc1.cameras)) || [];
         for (const camera of cameras) {
             if (!camera) continue;
             if (camera.x !== 0 || camera.y !== 0) continue;
@@ -182,8 +183,8 @@ function syncSceneCameras(width, height) {
     }
 }
 
-function applyViewport() {
-    if (!game?.scale) return;
+function applyViewport() { var __oc2;
+    if (!((game === null || game === void 0 ? void 0 : game.scale))) return;
     lockDocumentToVisualViewport();
     const nextViewport = getViewportSize();
     const nextSize = calcGameSize();
@@ -191,7 +192,7 @@ function applyViewport() {
 
     if (!changed) {
         const canvas = game.canvas;
-        const rect = canvas?.getBoundingClientRect?.();
+        const rect = (((__oc2 = canvas === null || canvas === void 0 ? void 0 : canvas.getBoundingClientRect) === null || __oc2 === void 0 ? void 0 : __oc2.call(canvas)));
         const fitted = Math.min(nextViewport.w / nextSize.w, nextViewport.h / nextSize.h);
         const wantW = Math.max(1, Math.round(nextSize.w * fitted));
         const wantH = Math.max(1, Math.round(nextSize.h * fitted));
@@ -219,7 +220,7 @@ function applyViewport() {
 }
 
 function scheduleViewportSync(delay) {
-    if (!game?.scale) return;
+    if (!((game === null || game === void 0 ? void 0 : game.scale))) return;
     if (resizeRefreshTimer) clearTimeout(resizeRefreshTimer);
     resizeRefreshTimer = setTimeout(() => {
         resizeRefreshTimer = null;
@@ -246,10 +247,10 @@ if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', handleResize);
     window.visualViewport.addEventListener('scroll', handleResize);
 }
-window.screen?.orientation?.addEventListener?.('change', handleOrientationChange);
+(((__oc5 = (__oc4 = (__oc3 = window.screen) === null || __oc3 === void 0 ? void 0 : __oc3.orientation) === null || __oc4 === void 0 ? void 0 : __oc4.addEventListener) === null || __oc5 === void 0 ? void 0 : __oc5.call(__oc4, 'change', handleOrientationChange)));
 requestAnimationFrame(() => applyViewport());
 
-game.events.on('destroy', () => {
+game.events.on('destroy', () => { var __oc6, __oc7, __oc8;
     if (resizeRefreshTimer) {
         clearTimeout(resizeRefreshTimer);
         resizeRefreshTimer = null;
@@ -261,7 +262,7 @@ game.events.on('destroy', () => {
         window.visualViewport.removeEventListener('resize', handleResize);
         window.visualViewport.removeEventListener('scroll', handleResize);
     }
-    window.screen?.orientation?.removeEventListener?.('change', handleOrientationChange);
+    (((__oc8 = (__oc7 = (__oc6 = window.screen) === null || __oc6 === void 0 ? void 0 : __oc6.orientation) === null || __oc7 === void 0 ? void 0 : __oc7.removeEventListener) === null || __oc8 === void 0 ? void 0 : __oc8.call(__oc7, 'change', handleOrientationChange)));
 });
 
 // 【글로벌 에러 핸들러】
@@ -324,15 +325,15 @@ game.events.on('destroy', () => {
     }
 
     if (!window.ArcherLabClientErrorReporter) {
-    window.addEventListener('error', function(e) {
+    window.addEventListener('error', function(e) { var __oc9, __oc10;
         var src = (e.filename || '') + ':' + e.lineno + ':' + e.colno;
-        _sendError(e.error?.name || 'Error', e.message, e.error?.stack || '', src);
+        _sendError((((__oc9 = e.error) === null || __oc9 === void 0 ? void 0 : __oc9.name)) || 'Error', e.message, (((__oc10 = e.error) === null || __oc10 === void 0 ? void 0 : __oc10.stack)) || '', src);
     });
 
     window.addEventListener('unhandledrejection', function(e) {
         var reason = e.reason;
-        var msg = reason?.message || String(reason || 'Unhandled rejection');
-        _sendError('UnhandledRejection', msg, reason?.stack || '', location.href);
+        var msg = ((reason === null || reason === void 0 ? void 0 : reason.message)) || String(reason || 'Unhandled rejection');
+        _sendError('UnhandledRejection', msg, ((reason === null || reason === void 0 ? void 0 : reason.stack)) || '', location.href);
     });
     }
 })();

@@ -4,19 +4,19 @@ import { Enemy } from '../entities/Enemy.js';
 const MAX_RESTORED_ENEMIES = 500;
 
 export class EnemyManager {
-    constructor(scene, options = {}) {
+    constructor(scene, options = {}) { var __oc0, __oc1, __oc2, __oc3, __oc4, __oc5;
         this.scene = scene;
         this.pool = scene.physics.add.group({
             classType: Enemy,
             runChildUpdate: false,
         });
-        this._warmPoolTarget = options.warmPoolSize ?? 50;
-        this._warmBatchSize = options.warmBatchSize ?? 8;
-        this._warmBatchDelay = options.warmBatchDelay ?? 70;
+        this._warmPoolTarget = (((__oc0 = options.warmPoolSize) !== null && __oc0 !== void 0 ? __oc0 : 50));
+        this._warmBatchSize = (((__oc1 = options.warmBatchSize) !== null && __oc1 !== void 0 ? __oc1 : 8));
+        this._warmBatchDelay = (((__oc2 = options.warmBatchDelay) !== null && __oc2 !== void 0 ? __oc2 : 70));
         this._warmPoolTimer = null;
         this._inactiveEnemies = [];
 
-        this._createInactiveEnemies(Math.min(options.initialPoolSize ?? 50, this._warmPoolTarget));
+        this._createInactiveEnemies(Math.min((((__oc3 = options.initialPoolSize) !== null && __oc3 !== void 0 ? __oc3 : 50)), this._warmPoolTarget));
 
         this.spawnTimer = WAVE_CONFIG.baseSpawnInterval * 0.75;
         this.eliteTimer = 0;
@@ -53,10 +53,10 @@ export class EnemyManager {
         this._activeEnemiesDirtyFrame = -1;
 
         if (this.pool.getLength() < this._warmPoolTarget) {
-            this._warmPoolTimer = scene.time.delayedCall(options.warmupDelay ?? 650, () => this._warmPool());
+            this._warmPoolTimer = scene.time.delayedCall((((__oc4 = options.warmupDelay) !== null && __oc4 !== void 0 ? __oc4 : 650)), () => this._warmPool());
         }
 
-        const openingWaveDelay = options.openingWaveDelay ?? 320;
+        const openingWaveDelay = (((__oc5 = options.openingWaveDelay) !== null && __oc5 !== void 0 ? __oc5 : 320));
         if (Number.isFinite(openingWaveDelay) && openingWaveDelay >= 0) {
             this._openingWaveTimer = scene.time.delayedCall(openingWaveDelay, () => {
                 this._openingWaveTimer = null;
@@ -114,7 +114,7 @@ export class EnemyManager {
         this._warmPoolTimer = this.scene.time.delayedCall(this._warmBatchDelay, () => this._warmPool());
     }
 
-    update(time, delta) {
+    update(time, delta) { var __oc6;
         this.gameTime += delta;
         const minutes = this.gameTime / 60000;
         const seconds = this.gameTime / 1000;
@@ -147,7 +147,7 @@ export class EnemyManager {
         const player = this.scene.player;
         if (!player) return;
 
-        const target = player.getHurtboxCenter?.() || player;
+        const target = (((__oc6 = player.getHurtboxCenter) === null || __oc6 === void 0 ? void 0 : __oc6.call(player))) || player;
         if (!this._despawnDist) {
             this._despawnDist = WORLD_SIZE * 0.75;
             this._despawnDistSq = this._despawnDist * this._despawnDist;
@@ -315,15 +315,15 @@ export class EnemyManager {
         });
     }
 
-    syncScreenLayout() {
+    syncScreenLayout() { var __oc7, __oc8;
         const border = this._dungeonBreakBorder;
-        const cam = this.scene?.cameras?.main;
-        if (!border?.active || !cam) return;
+        const cam = (((__oc8 = (__oc7 = this.scene) === null || __oc7 === void 0 ? void 0 : __oc7.cameras) === null || __oc8 === void 0 ? void 0 : __oc8.main));
+        if (!((border === null || border === void 0 ? void 0 : border.active)) || !cam) return;
         border.setPosition(cam.width / 2, cam.height / 2);
         border.setSize(Math.max(1, cam.width - 4), Math.max(1, cam.height - 4));
     }
 
-    _endDungeonBreak() {
+    _endDungeonBreak() { var __oc9;
         this.activeDungeonBreak = null;
 
         if (this._dungeonBreakBorder) {
@@ -340,7 +340,7 @@ export class EnemyManager {
         }
 
         // Bonus XP. A level from this grant must open the skill screen, same as quests.
-        const leveled = this.scene.player?.addXP(100);
+        const leveled = (((__oc9 = this.scene.player) === null || __oc9 === void 0 ? void 0 : __oc9.addXP(100)));
         if (leveled && this.scene.onLevelUp) {
             this.scene.onLevelUp();
         }
@@ -393,12 +393,12 @@ export class EnemyManager {
         }
     }
 
-    _generateQuest(seconds) {
+    _generateQuest(seconds) { var __oc10;
         const template = Phaser.Utils.Array.GetRandom(this.questTemplates);
         const quest = {
             ...template,
             startTime: seconds,
-            startKills: this.scene.player?.kills || 0,
+            startKills: (((__oc10 = this.scene.player) === null || __oc10 === void 0 ? void 0 : __oc10.kills)) || 0,
             startCount: this.killCounters[template.targetType] || 0,
         };
 
@@ -415,12 +415,12 @@ export class EnemyManager {
         }
     }
 
-    _completeQuest(index) {
+    _completeQuest(index) { var __oc11;
         const quest = this.quests[index];
         this.quests.splice(index, 1);
 
         // Give reward
-        const leveled = this.scene.player?.addXP(quest.reward);
+        const leveled = (((__oc11 = this.scene.player) === null || __oc11 === void 0 ? void 0 : __oc11.addXP(quest.reward)));
 
         if (this.scene.soundManager) this.scene.soundManager.play('quest');
 
@@ -446,8 +446,8 @@ export class EnemyManager {
     }
 
     // --- Spawning ---
-    _spawnOpeningWave() {
-        if (!this.scene?.player || this.scene.player.isDead) return;
+    _spawnOpeningWave() { var __oc12;
+        if (!(((__oc12 = this.scene) === null || __oc12 === void 0 ? void 0 : __oc12.player)) || this.scene.player.isDead) return;
         const openingTypes = ['goblin', 'goblin', 'antSoldier'];
         for (let i = 0; i < openingTypes.length; i++) {
             const pos = this._getSpawnPosition(72, 140);
@@ -500,9 +500,9 @@ export class EnemyManager {
         return entries[0][0];
     }
 
-    _getSpawnPosition(bufferMin = 110, bufferMax = 220) {
+    _getSpawnPosition(bufferMin = 110, bufferMax = 220) { var __oc13;
         const player = this.scene.player;
-        const cam = this.scene.cameras?.main;
+        const cam = (((__oc13 = this.scene.cameras) === null || __oc13 === void 0 ? void 0 : __oc13.main));
         if (player && cam) {
             const halfW = cam.width / cam.zoom / 2;
             const halfH = cam.height / cam.zoom / 2;
@@ -645,7 +645,7 @@ export class EnemyManager {
     }
 
     _applyEliteState(enemy) {
-        if (!enemy?.active || !ENEMY_TYPES[enemy.enemyType]) return;
+        if (!((enemy === null || enemy === void 0 ? void 0 : enemy.active)) || !ENEMY_TYPES[enemy.enemyType]) return;
         this._clearEliteState(enemy);
         enemy.isElite = true;
 
@@ -731,14 +731,14 @@ export class EnemyManager {
         }
     }
 
-    getActiveEnemySnapshots(limit = Infinity) {
+    getActiveEnemySnapshots(limit = Infinity) { var __oc14, __oc15, __oc16, __oc17;
         const max = Number.isFinite(limit) ? Math.max(0, limit) : Infinity;
         const snapshots = [];
         const enemies = this.getActiveEnemies();
 
         for (let i = 0; i < enemies.length && snapshots.length < max; i++) {
             const enemy = enemies[i];
-            if (!enemy?.active || !ENEMY_TYPES[enemy.enemyType]) continue;
+            if (!((enemy === null || enemy === void 0 ? void 0 : enemy.active)) || !ENEMY_TYPES[enemy.enemyType]) continue;
             snapshots.push({
                 typeKey: enemy.enemyType,
                 x: Math.round(enemy.x * 10) / 10,
@@ -754,8 +754,8 @@ export class EnemyManager {
                 knockbackTimer: Math.max(0, Math.round(enemy.knockbackTimer || 0)),
                 rangedCooldown: Math.max(0, Math.round(enemy.rangedCooldown || 0)),
                 meleeCooldown: Math.max(0, Math.round(enemy.meleeCooldown || 0)),
-                vx: Math.round((enemy.body?.velocity?.x || 0) * 10) / 10,
-                vy: Math.round((enemy.body?.velocity?.y || 0) * 10) / 10,
+                vx: Math.round(((((__oc15 = (__oc14 = enemy.body) === null || __oc14 === void 0 ? void 0 : __oc14.velocity) === null || __oc15 === void 0 ? void 0 : __oc15.x)) || 0) * 10) / 10,
+                vy: Math.round(((((__oc17 = (__oc16 = enemy.body) === null || __oc16 === void 0 ? void 0 : __oc16.velocity) === null || __oc17 === void 0 ? void 0 : __oc17.y)) || 0) * 10) / 10,
                 flipX: !!enemy.flipX,
             });
         }
@@ -773,7 +773,7 @@ export class EnemyManager {
 
         let restored = 0;
         for (const saved of savedEnemies.slice(0, MAX_RESTORED_ENEMIES)) {
-            if (!saved?.typeKey || !ENEMY_TYPES[saved.typeKey]) continue;
+            if (!((saved === null || saved === void 0 ? void 0 : saved.typeKey)) || !ENEMY_TYPES[saved.typeKey]) continue;
             const x = Phaser.Math.Clamp(Number(saved.x) || WORLD_SIZE / 2, 60, WORLD_SIZE - 60);
             const y = Phaser.Math.Clamp(Number(saved.y) || WORLD_SIZE / 2, 60, WORLD_SIZE - 60);
             const enemy = this._spawnEnemy(saved.typeKey, x, y);
@@ -832,7 +832,7 @@ export class EnemyManager {
         return this.gameTime;
     }
 
-    destroy() {
+    destroy() { var __oc18, __oc19, __oc20;
         if (this._openingWaveTimer) {
             this.cancelOpeningWave();
         }
@@ -843,13 +843,13 @@ export class EnemyManager {
 
         // 던전 브레이크 보더 정리
         if (this._dungeonBreakBorder) {
-            if (this.scene?.tweens) this.scene.tweens.killTweensOf(this._dungeonBreakBorder);
+            if ((((__oc18 = this.scene) === null || __oc18 === void 0 ? void 0 : __oc18.tweens))) this.scene.tweens.killTweensOf(this._dungeonBreakBorder);
             this._dungeonBreakBorder.destroy();
             this._dungeonBreakBorder = null;
         }
         // 엘리트 라벨 + 그림자 아우라 정리
         try {
-            const children = this.pool?.getChildren?.();
+            const children = (((__oc20 = (__oc19 = this.pool) === null || __oc19 === void 0 ? void 0 : __oc19.getChildren) === null || __oc20 === void 0 ? void 0 : __oc20.call(__oc19)));
             if (children) {
                 children.forEach(enemy => {
                     if (enemy._eliteLabel) {

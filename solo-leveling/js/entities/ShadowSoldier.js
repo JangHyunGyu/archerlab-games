@@ -189,21 +189,21 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    _addShadowVfx(key, x, y, opts = {}) {
+    _addShadowVfx(key, x, y, opts = {}) { var __oc0, __oc1, __oc2, __oc3, __oc4, __oc5, __oc6;
         const textureKey = `shadow_vfx_${key}`;
-        if (!this.scene?.textures?.exists(textureKey)) return null;
+        if (!(((__oc1 = (__oc0 = this.scene) === null || __oc0 === void 0 ? void 0 : __oc0.textures) === null || __oc1 === void 0 ? void 0 : __oc1.exists(textureKey)))) return null;
 
         return this.scene.add.sprite(x, y, textureKey)
-            .setDepth(opts.depth ?? 8)
-            .setAlpha(opts.alpha ?? 0.9)
-            .setScale(opts.scale ?? 1)
-            .setRotation(opts.rotation ?? 0)
-            .setTint(opts.tint ?? COLORS.SHADOW_PRIMARY)
+            .setDepth((((__oc2 = opts.depth) !== null && __oc2 !== void 0 ? __oc2 : 8)))
+            .setAlpha((((__oc3 = opts.alpha) !== null && __oc3 !== void 0 ? __oc3 : 0.9)))
+            .setScale((((__oc4 = opts.scale) !== null && __oc4 !== void 0 ? __oc4 : 1)))
+            .setRotation((((__oc5 = opts.rotation) !== null && __oc5 !== void 0 ? __oc5 : 0)))
+            .setTint((((__oc6 = opts.tint) !== null && __oc6 !== void 0 ? __oc6 : COLORS.SHADOW_PRIMARY)))
             .setBlendMode(Phaser.BlendModes.ADD);
     }
 
-    _getAttackTargets() {
-        return this.scene?.player?.getAllEnemies?.() || this.scene?.enemyManager?.getActiveEnemies?.() || [];
+    _getAttackTargets() { var __oc7, __oc8, __oc9, __oc10, __oc11, __oc12;
+        return (((__oc9 = (__oc8 = (__oc7 = this.scene) === null || __oc7 === void 0 ? void 0 : __oc7.player) === null || __oc8 === void 0 ? void 0 : __oc8.getAllEnemies) === null || __oc9 === void 0 ? void 0 : __oc9.call(__oc8))) || (((__oc12 = (__oc11 = (__oc10 = this.scene) === null || __oc10 === void 0 ? void 0 : __oc10.enemyManager) === null || __oc11 === void 0 ? void 0 : __oc11.getActiveEnemies) === null || __oc12 === void 0 ? void 0 : __oc12.call(__oc11))) || [];
     }
 
     // Igris: fast melee slash (shadow version)
@@ -298,7 +298,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
             rotation: angle + Math.PI * 4,
             duration,
             ease: 'Linear',
-            onUpdate: () => {
+            onUpdate: () => { var __oc13;
                 if (!proj.active) return;
                 this._spawnProjectileTrail(proj.x, proj.y, angle);
                 const enemies = this._getAttackTargets();
@@ -310,7 +310,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
                         : enemy;
                     if (pierced.has(key)) continue;
 
-                    const hitRadius = Math.max(25, (enemy.body?.width || enemy.displayWidth || 50) * 0.35);
+                    const hitRadius = Math.max(25, ((((__oc13 = enemy.body) === null || __oc13 === void 0 ? void 0 : __oc13.width)) || enemy.displayWidth || 50) * 0.35);
                     const dx = proj.x - prevX;
                     const dy = proj.y - prevY;
                     const segLenSq = dx * dx + dy * dy;
@@ -358,8 +358,8 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         });
     }
 
-    _spawnProjectileTrail(x, y, angle) {
-        if (!this.scene?.textures?.exists('shadow_vfx_soldier_trail')) return;
+    _spawnProjectileTrail(x, y, angle) { var __oc14, __oc15;
+        if (!(((__oc15 = (__oc14 = this.scene) === null || __oc14 === void 0 ? void 0 : __oc14.textures) === null || __oc15 === void 0 ? void 0 : __oc15.exists('shadow_vfx_soldier_trail')))) return;
         if (Math.random() > 0.42) return;
 
         const trail = this.scene.add.sprite(x - Math.cos(angle) * 12, y - Math.sin(angle) * 12, 'shadow_vfx_soldier_trail')

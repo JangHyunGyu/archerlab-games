@@ -34,11 +34,11 @@ export class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' });
     }
 
-    init(data = {}) {
+    init(data = {}) { var __oc0;
         this._rankRunToken = {};
         this._resumeRequested = !!data.resume;
         const savedData = this._resumeRequested ? GameScene.getSavedGameData() : null;
-        this._selectedCharacterId = savedData?.player?.characterId || data.characterId || DEFAULT_CHARACTER_ID;
+        this._selectedCharacterId = (((__oc0 = savedData === null || savedData === void 0 ? void 0 : savedData.player) === null || __oc0 === void 0 ? void 0 : __oc0.characterId)) || data.characterId || DEFAULT_CHARACTER_ID;
         this._restoredFromSave = false;
         this._lastAutoSaveAt = 0;
         this._rankSessionId = null;
@@ -162,7 +162,7 @@ export class GameScene extends Phaser.Scene {
         let index = 0;
         const total = steps.length;
 
-        const runNext = () => {
+        const runNext = () => { var __oc1;
             if (!this._isBooting) return;
             if (index >= total) {
                 this._finishStartup();
@@ -180,7 +180,7 @@ export class GameScene extends Phaser.Scene {
 
             index += 1;
             this._setStartupProgress(index, total, step.label);
-            const timer = this.time.delayedCall(step.delay ?? 32, runNext);
+            const timer = this.time.delayedCall((((__oc1 = step.delay) !== null && __oc1 !== void 0 ? __oc1 : 32)), runNext);
             this._startupTimers.push(timer);
         };
 
@@ -230,11 +230,11 @@ export class GameScene extends Phaser.Scene {
                 this._autoSave(true);
                 return this._rankSessionId;
             })
-            .catch((e) => {
+            .catch((e) => { var __oc2, __oc3;
                 if (token !== this._rankRunToken) return null;
                 this._rankSyncFailed = true;
                 this._rankSessionPromise = null;
-                window.ArcherLabClientErrorReporter?.reportCodeException?.(e, { phase: 'rank-session' }, 'ranking_client_exception');
+                (((__oc3 = (__oc2 = window.ArcherLabClientErrorReporter) === null || __oc2 === void 0 ? void 0 : __oc2.reportCodeException) === null || __oc3 === void 0 ? void 0 : __oc3.call(__oc2, e, { phase: 'rank-session' }, 'ranking_client_exception')));
                 console.warn('[ShadowSurvival] rank session failed:', e.message);
                 return null;
             });
@@ -247,37 +247,37 @@ export class GameScene extends Phaser.Scene {
         return this._rankSessionPromise;
     }
 
-    _getRankGameId() {
-        const characterId = this.player?.characterId || this._selectedCharacterId || DEFAULT_CHARACTER_ID;
+    _getRankGameId() { var __oc4;
+        const characterId = (((__oc4 = this.player) === null || __oc4 === void 0 ? void 0 : __oc4.characterId)) || this._selectedCharacterId || DEFAULT_CHARACTER_ID;
         return getCharacterRankingGameId(GAME_ID_SHADOW, characterId);
     }
 
-    _getRankProgressEvent(score) {
+    _getRankProgressEvent(score) { var __oc5, __oc6, __oc7, __oc8, __oc9;
         return {
             type: 'progress',
             survived_seconds: Math.max(0, Math.floor(score || 0)),
-            level: Math.max(1, Math.floor(this.player?.level || 1)),
-            rank: this.player?.currentRank || 'E',
-            kills: Math.max(0, Math.floor(this.player?.kills || 0)),
-            shadow_count: Math.max(0, Math.floor(this.shadowArmyManager?.getSoldierCount?.() || 0)),
+            level: Math.max(1, Math.floor((((__oc5 = this.player) === null || __oc5 === void 0 ? void 0 : __oc5.level)) || 1)),
+            rank: (((__oc6 = this.player) === null || __oc6 === void 0 ? void 0 : __oc6.currentRank)) || 'E',
+            kills: Math.max(0, Math.floor((((__oc7 = this.player) === null || __oc7 === void 0 ? void 0 : __oc7.kills)) || 0)),
+            shadow_count: Math.max(0, Math.floor((((__oc9 = (__oc8 = this.shadowArmyManager) === null || __oc8 === void 0 ? void 0 : __oc8.getSoldierCount) === null || __oc9 === void 0 ? void 0 : __oc9.call(__oc8))) || 0)),
         };
     }
 
-    _updateRankProgressSync() {
+    _updateRankProgressSync() { var __oc10, __oc11;
         if (this._rankSyncDisabled || !this.enemyManager || this.isGameOver || this._isBooting) return;
-        const gameTime = this.enemyManager.getGameTime?.() || 0;
+        const gameTime = (((__oc11 = (__oc10 = this.enemyManager).getGameTime) === null || __oc11 === void 0 ? void 0 : __oc11.call(__oc10))) || 0;
         if (gameTime - this._rankLastSyncGameTime < RANK_PROGRESS_SYNC_INTERVAL_MS) return;
         this._rankLastSyncGameTime = gameTime;
         this._syncRankProgress(false);
     }
 
-    async _syncRankProgress(force = false) {
+    async _syncRankProgress(force = false) { var __oc12, __oc13, __oc14, __oc15, __oc16, __oc17, __oc18;
         const token = this._rankRunToken;
         const gameId = this._getRankGameId();
-        const deliveryScore = Math.max(0, Math.floor((this.enemyManager?.getGameTime?.() || 0) / 1000));
+        const deliveryScore = Math.max(0, Math.floor(((((__oc13 = (__oc12 = this.enemyManager) === null || __oc12 === void 0 ? void 0 : __oc12.getGameTime) === null || __oc13 === void 0 ? void 0 : __oc13.call(__oc12))) || 0) / 1000));
         const deliveryEvent = this._getRankProgressEvent(deliveryScore);
         if (!this._rankSyncDisabled && deliveryScore > 0) {
-            window.ArcherRanking?.track(this._getRankGameId(), deliveryEvent, this._rankSessionId);
+            (((__oc14 = window.ArcherRanking) === null || __oc14 === void 0 ? void 0 : __oc14.track(this._getRankGameId(), deliveryEvent, this._rankSessionId)));
         }
         if (this._rankSyncInFlight) {
             if (!force) return this._rankSyncInFlight;
@@ -286,7 +286,7 @@ export class GameScene extends Phaser.Scene {
         }
         if (this._rankSyncDisabled) return null;
 
-        const score = Math.max(0, Math.floor((this.enemyManager?.getGameTime?.() || 0) / 1000));
+        const score = Math.max(0, Math.floor(((((__oc16 = (__oc15 = this.enemyManager) === null || __oc15 === void 0 ? void 0 : __oc15.getGameTime) === null || __oc16 === void 0 ? void 0 : __oc16.call(__oc15))) || 0) / 1000));
         if (score <= 0 || (!force && score <= this._rankSyncedScore)) {
             return this._rankSyncedScore;
         }
@@ -308,7 +308,7 @@ export class GameScene extends Phaser.Scene {
             const data = await response.json().catch(() => null);
             if (token !== this._rankRunToken) return null;
             if (!response.ok || !data || data.success !== true) {
-                throw new Error(data?.error || `rank progress ${response.status}`);
+                throw new Error(((data === null || data === void 0 ? void 0 : data.error)) || `rank progress ${response.status}`);
             }
 
             const verifiedScore = Number(data.score);
@@ -323,7 +323,7 @@ export class GameScene extends Phaser.Scene {
         } catch (e) {
             if (token !== this._rankRunToken) return null;
             this._rankSyncFailed = true;
-            window.ArcherLabClientErrorReporter?.reportCodeException?.(e, { phase: 'rank-progress-sync' }, 'ranking_client_exception');
+            (((__oc18 = (__oc17 = window.ArcherLabClientErrorReporter) === null || __oc17 === void 0 ? void 0 : __oc17.reportCodeException) === null || __oc18 === void 0 ? void 0 : __oc18.call(__oc17, e, { phase: 'rank-progress-sync' }, 'ranking_client_exception')));
             console.warn('[ShadowSurvival] rank progress sync failed:', e.message);
             return null;
         } finally {
@@ -331,9 +331,9 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    async _flushRankProgress() {
+    async _flushRankProgress() { var __oc19, __oc20;
         if (window.ArcherRanking && !this._rankSyncDisabled) {
-            const score = Math.max(0, Math.floor((this.enemyManager?.getGameTime?.() || 0) / 1000));
+            const score = Math.max(0, Math.floor(((((__oc20 = (__oc19 = this.enemyManager) === null || __oc19 === void 0 ? void 0 : __oc19.getGameTime) === null || __oc20 === void 0 ? void 0 : __oc20.call(__oc19))) || 0) / 1000));
             if (score > 0) window.ArcherRanking.track(this._getRankGameId(), this._getRankProgressEvent(score), this._rankSessionId);
             return null; // Verification happens in the durable server delivery, not in the UI.
         }
@@ -453,7 +453,7 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    _destroyStartupOverlay() {
+    _destroyStartupOverlay() { var __oc21, __oc22;
         const elements = this._startupOverlay || [];
         if (elements.length === 0) return;
 
@@ -465,10 +465,10 @@ export class GameScene extends Phaser.Scene {
         this.tweens.add({
             targets: elements,
             alpha: 0,
-            duration: window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ? 0 : 180,
+            duration: (((__oc22 = (__oc21 = window.matchMedia) === null || __oc21 === void 0 ? void 0 : __oc21.call(window, '(prefers-reduced-motion: reduce)')) === null || __oc22 === void 0 ? void 0 : __oc22.matches)) ? 0 : 180,
             onComplete: () => {
                 elements.forEach(el => {
-                    if (el?.active) el.destroy();
+                    if (((el === null || el === void 0 ? void 0 : el.active))) el.destroy();
                 });
             },
         });
@@ -479,10 +479,10 @@ export class GameScene extends Phaser.Scene {
         this._startupProgressFill = null;
     }
 
-    _relayoutStartupOverlay() {
-        if (!this._startupOverlay?.length) return;
-        const label = this._startupLabel?.text || '';
-        const percent = this._startupPercent?.text || '';
+    _relayoutStartupOverlay() { var __oc23, __oc24, __oc25;
+        if (!(((__oc23 = this._startupOverlay) === null || __oc23 === void 0 ? void 0 : __oc23.length))) return;
+        const label = (((__oc24 = this._startupLabel) === null || __oc24 === void 0 ? void 0 : __oc24.text)) || '';
+        const percent = (((__oc25 = this._startupPercent) === null || __oc25 === void 0 ? void 0 : __oc25.text)) || '';
         const ratio = this._startupProgressWidth > 0 && this._startupProgressFill
             ? this._startupProgressFill.displayWidth / this._startupProgressWidth
             : 1;
@@ -492,7 +492,7 @@ export class GameScene extends Phaser.Scene {
             this._startupCoreTween = null;
         }
         elements.forEach(el => {
-            if (el?.active) el.destroy();
+            if (((el === null || el === void 0 ? void 0 : el.active))) el.destroy();
         });
         this._startupOverlay = null;
         this._startupLabel = null;
@@ -510,7 +510,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     _registerResizeHandler() {
-        this._onGameResize = () => {
+        this._onGameResize = () => { var __oc26, __oc27, __oc28, __oc29;
             const cam = this.cameras.main;
             if (cam.width !== GAME_WIDTH || cam.height !== GAME_HEIGHT) {
                 cam.setSize(GAME_WIDTH, GAME_HEIGHT);
@@ -528,8 +528,8 @@ export class GameScene extends Phaser.Scene {
                 this.mobileControls = new MobileControls(this);
             }
             if (this.systemMessage) this.systemMessage.relayout();
-            this.enemyManager?.syncScreenLayout?.();
-            this.shadowArmyManager?.syncScreenLayout?.();
+            (((__oc27 = (__oc26 = this.enemyManager) === null || __oc26 === void 0 ? void 0 : __oc26.syncScreenLayout) === null || __oc27 === void 0 ? void 0 : __oc27.call(__oc26)));
+            (((__oc29 = (__oc28 = this.shadowArmyManager) === null || __oc28 === void 0 ? void 0 : __oc28.syncScreenLayout) === null || __oc29 === void 0 ? void 0 : __oc29.call(__oc28)));
             if (this._vignetteOverlay) {
                 this._vignetteOverlay.setPosition(cam.width / 2, cam.height / 2);
                 this._vignetteOverlay.setDisplaySize(cam.width * 1.15, cam.height * 1.15);
@@ -580,13 +580,13 @@ export class GameScene extends Phaser.Scene {
         this._soundToggleKey.on('down', this._soundToggleHandler);
     }
 
-    update(time, delta) {
+    update(time, delta) { var __oc30, __oc31;
         if (this.isGameOver || this._isBooting) return;
         if (!this.player || !this.enemyManager || !this.weaponManager || !this.xpOrbPool || !this.itemDropManager || !this.shadowArmyManager || !this.hud) return;
         // The status panel only pauses physics. Enemy attacks and weapon timers
         // are plain update calls, so the run must stop while the player is reading it.
-        if (this.statusWindow?.isOpen) return;
-        if (this.shadowArmyManager?.isPerformingArise) return;
+        if ((((__oc30 = this.statusWindow) === null || __oc30 === void 0 ? void 0 : __oc30.isOpen))) return;
+        if ((((__oc31 = this.shadowArmyManager) === null || __oc31 === void 0 ? void 0 : __oc31.isPerformingArise))) return;
 
         // Auto quality adjustment based on FPS
         this._fpsCheckTimer = (this._fpsCheckTimer || 0) + delta;
@@ -878,11 +878,11 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    _updateBosses(time, delta) {
+    _updateBosses(time, delta) { var __oc32, __oc33;
         for (let i = this.activeBosses.length - 1; i >= 0; i--) {
             const boss = this.activeBosses[i];
             if (boss.active) {
-                const target = this.player.getHurtboxCenter?.() || this.player;
+                const target = (((__oc33 = (__oc32 = this.player).getHurtboxCenter) === null || __oc33 === void 0 ? void 0 : __oc33.call(__oc32))) || this.player;
                 boss.update(time, delta, target.x, target.y);
             } else {
                 // Clean up colliders when boss is removed
@@ -947,7 +947,7 @@ export class GameScene extends Phaser.Scene {
         this.cameras.main.shake(500, 0.02);
         this.cameras.main.fadeOut(1500, 20, 0, 0);
 
-        this.time.delayedCall(1500, async () => {
+        this.time.delayedCall(1500, async () => { var __oc34;
             const finalScore = Math.floor(this.enemyManager.getGameTime() / 1000);
             let rankSyncFailed = this._rankSyncDisabled;
             let rankVerifiedScore = this._rankSyncedScore;
@@ -963,7 +963,7 @@ export class GameScene extends Phaser.Scene {
                 time: finalScore,
                 shadowCount: this.shadowArmyManager.getSoldierCount(),
                 characterId: this.player.characterId,
-                characterName: this.player.character?.name,
+                characterName: (((__oc34 = this.player.character) === null || __oc34 === void 0 ? void 0 : __oc34.name)),
                 rankSessionId: this._rankSessionId,
                 rankSyncFailed,
                 rankSyncDisabled: this._rankSyncDisabled,
@@ -1073,16 +1073,16 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    _addLevelUpBlur() {
+    _addLevelUpBlur() { var __oc35, __oc36;
         try {
             // A paused scene still renders. Bloom plus a full-screen blur on that
             // live frame stalls the audio thread for the whole choice. Hide the
             // battle instead of filtering it. LevelUpScene paints its own panel.
-            if (this._bloomFilter?.setActive) {
+            if ((((__oc35 = this._bloomFilter) === null || __oc35 === void 0 ? void 0 : __oc35.setActive))) {
                 this._bloomFilter.setActive(false);
                 this._bloomSuspendedForLevelUp = true;
             }
-            if (this._levelUpBlur?.setActive) this._levelUpBlur.setActive(false);
+            if ((((__oc36 = this._levelUpBlur) === null || __oc36 === void 0 ? void 0 : __oc36.setActive))) this._levelUpBlur.setActive(false);
             if (!this._levelUpSceneHidden) {
                 this.scene.setVisible(false);
                 this._levelUpSceneHidden = true;
@@ -1090,10 +1090,10 @@ export class GameScene extends Phaser.Scene {
         } catch (e) { /* hiding the battle is optional */ }
     }
 
-    removeLevelUpBlur() {
+    removeLevelUpBlur() { var __oc37, __oc38;
         try {
-            if (this._levelUpBlur?.setActive) this._levelUpBlur.setActive(false);
-            if (this._bloomSuspendedForLevelUp && this._bloomFilter?.setActive) {
+            if ((((__oc37 = this._levelUpBlur) === null || __oc37 === void 0 ? void 0 : __oc37.setActive))) this._levelUpBlur.setActive(false);
+            if (this._bloomSuspendedForLevelUp && (((__oc38 = this._bloomFilter) === null || __oc38 === void 0 ? void 0 : __oc38.setActive))) {
                 this._bloomFilter.setActive(true);
             }
             this._bloomSuspendedForLevelUp = false;
@@ -1129,10 +1129,10 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    _createSaveSnapshot(ts = Date.now(), options = {}) {
+    _createSaveSnapshot(ts = Date.now(), options = {}) { var __oc39, __oc40, __oc41, __oc42, __oc43, __oc44, __oc45, __oc46, __oc47, __oc48, __oc49, __oc50, __oc51, __oc52, __oc53;
         const player = this.player;
-        const gameTime = this.enemyManager?.getGameTime?.() || 0;
-        const enemyLimit = options.enemyLimit ?? AUTO_SAVE_ENEMY_LIMIT;
+        const gameTime = (((__oc40 = (__oc39 = this.enemyManager) === null || __oc39 === void 0 ? void 0 : __oc39.getGameTime) === null || __oc40 === void 0 ? void 0 : __oc40.call(__oc39))) || 0;
+        const enemyLimit = (((__oc41 = options.enemyLimit) !== null && __oc41 !== void 0 ? __oc41 : AUTO_SAVE_ENEMY_LIMIT));
         const weaponEntries = this.weaponManager
             ? Array.from(this.weaponManager.weapons.entries()).map(([key, weapon]) => ({
                 key,
@@ -1166,18 +1166,20 @@ export class GameScene extends Phaser.Scene {
             weapons: weaponEntries,
             enemyManager: {
                 gameTime,
-                difficultyMultiplier: this.enemyManager?.difficultyMultiplier || 1,
-                spawnTimer: this.enemyManager?.spawnTimer || 0,
-                eliteTimer: this.enemyManager?.eliteTimer || 0,
-                activeDungeonBreak: this.enemyManager?.activeDungeonBreak || null,
-                triggeredBreaks: [...(this.enemyManager?.triggeredBreaks || [])],
-                quests: JSON.parse(JSON.stringify(this.enemyManager?.quests || [])),
-                lastQuestTime: this.enemyManager?.lastQuestTime || 0,
-                killCounters: { ...(this.enemyManager?.killCounters || {}) },
-                activeEnemies: this.enemyManager?.getActiveEnemySnapshots?.(enemyLimit) || [],
+                difficultyMultiplier: (((__oc42 = this.enemyManager) === null || __oc42 === void 0 ? void 0 : __oc42.difficultyMultiplier)) || 1,
+                spawnTimer: (((__oc43 = this.enemyManager) === null || __oc43 === void 0 ? void 0 : __oc43.spawnTimer)) || 0,
+                eliteTimer: (((__oc44 = this.enemyManager) === null || __oc44 === void 0 ? void 0 : __oc44.eliteTimer)) || 0,
+                activeDungeonBreak: (((__oc45 = this.enemyManager) === null || __oc45 === void 0 ? void 0 : __oc45.activeDungeonBreak)) || null,
+                triggeredBreaks: [...((((__oc46 = this.enemyManager) === null || __oc46 === void 0 ? void 0 : __oc46.triggeredBreaks)) || [])],
+                quests: JSON.parse(JSON.stringify((((__oc47 = this.enemyManager) === null || __oc47 === void 0 ? void 0 : __oc47.quests)) || [])),
+                lastQuestTime: (((__oc48 = this.enemyManager) === null || __oc48 === void 0 ? void 0 : __oc48.lastQuestTime)) || 0,
+                killCounters: { ...((((__oc49 = this.enemyManager) === null || __oc49 === void 0 ? void 0 : __oc49.killCounters)) || {}) },
+                activeEnemies: (((__oc51 = (__oc50 = this.enemyManager) === null || __oc50 === void 0 ? void 0 : __oc50.getActiveEnemySnapshots) === null || __oc51 === void 0 ? void 0 : __oc51.call(__oc50, enemyLimit))) || [],
             },
             bossesSpawned: [...(this.bossesSpawned || [])],
-            activeBosses: (this.activeBosses || []).filter(b => b?.active).map(boss => ({
+            activeBosses: (this.activeBosses || []).filter(b => { return (
+(b === null || b === void 0 ? void 0 : b.active)
+); }).map(boss => ({
                 bossKey: boss.bossKey,
                 x: boss.x,
                 y: boss.y,
@@ -1187,24 +1189,24 @@ export class GameScene extends Phaser.Scene {
                 speed: boss.speed,
                 phase: boss.phase,
             })),
-            shadows: this.shadowArmyManager?.getSoldiers?.()
-                .filter(s => s?.active && !s._temporary)
-                .map(soldier => ({
-                    bossKey: soldier.bossKey,
-                    x: soldier.x,
-                    y: soldier.y,
-                })) || [],
+            shadows: (((__oc53 = (__oc52 = this.shadowArmyManager) === null || __oc52 === void 0 ? void 0 : __oc52.getSoldiers) === null || __oc53 === void 0 ? void 0 : __oc53.call(__oc52).filter(s => {
+        return (((s === null || s === void 0 ? void 0 : s.active)) && !s._temporary);
+    }).map(soldier => ({
+        bossKey: soldier.bossKey,
+        x: soldier.x,
+        y: soldier.y,
+    })))) || [],
         };
     }
 
-    _restoreSavedGame() {
+    _restoreSavedGame() { var __oc54;
         const data = GameScene.getSavedGameData();
         if (!GameScene._hasMeaningfulProgress(data)) return false;
 
         try {
             this._restorePlayer(data.player || {});
             this._restoreEnemyProgress(data.enemyManager || {});
-            this._restoreEnemies(data.enemyManager?.activeEnemies || []);
+            this._restoreEnemies((((__oc54 = data.enemyManager) === null || __oc54 === void 0 ? void 0 : __oc54.activeEnemies)) || []);
             this.bossesSpawned = Array.isArray(data.bossesSpawned)
                 ? data.bossesSpawned.filter(i => Number.isInteger(i))
                 : [];
@@ -1219,7 +1221,7 @@ export class GameScene extends Phaser.Scene {
                     e.message || String(e),
                     e.stack || '',
                     'GameScene:_restoreSavedGame',
-                    { hasSavedData: !!data, savedAt: data?.ts || null }
+                    { hasSavedData: !!data, savedAt: ((data === null || data === void 0 ? void 0 : data.ts)) || null }
                 );
             }
             return false;
@@ -1266,10 +1268,10 @@ export class GameScene extends Phaser.Scene {
         );
     }
 
-    _restoreEnemyProgress(saved) {
+    _restoreEnemyProgress(saved) { var __oc55;
         const manager = this.enemyManager;
         if (!manager) return;
-        manager.cancelOpeningWave?.();
+        (((__oc55 = manager.cancelOpeningWave) === null || __oc55 === void 0 ? void 0 : __oc55.call(manager)));
         manager.gameTime = Math.max(0, Number(saved.gameTime) || 0);
         manager.difficultyMultiplier = Math.max(1, Number(saved.difficultyMultiplier) || 1);
         manager.spawnTimer = Math.max(0, Number(saved.spawnTimer) || 0);
@@ -1286,8 +1288,8 @@ export class GameScene extends Phaser.Scene {
             : null;
     }
 
-    _restoreEnemies(savedEnemies) {
-        if (!this.enemyManager?.restoreActiveEnemies) return;
+    _restoreEnemies(savedEnemies) { var __oc56;
+        if (!(((__oc56 = this.enemyManager) === null || __oc56 === void 0 ? void 0 : __oc56.restoreActiveEnemies))) return;
         this.enemyManager.restoreActiveEnemies(savedEnemies);
     }
 
@@ -1298,12 +1300,16 @@ export class GameScene extends Phaser.Scene {
         const allowedKeys = new Set(getCharacterWeaponKeys(this.player.characterId));
         const starterKey = getStarterWeaponKey(this.player.characterId);
         const list = Array.isArray(savedWeapons)
-            ? savedWeapons.filter(w => allowedKeys.has(w?.key))
+            ? savedWeapons.filter(w => { return (
+allowedKeys.has(((w === null || w === void 0 ? void 0 : w.key)))
+); })
             : [];
-        if (!list.some(w => w?.key === starterKey)) list.unshift({ key: starterKey });
+        if (!list.some(w => { return (
+((w === null || w === void 0 ? void 0 : w.key)) === starterKey
+); })) list.unshift({ key: starterKey });
 
         for (const saved of list) {
-            if (!saved?.key || !this.weaponManager.addWeapon(saved.key)) continue;
+            if (!((saved === null || saved === void 0 ? void 0 : saved.key)) || !this.weaponManager.addWeapon(saved.key)) continue;
             const weapon = this.weaponManager.weapons.get(saved.key);
             if (!weapon) continue;
             weapon.level = Phaser.Math.Clamp(Number(saved.level) || 1, 1, 10);
@@ -1316,13 +1322,13 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    _restoreShadows(savedShadows) {
-        if (!this.shadowArmyManager?.enabled || !Array.isArray(savedShadows)) return;
-        this.shadowArmyManager.soldiers.forEach(s => { if (s?.scene) s.destroy(); });
+    _restoreShadows(savedShadows) { var __oc57;
+        if (!(((__oc57 = this.shadowArmyManager) === null || __oc57 === void 0 ? void 0 : __oc57.enabled)) || !Array.isArray(savedShadows)) return;
+        this.shadowArmyManager.soldiers.forEach(s => { if (((s === null || s === void 0 ? void 0 : s.scene))) s.destroy(); });
         this.shadowArmyManager.soldiers = [];
 
         for (const saved of savedShadows.slice(0, this.shadowArmyManager.maxSoldiers)) {
-            if (!saved?.bossKey || !BOSS_TYPES[saved.bossKey]) continue;
+            if (!((saved === null || saved === void 0 ? void 0 : saved.bossKey)) || !BOSS_TYPES[saved.bossKey]) continue;
             const soldier = new ShadowSoldier(
                 this,
                 Phaser.Math.Clamp(Number(saved.x) || this.player.x, 80, WORLD_SIZE - 80),
@@ -1336,7 +1342,7 @@ export class GameScene extends Phaser.Scene {
     _restoreBosses(savedBosses) {
         if (!Array.isArray(savedBosses)) return;
         for (const saved of savedBosses) {
-            if (!saved?.bossKey || !BOSS_TYPES[saved.bossKey]) continue;
+            if (!((saved === null || saved === void 0 ? void 0 : saved.bossKey)) || !BOSS_TYPES[saved.bossKey]) continue;
             const boss = new Boss(
                 this,
                 Phaser.Math.Clamp(Number(saved.x) || this.player.x, 80, WORLD_SIZE - 80),
@@ -1366,15 +1372,15 @@ export class GameScene extends Phaser.Scene {
             const raw = localStorage.getItem(SAVE_KEY);
             if (!raw) return null;
             const data = JSON.parse(raw);
-            return data?.version === SAVE_VERSION ? data : null;
+            return ((data === null || data === void 0 ? void 0 : data.version)) === SAVE_VERSION ? data : null;
         } catch (e) {
             return null;
         }
     }
 
-    static _hasMeaningfulProgress(data) {
-        if (!data?.player) return false;
-        const timeSec = Math.floor((data.enemyManager?.gameTime || 0) / 1000);
+    static _hasMeaningfulProgress(data) { var __oc58;
+        if (!((data === null || data === void 0 ? void 0 : data.player))) return false;
+        const timeSec = Math.floor(((((__oc58 = data.enemyManager) === null || __oc58 === void 0 ? void 0 : __oc58.gameTime)) || 0) / 1000);
         return timeSec >= 5
             || (data.player.kills || 0) > 0
             || (data.player.level || 1) > 1
@@ -1387,19 +1393,19 @@ export class GameScene extends Phaser.Scene {
         return GameScene._hasMeaningfulProgress(GameScene.getSavedGameData());
     }
 
-    static getSavedSummary() {
+    static getSavedSummary() { var __oc59;
         const data = GameScene.getSavedGameData();
         if (!GameScene._hasMeaningfulProgress(data)) return null;
         return {
             level: data.player.level || 1,
             kills: data.player.kills || 0,
-            timeSec: Math.floor((data.enemyManager?.gameTime || 0) / 1000),
+            timeSec: Math.floor(((((__oc59 = data.enemyManager) === null || __oc59 === void 0 ? void 0 : __oc59.gameTime)) || 0) / 1000),
             characterId: data.player.characterId || DEFAULT_CHARACTER_ID,
             characterName: getCharacter(data.player.characterId).name,
         };
     }
 
-    shutdown() {
+    shutdown() { var __oc60;
         this._rankRunToken = {};
         try {
             if (!this.isGameOver) this._autoSave(true);
@@ -1411,7 +1417,7 @@ export class GameScene extends Phaser.Scene {
                 this._startupTimers = [];
             }
             if (this._startupOverlay) {
-                this._startupOverlay.forEach(el => { if (el?.active) el.destroy(); });
+                this._startupOverlay.forEach(el => { if (((el === null || el === void 0 ? void 0 : el.active))) el.destroy(); });
                 this._startupOverlay = null;
                 this._startupLabel = null;
                 this._startupPercent = null;
@@ -1470,7 +1476,7 @@ export class GameScene extends Phaser.Scene {
             if (this.environmentProps) {
                 this.environmentProps.forEach(prop => {
                     if (this.tweens) this.tweens.killTweensOf(prop);
-                    if (prop?.active) prop.destroy();
+                    if (((prop === null || prop === void 0 ? void 0 : prop.active))) prop.destroy();
                 });
                 this.environmentProps = null;
             }
@@ -1479,7 +1485,7 @@ export class GameScene extends Phaser.Scene {
             if (this._colorTint) { this._colorTint.destroy(); this._colorTint = null; }
             if (this._mobileDarken) { this._mobileDarken.destroy(); this._mobileDarken = null; }
 
-            if (this.activeBosses && this.physics?.world) {
+            if (this.activeBosses && (((__oc60 = this.physics) === null || __oc60 === void 0 ? void 0 : __oc60.world))) {
                 for (const boss of this.activeBosses) {
                     try {
                         if (boss._playerCollider) this.physics.world.removeCollider(boss._playerCollider);

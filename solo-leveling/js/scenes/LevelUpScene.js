@@ -8,14 +8,14 @@ import { t } from '../utils/i18n.js';
 import { UIAssets } from '../ui/UIAssets.js?v=20260913-crafted-ui-v1';
 import { getCharacterWeaponKeys, getStarterWeaponKey } from '../utils/Characters.js';
 
-function cssPerGameUnit(scene) {
-    const scale = scene?.game?.scale?.displayScale;
-    const sx = Number(scale?.x);
-    const sy = Number(scale?.y);
+function cssPerGameUnit(scene) { var __oc0, __oc1;
+    const scale = (((__oc1 = (__oc0 = scene === null || scene === void 0 ? void 0 : scene.game) === null || __oc0 === void 0 ? void 0 : __oc0.scale) === null || __oc1 === void 0 ? void 0 : __oc1.displayScale));
+    const sx = Number(((scale === null || scale === void 0 ? void 0 : scale.x)));
+    const sy = Number(((scale === null || scale === void 0 ? void 0 : scale.y)));
     if (sx > 0.01 && sy > 0.01) return 1 / Math.max(sx, sy);
     const viewport = window.visualViewport;
-    const w = Math.max(1, viewport?.width || window.innerWidth || GAME_WIDTH);
-    const h = Math.max(1, viewport?.height || window.innerHeight || GAME_HEIGHT);
+    const w = Math.max(1, ((viewport === null || viewport === void 0 ? void 0 : viewport.width)) || window.innerWidth || GAME_WIDTH);
+    const h = Math.max(1, ((viewport === null || viewport === void 0 ? void 0 : viewport.height)) || window.innerHeight || GAME_HEIGHT);
     return Math.max(0.01, Math.min(w / GAME_WIDTH, h / GAME_HEIGHT));
 }
 
@@ -38,8 +38,8 @@ export class LevelUpScene extends Phaser.Scene {
         // Generate once per level-up. A viewport resize is a layout event, not
         // an opportunity to reroll the player's upgrade choices.
         this._choices = this._generateChoices();
-        this._onGameResize = () => {
-            if (!this.sys?.isActive?.()) return;
+        this._onGameResize = () => { var __oc2, __oc3;
+            if (!(((__oc3 = (__oc2 = this.sys) === null || __oc2 === void 0 ? void 0 : __oc2.isActive) === null || __oc3 === void 0 ? void 0 : __oc3.call(__oc2)))) return;
             const cam = this.cameras.main;
             if (cam && (cam.width !== GAME_WIDTH || cam.height !== GAME_HEIGHT)) {
                 cam.setSize(GAME_WIDTH, GAME_HEIGHT);
@@ -55,7 +55,7 @@ export class LevelUpScene extends Phaser.Scene {
         this._redraw();
     }
 
-    _cleanupSceneRefs() {
+    _cleanupSceneRefs() { var __oc4, __oc5, __oc6, __oc7;
         if (this._selectionTimer) {
             try { this._selectionTimer.remove(false); } catch (e) { /* already completed */ }
             this._selectionTimer = null;
@@ -65,9 +65,9 @@ export class LevelUpScene extends Phaser.Scene {
             this._onGameResize = null;
         }
 
-        try { this.game?._soundManager?.restoreLevelUpMix(); } catch (e) { /* mix is restored on the next prepare */ }
+        try { (((__oc5 = (__oc4 = this.game) === null || __oc4 === void 0 ? void 0 : __oc4._soundManager) === null || __oc5 === void 0 ? void 0 : __oc5.restoreLevelUpMix())); } catch (e) { /* mix is restored on the next prepare */ }
         if (this.gameScene) {
-            this.gameScene.removeLevelUpBlur?.();
+            (((__oc7 = (__oc6 = this.gameScene).removeLevelUpBlur) === null || __oc7 === void 0 ? void 0 : __oc7.call(__oc6)));
             this.gameScene._levelUpActive = false;
         }
 
@@ -600,7 +600,7 @@ export class LevelUpScene extends Phaser.Scene {
         }
     }
 
-    _commitChoice(choice) {
+    _commitChoice(choice) { var __oc8;
         if (!this.player || !this.weaponManager) return;
 
         if (choice.type === 'weapon') {
@@ -614,7 +614,7 @@ export class LevelUpScene extends Phaser.Scene {
             this.gameScene.removeLevelUpBlur();
         }
         if (this.gameScene) this.gameScene._levelUpActive = false;
-        if (this.gameScene?._autoSave) this.gameScene._autoSave(true);
+        if ((((__oc8 = this.gameScene) === null || __oc8 === void 0 ? void 0 : __oc8._autoSave))) this.gameScene._autoSave(true);
 
         this.scene.resume('GameScene');
         this.scene.stop();

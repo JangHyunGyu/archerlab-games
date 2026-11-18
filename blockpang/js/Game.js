@@ -42,9 +42,9 @@ const START_BOARD_ENTRANCE_MS = 450;
 const START_INPUT_GUARD_MS = 200;
 
 class Game {
-    constructor(app) {
+    constructor(app) { var __oc0;
         this.app = app;
-        this._reducedMotion = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        this._reducedMotion = typeof window !== 'undefined' && !!(((__oc0 = window.matchMedia) === null || __oc0 === void 0 ? void 0 : __oc0.call(window, '(prefers-reduced-motion: reduce)').matches));
         this.cellSize = 0;
         this.isGameOver = false;
         this.isAnimating = false;
@@ -527,10 +527,10 @@ class Game {
     _startRankSession() {
         this._resetRankSessionState();
         const token = this.rankRunToken;
-        this.rankSessionPromise = this._createRankSession().catch((e) => {
+        this.rankSessionPromise = this._createRankSession().catch((e) => { var __oc1, __oc2;
             if (token !== this.rankRunToken) return null;
             this.rankSyncFailed = true;
-            window.ArcherLabClientErrorReporter?.reportCodeException?.(e, { phase: 'rank-session' }, 'ranking_client_exception');
+            (((__oc2 = (__oc1 = window.ArcherLabClientErrorReporter) === null || __oc1 === void 0 ? void 0 : __oc1.reportCodeException) === null || __oc2 === void 0 ? void 0 : __oc2.call(__oc1, e, { phase: 'rank-session' }, 'ranking_client_exception')));
             console.warn('[Blockpang] rank session failed:', e.message);
             return null;
         });
@@ -543,8 +543,10 @@ class Game {
         const rngState = normalizeBlockpangSeed(rankData.rngState || 0);
         const moveSeq = parseInt(rankData.moveSeq || 0, 10);
         if (!sessionId && window.ArcherRanking && seed) {
-            const candidates = window.ArcherRanking.pending().filter(entry => entry.gameId === GAME_ID_BLOCKPANG
-                && entry.path === '/score-sessions' && normalizeBlockpangSeed(entry.body?.seed) === seed);
+            const candidates = window.ArcherRanking.pending().filter(entry => { var __oc3; return (
+entry.gameId === GAME_ID_BLOCKPANG
+                && entry.path === '/score-sessions' && normalizeBlockpangSeed((((__oc3 = entry.body) === null || __oc3 === void 0 ? void 0 : __oc3.seed))) === seed
+); });
             if (candidates.length === 1) sessionId = candidates[0].sessionId;
         }
         if (sessionId && protocol === 2 && seed && rngState && Number.isFinite(moveSeq)) {
@@ -575,7 +577,7 @@ class Game {
         return this.rankSessionPromise;
     }
 
-    _queueRankMove(slotIndex, gridX, gridY) {
+    _queueRankMove(slotIndex, gridX, gridY) { var __oc4;
         if (this.rankSyncFailed) return;
         const event = {
             type: 'move',
@@ -586,7 +588,7 @@ class Game {
         };
         this.rankMoveSeq = event.seq;
         if (this.rankSyncFailed || !event) return;
-        window.ArcherRanking?.track(GAME_ID_BLOCKPANG, event, this.rankSessionId);
+        (((__oc4 = window.ArcherRanking) === null || __oc4 === void 0 ? void 0 : __oc4.track(GAME_ID_BLOCKPANG, event, this.rankSessionId)));
         this.rankEventQueue.push(event);
         this.flushRankEvents();
     }
@@ -620,10 +622,10 @@ class Game {
                 this.rankEventQueue.splice(0, batch.length);
             }
             return true;
-        })().catch((e) => {
+        })().catch((e) => { var __oc5, __oc6;
             if (token !== this.rankRunToken) return false;
             this.rankSyncFailed = true;
-            window.ArcherLabClientErrorReporter?.reportCodeException?.(e, { phase: 'rank-sync' }, 'ranking_client_exception');
+            (((__oc6 = (__oc5 = window.ArcherLabClientErrorReporter) === null || __oc5 === void 0 ? void 0 : __oc5.reportCodeException) === null || __oc6 === void 0 ? void 0 : __oc6.call(__oc5, e, { phase: 'rank-sync' }, 'ranking_client_exception')));
             console.warn('[Blockpang] rank sync failed:', e.message);
             return false;
         }).finally(() => {
@@ -854,7 +856,7 @@ class Game {
 
     // ── Auto-Save / Resume ──
 
-    _autoSave() {
+    _autoSave() { var __oc7;
         try {
             const data = {
                 grid: this.board.grid.map(row => [...row]),
@@ -870,7 +872,7 @@ class Game {
                 level: this.scoreManager.level,
                 linesCleared: this.scoreManager.linesCleared,
                 totalLinesForLevel: this.scoreManager.totalLinesForLevel,
-                rankSessionId: this.rankSessionId || window.ArcherRanking?.sessionId(GAME_ID_BLOCKPANG),
+                rankSessionId: this.rankSessionId || (((__oc7 = window.ArcherRanking) === null || __oc7 === void 0 ? void 0 : __oc7.sessionId(GAME_ID_BLOCKPANG))),
                 rankProtocol: this.rankProtocol,
                 rankSeed: this.rankSeed,
                 rankMoveSeq: this.rankMoveSeq,
@@ -897,7 +899,7 @@ class Game {
     static getSavedScore() {
         try {
             const data = JSON.parse(localStorage.getItem('blockpang_save'));
-            return data?.score || 0;
+            return ((data === null || data === void 0 ? void 0 : data.score)) || 0;
         } catch (_) { return 0; }
     }
 

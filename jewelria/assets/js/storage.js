@@ -5,30 +5,30 @@ const NICK_KEY = `${PREFIX}.nick`;
 const LOCAL_RANK_KEY = `${PREFIX}.localRanks.v1`;
 
 export function getBestScore() {
-  try { return Math.max(0, Math.floor(Number(localStorage.getItem(BEST_KEY)) || 0)); } catch { return 0; }
+  try { return Math.max(0, Math.floor(Number(localStorage.getItem(BEST_KEY)) || 0)); } catch (_err) { return 0; }
 }
 
 // 타임 어택 최고 점수를 갱신하고 갱신된 값을 반환한다.
 export function updateBestScore(score) {
   const best = Math.max(getBestScore(), Math.floor(Number(score) || 0));
-  try { localStorage.setItem(BEST_KEY, String(best)); } catch {}
+  try { localStorage.setItem(BEST_KEY, String(best)); } catch (_err) {}
   return best;
 }
 
 export function loadSoundEnabled() {
-  try { return localStorage.getItem(SOUND_KEY) !== '0'; } catch { return true; }
+  try { return localStorage.getItem(SOUND_KEY) !== '0'; } catch (_err) { return true; }
 }
 
 export function saveSoundEnabled(enabled) {
-  try { localStorage.setItem(SOUND_KEY, enabled ? '1' : '0'); } catch {}
+  try { localStorage.setItem(SOUND_KEY, enabled ? '1' : '0'); } catch (_err) {}
 }
 
 export function loadNickname() {
-  try { return localStorage.getItem(NICK_KEY) || ''; } catch { return ''; }
+  try { return localStorage.getItem(NICK_KEY) || ''; } catch (_err) { return ''; }
 }
 
 export function saveNickname(name) {
-  try { localStorage.setItem(NICK_KEY, name); } catch {}
+  try { localStorage.setItem(NICK_KEY, name); } catch (_err) {}
 }
 
 export function saveLocalRank(name, score, extra = {}) {
@@ -46,7 +46,7 @@ export function saveLocalRank(name, score, extra = {}) {
     if (!prev || compareRankRows(row, prev) < 0) bestByName.set(key, row);
   }
   const sorted = [...bestByName.values()].sort(compareRankRows).slice(0, 20);
-  try { localStorage.setItem(LOCAL_RANK_KEY, JSON.stringify(sorted)); } catch {}
+  try { localStorage.setItem(LOCAL_RANK_KEY, JSON.stringify(sorted)); } catch (_err) {}
   return sorted;
 }
 
@@ -55,7 +55,7 @@ export function loadLocalRanks() {
     const raw = localStorage.getItem(LOCAL_RANK_KEY);
     const rows = raw ? JSON.parse(raw) : [];
     return Array.isArray(rows) ? rows : [];
-  } catch {
+  } catch (_err) {
     return [];
   }
 }

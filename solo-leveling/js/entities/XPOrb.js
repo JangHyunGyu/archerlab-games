@@ -1,20 +1,20 @@
 export class XPOrbPool {
-    constructor(scene, options = {}) {
+    constructor(scene, options = {}) { var __oc0, __oc1, __oc2, __oc3, __oc4, __oc5;
         this.scene = scene;
-        this._maxSize = options.maxSize ?? 200;
+        this._maxSize = (((__oc0 = options.maxSize) !== null && __oc0 !== void 0 ? __oc0 : 200));
         this.group = scene.physics.add.group({
             maxSize: this._maxSize,
         });
-        this._targetWarmSize = options.warmSize ?? 80;
-        this._batchSize = options.batchSize ?? 12;
-        this._batchDelay = options.batchDelay ?? 70;
+        this._targetWarmSize = (((__oc1 = options.warmSize) !== null && __oc1 !== void 0 ? __oc1 : 80));
+        this._batchSize = (((__oc2 = options.batchSize) !== null && __oc2 !== void 0 ? __oc2 : 12));
+        this._batchDelay = (((__oc3 = options.batchDelay) !== null && __oc3 !== void 0 ? __oc3 : 70));
         this._warmTimer = null;
 
-        const initialSize = Math.min(options.initialSize ?? 80, this._targetWarmSize);
+        const initialSize = Math.min((((__oc4 = options.initialSize) !== null && __oc4 !== void 0 ? __oc4 : 80)), this._targetWarmSize);
         this._createInactiveOrbs(initialSize);
 
         if (this._targetWarmSize > initialSize) {
-            this._warmTimer = scene.time.delayedCall(options.warmupDelay ?? 500, () => this._warmPool());
+            this._warmTimer = scene.time.delayedCall((((__oc5 = options.warmupDelay) !== null && __oc5 !== void 0 ? __oc5 : 500)), () => this._warmPool());
         }
     }
 
@@ -152,14 +152,14 @@ export class XPOrbPool {
         return this.group;
     }
 
-    destroy() {
+    destroy() { var __oc6, __oc7, __oc8;
         try {
             if (this._warmTimer) {
                 this._warmTimer.remove(false);
                 this._warmTimer = null;
             }
-            const tweens = this.scene?.tweens;
-            const children = this.group?.getChildren?.();
+            const tweens = (((__oc6 = this.scene) === null || __oc6 === void 0 ? void 0 : __oc6.tweens));
+            const children = (((__oc8 = (__oc7 = this.group) === null || __oc7 === void 0 ? void 0 : __oc7.getChildren) === null || __oc8 === void 0 ? void 0 : __oc8.call(__oc7)));
             if (children) {
                 children.forEach(orb => {
                     if (tweens) tweens.killTweensOf(orb);

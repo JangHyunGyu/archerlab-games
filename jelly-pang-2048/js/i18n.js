@@ -178,13 +178,13 @@
   function readStored() {
     try {
       return normalize(localStorage.getItem(STORAGE_KEY));
-    } catch {
+    } catch (_err) {
       return null;
     }
   }
 
   function save(lang) {
-    try { localStorage.setItem(STORAGE_KEY, lang); } catch {}
+    try { localStorage.setItem(STORAGE_KEY, lang); } catch (_err) {}
   }
 
   function langFromPathname() {
@@ -195,7 +195,7 @@
   function langFromQuery() {
     try {
       return normalize(new URLSearchParams(window.location.search).get("lang"));
-    } catch {
+    } catch (_err) {
       return null;
     }
   }

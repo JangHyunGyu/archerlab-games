@@ -44,7 +44,7 @@ assert.match(
 );
 assert.match(
   gameOverSource,
-  /typeof context\?\.drawElementImage === 'function'[\s\S]*typeof renderCanvas\.requestPaint === 'function'/,
+  /typeof (?:context\?\.drawElementImage|\(\(context === null \|\| context === void 0 \? void 0 : context\.drawElementImage\)\)) === 'function'[\s\S]*typeof renderCanvas\.requestPaint === 'function'/,
   "HTML-in-Canvas must be enabled only after runtime feature detection"
 );
 assert.match(

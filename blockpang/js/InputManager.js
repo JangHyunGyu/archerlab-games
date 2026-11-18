@@ -668,8 +668,8 @@ class InputManager {
         }
     }
 
-    destroy() {
-        const stage = this.game?.app?.stage;
+    destroy() { var __oc0, __oc1;
+        const stage = (((__oc1 = (__oc0 = this.game) === null || __oc0 === void 0 ? void 0 : __oc0.app) === null || __oc1 === void 0 ? void 0 : __oc1.stage));
         if (stage) {
             stage.off('pointermove', this._onPointerMove);
             stage.off('pointerup', this._onPointerUp);

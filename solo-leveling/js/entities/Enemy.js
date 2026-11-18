@@ -2,41 +2,41 @@ import { COLORS } from '../utils/Constants.js';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
     // Shared particle emitter pool for death effects (class-level)
-    static _deathEmitterPool = [];
-    static _deathSparkPool = [];
-    static MAX_POOLED_EMITTERS = 8;
-    static _vfxBudgetFrame = -1;
-    static _vfxBudgetUsed = 0;
-    static MAX_VFX_BUDGET_PER_FRAME = 12;
-    static _hitReactBudgetFrame = -1;
-    static _hitReactBudgetUsed = 0;
-    static MAX_HIT_REACTS_PER_FRAME = 28;
-    static _dmgTextBudgetFrame = -1;
-    static _dmgTextBudgetUsed = 0;
-    static MAX_DMG_TEXTS_PER_FRAME = 12;
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
-    static _getVfxBudget(scene) {
-        const fps = scene?.game?.loop?.actualFps || 60;
-        const children = scene?.children?.list?.length || 0;
-        if (scene?._lowQuality || fps < 35 || children > 900) return 5;
+    static _getVfxBudget(scene) { var __oc0, __oc1, __oc2, __oc3;
+        const fps = (((__oc1 = (__oc0 = scene === null || scene === void 0 ? void 0 : scene.game) === null || __oc0 === void 0 ? void 0 : __oc0.loop) === null || __oc1 === void 0 ? void 0 : __oc1.actualFps)) || 60;
+        const children = (((__oc3 = (__oc2 = scene === null || scene === void 0 ? void 0 : scene.children) === null || __oc2 === void 0 ? void 0 : __oc2.list) === null || __oc3 === void 0 ? void 0 : __oc3.length)) || 0;
+        if (((scene === null || scene === void 0 ? void 0 : scene._lowQuality)) || fps < 35 || children > 900) return 5;
         if (fps < 48 || children > 650) return 8;
         return Enemy.MAX_VFX_BUDGET_PER_FRAME;
     }
 
-    static _isVfxConstrained(scene) {
-        const fps = scene?.game?.loop?.actualFps || 60;
-        const children = scene?.children?.list?.length || 0;
-        return !!scene?._lowQuality || fps < 42 || children > 760;
+    static _isVfxConstrained(scene) { var __oc4, __oc5, __oc6, __oc7;
+        const fps = (((__oc5 = (__oc4 = scene === null || scene === void 0 ? void 0 : scene.game) === null || __oc4 === void 0 ? void 0 : __oc4.loop) === null || __oc5 === void 0 ? void 0 : __oc5.actualFps)) || 60;
+        const children = (((__oc7 = (__oc6 = scene === null || scene === void 0 ? void 0 : scene.children) === null || __oc6 === void 0 ? void 0 : __oc6.list) === null || __oc7 === void 0 ? void 0 : __oc7.length)) || 0;
+        return !!((scene === null || scene === void 0 ? void 0 : scene._lowQuality)) || fps < 42 || children > 760;
     }
 
-    static _isVfxSaturated(scene) {
-        const fps = scene?.game?.loop?.actualFps || 60;
-        const children = scene?.children?.list?.length || 0;
-        return !!scene?._lowQuality || fps < 30 || children > 980;
+    static _isVfxSaturated(scene) { var __oc8, __oc9, __oc10, __oc11;
+        const fps = (((__oc9 = (__oc8 = scene === null || scene === void 0 ? void 0 : scene.game) === null || __oc8 === void 0 ? void 0 : __oc8.loop) === null || __oc9 === void 0 ? void 0 : __oc9.actualFps)) || 60;
+        const children = (((__oc11 = (__oc10 = scene === null || scene === void 0 ? void 0 : scene.children) === null || __oc10 === void 0 ? void 0 : __oc10.list) === null || __oc11 === void 0 ? void 0 : __oc11.length)) || 0;
+        return !!((scene === null || scene === void 0 ? void 0 : scene._lowQuality)) || fps < 30 || children > 980;
     }
 
-    static _consumeVfxBudget(scene, cost = 1) {
-        const frame = scene?.game?.loop?.frame ?? 0;
+    static _consumeVfxBudget(scene, cost = 1) { var __oc12, __oc13, __oc14;
+        const frame = (((__oc14 = (__oc13 = (__oc12 = scene === null || scene === void 0 ? void 0 : scene.game) === null || __oc12 === void 0 ? void 0 : __oc12.loop) === null || __oc13 === void 0 ? void 0 : __oc13.frame) !== null && __oc14 !== void 0 ? __oc14 : 0));
         if (Enemy._vfxBudgetFrame !== frame) {
             Enemy._vfxBudgetFrame = frame;
             Enemy._vfxBudgetUsed = 0;
@@ -46,16 +46,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         return true;
     }
 
-    static _getHitReactBudget(scene) {
-        const fps = scene?.game?.loop?.actualFps || 60;
-        const children = scene?.children?.list?.length || 0;
-        if (scene?._lowQuality || fps < 35 || children > 900) return 10;
+    static _getHitReactBudget(scene) { var __oc15, __oc16, __oc17, __oc18;
+        const fps = (((__oc16 = (__oc15 = scene === null || scene === void 0 ? void 0 : scene.game) === null || __oc15 === void 0 ? void 0 : __oc15.loop) === null || __oc16 === void 0 ? void 0 : __oc16.actualFps)) || 60;
+        const children = (((__oc18 = (__oc17 = scene === null || scene === void 0 ? void 0 : scene.children) === null || __oc17 === void 0 ? void 0 : __oc17.list) === null || __oc18 === void 0 ? void 0 : __oc18.length)) || 0;
+        if (((scene === null || scene === void 0 ? void 0 : scene._lowQuality)) || fps < 35 || children > 900) return 10;
         if (fps < 48 || children > 650) return 18;
         return Enemy.MAX_HIT_REACTS_PER_FRAME;
     }
 
-    static _consumeHitReactBudget(scene, isCrit = false) {
-        const frame = scene?.game?.loop?.frame ?? 0;
+    static _consumeHitReactBudget(scene, isCrit = false) { var __oc19, __oc20, __oc21;
+        const frame = (((__oc21 = (__oc20 = (__oc19 = scene === null || scene === void 0 ? void 0 : scene.game) === null || __oc19 === void 0 ? void 0 : __oc19.loop) === null || __oc20 === void 0 ? void 0 : __oc20.frame) !== null && __oc21 !== void 0 ? __oc21 : 0));
         if (Enemy._hitReactBudgetFrame !== frame) {
             Enemy._hitReactBudgetFrame = frame;
             Enemy._hitReactBudgetUsed = 0;
@@ -68,16 +68,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         return true;
     }
 
-    static _getDmgTextBudget(scene) {
-        const fps = scene?.game?.loop?.actualFps || 60;
-        const children = scene?.children?.list?.length || 0;
-        if (scene?._lowQuality || fps < 35 || children > 900) return 4;
+    static _getDmgTextBudget(scene) { var __oc22, __oc23, __oc24, __oc25;
+        const fps = (((__oc23 = (__oc22 = scene === null || scene === void 0 ? void 0 : scene.game) === null || __oc22 === void 0 ? void 0 : __oc22.loop) === null || __oc23 === void 0 ? void 0 : __oc23.actualFps)) || 60;
+        const children = (((__oc25 = (__oc24 = scene === null || scene === void 0 ? void 0 : scene.children) === null || __oc24 === void 0 ? void 0 : __oc24.list) === null || __oc25 === void 0 ? void 0 : __oc25.length)) || 0;
+        if (((scene === null || scene === void 0 ? void 0 : scene._lowQuality)) || fps < 35 || children > 900) return 4;
         if (fps < 48 || children > 650) return 7;
         return Enemy.MAX_DMG_TEXTS_PER_FRAME;
     }
 
-    static _consumeDmgTextBudget(scene, isCrit = false) {
-        const frame = scene?.game?.loop?.frame ?? 0;
+    static _consumeDmgTextBudget(scene, isCrit = false) { var __oc26, __oc27, __oc28;
+        const frame = (((__oc28 = (__oc27 = (__oc26 = scene === null || scene === void 0 ? void 0 : scene.game) === null || __oc26 === void 0 ? void 0 : __oc26.loop) === null || __oc27 === void 0 ? void 0 : __oc27.frame) !== null && __oc28 !== void 0 ? __oc28 : 0));
         if (Enemy._dmgTextBudgetFrame !== frame) {
             Enemy._dmgTextBudgetFrame = frame;
             Enemy._dmgTextBudgetUsed = 0;
@@ -90,8 +90,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         return true;
     }
 
-    static _isNearCamera(scene, x, y, padding = 64) {
-        const cam = scene?.cameras?.main;
+    static _isNearCamera(scene, x, y, padding = 64) { var __oc29;
+        const cam = (((__oc29 = scene === null || scene === void 0 ? void 0 : scene.cameras) === null || __oc29 === void 0 ? void 0 : __oc29.main));
         if (!cam) return true;
         const view = cam.worldView;
         if (view) {
@@ -183,19 +183,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    static _canPoolSceneObject(obj) {
-        if (!obj?.scene) return false;
+    static _canPoolSceneObject(obj) { var __oc30, __oc31;
+        if (!((obj === null || obj === void 0 ? void 0 : obj.scene))) return false;
         try {
-            return obj.scene.sys?.isActive?.() !== false;
+            return (((__oc31 = (__oc30 = obj.scene.sys) === null || __oc30 === void 0 ? void 0 : __oc30.isActive) === null || __oc31 === void 0 ? void 0 : __oc31.call(__oc30))) !== false;
         } catch (e) {
             return false;
         }
     }
 
-    static _disposeTransientObject(obj, scene = null) {
+    static _disposeTransientObject(obj, scene = null) { var __oc32;
         if (!obj) return;
         try {
-            const tweens = scene?.tweens || obj.scene?.tweens;
+            const tweens = ((scene === null || scene === void 0 ? void 0 : scene.tweens)) || (((__oc32 = obj.scene) === null || __oc32 === void 0 ? void 0 : __oc32.tweens));
             if (tweens) tweens.killTweensOf(obj);
         } catch (e) { /* scene may already be shutting down */ }
         try {
@@ -229,8 +229,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         Enemy._dmgTextBudgetUsed = 0;
     }
 
-    static _playFrameVfx(scene, prefix, x, y, opts = {}) {
-        if (!scene?.textures?.exists(`${prefix}_0`)) return false;
+    static _playFrameVfx(scene, prefix, x, y, opts = {}) { var __oc33;
+        if (!(((__oc33 = scene === null || scene === void 0 ? void 0 : scene.textures) === null || __oc33 === void 0 ? void 0 : __oc33.exists(`${prefix}_0`)))) return false;
 
         const {
             scale = 1,
@@ -280,8 +280,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    static _animateFrameSprite(scene, sprite, prefix, frameMs = 55, frameCount = 6) {
-        if (!scene?.textures?.exists(`${prefix}_0`) || !sprite?.scene) return null;
+    static _animateFrameSprite(scene, sprite, prefix, frameMs = 55, frameCount = 6) { var __oc34;
+        if (!(((__oc34 = scene === null || scene === void 0 ? void 0 : scene.textures) === null || __oc34 === void 0 ? void 0 : __oc34.exists(`${prefix}_0`))) || !((sprite === null || sprite === void 0 ? void 0 : sprite.scene))) return null;
 
         let frame = 0;
         return scene.time.addEvent({
@@ -333,7 +333,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         } catch (_) { this._aura = null; }
     }
 
-    spawn(typeKey, typeData, difficultyMult, x, y, statProfile = null) {
+    spawn(typeKey, typeData, difficultyMult, x, y, statProfile = null) { var __oc35, __oc36, __oc37, __oc38;
         // Reset any monkey-patched methods from elite spawns
         this.update = Enemy.prototype.update;
         this.die = Enemy.prototype.die;
@@ -365,10 +365,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setScale(1, 1);
 
         // Apply difficulty scaling (fewer enemies → each one is tougher)
-        const hpScale = statProfile?.hp ?? difficultyMult;
-        const attackScale = statProfile?.attack ?? (1 + (difficultyMult - 1) * 0.5);
-        const speedScale = statProfile?.speed ?? (1 + (difficultyMult - 1) * 0.15);
-        const xpScale = statProfile?.xp ?? (1 + (difficultyMult - 1) * 0.5);
+        const hpScale = (((__oc35 = statProfile === null || statProfile === void 0 ? void 0 : statProfile.hp) !== null && __oc35 !== void 0 ? __oc35 : difficultyMult));
+        const attackScale = (((__oc36 = statProfile === null || statProfile === void 0 ? void 0 : statProfile.attack) !== null && __oc36 !== void 0 ? __oc36 : (1 + (difficultyMult - 1) * 0.5)));
+        const speedScale = (((__oc37 = statProfile === null || statProfile === void 0 ? void 0 : statProfile.speed) !== null && __oc37 !== void 0 ? __oc37 : (1 + (difficultyMult - 1) * 0.15)));
+        const xpScale = (((__oc38 = statProfile === null || statProfile === void 0 ? void 0 : statProfile.xp) !== null && __oc38 !== void 0 ? __oc38 : (1 + (difficultyMult - 1) * 0.5)));
 
         // Apply time pressure scaling: durability rises hardest, speed rises gently.
         this.maxHp = Math.floor(typeData.hp * hpScale);
@@ -491,10 +491,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    _fireProjectile(targetX, targetY) {
-        const playerTarget = this.scene.player?.getHurtboxCenter?.();
-        const aimX = playerTarget?.x ?? targetX;
-        const aimY = playerTarget?.y ?? targetY;
+    _fireProjectile(targetX, targetY) { var __oc39, __oc40, __oc41, __oc42;
+        const playerTarget = (((__oc40 = (__oc39 = this.scene.player) === null || __oc39 === void 0 ? void 0 : __oc39.getHurtboxCenter) === null || __oc40 === void 0 ? void 0 : __oc40.call(__oc39)));
+        const aimX = (((__oc41 = playerTarget === null || playerTarget === void 0 ? void 0 : playerTarget.x) !== null && __oc41 !== void 0 ? __oc41 : targetX));
+        const aimY = (((__oc42 = playerTarget === null || playerTarget === void 0 ? void 0 : playerTarget.y) !== null && __oc42 !== void 0 ? __oc42 : targetY));
         const angle = Phaser.Math.Angle.Between(this.x, this.y, aimX, aimY);
 
         // Brief cast animation (mage glows purple)
@@ -554,10 +554,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             hitPoll = this.scene.time.addEvent({
                 delay: 16,
                 loop: true,
-                callback: () => {
+                callback: () => { var __oc43, __oc44, __oc45;
                     if (!proj.active || !player.active || player.isDead) return;
-                    const target = player.getHurtboxCenter?.() || player;
-                    const playerRadius = Math.max(player.body?.width || 38, player.body?.height || 56) * 0.5;
+                    const target = (((__oc43 = player.getHurtboxCenter) === null || __oc43 === void 0 ? void 0 : __oc43.call(player))) || player;
+                    const playerRadius = Math.max((((__oc44 = player.body) === null || __oc44 === void 0 ? void 0 : __oc44.width)) || 38, (((__oc45 = player.body) === null || __oc45 === void 0 ? void 0 : __oc45.height)) || 56) * 0.5;
                     const dist = Phaser.Math.Distance.Between(proj.x, proj.y, target.x, target.y);
                     if (dist <= playerRadius + (useEffectAsset ? 18 : 12)) hitPlayer();
                 },
@@ -570,15 +570,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         });
 
         // Centralized cleanup: fires on destroy() from any path (hit, timeout, scene shutdown)
-        proj.once('destroy', () => {
+        proj.once('destroy', () => { var __oc46, __oc47, __oc48;
             if (frameTimer) frameTimer.destroy();
             if (trailEvent) trailEvent.destroy();
             if (hitPoll) hitPoll.destroy();
             if (autoDestroyTimer) autoDestroyTimer.destroy();
-            if (collider && this.scene?.physics?.world) {
+            if (collider && (((__oc47 = (__oc46 = this.scene) === null || __oc46 === void 0 ? void 0 : __oc46.physics) === null || __oc47 === void 0 ? void 0 : __oc47.world))) {
                 this.scene.physics.world.removeCollider(collider);
             }
-            if (this.scene?.tweens) this.scene.tweens.killTweensOf(proj);
+            if ((((__oc48 = this.scene) === null || __oc48 === void 0 ? void 0 : __oc48.tweens))) this.scene.tweens.killTweensOf(proj);
         });
 
         if (!useEffectAsset) {
@@ -594,7 +594,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    takeDamage(amount, knockbackX, knockbackY, hitEffect = null) {
+    takeDamage(amount, knockbackX, knockbackY, hitEffect = null) { var __oc49, __oc50, __oc51, __oc52, __oc53, __oc54;
         this.hp -= amount;
         this._lastHitEffect = hitEffect || null;
 
@@ -604,7 +604,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (isCrit && this.scene.soundManager) this.scene.soundManager.play('critHit');
         const restoreTint = this.isElite ? 0xff6644 : 0xffffff;
         const isOnCamera = Enemy._isNearCamera(this.scene, this.x, this.y, 96);
-        const now = this.scene?.time?.now ?? 0;
+        const now = (((__oc51 = (__oc50 = (__oc49 = this.scene) === null || __oc49 === void 0 ? void 0 : __oc49.time) === null || __oc50 === void 0 ? void 0 : __oc50.now) !== null && __oc51 !== void 0 ? __oc51 : 0));
         const canPlayHitReact = isOnCamera &&
             (isCrit || !this._lastHitReactTime || now - this._lastHitReactTime >= 55) &&
             Enemy._consumeHitReactBudget(this.scene, isCrit);
@@ -636,8 +636,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         });
 
         // Squash-and-stretch for hit punch — always based on resting scale (prevents drift under rapid hits)
-        const restX = this._restScaleX ?? this.scaleX;
-        const restY = this._restScaleY ?? this.scaleY;
+        const restX = (((__oc52 = this._restScaleX) !== null && __oc52 !== void 0 ? __oc52 : this.scaleX));
+        const restY = (((__oc53 = this._restScaleY) !== null && __oc53 !== void 0 ? __oc53 : this.scaleY));
         if (this._squashRestoreTimer) {
             this._squashRestoreTimer.remove(false);
             this._squashRestoreTimer = null;
@@ -650,7 +650,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
 
         // Crit: stronger kick — screen shake + white ring burst at hit location
-        if (isOnCamera && isCrit && this.scene.cameras?.main && Enemy._consumeVfxBudget(this.scene, 2)) {
+        if (isOnCamera && isCrit && (((__oc54 = this.scene.cameras) === null || __oc54 === void 0 ? void 0 : __oc54.main)) && Enemy._consumeVfxBudget(this.scene, 2)) {
             this.scene.cameras.main.shake(90, 0.004);
             try {
                 const ring = this.scene.add.image(this.x, this.y, 'particle_ring')
@@ -694,7 +694,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setTint(0x8888ff);
     }
 
-    die() {
+    die() { var __oc55, __oc56;
         const wasElite = this.isElite || this._eliteDeathPending;
         this._eliteDeathPending = wasElite;
 
@@ -734,7 +734,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this._aura) {
             this._aura.setVisible(false).setActive(false);
         }
-        this.scene.enemyManager?.releaseInactiveEnemy?.(this);
+        (((__oc56 = (__oc55 = this.scene.enemyManager) === null || __oc55 === void 0 ? void 0 : __oc55.releaseInactiveEnemy) === null || __oc56 === void 0 ? void 0 : __oc56.call(__oc55, this)));
         this._eliteDeathPending = false;
     }
 
@@ -808,9 +808,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         };
     }
 
-    _getDeathVfxProfile() {
-        const width = Math.max(this.displayWidth || 0, this.body?.width || 0, 60);
-        const height = Math.max(this.displayHeight || 0, this.body?.height || 0, width);
+    _getDeathVfxProfile() { var __oc57, __oc58;
+        const width = Math.max(this.displayWidth || 0, (((__oc57 = this.body) === null || __oc57 === void 0 ? void 0 : __oc57.width)) || 0, 60);
+        const height = Math.max(this.displayHeight || 0, (((__oc58 = this.body) === null || __oc58 === void 0 ? void 0 : __oc58.height)) || 0, width);
         const size = Math.max(width, height);
         const elite = this.isElite || this._eliteDeathPending;
         const ratio = Phaser.Math.Clamp(size / 64, 0.72, elite ? 3.35 : 2.35);
@@ -833,7 +833,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     _spawnHitRing(profile, color, yOffset = 0) {
-        if (!profile?.ringRadius || !this.scene) return;
+        if (!((profile === null || profile === void 0 ? void 0 : profile.ringRadius)) || !this.scene) return;
         if (Enemy._isVfxConstrained(this.scene) && profile.tier !== 'large') return;
         const ring = this.scene.add.circle(this.x, this.y + yOffset, profile.ringRadius, color, 0)
             .setDepth(17)
@@ -1268,7 +1268,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    destroy(fromScene) {
+    destroy(fromScene) { var __oc59;
         if (this._hitFlashTimerA) {
             this._hitFlashTimerA.remove(false);
             this._hitFlashTimerA = null;
@@ -1281,7 +1281,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this._squashRestoreTimer.remove(false);
             this._squashRestoreTimer = null;
         }
-        if (this.scene?.tweens) {
+        if ((((__oc59 = this.scene) === null || __oc59 === void 0 ? void 0 : __oc59.tweens))) {
             this.scene.tweens.killTweensOf(this);
             if (this._aura) this.scene.tweens.killTweensOf(this._aura);
             if (this._eliteLabel) this.scene.tweens.killTweensOf(this._eliteLabel);
@@ -1301,9 +1301,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         super.destroy(fromScene);
     }
 
-    static _dmgTextPool = [];
-    static _activeTexts = [];
-    static MAX_DMG_TEXTS = 40;
+    
+    
+    
 
     _showDamageNumber(value) {
         const isCrit = value > this.maxHp * 0.5;
@@ -1367,3 +1367,18 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 }
+Enemy._deathEmitterPool = [];
+Enemy._deathSparkPool = [];
+Enemy.MAX_POOLED_EMITTERS = 8;
+Enemy._vfxBudgetFrame = -1;
+Enemy._vfxBudgetUsed = 0;
+Enemy.MAX_VFX_BUDGET_PER_FRAME = 12;
+Enemy._hitReactBudgetFrame = -1;
+Enemy._hitReactBudgetUsed = 0;
+Enemy.MAX_HIT_REACTS_PER_FRAME = 28;
+Enemy._dmgTextBudgetFrame = -1;
+Enemy._dmgTextBudgetUsed = 0;
+Enemy.MAX_DMG_TEXTS_PER_FRAME = 12;
+Enemy._dmgTextPool = [];
+Enemy._activeTexts = [];
+Enemy.MAX_DMG_TEXTS = 40;

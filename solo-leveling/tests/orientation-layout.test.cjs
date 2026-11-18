@@ -26,7 +26,7 @@ const resizeFn = game.slice(resizeAt, game.indexOf('this.events.on(\'game-resize
 assert.match(resizeFn, /cam\.centerOn\(this\.player\.x, this\.player\.y\)/, 'the player must stay centered after a rotation');
 assert.match(resizeFn, /this\._relayoutStartupOverlay\(\)/, 'the boot gate must rebuild in the new frame');
 assert.match(resizeFn, /this\.hud\.rebuild\(\)/, 'the HUD must rebuild in the new frame');
-assert.match(resizeFn, /this\.shadowArmyManager\?\.syncScreenLayout\?\.\(\)/, 'an arise overlay must follow the new frame');
+assert.match(resizeFn, /(?:this\.shadowArmyManager\?\.syncScreenLayout\?\.\(\)|\(\(\(__oc\d+ = \(__oc\d+ = this\.shadowArmyManager\) === null \|\| __oc\d+ === void 0 \? void 0 : __oc\d+\.syncScreenLayout\) === null \|\| __oc\d+ === void 0 \? void 0 : __oc\d+\.call\(__oc\d+\)\)\))/, 'an arise overlay must follow the new frame');
 assert.match(resizeFn, /new MobileControls\(this\)/, 'touch controls must be recreated for the new frame');
 assert.match(resizeFn, /this\.systemMessage\.relayout\(\)/, 'a visible system message must move with the frame');
 
@@ -37,7 +37,7 @@ assert.doesNotMatch(
     'a rotation during the choice animation must still redraw'
 );
 
-assert.match(game, /if \(this\.statusWindow\?\.isOpen\) return;/, 'the status panel must stop the combat update');
+assert.match(game, /if \((?:this\.statusWindow\?\.isOpen|\(\(\(__oc\d+ = this\.statusWindow\) === null \|\| __oc\d+ === void 0 \? void 0 : __oc\d+\.isOpen\)\))\) return;/, 'the status panel must stop the combat update');
 const status = fs.readFileSync(path.join(__dirname, '..', 'js', 'ui', 'StatusWindow.js'), 'utf8');
 assert.match(status, /scene\.time\.paused = true/, 'scheduled attacks must not land while the status panel is open');
 assert.match(status, /scene\.time\.paused = false/, 'closing the status panel must resume scheduled combat');

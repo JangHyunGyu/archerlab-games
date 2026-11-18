@@ -1,5 +1,5 @@
 (function () {
-  "use strict";
+  "use strict"; var __oc1;
 
   const SchoolI18n = window.SchoolI18n;
   const GAME_WIDTH = 540;
@@ -64,7 +64,7 @@
       canvas.width = 1;
       canvas.height = 1;
       return canvas.toDataURL("image/webp").startsWith("data:image/webp");
-    } catch {
+    } catch (_err) {
       return false;
     }
   })();
@@ -118,7 +118,7 @@
   };
   const updateRunLoadingOverlay = (message) => {
     const overlay = document.getElementById(RUN_LOADING_OVERLAY_ID);
-    const text = overlay?.querySelector(RUN_LOADING_TEXT_SELECTOR);
+    const text = ((overlay === null || overlay === void 0 ? void 0 : overlay.querySelector(RUN_LOADING_TEXT_SELECTOR)));
     if (text) {
       text.textContent = message;
     }
@@ -861,12 +861,12 @@
   let lastDomPointerDownAt = 0;
   window.addEventListener("pointerdown", () => { lastDomPointerDownAt = performance.now(); }, true);
 
-  function goToArcherLabHome() {
+  function goToArcherLabHome() { var __oc0;
     const href = "https://archerlab.dev/";
     // Inside the Archerlab app launcher (iframe) this must close the launcher instead
     // of loading the portal in the frame; the shared helper handles both cases.
     try {
-      if (window.ArcherImmersive?.goHome) {
+      if ((((__oc0 = window.ArcherImmersive) === null || __oc0 === void 0 ? void 0 : __oc0.goHome))) {
         window.ArcherImmersive.goHome(href);
         return;
       }
@@ -1243,7 +1243,7 @@
   // Canvas types and draw calls are unchanged, so the pixels are identical.
   const CANVAS_FLUSH_HINT = typeof window !== "undefined"
     && typeof window.createImageBitmap === "function"
-    && Boolean(window.navigator?.userAgentData);
+    && Boolean((((__oc1 = window.navigator) === null || __oc1 === void 0 ? void 0 : __oc1.userAgentData)));
 
   function requestCanvasFlush(canvas) {
     if (!CANVAS_FLUSH_HINT) {
@@ -1252,7 +1252,9 @@
     try {
       // The snapshot submits the pending draw calls without waiting for them.
       // The bitmap itself is not used.
-      window.createImageBitmap(canvas).then((bitmap) => bitmap.close?.(), () => {});
+      window.createImageBitmap(canvas).then((bitmap) => { var __oc2; return (
+((__oc2 = bitmap.close) === null || __oc2 === void 0 ? void 0 : __oc2.call(bitmap))
+); }, () => {});
     } catch (error) {
       // Only a scheduling hint.
     }
@@ -1583,8 +1585,8 @@
   }
 
   function createCharacterAttackTextures(scene) {
-    Object.entries(CHARACTER_ATTACK_ACTIONS).forEach(([id, action]) => {
-      const frameCount = CHARACTER_ATTACK_FRAME_DURATIONS[id]?.length || THROW_ANIMATION_FRAMES;
+    Object.entries(CHARACTER_ATTACK_ACTIONS).forEach(([id, action]) => { var __oc3;
+      const frameCount = (((__oc3 = CHARACTER_ATTACK_FRAME_DURATIONS[id]) === null || __oc3 === void 0 ? void 0 : __oc3.length)) || THROW_ANIMATION_FRAMES;
       for (let frame = 0; frame < frameCount; frame += 1) {
         const usesBasePose = frame === 0 && CHARACTER_ATTACK_FRAME_ZERO_ALIASES.has(id);
         const sourceKey = usesBasePose ? `character-${id}` : `character-${id}-${action}-${frame}`;
@@ -2241,10 +2243,10 @@
     this.load.image("character-f", versionedImageAsset("assets/images/character-f.png", CHARACTER_ASSET_VERSION));
     this.load.image("character-g", versionedImageAsset("assets/images/character-g.png", CHARACTER_ASSET_VERSION));
     this.load.image("character-h", versionedImageAsset("assets/images/character-h.png", CHARACTER_ASSET_VERSION));
-    Object.entries(CHARACTER_ATTACK_ACTIONS).forEach(([id, action]) => {
+    Object.entries(CHARACTER_ATTACK_ACTIONS).forEach(([id, action]) => { var __oc4;
       const assetVersion = id === "a" ? CROSSBOW_ASSET_VERSION
         : id === "d" ? CHARACTER_CONTINUITY_ASSET_VERSION : CHARACTER_ASSET_VERSION;
-      const frameCount = CHARACTER_ATTACK_FRAME_DURATIONS[id]?.length || THROW_ANIMATION_FRAMES;
+      const frameCount = (((__oc4 = CHARACTER_ATTACK_FRAME_DURATIONS[id]) === null || __oc4 === void 0 ? void 0 : __oc4.length)) || THROW_ANIMATION_FRAMES;
       for (let frame = 0; frame < frameCount; frame += 1) {
         if (frame === 0 && CHARACTER_ATTACK_FRAME_ZERO_ALIASES.has(id)) {
           continue;
@@ -2508,9 +2510,9 @@
 
     preload() {
       const loadingRoot = document.querySelector(".loading");
-      const loadingTitle = loadingRoot?.querySelector(".loading__title");
-      const loadingText = loadingRoot?.querySelector(".loading__text");
-      const loadingBar = loadingRoot?.querySelector(".loading__bar span");
+      const loadingTitle = ((loadingRoot === null || loadingRoot === void 0 ? void 0 : loadingRoot.querySelector(".loading__title")));
+      const loadingText = ((loadingRoot === null || loadingRoot === void 0 ? void 0 : loadingRoot.querySelector(".loading__text")));
+      const loadingBar = ((loadingRoot === null || loadingRoot === void 0 ? void 0 : loadingRoot.querySelector(".loading__bar span")));
       this.load.on("progress", (progress) => {
         const percent = clamp(Math.round(progress * 100), 0, 100);
         if (loadingTitle) {
@@ -2562,11 +2564,11 @@
       super("GameScene");
     }
 
-    create() {
+    create() { var __oc5, __oc6, __oc7;
       if (isLocalDebugHost()) {
         window.__schoolZombieGame = this;
       }
-      const canvas = this.game?.canvas;
+      const canvas = (((__oc5 = this.game) === null || __oc5 === void 0 ? void 0 : __oc5.canvas));
       if (canvas) {
         canvas.tabIndex = 0;
         canvas.setAttribute("role", "application");
@@ -2609,7 +2611,7 @@
       this.recruitOrder = ["c"];
       this.runId = 0;
       this.disposed = false;
-      this.reducedMotion = Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
+      this.reducedMotion = Boolean((((__oc7 = (__oc6 = window.matchMedia) === null || __oc6 === void 0 ? void 0 : __oc6.call(window, "(prefers-reduced-motion: reduce)")) === null || __oc7 === void 0 ? void 0 : __oc7.matches)));
       this.mode = "menu";
       this.elapsed = 0;
       this.stage = 1;
@@ -2695,27 +2697,27 @@
       this.pauseConfirmOpen = false;
       this.events.once("shutdown", () => this.disposeScene());
       this.events.once("destroy", () => this.disposeScene());
-      this.boundHandleRankingSaved = (event) => {
-        if (!this.disposed && event.detail?.game_id === RANK_GAME_ID && this.mode === "ranking") {
+      this.boundHandleRankingSaved = (event) => { var __oc8;
+        if (!this.disposed && (((__oc8 = event.detail) === null || __oc8 === void 0 ? void 0 : __oc8.game_id)) === RANK_GAME_ID && this.mode === "ranking") {
           this.showRankings();
         }
       };
       window.addEventListener("archer-ranking-saved", this.boundHandleRankingSaved);
-      this.boundHandleRewardSaved = (event) => {
-        if (this.disposed || event.detail?.data?.profile_id !== this.profileAuth?.profile_id) return;
-        if (event.detail.session_id === (this.rankSessionId || window.ArcherRanking?.sessionId(RANK_GAME_ID))) {
+      this.boundHandleRewardSaved = (event) => { var __oc9, __oc10, __oc11, __oc12;
+        if (this.disposed || (((__oc10 = (__oc9 = event.detail) === null || __oc9 === void 0 ? void 0 : __oc9.data) === null || __oc10 === void 0 ? void 0 : __oc10.profile_id)) !== (((__oc11 = this.profileAuth) === null || __oc11 === void 0 ? void 0 : __oc11.profile_id))) return;
+        if (event.detail.session_id === (this.rankSessionId || (((__oc12 = window.ArcherRanking) === null || __oc12 === void 0 ? void 0 : __oc12.sessionId(RANK_GAME_ID))))) {
           this.runCoinsBanked = true;
           this.runCoinsQueued = false;
         }
         // Read the latest wallet instead of applying an old delivery receipt over
         // coins earned/spent in another run or tab.
-        this.ensureServerProfile({ force: true, quiet: true, allowOffline: false }).then(() => {
+        this.ensureServerProfile({ force: true, quiet: true, allowOffline: false }).then(() => { var __oc13, __oc14, __oc15;
           if (this.disposed) return;
-          if (this.menuCoinsText?.active) this.menuCoinsText.setText(`$${this.meta.coins}`);
-          if (this.gameOverCoinsText?.active && this.runCoinsBanked) {
+          if ((((__oc13 = this.menuCoinsText) === null || __oc13 === void 0 ? void 0 : __oc13.active))) this.menuCoinsText.setText(`$${this.meta.coins}`);
+          if ((((__oc14 = this.gameOverCoinsText) === null || __oc14 === void 0 ? void 0 : __oc14.active)) && this.runCoinsBanked) {
             this.gameOverCoinsText.setText(SchoolI18n.t("over.coins", { earned: this.coins, held: this.meta.coins }));
           }
-          this.shopUI?.refresh();
+          (((__oc15 = this.shopUI) === null || __oc15 === void 0 ? void 0 : __oc15.refresh()));
         }).catch(() => {});
       };
       window.addEventListener("archer-reward-saved", this.boundHandleRewardSaved);
@@ -2832,13 +2834,13 @@
       this.sys.setVisible(!suspended);
     }
 
-    refreshMenuProfileStatus() {
+    refreshMenuProfileStatus() { var __oc16, __oc17, __oc18;
       if (this.mode !== "menu") {
         return;
       }
-      if (this.menuCoinsText?.active) this.menuCoinsText.setText(`$${this.meta.coins}`);
-      if (this.menuProtocolText?.active) this.menuProtocolText.setText(this.profileSyncFailed ? "SYNC · OFFLINE" : "THREAT · RED");
-      if (this.menuCreditLabel?.active) this.menuCreditLabel.setText(this.profileSyncFailed ? "OFFLINE SUPPLY" : "SUPPLY CREDIT");
+      if ((((__oc16 = this.menuCoinsText) === null || __oc16 === void 0 ? void 0 : __oc16.active))) this.menuCoinsText.setText(`$${this.meta.coins}`);
+      if ((((__oc17 = this.menuProtocolText) === null || __oc17 === void 0 ? void 0 : __oc17.active))) this.menuProtocolText.setText(this.profileSyncFailed ? "SYNC · OFFLINE" : "THREAT · RED");
+      if ((((__oc18 = this.menuCreditLabel) === null || __oc18 === void 0 ? void 0 : __oc18.active))) this.menuCreditLabel.setText(this.profileSyncFailed ? "OFFLINE SUPPLY" : "SUPPLY CREDIT");
       announceGameStatus(SchoolI18n.t("menu.a11y", { coins: this.meta.coins, offline: this.profileSyncFailed ? SchoolI18n.t("menu.offline") : "" }));
     }
 
@@ -3134,7 +3136,7 @@
     }
 
     showRecruitCutIn(roster) {
-      const recruit = roster?.recruit;
+      const recruit = ((roster === null || roster === void 0 ? void 0 : roster.recruit));
       if (!recruit) {
         return;
       }
@@ -3259,9 +3261,9 @@
       this.fitSpriteHeight(defender.sprite, defender.height * sourceHeightScale);
     }
 
-    blendDefenderFrame(defender, duration, nextTextureKey = null) {
+    blendDefenderFrame(defender, duration, nextTextureKey = null) { var __oc19;
       const sprite = defender.sprite;
-      if (!sprite || !(duration > 0) || this.reducedMotion || sprite.texture?.key === nextTextureKey) {
+      if (!sprite || !(duration > 0) || this.reducedMotion || (((__oc19 = sprite.texture) === null || __oc19 === void 0 ? void 0 : __oc19.key)) === nextTextureKey) {
         return null;
       }
       // Leave the outgoing drawing on screen and dissolve it away, so the
@@ -3283,12 +3285,12 @@
       return ghost;
     }
 
-    setDefenderPose(defender, pose) {
+    setDefenderPose(defender, pose) { var __oc20;
       if (!defender.sprite) {
         return;
       }
       const textureKey = `character-${defender.id}-${pose}`;
-      if (!defender.attackAnimation && defender.pose === pose && defender.sprite.texture?.key === textureKey) {
+      if (!defender.attackAnimation && defender.pose === pose && (((__oc20 = defender.sprite.texture) === null || __oc20 === void 0 ? void 0 : __oc20.key)) === textureKey) {
         return;
       }
       defender.attackAnimation = null;
@@ -3342,21 +3344,21 @@
       }
     }
 
-    getAttackPose(defender, target) {
-      const pivot = defender.aim?.pivot || [0, -160];
+    getAttackPose(defender, target) { var __oc21;
+      const pivot = (((__oc21 = defender.aim) === null || __oc21 === void 0 ? void 0 : __oc21.pivot)) || [0, -160];
       const dx = target.x - (defender.x + pivot[0]);
       const dy = target.y - (defender.y + pivot[1]);
       return getShotAimPoseKey(Math.atan2(dy, dx));
     }
 
-    getDefenderMuzzle(defender, pose, frame = 0) {
+    getDefenderMuzzle(defender, pose, frame = 0) { var __oc22, __oc23, __oc24, __oc25;
       const aim = defender.aim || { pivot: [0, -160], reach: 84 };
       const poseInfo = getAimPose(pose);
       const poseIndex = AIM_POSE_KEYS.indexOf(poseInfo.key);
-      const measuredOffset = (frame > 0 ? CHARACTER_FRAME_MUZZLE_OFFSETS[defender.id]?.[frame]?.[poseIndex] : null)
-        || CHARACTER_MUZZLE_OFFSETS[defender.id]?.[poseIndex];
+      const measuredOffset = (frame > 0 ? (((__oc23 = (__oc22 = CHARACTER_FRAME_MUZZLE_OFFSETS[defender.id]) === null || __oc22 === void 0 ? void 0 : __oc22[frame]) === null || __oc23 === void 0 ? void 0 : __oc23[poseIndex])) : null)
+        || (((__oc24 = CHARACTER_MUZZLE_OFFSETS[defender.id]) === null || __oc24 === void 0 ? void 0 : __oc24[poseIndex]));
       if (measuredOffset) {
-        const effectAngleOverride = CHARACTER_MUZZLE_EFFECT_ANGLE_OVERRIDES[defender.id]?.[poseIndex];
+        const effectAngleOverride = (((__oc25 = CHARACTER_MUZZLE_EFFECT_ANGLE_OVERRIDES[defender.id]) === null || __oc25 === void 0 ? void 0 : __oc25[poseIndex]));
         const effectAngle = Number.isFinite(effectAngleOverride)
           ? effectAngleOverride
           : DIRECTIONAL_MUZZLE_EFFECT_DEFENDERS.has(defender.id)
@@ -3374,9 +3376,9 @@
       };
     }
 
-    syncDefenderMuzzleFlash(defender, frame) {
+    syncDefenderMuzzleFlash(defender, frame) { var __oc26;
       const tracked = defender.muzzleFlash;
-      const flash = tracked?.flash;
+      const flash = ((tracked === null || tracked === void 0 ? void 0 : tracked.flash));
       if (!flash) {
         return;
       }
@@ -3384,7 +3386,7 @@
         defender.muzzleFlash = null;
         return;
       }
-      if (!CHARACTER_FRAME_MUZZLE_OFFSETS[defender.id]?.[frame]) {
+      if (!(((__oc26 = CHARACTER_FRAME_MUZZLE_OFFSETS[defender.id]) === null || __oc26 === void 0 ? void 0 : __oc26[frame]))) {
         return;
       }
       // Keep a live flash on the barrel while the recoil frames move it.
@@ -3472,7 +3474,7 @@
         icon.fillRect(x - 3, y + 4, 6, 7);
       };
       drawIcon(false);
-      hit.on("pointerdown", (pointer, localX, localY, event) => {
+      hit.on("pointerdown", (pointer, localX, localY, event) => { var __oc27;
         if (event && typeof event.stopPropagation === "function") {
           event.stopPropagation();
         }
@@ -3480,7 +3482,7 @@
         this.playSfx("button", 0.72);
         if (this.mode === "playing") {
           this.mode = "paused";
-          this.ui.pauseText?.setText("▶");
+          (((__oc27 = this.ui.pauseText) === null || __oc27 === void 0 ? void 0 : __oc27.setText("▶")));
           this.showQuitConfirmation();
         } else if (this.mode === "paused") {
           this.showQuitConfirmation();
@@ -3510,8 +3512,8 @@
         glow.setAlpha(0.38);
         text.setScale(hovered ? 1.06 : 1);
       };
-      hit.on("pointerdown", (pointer, localX, localY, event) => {
-        event?.stopPropagation?.();
+      hit.on("pointerdown", (pointer, localX, localY, event) => { var __oc28;
+        (((__oc28 = event === null || event === void 0 ? void 0 : event.stopPropagation) === null || __oc28 === void 0 ? void 0 : __oc28.call(event)));
         this.unlockAudio();
         this.playSfx("pause", 0.74);
         this.togglePause();
@@ -3617,12 +3619,12 @@
       };
       this.input.on("pointerdown", this.boundHandlePointerDown);
 
-      this.boundHandleKeyDown = (event) => {
+      this.boundHandleKeyDown = (event) => { var __oc29, __oc30, __oc31, __oc32;
         const target = event.target;
         if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
           return;
         }
-        if (this.mode === "shop" && target?.closest?.(".school-shop")) return;
+        if (this.mode === "shop" && (((__oc29 = target === null || target === void 0 ? void 0 : target.closest) === null || __oc29 === void 0 ? void 0 : __oc29.call(target, ".school-shop")))) return;
         const code = event.code;
         const consume = () => {
           event.preventDefault();
@@ -3637,7 +3639,7 @@
           }
           if (this.mode === "shop" || this.mode === "ranking") {
             consume();
-            if (this.shopUI?.isOpen()) this.shopUI.close();
+            if ((((__oc30 = this.shopUI) === null || __oc30 === void 0 ? void 0 : __oc30.isOpen()))) this.shopUI.close();
             else this.showMenu();
             return;
           }
@@ -3667,7 +3669,7 @@
             return;
           }
           const choiceIndex = { Digit1: 0, Digit2: 1, Digit3: 2 }[code];
-          const choice = Number.isInteger(choiceIndex) ? this.currentSkillChoices?.[choiceIndex] : null;
+          const choice = Number.isInteger(choiceIndex) ? (((__oc31 = this.currentSkillChoices) === null || __oc31 === void 0 ? void 0 : __oc31[choiceIndex])) : null;
           if (choice) {
             consume();
             this.applyUpgrade(choice);
@@ -3681,7 +3683,7 @@
           }
           if (code === "Enter" || code === "Space") {
             consume();
-            const focusedChoice = this.currentSkillChoices?.[this.skillChoiceFocusIndex || 0];
+            const focusedChoice = (((__oc32 = this.currentSkillChoices) === null || __oc32 === void 0 ? void 0 : __oc32[this.skillChoiceFocusIndex || 0]));
             if (focusedChoice) {
               this.applyUpgrade(focusedChoice);
             }
@@ -3713,7 +3715,7 @@
       window.addEventListener("pageshow", this.boundHandlePageShow);
     }
 
-    pollGamepadInput(time = 0) {
+    pollGamepadInput(time = 0) { var __oc33;
       if (this.gamepadAccessDenied) {
         return;
       }
@@ -3725,7 +3727,7 @@
       try {
         gamepads = typeof navigator.getGamepads === "function" ? navigator.getGamepads() : [];
       } catch (error) {
-        if (error?.name === "SecurityError") {
+        if (((error === null || error === void 0 ? void 0 : error.name)) === "SecurityError") {
           this.gamepadAccessDenied = true;
           this.gamepadButtons.clear();
           return;
@@ -3739,7 +3741,7 @@
       }
       const pressed = new Set();
       gamepad.buttons.forEach((button, index) => {
-        if (button?.pressed) {
+        if (((button === null || button === void 0 ? void 0 : button.pressed))) {
           pressed.add(index);
         }
       });
@@ -3767,7 +3769,7 @@
         if (this.mode === "menu") {
           this.startRun();
         } else if (this.mode === "skill") {
-          const focusedChoice = this.currentSkillChoices?.[this.skillChoiceFocusIndex || 0];
+          const focusedChoice = (((__oc33 = this.currentSkillChoices) === null || __oc33 === void 0 ? void 0 : __oc33[this.skillChoiceFocusIndex || 0]));
           if (focusedChoice) {
             this.applyUpgrade(focusedChoice);
           }
@@ -3850,26 +3852,26 @@
       this.fireTickEffectsThisFrame = 0;
     }
 
-    canSpawnDamageText(priority = false) {
+    canSpawnDamageText(priority = false) { var __oc34;
       const frameLimit = DAMAGE_TEXT_FRAME_BUDGET + (priority ? 4 : 0);
       const activeLimit = ACTIVE_DAMAGE_TEXT_LIMIT + (priority ? 8 : 0);
       if ((this.damageTextsThisFrame || 0) >= frameLimit) {
         return false;
       }
-      if ((this.activeDamageTexts?.size || 0) >= activeLimit) {
+      if (((((__oc34 = this.activeDamageTexts) === null || __oc34 === void 0 ? void 0 : __oc34.size)) || 0) >= activeLimit) {
         return false;
       }
       this.damageTextsThisFrame = (this.damageTextsThisFrame || 0) + 1;
       return true;
     }
 
-    canSpawnHitEffect(priority = false) {
+    canSpawnHitEffect(priority = false) { var __oc35;
       const frameLimit = HIT_EFFECT_FRAME_BUDGET + (priority ? 4 : 0);
       const activeLimit = ACTIVE_HIT_EFFECT_LIMIT + (priority ? 10 : 0);
       if ((this.hitEffectsThisFrame || 0) >= frameLimit) {
         return false;
       }
-      if ((this.activeHitEffects?.size || 0) >= activeLimit) {
+      if (((((__oc35 = this.activeHitEffects) === null || __oc35 === void 0 ? void 0 : __oc35.size)) || 0) >= activeLimit) {
         return false;
       }
       this.hitEffectsThisFrame = (this.hitEffectsThisFrame || 0) + 1;
@@ -3907,15 +3909,15 @@
       }
     }
 
-    destroyTransientObject(object, killTweens = true) {
-      if (object?.followZombie?.hitEffects) {
+    destroyTransientObject(object, killTweens = true) { var __oc36;
+      if ((((__oc36 = object === null || object === void 0 ? void 0 : object.followZombie) === null || __oc36 === void 0 ? void 0 : __oc36.hitEffects))) {
         object.followZombie.hitEffects.delete(object);
       }
-      if (object?.hitEffectRoot) {
+      if (((object === null || object === void 0 ? void 0 : object.hitEffectRoot))) {
         this.activeHitEffects.delete(object);
         object.hitEffectRoot = false;
       }
-      if (object?.barricadeFragment) {
+      if (((object === null || object === void 0 ? void 0 : object.barricadeFragment))) {
         this.activeBarricadeFragments.delete(object);
         object.barricadeFragment = false;
       }
@@ -3937,8 +3939,8 @@
       this.embeddedArrows = [];
     }
 
-    clearEmbeddedArrowsForZombie(zombie) {
-      if (!zombie || !this.embeddedArrows?.length) {
+    clearEmbeddedArrowsForZombie(zombie) { var __oc37;
+      if (!zombie || !(((__oc37 = this.embeddedArrows) === null || __oc37 === void 0 ? void 0 : __oc37.length))) {
         return;
       }
       for (let i = this.embeddedArrows.length - 1; i >= 0; i -= 1) {
@@ -3950,7 +3952,7 @@
       }
     }
 
-    clearRunEntities() {
+    clearRunEntities() { var __oc38;
       this.clearEmbeddedArrows();
       (this.fireZones || []).forEach((zone) => {
         (zone.objects || []).forEach((object) => this.destroyTransientObject(object, false));
@@ -3966,7 +3968,7 @@
       this.bullets.forEach((bullet) => this.destroyBullet(bullet));
       this.zombies = [];
       this.bullets = [];
-      this.zombieHitBuckets?.clear();
+      (((__oc38 = this.zombieHitBuckets) === null || __oc38 === void 0 ? void 0 : __oc38.clear()));
       if (this.zombieHitCandidates) {
         this.zombieHitCandidates.length = 0;
       }
@@ -3979,16 +3981,16 @@
     }
 
     getZombieFootOffset(zombie) {
-      const displayHeight = zombie?.displayH || 170;
-      const type = zombie?.elite ? "elite" : zombie?.type || "normal";
+      const displayHeight = ((zombie === null || zombie === void 0 ? void 0 : zombie.displayH)) || 170;
+      const type = ((zombie === null || zombie === void 0 ? void 0 : zombie.elite)) ? "elite" : ((zombie === null || zombie === void 0 ? void 0 : zombie.type)) || "normal";
       return displayHeight * (ZOMBIE_FOOT_OFFSET_RATIOS[type] || ZOMBIE_FOOT_OFFSET_RATIOS.normal);
     }
 
     getZombieFootPoint(zombie) {
       const footOffset = this.getZombieFootOffset(zombie);
       return {
-        x: zombie?.x || 0,
-        y: (zombie?.y || 0) + footOffset
+        x: ((zombie === null || zombie === void 0 ? void 0 : zombie.x)) || 0,
+        y: (((zombie === null || zombie === void 0 ? void 0 : zombie.y)) || 0) + footOffset
       };
     }
 
@@ -4000,12 +4002,12 @@
         return fetch(url, fetchOptions);
       }
       const controller = new AbortControllerCtor();
-      controllerSet?.add(controller);
+      ((controllerSet === null || controllerSet === void 0 ? void 0 : controllerSet.add(controller)));
       const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
       return fetch(url, { ...fetchOptions, signal: controller.signal })
         .finally(() => {
           window.clearTimeout(timeout);
-          controllerSet?.delete(controller);
+          ((controllerSet === null || controllerSet === void 0 ? void 0 : controllerSet.delete(controller)));
         });
     }
 
@@ -4023,7 +4025,7 @@
       controllerSet.clear();
     }
 
-    applyServerProfile(data) {
+    applyServerProfile(data) { var __oc39;
       if (this.disposed) return this.meta;
       if (!data || data.success !== true) {
         throw new Error("invalid profile response");
@@ -4048,7 +4050,7 @@
       });
       this.profileRevision = revision;
       saveMetaSave(this.meta);
-      if (this.ui?.coins) {
+      if ((((__oc39 = this.ui) === null || __oc39 === void 0 ? void 0 : __oc39.coins))) {
         this.updateHud();
       }
       this.profileReady = true;
@@ -4056,7 +4058,7 @@
       return this.meta;
     }
 
-    async ensureServerProfile(options = {}) {
+    async ensureServerProfile(options = {}) { var __oc40;
       const { quiet = false, force = false, allowOffline = true } = options;
       if (this.profileReady && !force) {
         return this.meta;
@@ -4087,18 +4089,18 @@
         let response = await requestProfile(auth);
         if (auth && response.status === 401) {
           const backup = await readProfileAuthBackup();
-          if (backup?.profile_id === auth.profile_id && backup.profile_secret !== auth.profile_secret) {
+          if (((backup === null || backup === void 0 ? void 0 : backup.profile_id)) === auth.profile_id && backup.profile_secret !== auth.profile_secret) {
             const restoredResponse = await requestProfile(backup);
             if (restoredResponse.ok) { auth = backup; response = restoredResponse; }
           }
         }
         const data = await response.json().catch(() => null);
         if (!response.ok) {
-          const error = new Error(data?.error || `profile ${response.status}`);
+          const error = new Error(((data === null || data === void 0 ? void 0 : data.error)) || `profile ${response.status}`);
           error.status = response.status;
           throw error;
         }
-        if (auth && data?.profile_id !== auth.profile_id) throw new Error("profile identity changed");
+        if (auth && ((data === null || data === void 0 ? void 0 : data.profile_id)) !== auth.profile_id) throw new Error("profile identity changed");
         const nextAuth = data.profile_secret
           ? { profile_id: data.profile_id, profile_secret: data.profile_secret } : auth;
         if (nextAuth) {
@@ -4114,7 +4116,7 @@
       };
 
       // Two newly opened tabs must recover/create the same persistent identity.
-      const loading = typeof navigator !== "undefined" && navigator.locks?.request
+      const loading = typeof navigator !== "undefined" && (((__oc40 = navigator.locks) === null || __oc40 === void 0 ? void 0 : __oc40.request))
         ? navigator.locks.request("school-zombie-profile", load) : load();
       this.profilePromise = loading
         .catch((error) => {
@@ -4151,7 +4153,7 @@
       }, this.profileFetchControllers);
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(data?.error || `profile action ${response.status}`);
+        throw new Error(((data === null || data === void 0 ? void 0 : data.error)) || `profile action ${response.status}`);
       }
       this.applyServerProfile(data);
       return data;
@@ -4221,11 +4223,11 @@
       this.sfxPreloadStarted = false;
     }
 
-    disposeScene() {
+    disposeScene() { var __oc41;
       if (this.disposed) {
         return;
       }
-      if (window.ArcherRanking?.bankRun && ["playing", "paused", "skill"].includes(this.mode)) {
+      if ((((__oc41 = window.ArcherRanking) === null || __oc41 === void 0 ? void 0 : __oc41.bankRun)) && ["playing", "paused", "skill"].includes(this.mode)) {
         void this.bankRunCoins();
       }
       this.disposed = true;
@@ -4398,8 +4400,8 @@
       return Promise.race([readyPromise, timeoutPromise]).then(() => undefined);
     }
 
-    ensureSfxFallbackTracks() {
-      if (this.sfxFallbackTracks?.size) {
+    ensureSfxFallbackTracks() { var __oc42;
+      if ((((__oc42 = this.sfxFallbackTracks) === null || __oc42 === void 0 ? void 0 : __oc42.size))) {
         return;
       }
       if (!this.sfxFallbackTracks) {
@@ -4441,9 +4443,9 @@
       });
     }
 
-    startBgm(name) {
+    startBgm(name) { var __oc43;
       this.ensureBgmTracks();
-      const next = this.bgmTracks?.[name];
+      const next = (((__oc43 = this.bgmTracks) === null || __oc43 === void 0 ? void 0 : __oc43[name]));
       if (!next) {
         return;
       }
@@ -4469,9 +4471,9 @@
       }
     }
 
-    startZombieAmbient() {
+    startZombieAmbient() { var __oc44;
       this.ensureAmbientTracks();
-      const track = this.ambientTracks?.zombie;
+      const track = (((__oc44 = this.ambientTracks) === null || __oc44 === void 0 ? void 0 : __oc44.zombie));
       if (!track) {
         return;
       }
@@ -4485,8 +4487,8 @@
       }
     }
 
-    stopZombieAmbient() {
-      const track = this.ambientTracks?.zombie;
+    stopZombieAmbient() { var __oc45;
+      const track = (((__oc45 = this.ambientTracks) === null || __oc45 === void 0 ? void 0 : __oc45.zombie));
       if (!track) {
         return;
       }
@@ -4692,7 +4694,7 @@
         nailgun_hit: 0.06,
         skill: 0.18
       }[name] || 0.04;
-      const now = ctx?.currentTime || performance.now() / 1000;
+      const now = ((ctx === null || ctx === void 0 ? void 0 : ctx.currentTime)) || performance.now() / 1000;
       const last = this.sfxLastPlayed[name] || 0;
       if (now - last < minGap) {
         return;
@@ -4715,7 +4717,7 @@
         return;
       }
       const ctx = this.unlockAudio();
-      const now = ctx?.currentTime || performance.now() / 1000;
+      const now = ((ctx === null || ctx === void 0 ? void 0 : ctx.currentTime)) || performance.now() / 1000;
       const minGap = {
         shock_hit: 0.075
       }[name] || 0.04;
@@ -4752,21 +4754,21 @@
       this.playSfx(sfx, WEAPON_SFX_INTENSITY[sfx] || 1);
     }
 
-    shakeCamera(duration = 70, intensity = 0.004) {
+    shakeCamera(duration = 70, intensity = 0.004) { var __oc46;
       if (this.reducedMotion) {
         return;
       }
-      const camera = this.cameras?.main;
+      const camera = (((__oc46 = this.cameras) === null || __oc46 === void 0 ? void 0 : __oc46.main));
       if (camera && camera.shake) {
         camera.shake(duration, intensity);
       }
     }
 
-    vibrateImpact(pattern = [60, 28, 80]) {
+    vibrateImpact(pattern = [60, 28, 80]) { var __oc47;
       if (this.reducedMotion) {
         return;
       }
-      const vibrate = window.navigator?.vibrate;
+      const vibrate = (((__oc47 = window.navigator) === null || __oc47 === void 0 ? void 0 : __oc47.vibrate));
       if (typeof vibrate === "function") {
         vibrate.call(window.navigator, pattern);
       }
@@ -4932,9 +4934,9 @@
         .setDisplaySize(width, height);
     }
 
-    addCommandPanel(x, y, width, height, depth = 500, accent = COLORS.blue, options = {}) {
-      const shadow = this.add.rectangle(x, y + 5, width - 4, height - 3, 0x000000, options.shadowAlpha ?? 0.38).setDepth(depth);
-      const panel = this.addSurfaceImage(x, y, width, height).setAlpha(options.surfaceAlpha ?? Math.max(0.84, options.alpha ?? 0.96)).setDepth(depth + 0.1);
+    addCommandPanel(x, y, width, height, depth = 500, accent = COLORS.blue, options = {}) { var __oc48, __oc49, __oc50;
+      const shadow = this.add.rectangle(x, y + 5, width - 4, height - 3, 0x000000, (((__oc48 = options.shadowAlpha) !== null && __oc48 !== void 0 ? __oc48 : 0.38))).setDepth(depth);
+      const panel = this.addSurfaceImage(x, y, width, height).setAlpha((((__oc49 = options.surfaceAlpha) !== null && __oc49 !== void 0 ? __oc49 : Math.max(0.84, (__oc50 = options.alpha) !== null && __oc50 !== void 0 ? __oc50 : 0.96)))).setDepth(depth + 0.1);
       const wash = this.add.rectangle(x, y, width - 8, height - 8, UI_COLORS.chalk, options.fill ? 0.045 : 0).setDepth(depth + 0.15);
       const objects = [shadow, panel, wash];
       if (options.track !== false) this.overlayObjects.push(...objects);
@@ -5029,16 +5031,16 @@
       });
     }
 
-    addTacticalMenuButton(x, y, width, height, label, depth, onClick, accent = COLORS.blue, options = {}) {
+    addTacticalMenuButton(x, y, width, height, label, depth, onClick, accent = COLORS.blue, options = {}) { var __oc51, __oc52, __oc53;
       const visualHeight = Math.max(34, Number(options.visualHeight) || height);
       const hitHeight = Math.max(height, Number(options.hitHeight) || height);
       const primary = options.primary === true;
       const lightText = !primary || options.lightText === true;
       const compact = options.compact === true;
       const disabled = options.disabled === true;
-      const shadow = this.add.rectangle(x, y + 4, width - 6, visualHeight - 4, 0x000000, options.shadowAlpha ?? 0.45).setDepth(depth);
+      const shadow = this.add.rectangle(x, y + 4, width - 6, visualHeight - 4, 0x000000, (((__oc51 = options.shadowAlpha) !== null && __oc51 !== void 0 ? __oc51 : 0.45))).setDepth(depth);
       const frame = this.addSurfaceImage(x, y, width, visualHeight, primary ? "primary" : "button")
-        .setAlpha(options.surfaceAlpha ?? 1).setDepth(depth + 0.1);
+        .setAlpha((((__oc52 = options.surfaceAlpha) !== null && __oc52 !== void 0 ? __oc52 : 1))).setDepth(depth + 0.1);
       const wash = this.add.rectangle(x, y, width - 12, visualHeight - 12, 0xffeed0, 0).setDepth(depth + 0.2);
       const kicker = options.kicker ? this.add.text(x, y - visualHeight * 0.22, String(options.kicker), {
         resolution: 2, fontFamily: "Arial, sans-serif", fontSize: compact ? 9 : 10,
@@ -5059,7 +5061,7 @@
         frame.setTint(hovered ? 0xffffff : 0xeeeae0);
       };
       frame.setTint(disabled ? 0x777a71 : 0xeeeae0);
-      if (disabled) { text.setAlpha(0.55); kicker?.setAlpha(0.55); hit.disableInteractive(); }
+      if (disabled) { text.setAlpha(0.55); ((kicker === null || kicker === void 0 ? void 0 : kicker.setAlpha(0.55))); hit.disableInteractive(); }
       hit.on("pointerover", () => setHover(true));
       hit.on("pointerout", () => setHover(false));
       const createdAt = performance.now();
@@ -5091,7 +5093,7 @@
       // so presses in the first frame after a screen is built hit nothing. Register now.
       try {
         const inputPlugin = this.input;
-        if (!disabled && inputPlugin?._pendingInsertion?.length && typeof inputPlugin.preUpdate === "function") {
+        if (!disabled && (((__oc53 = inputPlugin === null || inputPlugin === void 0 ? void 0 : inputPlugin._pendingInsertion) === null || __oc53 === void 0 ? void 0 : __oc53.length)) && typeof inputPlugin.preUpdate === "function") {
           inputPlugin.preUpdate();
         }
       } catch (error) { /* the next frame registers it anyway */ }
@@ -5134,15 +5136,15 @@
       });
     }
 
-    showShopActionLoading(message = SchoolI18n.t("shop.processing")) {
+    showShopActionLoading(message = SchoolI18n.t("shop.processing")) { var __oc54;
       if (this.disposed || this.mode !== "shop") return;
       this.shopActionInFlight = true;
-      this.shopUI?.setBusy(message);
+      (((__oc54 = this.shopUI) === null || __oc54 === void 0 ? void 0 : __oc54.setBusy(message)));
     }
 
-    clearShopActionLoading() {
+    clearShopActionLoading() { var __oc55;
       this.shopActionInFlight = false;
-      this.shopUI?.setBusy("");
+      (((__oc55 = this.shopUI) === null || __oc55 === void 0 ? void 0 : __oc55.setBusy("")));
     }
 
     getStoredRankName() {
@@ -5187,7 +5189,7 @@
 
     async createRankSession(syncToken = this.rankSyncToken) {
       const auth = this.profileAuth || loadProfileAuth();
-      if (!auth?.profile_id || !auth?.profile_secret) {
+      if (!((auth === null || auth === void 0 ? void 0 : auth.profile_id)) || !((auth === null || auth === void 0 ? void 0 : auth.profile_secret))) {
         throw new Error("profile credentials unavailable");
       }
       const response = await this.fetchWithAbort(`${RANK_API_BASE}/score-sessions`, {
@@ -5218,11 +5220,11 @@
     startRankSession() {
       this.resetRankSessionState();
       const syncToken = this.rankSyncToken;
-      this.rankSessionPromise = this.createRankSession(syncToken).catch((error) => {
+      this.rankSessionPromise = this.createRankSession(syncToken).catch((error) => { var __oc56, __oc57;
         if (!this.disposed && syncToken === this.rankSyncToken) {
           this.rankSyncFailed = true;
           this.rankLastSyncError = error.message;
-          window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-session' }, 'ranking_client_exception');
+          (((__oc57 = (__oc56 = window.ArcherLabClientErrorReporter) === null || __oc56 === void 0 ? void 0 : __oc56.reportCodeException) === null || __oc57 === void 0 ? void 0 : __oc57.call(__oc56, error, { phase: 'rank-session' }, 'ranking_client_exception')));
           console.warn("[SchoolZombie] rank session failed:", error.message);
         }
         return null;
@@ -5257,7 +5259,7 @@
       };
     }
 
-    async sendRankStageEvent(event, syncToken = this.rankSyncToken) {
+    async sendRankStageEvent(event, syncToken = this.rankSyncToken) { var __oc58, __oc59;
       const sessionId = await this.ensureRankSession();
       if (this.disposed || syncToken !== this.rankSyncToken) {
         return null;
@@ -5271,14 +5273,14 @@
         body: JSON.stringify({
           game_id: RANK_GAME_ID,
           session_id: sessionId,
-          profile_id: this.profileAuth?.profile_id,
-          profile_secret: this.profileAuth?.profile_secret,
+          profile_id: (((__oc58 = this.profileAuth) === null || __oc58 === void 0 ? void 0 : __oc58.profile_id)),
+          profile_secret: (((__oc59 = this.profileAuth) === null || __oc59 === void 0 ? void 0 : __oc59.profile_secret)),
           event
         })
       }, this.rankFetchControllers);
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(data?.error || `rank event ${response.status}`);
+        throw new Error(((data === null || data === void 0 ? void 0 : data.error)) || `rank event ${response.status}`);
       }
       if (!data || data.success !== true) {
         throw new Error("invalid rank event response");
@@ -5286,7 +5288,7 @@
       return data;
     }
 
-    async syncRankStageWithRetry(clearedStage, event, syncToken = this.rankSyncToken, maxAttempts = 2) {
+    async syncRankStageWithRetry(clearedStage, event, syncToken = this.rankSyncToken, maxAttempts = 2) { var __oc60, __oc61;
       let lastError = null;
       for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
         if (this.disposed || syncToken !== this.rankSyncToken) {
@@ -5312,7 +5314,7 @@
           return true;
         } catch (error) {
           lastError = error;
-          window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-stage' }, 'ranking_client_exception');
+          (((__oc61 = (__oc60 = window.ArcherLabClientErrorReporter) === null || __oc60 === void 0 ? void 0 : __oc60.reportCodeException) === null || __oc61 === void 0 ? void 0 : __oc61.call(__oc60, error, { phase: 'rank-stage' }, 'ranking_client_exception')));
           console.warn(`[SchoolZombie] rank stage ${clearedStage} sync attempt ${attempt} failed:`, error.message);
           if (attempt < maxAttempts) {
             await new Promise((resolve) => window.setTimeout(resolve, 450 * attempt));
@@ -5321,20 +5323,20 @@
       }
       if (!this.disposed && syncToken === this.rankSyncToken) {
         this.rankSyncFailed = true;
-        this.rankLastSyncError = lastError?.message || "rank stage sync failed";
+        this.rankLastSyncError = ((lastError === null || lastError === void 0 ? void 0 : lastError.message)) || "rank stage sync failed";
       }
       return false;
     }
 
-    recordRankStageClear(clearedStage) {
+    recordRankStageClear(clearedStage) { var __oc62, __oc63, __oc64;
       if (!Number.isFinite(clearedStage) || clearedStage <= 0) {
         return;
       }
       const stage = Math.floor(clearedStage);
       const event = this.createRankStageEvent(stage);
-      window.ArcherRanking?.track(RANK_GAME_ID, event, this.rankSessionId, {
-        profile_id: this.profileAuth?.profile_id, profile_secret: this.profileAuth?.profile_secret
-      });
+      (((__oc62 = window.ArcherRanking) === null || __oc62 === void 0 ? void 0 : __oc62.track(RANK_GAME_ID, event, this.rankSessionId, {
+        profile_id: (__oc63 = this.profileAuth) === null || __oc63 === void 0 ? void 0 : __oc63.profile_id, profile_secret: (__oc64 = this.profileAuth) === null || __oc64 === void 0 ? void 0 : __oc64.profile_secret
+    })));
       const syncToken = this.rankSyncToken;
       this.rankPendingStageEvents.set(stage, event);
       this.rankStageSyncQueue = this.rankStageSyncQueue
@@ -5383,8 +5385,8 @@
       };
     }
 
-    checkpointRunRewards() {
-      if (this.rewardCheckpointQueued || !window.ArcherRanking?.checkpointRun) return;
+    checkpointRunRewards() { var __oc65;
+      if (this.rewardCheckpointQueued || !(((__oc65 = window.ArcherRanking) === null || __oc65 === void 0 ? void 0 : __oc65.checkpointRun))) return;
       this.rewardCheckpointQueued = true;
       const syncToken = this.rankSyncToken;
       // One write per JavaScript turn, including a whole explosion kill burst.
@@ -5398,8 +5400,8 @@
       });
     }
 
-    async recordRankRunProgress() {
-      const sessionId = this.rankSessionId || window.ArcherRanking?.sessionId(RANK_GAME_ID) || await this.ensureRankSession();
+    async recordRankRunProgress() { var __oc66, __oc67, __oc68;
+      const sessionId = this.rankSessionId || (((__oc66 = window.ArcherRanking) === null || __oc66 === void 0 ? void 0 : __oc66.sessionId(RANK_GAME_ID))) || await this.ensureRankSession();
       if (!sessionId || this.disposed) {
         return false;
       }
@@ -5409,8 +5411,8 @@
         body: JSON.stringify({
           game_id: RANK_GAME_ID,
           session_id: sessionId,
-          profile_id: this.profileAuth?.profile_id,
-          profile_secret: this.profileAuth?.profile_secret,
+          profile_id: (((__oc67 = this.profileAuth) === null || __oc67 === void 0 ? void 0 : __oc67.profile_id)),
+          profile_secret: (((__oc68 = this.profileAuth) === null || __oc68 === void 0 ? void 0 : __oc68.profile_secret)),
           event: this.createRankRunProgressEvent()
         })
       }, this.rankFetchControllers);
@@ -5446,7 +5448,7 @@
           }
         })
         .catch((error) => {
-          if (error?.name === "AbortError") {
+          if (((error === null || error === void 0 ? void 0 : error.name)) === "AbortError") {
             return;
           }
           if (this.rankRequestId === requestId && this.mode === "ranking") {
@@ -5818,7 +5820,7 @@
           }
           try {
             input.focus({ preventScroll: true });
-          } catch {
+          } catch (_err) {
             input.focus();
           }
           input.select();
@@ -5826,7 +5828,7 @@
       }
     }
 
-    async submitRankScore(snapshot = this.lastRankableRun, rawName = null, options = {}) {
+    async submitRankScore(snapshot = this.lastRankableRun, rawName = null, options = {}) { var __oc69, __oc70;
       const run = snapshot || this.getRankSnapshot();
       if (!run || run.score <= 0) {
         this.showToast(SchoolI18n.t("toast.noStage"), COLORS.red);
@@ -5876,39 +5878,39 @@
         }, this.rankFetchControllers);
         const data = await response.json().catch(() => null);
         if (!response.ok) {
-          throw new Error(data?.error || `rank submit ${response.status}`);
+          throw new Error(((data === null || data === void 0 ? void 0 : data.error)) || `rank submit ${response.status}`);
         }
         this.saveStoredRankName(name);
         this.lastRankableRun = null;
         this.removeRankNameLayer();
-        this.showToast(data?.pending ? SchoolI18n.t("toast.rankQueued") : SchoolI18n.t("toast.rankDone"), COLORS.green);
+        this.showToast(((data === null || data === void 0 ? void 0 : data.pending)) ? SchoolI18n.t("toast.rankQueued") : SchoolI18n.t("toast.rankDone"), COLORS.green);
         if (options.returnToMenuOnSuccess) {
           this.showMenu();
         } else {
           this.showRankings();
         }
       } catch (error) {
-        window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-submit' }, 'ranking_client_exception');
+        (((__oc70 = (__oc69 = window.ArcherLabClientErrorReporter) === null || __oc69 === void 0 ? void 0 : __oc69.reportCodeException) === null || __oc70 === void 0 ? void 0 : __oc70.call(__oc69, error, { phase: 'rank-submit' }, 'ranking_client_exception')));
         console.warn("[SchoolZombie] rank submit failed:", error.message);
         this.showToast(SchoolI18n.t("toast.rankFail"), COLORS.red);
       }
     }
 
-    refreshLanguageChrome() {
-      if (this.ui?.supplyLabel?.active) this.ui.supplyLabel.setText(SchoolI18n.t("hud.supply"));
-      if (this.ui?.stage?.active) this.updateHud();
-      const canvas = this.game?.canvas;
+    refreshLanguageChrome() { var __oc71, __oc72, __oc73, __oc74, __oc75;
+      if ((((__oc72 = (__oc71 = this.ui) === null || __oc71 === void 0 ? void 0 : __oc71.supplyLabel) === null || __oc72 === void 0 ? void 0 : __oc72.active))) this.ui.supplyLabel.setText(SchoolI18n.t("hud.supply"));
+      if ((((__oc74 = (__oc73 = this.ui) === null || __oc73 === void 0 ? void 0 : __oc73.stage) === null || __oc74 === void 0 ? void 0 : __oc74.active))) this.updateHud();
+      const canvas = (((__oc75 = this.game) === null || __oc75 === void 0 ? void 0 : __oc75.canvas));
       if (canvas) canvas.setAttribute("aria-label", SchoolI18n.t("boot.canvas"));
     }
 
-    switchLanguage(lang) {
+    switchLanguage(lang) { var __oc76;
       if (SchoolI18n.getLang() === lang) return;
       SchoolI18n.setLang(lang);
       this.refreshLanguageChrome();
       if (this.mode === "menu") this.showMenu();
       else if (this.mode === "ranking") this.showRankings();
       else if (this.mode === "profile-loading") this.showInitialProfileLoading();
-      else if (this.mode === "shop") this.shopUI?.localize();
+      else if (this.mode === "shop") (((__oc76 = this.shopUI) === null || __oc76 === void 0 ? void 0 : __oc76.localize()));
       else if (this.mode === "paused") {
         if (this.pauseConfirmOpen) this.showQuitConfirmation();
         else this.showPauseOverlay();
@@ -6125,14 +6127,14 @@
       this.animateOverlayEntrance(Object.values(shopButton), 470, 18, 380);
     }
 
-    showShop(selectedId = this.shopSelectedCharacter || "c") {
+    showShop(selectedId = this.shopSelectedCharacter || "c") { var __oc77;
       const enteringShop = this.mode !== "shop";
       this.clearOverlay();
       this.mode = "shop";
       announceGameStatus(SchoolI18n.t("shop.a11y"));
       this.startBgm("menu");
       if (enteringShop) this.playSfx("shop_open", 0.82);
-      this.shopSelectedCharacter = SHOP_CHARACTERS.find((character) => character.id === selectedId)?.id || "c";
+      this.shopSelectedCharacter = (((__oc77 = SHOP_CHARACTERS.find((character) => character.id === selectedId)) === null || __oc77 === void 0 ? void 0 : __oc77.id)) || "c";
       this.overlayObjects.push(this.add.image(270, 480, "shop-blackmarket").setDisplaySize(540, 960).setDepth(500));
       const shopUI = window.SchoolZombieShop.create({
         host: document.getElementById("game-shell"),
@@ -6194,8 +6196,8 @@
       return SchoolI18n.t("shop.total", { total });
     }
 
-    getMetaUpgradeLevel(id) {
-      return clamp(Math.floor(Number(this.meta?.upgrades?.[id]) || 0), 0, SHOP_MAX_LEVEL);
+    getMetaUpgradeLevel(id) { var __oc78, __oc79;
+      return clamp(Math.floor(Number((((__oc79 = (__oc78 = this.meta) === null || __oc78 === void 0 ? void 0 : __oc78.upgrades) === null || __oc79 === void 0 ? void 0 : __oc79[id]))) || 0), 0, SHOP_MAX_LEVEL);
     }
 
     getShopUpgradeEffectLine(id, level) {
@@ -6281,7 +6283,7 @@
         if (this.disposed || this.shopUI !== shopUI || this.mode !== "shop") return;
         this.clearShopActionLoading();
         this.playSfx("purchase");
-        shopUI?.refresh();
+        ((shopUI === null || shopUI === void 0 ? void 0 : shopUI.refresh()));
         this.showToast(`${upgrade.title} Lv.${result.level || level + 1}`, character.accent);
       } catch (error) {
         if (this.disposed || this.shopUI !== shopUI || this.mode !== "shop") return;
@@ -6290,7 +6292,7 @@
         this.showToast(SchoolI18n.t("toast.buyFail"), COLORS.red);
         this.ensureServerProfile({ force: true, quiet: true }).then(() => {
           if (!this.disposed && this.shopUI === shopUI && this.mode === "shop") {
-            shopUI?.refresh();
+            ((shopUI === null || shopUI === void 0 ? void 0 : shopUI.refresh()));
           }
         }).catch(() => {});
       }
@@ -6302,12 +6304,12 @@
         .reduce((sum, id) => sum + getShopUpgradeRefund(meta.upgrades[id]), 0);
     }
 
-    showShopResetNoticeLayer() {
-      this.shopUI?.confirmReset(0, () => {});
+    showShopResetNoticeLayer() { var __oc80;
+      (((__oc80 = this.shopUI) === null || __oc80 === void 0 ? void 0 : __oc80.confirmReset(0, () => { })));
     }
 
-    showShopResetConfirmLayer(refund) {
-      this.shopUI?.confirmReset(refund, () => this.resetShopUpgrades(true));
+    showShopResetConfirmLayer(refund) { var __oc81;
+      (((__oc81 = this.shopUI) === null || __oc81 === void 0 ? void 0 : __oc81.confirmReset(refund, () => this.resetShopUpgrades(true))));
     }
 
     async resetShopUpgrades(confirmed = false) {
@@ -6342,7 +6344,7 @@
         if (this.disposed || this.shopUI !== shopUI || this.mode !== "shop") return;
         this.clearShopActionLoading();
         this.playSfx("coin");
-        shopUI?.refresh();
+        ((shopUI === null || shopUI === void 0 ? void 0 : shopUI.refresh()));
         this.showToast(SchoolI18n.t("toast.shopReset", { refund: `$${formatShopCost(result.refund || refund)}` }), COLORS.gold);
       } catch (error) {
         if (this.disposed || this.shopUI !== shopUI || this.mode !== "shop") return;
@@ -6351,7 +6353,7 @@
         this.showToast(SchoolI18n.t("toast.resetFail"), COLORS.red);
         this.ensureServerProfile({ force: true, quiet: true }).then(() => {
           if (!this.disposed && this.shopUI === shopUI && this.mode === "shop") {
-            shopUI?.refresh();
+            ((shopUI === null || shopUI === void 0 ? void 0 : shopUI.refresh()));
           }
         }).catch(() => {});
       }
@@ -6362,8 +6364,8 @@
       saveMetaSave(this.meta);
     }
 
-    getDisplayedCoins() {
-      const storedCoins = Math.max(0, Math.floor(Number(this.meta?.coins) || 0));
+    getDisplayedCoins() { var __oc82;
+      const storedCoins = Math.max(0, Math.floor(Number((((__oc82 = this.meta) === null || __oc82 === void 0 ? void 0 : __oc82.coins))) || 0));
       const runCoins = Math.max(0, Math.floor(Number(this.coins) || 0));
       return storedCoins + (this.runCoinsBanked ? 0 : runCoins);
     }
@@ -6474,20 +6476,20 @@
       }
     }
 
-    bankRunCoins() {
+    bankRunCoins() { var __oc83;
       if (this.runCoinsBanked) return Promise.resolve(0);
       if (this.runCoinBankPromise) return this.runCoinBankPromise;
       // Capture before waiting: reset/menu/new-run actions must not replace this
       // run's final ledger. Durable delivery persists it before returning pending.
-      const sessionId = this.rankSessionId || window.ArcherRanking?.sessionId(RANK_GAME_ID);
+      const sessionId = this.rankSessionId || (((__oc83 = window.ArcherRanking) === null || __oc83 === void 0 ? void 0 : __oc83.sessionId(RANK_GAME_ID)));
       const syncToken = this.rankSyncToken;
       const auth = this.profileAuth || loadProfileAuth();
       const event = this.createRankRunProgressEvent();
-      const task = (async () => {
+      const task = (async () => { var __oc84, __oc85, __oc86;
         try {
           if (!sessionId || !auth) throw new Error("reward session unavailable");
           const body = { ...auth, game_id: RANK_GAME_ID, session_id: sessionId, event };
-          const result = window.ArcherRanking?.bankRun
+          const result = (((__oc84 = window.ArcherRanking) === null || __oc84 === void 0 ? void 0 : __oc84.bankRun))
             ? await window.ArcherRanking.bankRun(body)
             : await this.postProfileAction("/school-zombie/profile/bank-run", body);
           if (result.pending) {
@@ -6495,14 +6497,14 @@
             if (!this.disposed) this.showToast(SchoolI18n.t("toast.rewardQueued"), COLORS.gold);
             return 0;
           }
-          if (!this.disposed && result.profile_id === this.profileAuth?.profile_id) {
+          if (!this.disposed && result.profile_id === (((__oc85 = this.profileAuth) === null || __oc85 === void 0 ? void 0 : __oc85.profile_id))) {
             if (this.rankSyncToken === syncToken) {
               this.runCoinsBanked = true;
               this.runCoinsQueued = false;
             }
             this.applyServerProfile(result);
           }
-          return Math.max(0, Math.floor(Number(result.run_coins ?? result.earned_coins) || 0));
+          return Math.max(0, Math.floor(Number((((__oc86 = result.run_coins) !== null && __oc86 !== void 0 ? __oc86 : result.earned_coins))) || 0));
         } catch (error) {
           if (!this.disposed) {
             this.playSfx("core", 0.65);
@@ -6788,9 +6790,9 @@
       const speedHit = this.add.rectangle(270, 540, 400, 58, 0xeee6d2, 0)
         .setDepth(527)
         .setInteractive({ useHandCursor: true });
-      speedHit.on("pointerdown", () => {
+      speedHit.on("pointerdown", () => { var __oc87;
         this.toggleSpeed();
-        this.ui.pauseSpeedValue?.setText(formatGameSpeedLabel(this.speedMultiplier));
+        (((__oc87 = this.ui.pauseSpeedValue) === null || __oc87 === void 0 ? void 0 : __oc87.setText(formatGameSpeedLabel(this.speedMultiplier))));
       });
       items.push(speedLabel, this.ui.pauseSpeedValue, speedHit);
 
@@ -6870,13 +6872,13 @@
       this.animateOverlayEntrance([...panel.objects, kicker, title, body, ...Object.values(cancel), ...Object.values(confirm)], 30, 16, 320);
     }
 
-    setGameSpeed(speed = DEFAULT_GAME_SPEED) {
+    setGameSpeed(speed = DEFAULT_GAME_SPEED) { var __oc88;
       const normalized = GAME_SPEED_STEPS.find((step) => Math.abs(step - speed) < 0.001) || DEFAULT_GAME_SPEED;
       this.speedMultiplier = normalized;
       if (this.ui.speed) {
         this.ui.speed.setText(formatGameSpeedLabel(normalized));
       }
-      if (this.ui.pauseSpeedValue?.active) {
+      if ((((__oc88 = this.ui.pauseSpeedValue) === null || __oc88 === void 0 ? void 0 : __oc88.active))) {
         this.ui.pauseSpeedValue.setText(formatGameSpeedLabel(normalized));
       }
     }
@@ -6925,7 +6927,7 @@
     }
 
     updateDefenderAnimations(dt) {
-      this.defenders.forEach((defender) => {
+      this.defenders.forEach((defender) => { var __oc89;
         if (!defender.recruited) {
           return;
         }
@@ -6966,7 +6968,7 @@
               }
               return;
             }
-            animation.timer += animation.frameDurations?.[animation.frame] || animation.frameDuration;
+            animation.timer += (((__oc89 = animation.frameDurations) === null || __oc89 === void 0 ? void 0 : __oc89[animation.frame])) || animation.frameDuration;
             const textureKey = `character-${defender.id}-${animation.action}-${animation.pose}-${animation.frame}`;
             if (defender.sprite && this.textures.exists(textureKey)) {
               this.blendDefenderFrame(defender, CHARACTER_FRAME_BLEND_DURATIONS[defender.id] || 0, textureKey);
@@ -7154,7 +7156,9 @@
       if (!this.turrets) {
         this.turrets = [];
       }
-      this.turrets = this.turrets.filter((turret) => turret && !turret.container?.destroyed);
+      this.turrets = this.turrets.filter((turret) => { var __oc90; return (
+turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 : __oc90.destroyed))
+); });
       const existingTurret = this.turrets[0];
       if (existingTurret) {
         existingTurret.damageScale *= 1.14;
@@ -7173,7 +7177,7 @@
       }
 
       const position = {
-        x: clamp(engineer?.x || 270, this.bounds.left + 58, this.bounds.right - 58),
+        x: clamp(((engineer === null || engineer === void 0 ? void 0 : engineer.x)) || 270, this.bounds.left + 58, this.bounds.right - 58),
         y: clamp(this.bounds.barricade + 38, this.bounds.zombieFootLine + 24, this.bounds.survivorLine - 24)
       };
       const container = this.trackTransient(this.add.container(position.x, position.y).setDepth(228));
@@ -7203,10 +7207,10 @@
         turretBase,
         turretSprite: turretHead,
         projectile: "projectile-rifle",
-        speed: rifleDefender?.speed || 1800,
-        rate: Math.max(0.46, 0.82 / (engineer?.turretRateBoost || 1)),
+        speed: ((rifleDefender === null || rifleDefender === void 0 ? void 0 : rifleDefender.speed)) || 1800,
+        rate: Math.max(0.46, 0.82 / (((engineer === null || engineer === void 0 ? void 0 : engineer.turretRateBoost)) || 1)),
         timer: rand(0.18, 0.5),
-        damageScale: 0.34 * (engineer?.turretDamageBoost || 1),
+        damageScale: 0.34 * (((engineer === null || engineer === void 0 ? void 0 : engineer.turretDamageBoost)) || 1),
         pierce: 0,
         critChance: 0.05,
         critMultiplier: 1.35,
@@ -7217,13 +7221,13 @@
       this.createScreenPulse(SKILL_ACCENTS.engineer);
     }
 
-    updateTurrets(dt) {
-      if (!this.turrets?.length) {
+    updateTurrets(dt) { var __oc91, __oc92;
+      if (!(((__oc91 = this.turrets) === null || __oc91 === void 0 ? void 0 : __oc91.length))) {
         return;
       }
       for (let i = this.turrets.length - 1; i >= 0; i -= 1) {
         const turret = this.turrets[i];
-        if (!turret || turret.container?.destroyed) {
+        if (!turret || (((__oc92 = turret.container) === null || __oc92 === void 0 ? void 0 : __oc92.destroyed))) {
           this.turrets.splice(i, 1);
           continue;
         }
@@ -7262,8 +7266,8 @@
         const glow = this.trackTransient(this.add.rectangle(270, y + 8, 506, 70, 0x3d4a4f, 0.18).setDepth(225));
         this.barbedWire = {
           y,
-          damageScale: engineer?.wireDamageBoost || 1,
-          slowDuration: Math.min(BARBED_WIRE_MAX_SLOW_DURATION, BARBED_WIRE_SLOW_DURATION * (engineer?.wireSlowBoost || 1)),
+          damageScale: ((engineer === null || engineer === void 0 ? void 0 : engineer.wireDamageBoost)) || 1,
+          slowDuration: Math.min(BARBED_WIRE_MAX_SLOW_DURATION, BARBED_WIRE_SLOW_DURATION * (((engineer === null || engineer === void 0 ? void 0 : engineer.wireSlowBoost)) || 1)),
           hitHalfHeight: BARBED_WIRE_HIT_HALF_HEIGHT,
           objects: [wire, glow]
         };
@@ -7290,8 +7294,8 @@
       this.createScreenPulse(SKILL_ACCENTS.engineer);
     }
 
-    drawBarbedWire() {
-      const wire = this.barbedWire?.objects?.[0];
+    drawBarbedWire() { var __oc93, __oc94;
+      const wire = (((__oc94 = (__oc93 = this.barbedWire) === null || __oc93 === void 0 ? void 0 : __oc93.objects) === null || __oc94 === void 0 ? void 0 : __oc94[0]));
       if (!wire || wire.destroyed) {
         return;
       }
@@ -7325,7 +7329,7 @@
     }
 
     applyBarbedWireToZombie(zombie, dt) {
-      if (!this.barbedWire || !zombie?.active) {
+      if (!this.barbedWire || !((zombie === null || zombie === void 0 ? void 0 : zombie.active))) {
         return;
       }
       zombie.wireCooldown = Math.max(0, (zombie.wireCooldown || 0) - dt);
@@ -7655,7 +7659,7 @@
       const pose = CHARACTER_ATTACK_DIRECTION_LOCKS.has(defender.id)
         ? initialPose
         : getShotAimPoseKey(initialAngle);
-      this.startDefenderAttackAnimation(defender, pose, () => {
+      this.startDefenderAttackAnimation(defender, pose, () => { var __oc95, __oc96;
         if (this.disposed || this.mode !== "playing" || !defender.recruited || !target.active || target.hp <= 0) {
           return;
         }
@@ -7671,7 +7675,7 @@
         const usesHorizontalProjectile = defender.projectile === "projectile-nail"
           || defender.projectile === "projectile-arrow";
         const sprite = this.add.image(x, y, defender.projectile)
-          .setOrigin(0.5, usesHorizontalProjectile ? 0.5 : (PROJECTILE_TAIL_ORIGINS[defender.projectile] ?? 1))
+          .setOrigin(0.5, usesHorizontalProjectile ? 0.5 : (((__oc95 = PROJECTILE_TAIL_ORIGINS[defender.projectile]) !== null && __oc95 !== void 0 ? __oc95 : 1)))
           .setScale(PROJECTILE_SCALES[defender.projectile] || 0.78)
           .setRotation(angle + (usesHorizontalProjectile ? 0 : Math.PI / 2))
           .setDepth(190);
@@ -7723,7 +7727,7 @@
           hitTargets: new Set(),
           trailTimer: 0
         });
-        const muzzleFlash = this.createMuzzle(x, y, muzzle.effectAngle ?? angle, defender.projectile);
+        const muzzleFlash = this.createMuzzle(x, y, (((__oc96 = muzzle.effectAngle) !== null && __oc96 !== void 0 ? __oc96 : angle)), defender.projectile);
         defender.muzzleFlash = muzzleFlash ? { flash: muzzleFlash, pose, shotOffset } : null;
         this.playWeaponSfx(defender.projectile);
       });
@@ -7784,7 +7788,7 @@
     }
 
     updateBulletVisuals(bullet) {
-      if (!bullet?.visualEffects || !bullet.sprite || bullet.sprite.destroyed) {
+      if (!((bullet === null || bullet === void 0 ? void 0 : bullet.visualEffects)) || !bullet.sprite || bullet.sprite.destroyed) {
         return;
       }
       if (bullet.visualEffects.type === "arrow") {
@@ -7854,7 +7858,7 @@
     }
 
     spawnRocketTrailParticles(bullet, dt) {
-      if (!bullet?.sprite || bullet.sprite.destroyed || bullet.projectile !== "projectile-rocket") {
+      if (!((bullet === null || bullet === void 0 ? void 0 : bullet.sprite)) || bullet.sprite.destroyed || bullet.projectile !== "projectile-rocket") {
         return;
       }
       bullet.trailTimer = (bullet.trailTimer || 0) - dt;
@@ -7907,7 +7911,7 @@
 
     drawShockProjectileLink(bullet) {
       const effect = bullet.visualEffects;
-      const link = effect?.link;
+      const link = ((effect === null || effect === void 0 ? void 0 : effect.link));
       if (!link || link.destroyed) {
         return;
       }
@@ -8211,7 +8215,7 @@
     }
 
     applyFireZoneBurn(zombie, damagePerTick, burnDuration, tickInterval) {
-      if (!zombie?.active || damagePerTick <= 0 || burnDuration <= 0) {
+      if (!((zombie === null || zombie === void 0 ? void 0 : zombie.active)) || damagePerTick <= 0 || burnDuration <= 0) {
         return;
       }
       const wasBurning = (zombie.fireBurnTimer || 0) > 0;
@@ -8224,7 +8228,7 @@
     }
 
     updateFireBurn(zombie, dt) {
-      if (!zombie?.active || (zombie.fireBurnTimer || 0) <= 0) {
+      if (!((zombie === null || zombie === void 0 ? void 0 : zombie.active)) || (zombie.fireBurnTimer || 0) <= 0) {
         return;
       }
       zombie.fireBurnTimer = Math.max(0, zombie.fireBurnTimer - dt);
@@ -8250,8 +8254,8 @@
       }
     }
 
-    updateFireZones(dt) {
-      if (!this.fireZones?.length) {
+    updateFireZones(dt) { var __oc97;
+      if (!(((__oc97 = this.fireZones) === null || __oc97 === void 0 ? void 0 : __oc97.length))) {
         return;
       }
       for (let i = this.fireZones.length - 1; i >= 0; i -= 1) {
@@ -8379,8 +8383,8 @@
       const ignoredTargets = new Set(bullet.hitTargets || []);
       ignoredTargets.add(sourceZombie);
       let origin = {
-        x: impactPoint?.x || sourceZombie.x,
-        y: impactPoint?.y || sourceZombie.y
+        x: ((impactPoint === null || impactPoint === void 0 ? void 0 : impactPoint.x)) || sourceZombie.x,
+        y: ((impactPoint === null || impactPoint === void 0 ? void 0 : impactPoint.y)) || sourceZombie.y
       };
       const jumps = Math.max(0, Math.floor(bullet.chainJumps || 0));
       for (let jump = 0; jump < jumps; jump += 1) {
@@ -8453,17 +8457,17 @@
       const hitPoint = this.getZombieBodyHitPoint(
         zombie,
         this.getBulletAimPointForZombie(bullet, zombie) || tip,
-        bullet?.projectile
+        ((bullet === null || bullet === void 0 ? void 0 : bullet.projectile))
       );
-      if (Number.isFinite(bullet?.angle)) {
+      if (Number.isFinite(((bullet === null || bullet === void 0 ? void 0 : bullet.angle)))) {
         hitPoint.angle = bullet.angle;
       }
       return hitPoint;
     }
 
     createEmbeddedProjectile(zombie, bullet, impactPoint = null) {
-      const config = EMBEDDED_PROJECTILES[bullet?.projectile];
-      if (!config || !zombie || !zombie.active || !bullet?.sprite) {
+      const config = EMBEDDED_PROJECTILES[((bullet === null || bullet === void 0 ? void 0 : bullet.projectile))];
+      if (!config || !zombie || !zombie.active || !((bullet === null || bullet === void 0 ? void 0 : bullet.sprite))) {
         return;
       }
       const hitPoint = this.getZombieBodyHitPoint(zombie, impactPoint || this.getBulletTip(bullet), bullet.projectile);
@@ -8510,7 +8514,7 @@
 
     updateFollowingHitEffects() {
       Array.from(this.transientObjects || []).forEach((object) => {
-        if (!object?.followZombie) {
+        if (!((object === null || object === void 0 ? void 0 : object.followZombie))) {
           return;
         }
         this.updateFollowingHitEffect(object);
@@ -8518,7 +8522,7 @@
     }
 
     updateFollowingHitEffectsForZombie(zombie) {
-      if (!zombie?.hitEffects) {
+      if (!((zombie === null || zombie === void 0 ? void 0 : zombie.hitEffects))) {
         return;
       }
       Array.from(zombie.hitEffects).forEach((object) => {
@@ -8527,7 +8531,7 @@
     }
 
     updateFollowingHitEffect(object) {
-      const zombie = object?.followZombie;
+      const zombie = ((object === null || object === void 0 ? void 0 : object.followZombie));
       if (!object || object.destroyed || !zombie || !zombie.active || zombie.dying) {
         return;
       }
@@ -8547,7 +8551,7 @@
       buckets.clear();
       for (let i = 0; i < this.zombies.length; i += 1) {
         const zombie = this.zombies[i];
-        if (!zombie?.active || zombie.hp <= 0) {
+        if (!((zombie === null || zombie === void 0 ? void 0 : zombie.active)) || zombie.hp <= 0) {
           continue;
         }
         const bucketX = Math.floor(zombie.x / ZOMBIE_HIT_GRID_SIZE);
@@ -8566,7 +8570,7 @@
       const buckets = this.zombieHitBuckets;
       const candidates = this.zombieHitCandidates || (this.zombieHitCandidates = []);
       candidates.length = 0;
-      if (!buckets?.size) {
+      if (!((buckets === null || buckets === void 0 ? void 0 : buckets.size))) {
         return candidates;
       }
 
@@ -8587,8 +8591,8 @@
         }
       }
 
-      const aimTarget = bullet?.aimTarget;
-      if (aimTarget?.active && aimTarget.hp > 0 && !candidates.includes(aimTarget)) {
+      const aimTarget = ((bullet === null || bullet === void 0 ? void 0 : bullet.aimTarget));
+      if (((aimTarget === null || aimTarget === void 0 ? void 0 : aimTarget.active)) && aimTarget.hp > 0 && !candidates.includes(aimTarget)) {
         candidates.push(aimTarget);
       }
       return candidates;
@@ -8598,7 +8602,7 @@
       const buckets = this.zombieHitBuckets;
       const candidates = this.zombieSeparationCandidates || (this.zombieSeparationCandidates = []);
       candidates.length = 0;
-      if (!zombie || !buckets?.size) {
+      if (!zombie || !((buckets === null || buckets === void 0 ? void 0 : buckets.size))) {
         return candidates;
       }
 
@@ -8618,7 +8622,7 @@
     }
 
     getZombieCrowdRadius(zombie) {
-      return Math.max(12, (zombie?.hitRadius || 32) * ZOMBIE_SEPARATION_RADIUS_SCALE);
+      return Math.max(12, (((zombie === null || zombie === void 0 ? void 0 : zombie.hitRadius)) || 32) * ZOMBIE_SEPARATION_RADIUS_SCALE);
     }
 
     getZombieLaneMinX(extra = 0) {
@@ -8634,7 +8638,7 @@
     }
 
     separateZombieFromCrowd(zombie, dt) {
-      if (!zombie?.active || zombie.knockbackTweening || zombie.stunTimer > 0) {
+      if (!((zombie === null || zombie === void 0 ? void 0 : zombie.active)) || zombie.knockbackTweening || zombie.stunTimer > 0) {
         return;
       }
 
@@ -8686,8 +8690,8 @@
       }
     }
 
-    getZombieFrontBlocker(zombie, x = zombie?.x || 0) {
-      if (!zombie?.active || zombie.hp <= 0) {
+    getZombieFrontBlocker(zombie, x = ((zombie === null || zombie === void 0 ? void 0 : zombie.x)) || 0) {
+      if (!((zombie === null || zombie === void 0 ? void 0 : zombie.active)) || zombie.hp <= 0) {
         return null;
       }
 
@@ -9023,7 +9027,7 @@
     }
 
     createFireBurnTickEffect(zombie) {
-      if (!zombie?.active) {
+      if (!((zombie === null || zombie === void 0 ? void 0 : zombie.active))) {
         return;
       }
       if (!this.canSpawnFireTickEffect() || !this.canSpawnHitEffect(false)) {
@@ -9229,7 +9233,7 @@
       const effect = ZOMBIE_HIT_EFFECTS[hitType] || ZOMBIE_HIT_EFFECTS.default;
       const sizeScale = this.getZombieEffectScale(zombie) * (crit ? 1.12 : 1);
       const hitPoint = this.getZombieBodyHitPoint(zombie, impactPoint, hitType, crit);
-      const impactAngle = Number.isFinite(impactPoint?.angle) ? impactPoint.angle : null;
+      const impactAngle = Number.isFinite(((impactPoint === null || impactPoint === void 0 ? void 0 : impactPoint.angle))) ? impactPoint.angle : null;
       const rotation = effect.alignToImpact === false || impactAngle === null
         ? rand(-effect.rotation, effect.rotation)
         : impactAngle + rand(-effect.rotation * 0.36, effect.rotation * 0.36);
@@ -9246,7 +9250,7 @@
       }
       zombie.lastHitContext = {
         type: hitType,
-        angle: Number.isFinite(impactPoint?.angle) ? impactPoint.angle : null,
+        angle: Number.isFinite(((impactPoint === null || impactPoint === void 0 ? void 0 : impactPoint.angle))) ? impactPoint.angle : null,
         crit
       };
       zombie.hp -= damage;
@@ -9412,7 +9416,9 @@
     registerCorpseRecord(objects, depthEntries = []) {
       const record = {
         objects: objects.filter(Boolean),
-        depthEntries: depthEntries.filter((entry) => entry?.object),
+        depthEntries: depthEntries.filter((entry) => { return (
+(entry === null || entry === void 0 ? void 0 : entry.object)
+); }),
         fading: false
       };
       this.activeCorpses.push(record);
@@ -9497,8 +9503,8 @@
       ];
       const fall = choose(fallProfiles);
       const corpseX = this.clampZombieLaneX(x);
-      const knockbackDx = Number.isFinite(deathKnockback?.dx) ? deathKnockback.dx : 0;
-      const knockbackDy = Number.isFinite(deathKnockback?.dy) ? deathKnockback.dy : 0;
+      const knockbackDx = Number.isFinite(((deathKnockback === null || deathKnockback === void 0 ? void 0 : deathKnockback.dx))) ? deathKnockback.dx : 0;
+      const knockbackDy = Number.isFinite(((deathKnockback === null || deathKnockback === void 0 ? void 0 : deathKnockback.dy))) ? deathKnockback.dy : 0;
       const deathKnockbackDy = clamp(
         knockbackDy * ZOMBIE_DEATH_VERTICAL_KNOCKBACK_SCALE,
         -displayH * ZOMBIE_DEATH_VERTICAL_KNOCKBACK_LIMIT_RATIO,
@@ -9552,7 +9558,7 @@
         && this.textures.exists(deathTexture);
       const deathDisplaySize = displayH * (renderScale.deathSize || 0.9);
       const deathCenters = zombieMotionData.death[deathTexture];
-      const deathFrameCount = deathCenters?.length || (deathType === "normal"
+      const deathFrameCount = ((deathCenters === null || deathCenters === void 0 ? void 0 : deathCenters.length)) || (deathType === "normal"
         ? NORMAL_ZOMBIE_DEATH_ANIMATION_FRAMES
         : ZOMBIE_DEATH_ANIMATION_FRAMES);
       const settledDeathAngle = finalAngle * 0.08;
@@ -9560,7 +9566,7 @@
       const walkCenters = zombieMotionData.walk[deathType] || zombieMotionData.walk.normal;
       const walkFrameIndex = (zombie.variant || 0) * 4 + (zombie.animFrame || 0);
       const deathStart = zombieMotion.deathStart(
-        zombie, walkCenters[walkFrameIndex] || walkCenters[0], deathCenters?.[0] || [0, 0], deathDisplaySize
+        zombie, walkCenters[walkFrameIndex] || walkCenters[0], ((deathCenters === null || deathCenters === void 0 ? void 0 : deathCenters[0])) || [0, 0], deathDisplaySize
       );
       const finalFrameScale = zombieMotion.frameScale(deathType, deathFrameCount - 1);
       const corpseRotation = settledDeathAngle * Math.PI / 180;
@@ -9604,13 +9610,13 @@
         && this.textures.exists("blood-burst-core");
       let bloodWidth = bloodMaxSide;
       let bloodHeight = bloodMaxSide;
-      const createBloodStainImage = (textureKey, tint = null) => {
+      const createBloodStainImage = (textureKey, tint = null) => { var __oc98, __oc99, __oc100, __oc101;
         const alphaOrigin = BLOOD_STAIN_ALPHA_ORIGINS[textureKey] || { x: 0.5, y: 0.5 };
         const image = this.add.image(bloodX, bloodY, textureKey)
           .setOrigin(alphaOrigin.x, alphaOrigin.y)
           .setRotation(bloodRotation);
-        const frameWidth = image.frame?.realWidth || image.frame?.width || bloodMaxSide;
-        const frameHeight = image.frame?.realHeight || image.frame?.height || bloodMaxSide;
+        const frameWidth = (((__oc98 = image.frame) === null || __oc98 === void 0 ? void 0 : __oc98.realWidth)) || (((__oc99 = image.frame) === null || __oc99 === void 0 ? void 0 : __oc99.width)) || bloodMaxSide;
+        const frameHeight = (((__oc100 = image.frame) === null || __oc100 === void 0 ? void 0 : __oc100.realHeight)) || (((__oc101 = image.frame) === null || __oc101 === void 0 ? void 0 : __oc101.height)) || bloodMaxSide;
         const aspect = frameWidth / Math.max(1, frameHeight);
         if (aspect >= 1) {
           bloodWidth = bloodMaxSide;
@@ -9699,7 +9705,7 @@
       if (deathSprite) {
         const applyDeathFrameSize = (frame) => {
           const transform = zombieMotion.frameTransform(
-            deathDisplaySize, zombieMotion.frameScale(deathType, frame), deathCenters?.[frame] || [0, 0], corpseFlipX
+            deathDisplaySize, zombieMotion.frameScale(deathType, frame), ((deathCenters === null || deathCenters === void 0 ? void 0 : deathCenters[frame])) || [0, 0], corpseFlipX
           );
           deathSprite.setOrigin(transform.originX, transform.originY)
             .setDisplaySize(transform.size, transform.size);
@@ -9792,13 +9798,13 @@
     }
 
     getZombieSurgeCooldown(zombie) {
-      const min = Math.max(0.4, Number(zombie?.surgeCooldownMin) || 3.8);
-      const max = Math.max(min, Number(zombie?.surgeCooldownMax) || 5.2);
+      const min = Math.max(0.4, Number(((zombie === null || zombie === void 0 ? void 0 : zombie.surgeCooldownMin))) || 3.8);
+      const max = Math.max(min, Number(((zombie === null || zombie === void 0 ? void 0 : zombie.surgeCooldownMax))) || 5.2);
       return rand(min, max);
     }
 
     setZombieSurgeState(zombie, state, timer) {
-      if (!zombie?.surgeState) {
+      if (!((zombie === null || zombie === void 0 ? void 0 : zombie.surgeState))) {
         return;
       }
       zombie.surgeState = state;
@@ -9812,14 +9818,14 @@
     }
 
     resetZombieSurge(zombie, minimumDelay = 0) {
-      if (!zombie?.surgeState) {
+      if (!((zombie === null || zombie === void 0 ? void 0 : zombie.surgeState))) {
         return;
       }
       this.setZombieSurgeState(zombie, "cooldown", Math.max(minimumDelay, this.getZombieSurgeCooldown(zombie)));
     }
 
     createChargerSurgeCue(zombie) {
-      if (!zombie?.active) {
+      if (!((zombie === null || zombie === void 0 ? void 0 : zombie.active))) {
         return;
       }
       const foot = this.getZombieFootPoint(zombie);
@@ -9845,7 +9851,7 @@
     }
 
     updateZombieSurge(zombie, dt, attackLine, frontBlocker) {
-      if (!zombie?.surgeState) {
+      if (!((zombie === null || zombie === void 0 ? void 0 : zombie.surgeState))) {
         return 1;
       }
       const remainingDistance = attackLine - zombie.y;
@@ -10256,7 +10262,9 @@
 
     getUpgradeChoiceSignature(upgrades) {
       return (upgrades || [])
-        .map((upgrade) => upgrade?.id || "")
+        .map((upgrade) => { return (
+((upgrade === null || upgrade === void 0 ? void 0 : upgrade.id)) || ""
+); })
         .sort()
         .join("|");
     }
@@ -10281,14 +10289,16 @@
       this.skillChoiceCardObjects = [];
     }
 
-    setSkillChoiceFocus(index = 0) {
-      const count = this.currentSkillChoices?.length || 0;
+    setSkillChoiceFocus(index = 0) { var __oc102;
+      const count = (((__oc102 = this.currentSkillChoices) === null || __oc102 === void 0 ? void 0 : __oc102.length)) || 0;
       if (count <= 0) {
         return;
       }
       const normalized = (Math.floor(index) % count + count) % count;
       this.skillChoiceFocusIndex = normalized;
-      this.skillChoiceFocusHandlers.forEach((handler, handlerIndex) => handler?.(handlerIndex === normalized));
+      this.skillChoiceFocusHandlers.forEach((handler, handlerIndex) => { return (
+(handler === null || handler === void 0 ? void 0 : handler(handlerIndex === normalized))
+); });
       const choice = this.currentSkillChoices[normalized];
       if (choice) {
         announceGameStatus(SchoolI18n.t("skill.a11yCard", { index: normalized + 1, title: choice.title, desc: String(choice.desc || "").replace(/\n/g, " ") }));
@@ -10323,9 +10333,9 @@
       this.skillRerollButtonObjects = button;
     }
 
-    updateSkillRerollButton() {
+    updateSkillRerollButton() { var __oc103;
       const button = this.skillRerollButtonObjects;
-      if (!button?.text?.active) return;
+      if (!(((__oc103 = button === null || button === void 0 ? void 0 : button.text) === null || __oc103 === void 0 ? void 0 : __oc103.active))) return;
       button.text.setText(this.skillRerollUsed ? SchoolI18n.t("skill.rerollDone") : SchoolI18n.t("skill.reroll", { cost: this.getSkillRerollCost() }));
       button.frame.setTint(this.skillRerollUsed ? 0x777a71 : 0xeeeae0);
       button.text.setAlpha(this.skillRerollUsed ? 0.55 : 1);
@@ -10373,7 +10383,7 @@
       return `${Math.round(value)}ms`;
     }
 
-    getCharacterUpgrades() {
+    getCharacterUpgrades() { var __oc104, __oc105;
       const upgrades = [];
       const add = (ownerId, upgrade) => {
         const defender = this.getDefenderById(ownerId);
@@ -10985,9 +10995,9 @@
         id: "h-turret",
         icon: "skill-barrage",
         tag: SchoolI18n.t("tag.engineer"),
-        title: (this.turrets?.length || 0) > 0 ? SchoolI18n.t("skill.h-turret.titleOwned") : SchoolI18n.t("skill.h-turret.title"),
+        title: ((((__oc104 = this.turrets) === null || __oc104 === void 0 ? void 0 : __oc104.length)) || 0) > 0 ? SchoolI18n.t("skill.h-turret.titleOwned") : SchoolI18n.t("skill.h-turret.title"),
         desc: SchoolI18n.t("skill.h-turret.desc"),
-        stat: SchoolI18n.t((this.turrets?.length || 0) > 0 ? "skill.stat.turretOwned" : "skill.stat.turretNew", {
+        stat: SchoolI18n.t(((((__oc105 = this.turrets) === null || __oc105 === void 0 ? void 0 : __oc105.length)) || 0) > 0 ? "skill.stat.turretOwned" : "skill.stat.turretNew", {
           from: this.formatPercent(engineer.turretDamageBoost),
           to: this.formatPercent(engineer.turretDamageBoost * 1.08)
         }),
@@ -11105,7 +11115,7 @@
       return chosen;
     }
 
-    addWideSkillCard(x, y, upgrade, index = 0) {
+    addWideSkillCard(x, y, upgrade, index = 0) { var __oc106;
       const accent = fieldAccent(upgrade.accent || SKILL_ACCENTS[upgrade.id] || COLORS.gold);
       const accentHex = "#d5c5a1";
       const isRecruit = Boolean(upgrade.characterTexture);
@@ -11260,7 +11270,7 @@
       });
       const objects = [...animated, hit];
       this.overlayObjects.push(...objects);
-      this.skillChoiceCardObjects?.push(...objects);
+      (((__oc106 = this.skillChoiceCardObjects) === null || __oc106 === void 0 ? void 0 : __oc106.push(...objects)));
       return objects;
     }
 
@@ -11580,8 +11590,8 @@
       }
     }
 
-    clearOverlay() {
-      this.shopUI?.destroy();
+    clearOverlay() { var __oc107;
+      (((__oc107 = this.shopUI) === null || __oc107 === void 0 ? void 0 : __oc107.destroy()));
       this.shopUI = null;
       this.removeRankPrepLayer();
       this.removeRankNameLayer();
@@ -11649,8 +11659,8 @@
     const readViewportSize = () => {
       const viewport = window.visualViewport;
       return {
-        width: Math.max(1, Math.round(viewport?.width || window.innerWidth || document.documentElement.clientWidth || GAME_WIDTH)),
-        height: Math.max(1, Math.round(viewport?.height || window.innerHeight || document.documentElement.clientHeight || GAME_HEIGHT))
+        width: Math.max(1, Math.round(((viewport === null || viewport === void 0 ? void 0 : viewport.width)) || window.innerWidth || document.documentElement.clientWidth || GAME_WIDTH)),
+        height: Math.max(1, Math.round(((viewport === null || viewport === void 0 ? void 0 : viewport.height)) || window.innerHeight || document.documentElement.clientHeight || GAME_HEIGHT))
       };
     };
 
@@ -11688,14 +11698,14 @@
       if (refreshRaf) {
         cancelAnimationFrame(refreshRaf);
       }
-      refreshRaf = requestAnimationFrame(() => {
+      refreshRaf = requestAnimationFrame(() => { var __oc108, __oc109;
         refreshRaf = 0;
-        const canvas = game.canvas || game.scale?.canvas || document.querySelector("#game-root canvas");
-        if (!canvas?.style) {
+        const canvas = game.canvas || (((__oc108 = game.scale) === null || __oc108 === void 0 ? void 0 : __oc108.canvas)) || document.querySelector("#game-root canvas");
+        if (!((canvas === null || canvas === void 0 ? void 0 : canvas.style))) {
           scheduleTimer(schedule, 80);
           return;
         }
-        if (game.scale?.refresh) {
+        if ((((__oc109 = game.scale) === null || __oc109 === void 0 ? void 0 : __oc109.refresh))) {
           try {
             game.scale.refresh();
           } catch (error) {

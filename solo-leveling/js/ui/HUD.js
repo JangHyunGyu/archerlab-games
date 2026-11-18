@@ -7,14 +7,14 @@ import {
 import { UIAssets } from './UIAssets.js?v=20260913-crafted-ui-v1';
 import { questLine } from '../utils/i18n.js?v=20261009-audit-v1';
 
-function cssPerGameUnit(scene) {
-    const scale = scene?.game?.scale?.displayScale;
-    const sx = Number(scale?.x);
-    const sy = Number(scale?.y);
+function cssPerGameUnit(scene) { var __oc0, __oc1;
+    const scale = (((__oc1 = (__oc0 = scene === null || scene === void 0 ? void 0 : scene.game) === null || __oc0 === void 0 ? void 0 : __oc0.scale) === null || __oc1 === void 0 ? void 0 : __oc1.displayScale));
+    const sx = Number(((scale === null || scale === void 0 ? void 0 : scale.x)));
+    const sy = Number(((scale === null || scale === void 0 ? void 0 : scale.y)));
     if (sx > 0.01 && sy > 0.01) return 1 / Math.max(sx, sy);
     const viewport = window.visualViewport;
-    const w = Math.max(1, viewport?.width || window.innerWidth || GAME_WIDTH);
-    const h = Math.max(1, viewport?.height || window.innerHeight || GAME_HEIGHT);
+    const w = Math.max(1, ((viewport === null || viewport === void 0 ? void 0 : viewport.width)) || window.innerWidth || GAME_WIDTH);
+    const h = Math.max(1, ((viewport === null || viewport === void 0 ? void 0 : viewport.height)) || window.innerHeight || GAME_HEIGHT);
     return Math.max(0.01, Math.min(w / GAME_WIDTH, h / GAME_HEIGHT));
 }
 
@@ -335,7 +335,7 @@ export class HUD {
         this.elements.push(this._mmGfx);
     }
 
-    _updateMinimap(player, enemyManager, shadowArmyManager, activeEnemies = null) {
+    _updateMinimap(player, enemyManager, shadowArmyManager, activeEnemies = null) { var __oc2;
         if (!this._mmGfx || !player) return;
 
         const gfx = this._mmGfx;
@@ -355,7 +355,7 @@ export class HUD {
 
         if (enemyManager) {
             const enemies = activeEnemies || enemyManager.getActiveEnemies();
-            const maxDots = this.scene?._lowQuality ? 80 : (enemies.length > 300 ? 150 : 220);
+            const maxDots = (((__oc2 = this.scene) === null || __oc2 === void 0 ? void 0 : __oc2._lowQuality)) ? 80 : (enemies.length > 300 ? 150 : 220);
             const stride = Math.max(1, Math.ceil(enemies.length / maxDots));
             gfx.fillStyle(0xff4444, 0.8);
             for (let i = 0; i < enemies.length; i += stride) {
@@ -373,7 +373,7 @@ export class HUD {
             }
             if (stride > 1) {
                 for (const e of enemies) {
-                    if (!e?.active || !e.isElite) continue;
+                    if (!((e === null || e === void 0 ? void 0 : e.active)) || !e.isElite) continue;
                     const ex = ox + e.x * s;
                     const ey = oy + e.y * s;
                     gfx.fillStyle(0xff8844, 0.95);
@@ -448,8 +448,8 @@ export class HUD {
         return this._updateOptimized(player, weaponManager, enemyManager, shadowArmyManager);
     }
 
-    _updateOptimized(player, weaponManager, enemyManager, shadowArmyManager) {
-        const now = this.scene?.time?.now ?? 0;
+    _updateOptimized(player, weaponManager, enemyManager, shadowArmyManager) { var __oc3, __oc4, __oc5, __oc6;
+        const now = (((__oc5 = (__oc4 = (__oc3 = this.scene) === null || __oc3 === void 0 ? void 0 : __oc3.time) === null || __oc4 === void 0 ? void 0 : __oc4.now) !== null && __oc5 !== void 0 ? __oc5 : 0));
 
         const hpRatio = player.stats.hp / player.stats.maxHp;
         const hpWidth = (this._hpW - 4) * hpRatio;
@@ -516,7 +516,7 @@ export class HUD {
                         const w = weapons[i];
                         const icon = this.weaponIcons[i];
                         const texture = this._weaponIconTexture(w.key);
-                        if (icon.texture?.key !== texture) icon.setTexture(texture);
+                        if ((((__oc6 = icon.texture) === null || __oc6 === void 0 ? void 0 : __oc6.key)) !== texture) icon.setTexture(texture);
                         icon.setDisplaySize(icon._hudDisplaySize, icon._hudDisplaySize);
                         this._setVisibleIfChanged(icon, true);
                         this._setTextIfChanged(this.weaponTexts[i], String(w.level));
@@ -544,7 +544,7 @@ export class HUD {
             this._setTextIfChanged(this.questText, quests.length > 0 ? quests.slice(0, 3).map(q => `- ${questLine(q)}`).join('\n') : '');
         }
 
-        const enemyCount = activeEnemies?.length || 0;
+        const enemyCount = ((activeEnemies === null || activeEnemies === void 0 ? void 0 : activeEnemies.length)) || 0;
         const minimapModulo = enemyCount > 300 ? 10 : (enemyCount > 180 ? 6 : 3);
         this._mmFrameCounter = ((this._mmFrameCounter || 0) + 1) % minimapModulo;
         if (this._mmFrameCounter === 0) {
@@ -563,10 +563,10 @@ export class HUD {
         }
     }
 
-    _updateLegacy(player, weaponManager, enemyManager, shadowArmyManager) {
+    _updateLegacy(player, weaponManager, enemyManager, shadowArmyManager) { var __oc7, __oc8, __oc9;
         if (!player) return;
 
-        const now = this.scene?.time?.now ?? 0;
+        const now = (((__oc9 = (__oc8 = (__oc7 = this.scene) === null || __oc7 === void 0 ? void 0 : __oc7.time) === null || __oc8 === void 0 ? void 0 : __oc8.now) !== null && __oc9 !== void 0 ? __oc9 : 0));
         const hpRatio = player.stats.hp / player.stats.maxHp;
         const hpWidth = (this._hpW - 2) * hpRatio;
         if (this.hpFill._hudWidth !== hpWidth) {
@@ -691,8 +691,8 @@ export class HUD {
         this._createMinimap();
     }
 
-    destroy() {
-        const tweens = this.scene?.tweens;
+    destroy() { var __oc10;
+        const tweens = (((__oc10 = this.scene) === null || __oc10 === void 0 ? void 0 : __oc10.tweens));
         for (const el of this.elements) {
             if (tweens) tweens.killTweensOf(el);
             if (el && el.active) el.destroy();

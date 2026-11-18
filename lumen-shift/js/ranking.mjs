@@ -28,12 +28,12 @@ export class RankClient {
       if (token !== this.rankRunToken) return;
       this.sessionId = data.session_id || '';
       if (!this.sessionId) throw new Error('empty session');
-    } catch {
+    } catch (_err) {
       if (token === this.rankRunToken) this.disabled = true;
     }
   }
 
-  record(event) {
+  record(event) { var __oc0;
     if (this.disabled || !event) return;
     const delta = Math.floor(Number(event.delta || 0));
     if (!Number.isFinite(delta) || delta <= 0) return;
@@ -44,7 +44,7 @@ export class RankClient {
       combo: Math.floor(Number(event.combo || 0)),
       at: Date.now(),
     };
-    globalThis.ArcherRanking?.track(GAME_ID, queuedEvent, this.sessionId);
+    (((__oc0 = (typeof globalThis !== 'undefined' ? globalThis : window).ArcherRanking) === null || __oc0 === void 0 ? void 0 : __oc0.track(GAME_ID, queuedEvent, this.sessionId)));
     this.queue.push(queuedEvent);
     if (this.queue.length >= 8) this.flush().catch(() => null);
   }
@@ -73,7 +73,7 @@ export class RankClient {
         this.queue.splice(0, events.length);
       }
       return true;
-    } catch {
+    } catch (_err) {
       return false;
     } finally {
       if (token === this.rankRunToken) this.syncing = false;
@@ -81,9 +81,9 @@ export class RankClient {
   }
 
   async submit(playerName, score, extraData) {
-    if (globalThis.ArcherRanking) {
-      this.queue.forEach(event => globalThis.ArcherRanking.track(GAME_ID, event, this.sessionId));
-      return globalThis.ArcherRanking.submit({ game_id: GAME_ID, player_name: playerName,
+    if ((typeof globalThis !== 'undefined' ? globalThis : window).ArcherRanking) {
+      this.queue.forEach(event => (typeof globalThis !== 'undefined' ? globalThis : window).ArcherRanking.track(GAME_ID, event, this.sessionId));
+      return (typeof globalThis !== 'undefined' ? globalThis : window).ArcherRanking.submit({ game_id: GAME_ID, player_name: playerName,
         score: Math.floor(score), session_id: this.sessionId, extra_data: extraData });
     }
     if (this.disabled || !this.sessionId) throw new Error('ranking offline');

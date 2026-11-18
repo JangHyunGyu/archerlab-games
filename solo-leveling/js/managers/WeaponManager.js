@@ -35,7 +35,7 @@ export class WeaponManager {
         if (this.weapons.size >= this.maxSlots) return false;
 
         const config = WEAPONS[weaponKey];
-        const WeaponClass = WEAPON_CLASSES[config?.classKey || weaponKey];
+        const WeaponClass = WEAPON_CLASSES[((config === null || config === void 0 ? void 0 : config.classKey)) || weaponKey];
         if (!WeaponClass) return false;
 
         const weapon = new WeaponClass(this.scene, this.player, config);
@@ -53,10 +53,10 @@ export class WeaponManager {
         return true;
     }
 
-    _setupCollision(weaponKey, weapon) {
+    _setupCollision(weaponKey, weapon) { var __oc0;
         if (weapon.getProjectileGroup) {
             const projGroup = weapon.getProjectileGroup();
-            const enemyGroup = this.scene.enemyManager?.getGroup();
+            const enemyGroup = (((__oc0 = this.scene.enemyManager) === null || __oc0 === void 0 ? void 0 : __oc0.getGroup()));
 
             if (projGroup && enemyGroup) {
                 const collider = this.scene.physics.add.overlap(projGroup, enemyGroup, (proj, enemy) => {
@@ -106,8 +106,8 @@ export class WeaponManager {
         }
     }
 
-    destroy() {
-        if (this.scene?.physics?.world && this._colliders) {
+    destroy() { var __oc1, __oc2;
+        if ((((__oc2 = (__oc1 = this.scene) === null || __oc1 === void 0 ? void 0 : __oc1.physics) === null || __oc2 === void 0 ? void 0 : __oc2.world)) && this._colliders) {
             for (const collider of this._colliders) {
                 try { this.scene.physics.world.removeCollider(collider); } catch (e) { /* already removed */ }
             }

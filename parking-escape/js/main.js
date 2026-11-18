@@ -11,7 +11,7 @@
       canvas.width = 1;
       canvas.height = 1;
       return canvas.toDataURL("image/webp").startsWith("data:image/webp");
-    } catch {
+    } catch (_err) {
       return false;
     }
   })();
@@ -204,7 +204,7 @@
 
   function animatePanelOut(modal, onComplete) {
     if (!motionEnabled() || !modal) {
-      onComplete?.();
+      ((onComplete === null || onComplete === void 0 ? void 0 : onComplete()));
       return;
     }
     const gsap = window.gsap;
@@ -225,7 +225,7 @@
       duration: 0.16,
       ease: "power2.in",
       onComplete: () => {
-        onComplete?.();
+        ((onComplete === null || onComplete === void 0 ? void 0 : onComplete()));
         gsap.set(targets, { clearProps: "opacity,visibility,transform" });
       },
     });
@@ -326,7 +326,7 @@
     });
   }
 
-  function countText(el, value, render = v => String(v), duration = 0.52) {
+  function countText(el, value, render = v => String(v), duration = 0.52) { var __oc0;
     if (!el) return;
     const target = Number(value) || 0;
     if (!motionEnabled()) {
@@ -334,7 +334,7 @@
       return;
     }
     const state = { value: 0 };
-    el._countTween?.kill();
+    (((__oc0 = el._countTween) === null || __oc0 === void 0 ? void 0 : __oc0.kill()));
     el._countTween = window.gsap.to(state, {
       value: target,
       duration,
@@ -470,10 +470,10 @@
     startRankSession() {
       this.resetRankSessionState();
       const token = this.rankRunToken;
-      this.rankSessionPromise = this.createRankSession().catch(error => {
+      this.rankSessionPromise = this.createRankSession().catch(error => { var __oc1, __oc2;
         if (token !== this.rankRunToken) return null;
         this.rankSyncFailed = true;
-        window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-session' }, 'ranking_client_exception');
+        (((__oc2 = (__oc1 = window.ArcherLabClientErrorReporter) === null || __oc1 === void 0 ? void 0 : __oc1.reportCodeException) === null || __oc2 === void 0 ? void 0 : __oc2.call(__oc1, error, { phase: 'rank-session' }, 'ranking_client_exception')));
         console.warn("[Parking] rank session failed:", error.message);
         return null;
       });
@@ -492,12 +492,12 @@
       return this.rankSessionPromise;
     }
 
-    async recordRankClear(clearData) {
+    async recordRankClear(clearData) { var __oc3, __oc4, __oc5;
       if (!clearData) return false;
       const token = this.rankRunToken;
       const event = { type: "level_clear", moves: clearData.moves, level_moves: clearData.levelMoves,
         vehicles: clearData.vehicles, seed: clearData.seed };
-      window.ArcherRanking?.track(GAME_ID, event, this.rankSessionId);
+      (((__oc3 = window.ArcherRanking) === null || __oc3 === void 0 ? void 0 : __oc3.track(GAME_ID, event, this.rankSessionId)));
       try {
         const sessionId = await this.ensureRankSession();
         if (token !== this.rankRunToken) return false;
@@ -518,7 +518,7 @@
       } catch (error) {
         if (token !== this.rankRunToken) return false;
         this.rankSyncFailed = true;
-        window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-sync' }, 'ranking_client_exception');
+        (((__oc5 = (__oc4 = window.ArcherLabClientErrorReporter) === null || __oc4 === void 0 ? void 0 : __oc4.reportCodeException) === null || __oc5 === void 0 ? void 0 : __oc5.call(__oc4, error, { phase: 'rank-sync' }, 'ranking_client_exception')));
         console.warn("[Parking] rank sync failed:", error.message);
         return false;
       }
@@ -575,7 +575,7 @@
       document.body.classList.remove("dialog-open");
       const returnFocus = this.dialogReturnFocus;
       this.dialogReturnFocus = null;
-      if (restoreFocus && returnFocus?.isConnected && !returnFocus.closest(".hidden")) {
+      if (restoreFocus && ((returnFocus === null || returnFocus === void 0 ? void 0 : returnFocus.isConnected)) && !returnFocus.closest(".hidden")) {
         requestAnimationFrame(() => returnFocus.focus({ preventScroll: true }));
       }
     }
@@ -1467,12 +1467,12 @@
       this.playTone("timeout");
     }
 
-    updateHud() {
+    updateHud() { var __oc6;
       dom.level.textContent = String(this.level);
       if (dom.time) dom.time.textContent = formatTime(this.timeLeft);
       if (dom.timeStat) dom.timeStat.classList.toggle("is-low", this.mode === "playing" && this.timeLeft <= 5);
       dom.moves.textContent = String(this.moves);
-      if (dom.par) dom.par.textContent = String(this.levelMetrics?.depth || "-");
+      if (dom.par) dom.par.textContent = String((((__oc6 = this.levelMetrics) === null || __oc6 === void 0 ? void 0 : __oc6.depth)) || "-");
     }
 
     async openRankModal() {
@@ -1555,7 +1555,7 @@
       if (animate) animateRankRows();
     }
 
-    async handleSubmitRank() {
+    async handleSubmitRank() { var __oc7, __oc8;
       if (!this.rankEligible || !this.lastClear) return;
       if (dom.submitRank.disabled) return;
       const name = (dom.nickname.value || "").trim().slice(0, 20);
@@ -1597,20 +1597,20 @@
           }),
         });
         const result = await response.json().catch(() => null);
-        if (!response.ok) throw new Error(result?.error || `submit ${response.status}`);
+        if (!response.ok) throw new Error(((result === null || result === void 0 ? void 0 : result.error)) || `submit ${response.status}`);
         writeStorage(NICK_KEY, name);
         this.setRankSubmitLoading(false);
         dom.submitRank.disabled = true;
         dom.skipRank.disabled = true;
         dom.nickname.disabled = true;
-        this.rankButtonKey = result?.pending ? "rank.pendingBtn" : "rank.doneBtn";
+        this.rankButtonKey = ((result === null || result === void 0 ? void 0 : result.pending)) ? "rank.pendingBtn" : "rank.doneBtn";
         dom.submitRank.textContent = t(this.rankButtonKey);
-        this.rankStatusKey = result?.pending ? "rank.pendingStatus" : "rank.doneStatus";
+        this.rankStatusKey = ((result === null || result === void 0 ? void 0 : result.pending)) ? "rank.pendingStatus" : "rank.doneStatus";
         dom.submitStatus.textContent = t(this.rankStatusKey);
         this.playTone("submit");
         this.returnToMenuAfterRank();
       } catch (error) {
-        window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-submit' }, 'ranking_client_exception');
+        (((__oc8 = (__oc7 = window.ArcherLabClientErrorReporter) === null || __oc7 === void 0 ? void 0 : __oc7.reportCodeException) === null || __oc8 === void 0 ? void 0 : __oc8.call(__oc7, error, { phase: 'rank-submit' }, 'ranking_client_exception')));
         console.warn("[Parking] rank submit failed:", error.message);
         const syncFailed = error.message.includes("rank score sync");
         this.setRankSubmitLoading(
@@ -1904,8 +1904,8 @@
     return Math.max(1, level | 0);
   }
 
-  function getLevelTimeLimit(level) {
-    const parMoves = puzzleCatalog.getLevel(clamp(level | 0, 1, MAX_LEVEL))?.parMoves || 2;
+  function getLevelTimeLimit(level) { var __oc9;
+    const parMoves = (((__oc9 = puzzleCatalog.getLevel(clamp(level | 0, 1, MAX_LEVEL))) === null || __oc9 === void 0 ? void 0 : __oc9.parMoves)) || 2;
     return Math.max(LEVEL_TIME_LIMIT, Math.ceil(18 + parMoves * 1.5));
   }
 
@@ -1961,11 +1961,11 @@
   }
 
   function readStorage(name) {
-    try { return localStorage.getItem(name); } catch { return null; }
+    try { return localStorage.getItem(name); } catch (_err) { return null; }
   }
 
   function writeStorage(name, value) {
-    try { localStorage.setItem(name, value); } catch { /* Gameplay continues when storage is unavailable. */ }
+    try { localStorage.setItem(name, value); } catch (_err) { /* Gameplay continues when storage is unavailable. */ }
   }
 
   function nextFrame() {

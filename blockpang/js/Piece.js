@@ -55,11 +55,11 @@ function generateRandomPiece(level = 99, randomSource = Math.random) {
     };
 }
 
-function createPieceContainer(piece, cellSize, alpha = 1, options = {}) {
+function createPieceContainer(piece, cellSize, alpha = 1, options = {}) { var __oc0;
     const container = new PIXI.Container();
     const color = BLOCK_COLORS[piece.colorIndex];
     const tileTexture = getBlockpangTexture(`blockTile${piece.colorIndex}`);
-    const tileScale = options.tileScale ?? 0.92;
+    const tileScale = (((__oc0 = options.tileScale) !== null && __oc0 !== void 0 ? __oc0 : 0.92));
     const r = Math.max(1, cellSize * 0.12);
     const p = 2;
     const inner = cellSize - p * 2;
@@ -146,9 +146,9 @@ function createPieceContainer(piece, cellSize, alpha = 1, options = {}) {
 
 // ─── Piece Tray ───
 class PieceTray {
-    constructor(game) {
+    constructor(game) { var __oc1;
         this.game = game;
-        this._reducedMotion = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        this._reducedMotion = typeof window !== 'undefined' && !!(((__oc1 = window.matchMedia) === null || __oc1 === void 0 ? void 0 : __oc1.call(window, '(prefers-reduced-motion: reduce)').matches));
         this.container = new PIXI.Container();
         this.slots = [null, null, null]; // piece data
         this.slotContainers = [null, null, null]; // PIXI containers

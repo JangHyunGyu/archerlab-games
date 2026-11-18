@@ -75,7 +75,7 @@ function assertBand(value, min, max, label) {
 
     const dragonFearSource = fs.readFileSync(path.join(root, 'js', 'weapons', 'DragonFear.js'), 'utf8');
     assert.ok(
-        dragonFearSource.includes('(this.config.slowMultiplier ?? 0.4) - this.extraSlow'),
+        /(?:\(this\.config\.slowMultiplier \?\? 0\.4\)|\(\(\(__oc\d+ = this\.config\.slowMultiplier\) !== null && __oc\d+ !== void 0 \? __oc\d+ : 0\.4\)\)) - this\.extraSlow/.test(dragonFearSource),
         'aura slow upgrades must reduce the configured movement multiplier',
     );
 

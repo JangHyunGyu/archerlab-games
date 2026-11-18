@@ -319,7 +319,7 @@ class EffectManager {
         return id;
     }
 
-    update(ticker) {
+    update(ticker) { var __oc0, __oc1;
         if (this._destroyed) return;
         const delta = ticker.deltaTime;
         const dt = delta * (1000 / 60);
@@ -343,8 +343,8 @@ class EffectManager {
                 ? (t < 0.1 ? t * 10 : 1 - easeInOutQuad((t - 0.1) / 0.9))
                 : 1 - easeInOutQuad(t);
             const shrinkScale = 1 - t * (p.shrink || 0.6);
-            const baseScaleX = p.baseScaleX ?? p.baseScale;
-            const baseScaleY = p.baseScaleY ?? p.baseScale;
+            const baseScaleX = (((__oc0 = p.baseScaleX) !== null && __oc0 !== void 0 ? __oc0 : p.baseScale));
+            const baseScaleY = (((__oc1 = p.baseScaleY) !== null && __oc1 !== void 0 ? __oc1 : p.baseScale));
             p.gfx.scale.set(baseScaleX * shrinkScale, baseScaleY * shrinkScale);
             p.gfx.rotation += (p.rotSpeed || 0) * delta;
         }

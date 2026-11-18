@@ -267,7 +267,7 @@
   <script src="../shared/pixi-asset-base.js?v=20261009-asset-base-v1"></script>
   <script src="../assets/vendor/gsap/gsap-3.15.0.min.js"></script>
   <script>
-    (() => {
+    (() => { var __oc0, __oc1, __oc2;
       const requested = /\/index-en(?:\.html)?\/?$/.test(location.pathname)
         ? 'en' : new URLSearchParams(location.search).get('lang');
       const lang = requested === 'en' || requested === 'ja' ? requested : 'ko';
@@ -298,13 +298,13 @@
       };
       document.documentElement.lang = lang;
       document.title = copy.documentTitle;
-      document.getElementById('app')?.setAttribute('data-lang', lang);
+      (((__oc0 = document.getElementById('app')) === null || __oc0 === void 0 ? void 0 : __oc0.setAttribute('data-lang', lang)));
       label('.archerlab-link', copy.archerlab);
       label('#title-screen', copy.titleLabel);
       label('#sound-toggle-title', copy.sound);
       label('#rank-open-title', copy.rank);
-      document.getElementById('sound-toggle-title')?.setAttribute('title', copy.sound);
-      document.getElementById('rank-open-title')?.setAttribute('title', copy.rank);
+      (((__oc1 = document.getElementById('sound-toggle-title')) === null || __oc1 === void 0 ? void 0 : __oc1.setAttribute('title', copy.sound)));
+      (((__oc2 = document.getElementById('rank-open-title')) === null || __oc2 === void 0 ? void 0 : __oc2.setAttribute('title', copy.rank)));
       text('.title-plaque h1', copy.title);
       text('.record-strip > div:first-child span', copy.time);
       text('.record-strip > div:last-child span', copy.best);

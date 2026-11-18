@@ -34,10 +34,10 @@ export class ShadowSlash extends WeaponBase {
         }
     }
 
-    fire() {
+    fire() { var __oc0;
         if (this.config.slashMode === 'linePierce') {
             for (let i = 0; i < this.count; i++) {
-                this._delay(i * (this.config.patternDelay ?? 140), () => this._doLinePierce(i === 0));
+                this._delay(i * (((__oc0 = this.config.patternDelay) !== null && __oc0 !== void 0 ? __oc0 : 140)), () => this._doLinePierce(i === 0));
             }
             return;
         }
@@ -66,11 +66,10 @@ export class ShadowSlash extends WeaponBase {
         }
     }
 
-    _getAimAngle(acquireRange) {
+    _getAimAngle(acquireRange) { var __oc1;
         const target = this.player.getClosestEnemy(acquireRange);
         const dirAngles = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
-        const idleAngle = dirAngles[this.player.facingDirection]
-            ?? (this.player.facingRight ? 0 : Math.PI);
+        const idleAngle = (((__oc1 = dirAngles[this.player.facingDirection]) !== null && __oc1 !== void 0 ? __oc1 : (this.player.facingRight ? 0 : Math.PI)));
         const fallbackAngle = this.player.moveIntensity > 0.12
             ? this.player.lastMoveAngle
             : idleAngle;
@@ -79,14 +78,14 @@ export class ShadowSlash extends WeaponBase {
             : fallbackAngle;
     }
 
-    _doSlash(angleOffset, triggerMotion = true) {
+    _doSlash(angleOffset, triggerMotion = true) { var __oc2, __oc3, __oc4, __oc5, __oc6, __oc7, __oc8, __oc9, __oc10, __oc11, __oc12, __oc13, __oc14;
         const angle = this._getAimAngle((this.config.acquireRange || 360) + this.extraRange) + angleOffset;
         if (triggerMotion) {
-            this.player.playAttackMotion?.(angle, this.config.motionDuration || 260, 1);
+            (((__oc3 = (__oc2 = this.player).playAttackMotion) === null || __oc3 === void 0 ? void 0 : __oc3.call(__oc2, angle, this.config.motionDuration || 260, 1)));
         }
 
         const range = (this.config.slashRange || 350) + this.extraRange;
-        const slashDist = range * (this.config.slashDistanceRatio ?? 0.45);
+        const slashDist = range * (((__oc4 = this.config.slashDistanceRatio) !== null && __oc4 !== void 0 ? __oc4 : 0.45));
         const slashX = this.player.x + Math.cos(angle) * slashDist;
         const slashY = this.player.y + Math.sin(angle) * slashDist;
 
@@ -96,7 +95,7 @@ export class ShadowSlash extends WeaponBase {
         const darkColor = this.getEffectDarkColor(0x4400aa);
         const color = this.getEffectColor(0x9944dd);
         const glowColor = this.getEffectGlowColor(0xddaaff);
-        const arcHalf = this.config.slashArc ?? 0.8;
+        const arcHalf = (((__oc5 = this.config.slashArc) !== null && __oc5 !== void 0 ? __oc5 : 0.8));
         const imageOnlyVfx = !!this.config.imageOnlyVfx;
         const effectTexture = this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;
@@ -197,21 +196,20 @@ export class ShadowSlash extends WeaponBase {
         const slashRotation = useCharacterEffect
             ? this.getEffectRotation(angle)
             : (useEffectAsset ? angle + Math.PI : angle);
-        const desiredOuterReach = range * (this.config.visualRangeRatio ?? 0.9);
+        const desiredOuterReach = range * (((__oc6 = this.config.visualRangeRatio) !== null && __oc6 !== void 0 ? __oc6 : 0.9));
         const effectFit = useCharacterEffect
             ? this.getEffectForwardFit(effectTexture, {
                 innerReach: 24,
                 outerReach: desiredOuterReach,
-                rotationOffset: this.config.effectRotationOffset ?? 0,
+                rotationOffset: (((__oc7 = this.config.effectRotationOffset) !== null && __oc7 !== void 0 ? __oc7 : 0)),
             })
             : null;
-        const fittedCharacterScale = effectFit?.scale ??
-            (this.config.effectScale || 0.58) + this.extraRange / 520;
-        const visualSlashDist = effectFit?.centerForward ?? slashDist;
+        const fittedCharacterScale = (((__oc8 = effectFit === null || effectFit === void 0 ? void 0 : effectFit.scale) !== null && __oc8 !== void 0 ? __oc8 : (this.config.effectScale || 0.58) + this.extraRange / 520));
+        const visualSlashDist = (((__oc9 = effectFit === null || effectFit === void 0 ? void 0 : effectFit.centerForward) !== null && __oc9 !== void 0 ? __oc9 : slashDist));
         const visualSlashX = this.player.x + Math.cos(angle) * visualSlashDist;
         const visualSlashY = this.player.y + Math.sin(angle) * visualSlashDist;
         const peakAlpha = useCharacterEffect
-            ? (this.config.effectPeakAlpha ?? 0.82)
+            ? (((__oc10 = this.config.effectPeakAlpha) !== null && __oc10 !== void 0 ? __oc10 : 0.82))
             : (useEffectAsset ? 0.82 : 0.5);
         const baseScale = useCharacterEffect ? fittedCharacterScale : (useEffectAsset ? 0.48 + this.extraRange / 460 : 1.5 + this.extraRange / 60);
         const slashTex = effectTexture || (useEffectAsset ? 'effect_shadow_slash' : 'proj_slash');
@@ -229,7 +227,7 @@ export class ShadowSlash extends WeaponBase {
         if (!useCharacterEffect && !useEffectAsset) slash.setTint(color);
 
         const fadeDuration = useCharacterEffect
-            ? (this.config.effectFadeDuration ?? 320)
+            ? (((__oc11 = this.config.effectFadeDuration) !== null && __oc11 !== void 0 ? __oc11 : 320))
             : (useEffectAsset ? 320 : 400);
         if (useCharacterEffect || useEffectAsset) {
             const slashEcho = this.createEffectSprite(
@@ -259,7 +257,7 @@ export class ShadowSlash extends WeaponBase {
             alpha: 0,
             scaleX: slash.scaleX * ((useCharacterEffect || useEffectAsset) ? 1.08 : 1.8),
             scaleY: slash.scaleY * ((useCharacterEffect || useEffectAsset) ? 1.08 : 1.8),
-            hold: useCharacterEffect ? (this.config.effectHold ?? 0) : 0,
+            hold: useCharacterEffect ? (((__oc12 = this.config.effectHold) !== null && __oc12 !== void 0 ? __oc12 : 0)) : 0,
             duration: fadeDuration,
             onComplete: () => slash.destroy(),
         });
@@ -280,8 +278,8 @@ export class ShadowSlash extends WeaponBase {
 
         // Hit enemies in arc
         const enemies = this.player.getAllEnemies();
-        const hitAngle = this.config.hitAngle ?? arcHalf;
-        const damage = Math.floor(this.getDamage() * (this.config.damageMult ?? 1));
+        const hitAngle = (((__oc13 = this.config.hitAngle) !== null && __oc13 !== void 0 ? __oc13 : arcHalf));
+        const damage = Math.floor(this.getDamage() * (((__oc14 = this.config.damageMult) !== null && __oc14 !== void 0 ? __oc14 : 1)));
         for (const enemy of enemies) {
             if (!enemy.active) continue;
             const dist = Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y);
@@ -298,8 +296,8 @@ export class ShadowSlash extends WeaponBase {
         }
 
         if (this.config.aftershockRadius) {
-            this._delay(this.config.aftershockDelay || 180, () => {
-                if (!this.scene?.scene?.isActive()) return;
+            this._delay(this.config.aftershockDelay || 180, () => { var __oc15, __oc16, __oc17;
+                if (!(((__oc16 = (__oc15 = this.scene) === null || __oc15 === void 0 ? void 0 : __oc15.scene) === null || __oc16 === void 0 ? void 0 : __oc16.isActive()))) return;
                 if (!suppressAuxiliaryFx) {
                     const pulse = this.scene.add.circle(slashX, slashY, this.config.aftershockRadius * 0.35, color, 0.28)
                         .setDepth(7)
@@ -317,7 +315,7 @@ export class ShadowSlash extends WeaponBase {
                     if (!enemy.active) continue;
                     const dist = Phaser.Math.Distance.Between(slashX, slashY, enemy.x, enemy.y);
                     if (dist > this.config.aftershockRadius) continue;
-                    this.applyDamage(enemy, Math.floor(this.getDamage() * (this.config.aftershockDamageMult ?? 0.45)), slashX, slashY);
+                    this.applyDamage(enemy, Math.floor(this.getDamage() * (((__oc17 = this.config.aftershockDamageMult) !== null && __oc17 !== void 0 ? __oc17 : 0.45))), slashX, slashY);
                 }
             });
         }
@@ -335,7 +333,7 @@ export class ShadowSlash extends WeaponBase {
         return Phaser.Math.Distance.Between(px, py, ax + dx * t, ay + dy * t);
     }
 
-    _doLinePierce(triggerMotion = true) {
+    _doLinePierce(triggerMotion = true) { var __oc18, __oc19, __oc20, __oc21, __oc22, __oc23, __oc24, __oc25, __oc26;
         const angle = this._getAimAngle((this.config.acquireRange || 540) + this.extraRange);
 
         const px = this.player.x;
@@ -394,23 +392,23 @@ export class ShadowSlash extends WeaponBase {
         }
 
         if (effectTexture) {
-            const visualOuterReach = 24 + (range - 24) * (this.config.visualRangeRatio ?? 0.96);
+            const visualOuterReach = 24 + (range - 24) * (((__oc18 = this.config.visualRangeRatio) !== null && __oc18 !== void 0 ? __oc18 : 0.96));
             const effectFit = this.getEffectForwardFit(effectTexture, {
                 innerReach: 24,
                 outerReach: visualOuterReach,
-                rotationOffset: this.config.effectRotationOffset ?? 0,
+                rotationOffset: (((__oc19 = this.config.effectRotationOffset) !== null && __oc19 !== void 0 ? __oc19 : 0)),
             });
             const visualMidX = px + Math.cos(angle) * effectFit.centerForward;
             const visualMidY = py + Math.sin(angle) * effectFit.centerForward;
             const lance = this.createEffectSprite(visualMidX, visualMidY, effectTexture, {
-                frameMs: this.config.effectFrameMs ?? 44,
-                loop: this.config.effectLoop ?? false,
-                loopStart: this.config.effectStartFrame ?? 0,
+                frameMs: (((__oc20 = this.config.effectFrameMs) !== null && __oc20 !== void 0 ? __oc20 : 44)),
+                loop: (((__oc21 = this.config.effectLoop) !== null && __oc21 !== void 0 ? __oc21 : false)),
+                loopStart: (((__oc22 = this.config.effectStartFrame) !== null && __oc22 !== void 0 ? __oc22 : 0)),
                 loopEnd: this.config.effectLoopEnd,
             })
                 .setDepth(18)
                 .setRotation(this.getEffectRotation(angle))
-                .setAlpha(this.config.effectPeakAlpha ?? 0.88)
+                .setAlpha((((__oc23 = this.config.effectPeakAlpha) !== null && __oc23 !== void 0 ? __oc23 : 0.88)))
                 .setScale(effectFit.scale)
                 .setBlendMode(Phaser.BlendModes.ADD);
             this.scene.tweens.add({
@@ -418,14 +416,14 @@ export class ShadowSlash extends WeaponBase {
                 alpha: 0,
                 scaleX: lance.scaleX * 1.015,
                 scaleY: lance.scaleY * 1.015,
-                delay: this.config.effectFadeDelay ?? 0,
-                duration: this.config.effectFadeDuration ?? 260,
+                delay: this.config.effectFadeDelay != null ? this.config.effectFadeDelay : 0,
+                duration: (((__oc25 = this.config.effectFadeDuration) !== null && __oc25 !== void 0 ? __oc25 : 260)),
                 ease: 'Quad.easeOut',
                 onComplete: () => lance.destroy(),
             });
         }
 
-        const damage = Math.floor(this.getDamage() * (this.config.damageMult ?? 1));
+        const damage = Math.floor(this.getDamage() * (((__oc26 = this.config.damageMult) !== null && __oc26 !== void 0 ? __oc26 : 1)));
         for (const enemy of this.player.getAllEnemies()) {
             if (!enemy.active) continue;
             const dist = this._distanceToLineSegment(enemy.x, enemy.y, startX, startY, endX, endY);
@@ -439,15 +437,14 @@ export class ShadowSlash extends WeaponBase {
         this.playConfiguredSound('slash');
     }
 
-    _doRadialPulse(triggerMotion = true) {
+    _doRadialPulse(triggerMotion = true) { var __oc27, __oc28, __oc29, __oc30;
         if (triggerMotion && this.player.playAttackMotion) {
             const dirAngles = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
-            const idleAngle = dirAngles[this.player.facingDirection]
-                ?? (this.player.facingRight ? 0 : Math.PI);
+            const idleAngle = (((__oc27 = dirAngles[this.player.facingDirection]) !== null && __oc27 !== void 0 ? __oc27 : (this.player.facingRight ? 0 : Math.PI)));
             const motionAngle = this.player.moveIntensity > 0.12
                 ? this.player.lastMoveAngle
                 : idleAngle;
-            const variantMotion = this.player.character?.basicAttackVariants?.[0];
+            const variantMotion = (((__oc29 = (__oc28 = this.player.character) === null || __oc28 === void 0 ? void 0 : __oc28.basicAttackVariants) === null || __oc29 === void 0 ? void 0 : __oc29[0]));
             this.player.playAttackMotion(motionAngle, this.config.motionDuration || 260, 1, variantMotion);
         }
         const range = (this.config.slashRange || 280) + this.extraRange;
@@ -455,7 +452,7 @@ export class ShadowSlash extends WeaponBase {
         const glowColor = this.getEffectGlowColor(0xe8fff5);
         const px = this.player.x;
         const py = this.player.y;
-        const damage = Math.floor(this.getDamage() * (this.config.damageMult ?? 0.85));
+        const damage = Math.floor(this.getDamage() * (((__oc30 = this.config.damageMult) !== null && __oc30 !== void 0 ? __oc30 : 0.85)));
         const effectTexture = this.getEffectTexture();
 
         if (effectTexture) {
@@ -517,8 +514,8 @@ export class ShadowSlash extends WeaponBase {
         return this.slashGroup;
     }
 
-    destroy() {
-        if (this.scene?.tweens) {
+    destroy() { var __oc31;
+        if ((((__oc31 = this.scene) === null || __oc31 === void 0 ? void 0 : __oc31.tweens))) {
             for (const tween of this._activeTweens) {
                 this.scene.tweens.remove(tween);
             }

@@ -4,9 +4,9 @@ const DEFAULT_BOSS_SPECIAL_COOLDOWN = { phase1: 6400, phase2: 5000 };
 const BOSS_SPECIAL_RETRY_DELAY = 700;
 
 export class Boss extends Phaser.Physics.Arcade.Sprite {
-    static _sceneIsActive(scene) {
+    static _sceneIsActive(scene) { var __oc0, __oc1, __oc2, __oc3;
         try {
-            return !!scene && scene.scene?.isActive?.() !== false && scene.sys?.isActive?.() !== false;
+            return !!scene && (((__oc1 = (__oc0 = scene.scene) === null || __oc0 === void 0 ? void 0 : __oc0.isActive) === null || __oc1 === void 0 ? void 0 : __oc1.call(__oc0))) !== false && (((__oc3 = (__oc2 = scene.sys) === null || __oc2 === void 0 ? void 0 : __oc2.isActive) === null || __oc3 === void 0 ? void 0 : __oc3.call(__oc2))) !== false;
         } catch (e) {
             return false;
         }
@@ -14,14 +14,14 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
     static _destroyIfAlive(obj) {
         try {
-            if (obj?.scene && obj.destroy) obj.destroy();
+            if (((obj === null || obj === void 0 ? void 0 : obj.scene)) && obj.destroy) obj.destroy();
         } catch (e) {
             // Object may already be gone during scene shutdown.
         }
     }
 
-    static _addImageVfx(scene, textureKey, x, y, opts = {}) {
-        if (!scene?.textures?.exists(textureKey)) return null;
+    static _addImageVfx(scene, textureKey, x, y, opts = {}) { var __oc4;
+        if (!(((__oc4 = scene === null || scene === void 0 ? void 0 : scene.textures) === null || __oc4 === void 0 ? void 0 : __oc4.exists(textureKey)))) return null;
 
         const {
             depth = 8,
@@ -52,7 +52,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     }
 
     static _tweenDestroy(scene, target, config) {
-        if (!target?.scene) return;
+        if (!((target === null || target === void 0 ? void 0 : target.scene))) return;
         scene.tweens.add({
             targets: target,
             ...config,
@@ -60,8 +60,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         });
     }
 
-    static _playFrameVfx(scene, prefix, x, y, opts = {}) {
-        if (!scene?.textures?.exists(`${prefix}_0`)) return false;
+    static _playFrameVfx(scene, prefix, x, y, opts = {}) { var __oc5;
+        if (!(((__oc5 = scene === null || scene === void 0 ? void 0 : scene.textures) === null || __oc5 === void 0 ? void 0 : __oc5.exists(`${prefix}_0`)))) return false;
 
         const {
             scale = 1,
@@ -109,8 +109,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    static _animateFrameSprite(scene, sprite, prefix, frameMs = 60) {
-        if (!scene?.textures?.exists(`${prefix}_0`) || !sprite?.scene) return null;
+    static _animateFrameSprite(scene, sprite, prefix, frameMs = 60) { var __oc6;
+        if (!(((__oc6 = scene === null || scene === void 0 ? void 0 : scene.textures) === null || __oc6 === void 0 ? void 0 : __oc6.exists(`${prefix}_0`))) || !((sprite === null || sprite === void 0 ? void 0 : sprite.scene))) return null;
 
         let frame = 0;
         return scene.time.addEvent({
@@ -125,7 +125,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     }
 
     static _spawnDeathFragments(scene, x, y, scale = 1, palette = [0x13091f, 0x66112c, 0xffbf55]) {
-        if (!scene?.add) return;
+        if (!((scene === null || scene === void 0 ? void 0 : scene.add))) return;
         const count = Math.round(24 * scale);
         for (let i = 0; i < count; i++) {
             const angle = Math.random() * Math.PI * 2;
@@ -424,9 +424,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    _getSpecialCooldown() {
+    _getSpecialCooldown() { var __oc7, __oc8;
         const phaseKey = this.phase === 2 ? 'phase2' : 'phase1';
-        return this.config.specialCooldown?.[phaseKey] ?? DEFAULT_BOSS_SPECIAL_COOLDOWN[phaseKey];
+        return (((__oc8 = (__oc7 = this.config.specialCooldown) === null || __oc7 === void 0 ? void 0 : __oc7[phaseKey]) !== null && __oc8 !== void 0 ? __oc8 : DEFAULT_BOSS_SPECIAL_COOLDOWN[phaseKey]));
     }
 
     _getSpecialRetryTimer() {
@@ -731,13 +731,13 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     }
 
     // Beru: acid spit - 3 projectiles in spread, visible and dodgeable
-    _beruAcidSpit(playerX, playerY) {
+    _beruAcidSpit(playerX, playerY) { var __oc9, __oc10, __oc11, __oc12, __oc13;
         const scene = this.scene;
-        if (!scene?.physics?.world) return;
+        if (!(((__oc9 = scene === null || scene === void 0 ? void 0 : scene.physics) === null || __oc9 === void 0 ? void 0 : __oc9.world))) return;
 
-        const playerTarget = scene.player?.getHurtboxCenter?.();
-        const aimX = playerTarget?.x ?? playerX;
-        const aimY = playerTarget?.y ?? playerY;
+        const playerTarget = (((__oc11 = (__oc10 = scene.player) === null || __oc10 === void 0 ? void 0 : __oc10.getHurtboxCenter) === null || __oc11 === void 0 ? void 0 : __oc11.call(__oc10)));
+        const aimX = (((__oc12 = playerTarget === null || playerTarget === void 0 ? void 0 : playerTarget.x) !== null && __oc12 !== void 0 ? __oc12 : playerX));
+        const aimY = (((__oc13 = playerTarget === null || playerTarget === void 0 ? void 0 : playerTarget.y) !== null && __oc13 !== void 0 ? __oc13 : playerY));
         const baseAngle = Phaser.Math.Angle.Between(this.x, this.y, aimX, aimY);
         const spreadCount = this.phase === 2 ? 5 : 3;
         const spreadAngle = 0.3;
@@ -775,10 +775,10 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             let autoDestroyTimer = null;
             let cleanedUp = false;
             let hitResolved = false;
-            const cleanupProjectile = () => {
+            const cleanupProjectile = () => { var __oc14;
                 if (cleanedUp) return;
                 cleanedUp = true;
-                if (collider && scene.physics?.world) {
+                if (collider && (((__oc14 = scene.physics) === null || __oc14 === void 0 ? void 0 : __oc14.world))) {
                     scene.physics.world.removeCollider(collider);
                     collider = null;
                 }
@@ -822,10 +822,10 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 hitPoll = scene.time.addEvent({
                     delay: 16,
                     loop: true,
-                    callback: () => {
+                    callback: () => { var __oc15, __oc16, __oc17;
                         if (!proj.active || !player.active || player.isDead) return;
-                        const target = player.getHurtboxCenter?.() || player;
-                        const playerRadius = Math.max(player.body?.width || 38, player.body?.height || 56) * 0.5;
+                        const target = (((__oc15 = player.getHurtboxCenter) === null || __oc15 === void 0 ? void 0 : __oc15.call(player))) || player;
+                        const playerRadius = Math.max((((__oc16 = player.body) === null || __oc16 === void 0 ? void 0 : __oc16.width)) || 38, (((__oc17 = player.body) === null || __oc17 === void 0 ? void 0 : __oc17.height)) || 56) * 0.5;
                         const dist = Phaser.Math.Distance.Between(proj.x, proj.y, target.x, target.y);
                         if (dist <= playerRadius + 18) hitPlayer();
                     },
@@ -1078,9 +1078,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         sparks.explode(Math.round(34 * deathScale));
         scene.time.delayedCall(1000, () => Boss._destroyIfAlive(sparks));
 
-        if (shadowManager?.enabled) {
-            scene.time.delayedCall(deathTheme.ariseDelay, () => {
-                if (scene.scene?.isActive?.() !== false) {
+        if (((shadowManager === null || shadowManager === void 0 ? void 0 : shadowManager.enabled))) {
+            scene.time.delayedCall(deathTheme.ariseDelay, () => { var __oc18, __oc19;
+                if ((((__oc19 = (__oc18 = scene.scene) === null || __oc18 === void 0 ? void 0 : __oc18.isActive) === null || __oc19 === void 0 ? void 0 : __oc19.call(__oc18))) !== false) {
                     shadowManager.onBossKilled(shadowBossData);
                 }
             });
@@ -1089,8 +1089,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         const deathCamera = scene.cameras.main;
         deathCamera.shake(620, deathTheme.cameraShake);
         deathCamera.flash(280, 255, 180, 70);
-        scene.time.delayedCall(160, () => {
-            if (deathCamera?.scene?.sys?.isActive?.() !== false) deathCamera.shake(260, 0.012);
+        scene.time.delayedCall(160, () => { var __oc20, __oc21, __oc22;
+            if ((((__oc22 = (__oc21 = (__oc20 = deathCamera === null || deathCamera === void 0 ? void 0 : deathCamera.scene) === null || __oc20 === void 0 ? void 0 : __oc20.sys) === null || __oc21 === void 0 ? void 0 : __oc21.isActive) === null || __oc22 === void 0 ? void 0 : __oc22.call(__oc21))) !== false) deathCamera.shake(260, 0.012);
         });
 
         this.destroy();

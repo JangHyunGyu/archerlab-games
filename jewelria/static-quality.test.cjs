@@ -19,7 +19,7 @@ assert.match(main, /function resumeGame\(\)/);
 assert.match(main, /document\.addEventListener\('visibilitychange'/);
 assert.match(main, /if \(document\.hidden\) pauseGame\(\{ playSound: false \}\)/);
 assert.match(main, /window\.addEventListener\('pagehide', \(\) => pauseGame/);
-assert.match(main, /if \(state\?\.status === 'paused'\)/);
+assert.match(main, /if \((?:state\?\.status|\(\(state === null \|\| state === void 0 \? void 0 : state\.status\)\)) === 'paused'\)/);
 assert.match(main, /input\.setEnabled\(!resolving\)/);
 assert.match(serviceWorker, /jewelria-20261103-japanese-ui-v1/);
 assert.match(serviceWorker, /CORE_ASSETS\.map/);

@@ -138,7 +138,7 @@ test('cat-tower: an offline save without a session id recovers its original jour
   const event = { type: 'merge', created_tier: 1, combo: 1, delta: 25, seq: 1, _delivery_id: 'saved-event' };
   // Install the transport in the actual VM global used by the extracted client.
   const source = read('cat-tower/js/game.js');
-  assert.match(source, /rankSessionId: rankSessionId \|\| window\.ArcherRanking\?\.sessionId\(GAME_ID\)/);
+  assert.match(source, /rankSessionId: rankSessionId \|\| (?:window\.ArcherRanking\?\.sessionId\(GAME_ID\)|\(\(__oc\d+ = window\.ArcherRanking\) === null \|\| __oc\d+ === void 0 \? void 0 : __oc\d+\.sessionId\(GAME_ID\)\)|\(\(\(__oc\d+ = window\.ArcherRanking\) === null \|\| __oc\d+ === void 0 \? void 0 : __oc\d+\.sessionId\(GAME_ID\)\)\))/);
   // The fixture exposes its VM window via the shared function's realm.
   f.setTransport({ pending: () => [{ id: 'saved-event', gameId: 'cat-tower', sessionId: 'retained-run' }] });
   f.client.restore(null, 25, [event], 2);
@@ -153,5 +153,5 @@ test('blockpang: an offline save keeps its original seed-bound journal session',
   assert.equal(f.session(), 'retained-run');
   assert.equal(f.failed(), false);
   assert.equal(f.requests.length, 0);
-  assert.match(read('blockpang/js/Game.js'), /rankSessionId: this\.rankSessionId \|\| window\.ArcherRanking\?\.sessionId\(GAME_ID_BLOCKPANG\)/);
+  assert.match(read('blockpang/js/Game.js'), /rankSessionId: this\.rankSessionId \|\| (?:window\.ArcherRanking\?\.sessionId\(GAME_ID_BLOCKPANG\)|\(\((?:\()?__oc\d+ = window\.ArcherRanking\) === null \|\| __oc\d+ === void 0 \? void 0 : __oc\d+\.sessionId\(GAME_ID_BLOCKPANG\)\)(?:\))?)/);
 });

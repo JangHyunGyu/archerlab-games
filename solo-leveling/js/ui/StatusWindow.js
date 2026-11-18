@@ -6,21 +6,21 @@ import {
 import { t } from '../utils/i18n.js';
 import { UIAssets } from './UIAssets.js?v=20260913-crafted-ui-v1';
 
-function cssPerGameUnit(scene) {
-    const scale = scene?.game?.scale?.displayScale;
-    const sx = Number(scale?.x);
-    const sy = Number(scale?.y);
+function cssPerGameUnit(scene) { var __oc0, __oc1;
+    const scale = (((__oc1 = (__oc0 = scene === null || scene === void 0 ? void 0 : scene.game) === null || __oc0 === void 0 ? void 0 : __oc0.scale) === null || __oc1 === void 0 ? void 0 : __oc1.displayScale));
+    const sx = Number(((scale === null || scale === void 0 ? void 0 : scale.x)));
+    const sy = Number(((scale === null || scale === void 0 ? void 0 : scale.y)));
     if (sx > 0.01 && sy > 0.01) return 1 / Math.max(sx, sy);
     const viewport = window.visualViewport;
-    const w = Math.max(1, viewport?.width || window.innerWidth || GAME_WIDTH);
-    const h = Math.max(1, viewport?.height || window.innerHeight || GAME_HEIGHT);
+    const w = Math.max(1, ((viewport === null || viewport === void 0 ? void 0 : viewport.width)) || window.innerWidth || GAME_WIDTH);
+    const h = Math.max(1, ((viewport === null || viewport === void 0 ? void 0 : viewport.height)) || window.innerHeight || GAME_HEIGHT);
     return Math.max(0.01, Math.min(w / GAME_WIDTH, h / GAME_HEIGHT));
 }
 
 // Physics pause does not stop update() attacks or scene.time callbacks.
 // The panel stays on this scene, so the scene itself must keep running.
-function freezeCombat(scene, frozen) {
-    if (!scene?.scene?.isActive('GameScene')) return;
+function freezeCombat(scene, frozen) { var __oc2;
+    if (!(((__oc2 = scene === null || scene === void 0 ? void 0 : scene.scene) === null || __oc2 === void 0 ? void 0 : __oc2.isActive('GameScene')))) return;
     if (frozen) {
         scene.physics.pause();
         scene.time.paused = true;
@@ -61,7 +61,7 @@ export class StatusWindow {
         else this.open();
     }
 
-    open() {
+    open() { var __oc3, __oc4;
         if (this.isOpen) return;
         const player = this.scene.player;
         if (!player) return;
@@ -175,7 +175,7 @@ export class StatusWindow {
             { label: t('statXP'), value: 'x' + player.stats.xpMultiplier.toFixed(2), color: '#b080ff' },
             { label: t('statCDR'), value: (player.stats.cooldownReduction * 100).toFixed(1) + '%', color: SYSTEM.TEXT_CYAN },
         ];
-        const soldiers = this.scene.shadowArmyManager?.getSoldiers() || [];
+        const soldiers = (((__oc3 = this.scene.shadowArmyManager) === null || __oc3 === void 0 ? void 0 : __oc3.getSoldiers())) || [];
         const contentBottom = py + h - uv(touch ? 48 : 44);
         let yOff = headerLineY + uv(10);
         const contentH = Math.max(1, contentBottom - yOff);
@@ -232,7 +232,7 @@ export class StatusWindow {
         }).setDepth(303).setScrollFactor(0);
         this.elements.push(shadowHeader);
 
-        const shadowCount = this.scene.shadowArmyManager?.getSoldierCount() || 0;
+        const shadowCount = (((__oc4 = this.scene.shadowArmyManager) === null || __oc4 === void 0 ? void 0 : __oc4.getSoldierCount())) || 0;
         const shadowCountText = this._text(rightX, yOff,
             String(shadowCount).padStart(2, '0') + (t('statUnit') || ''), {
             fontSize: fs(labelSize + 1), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
@@ -308,12 +308,12 @@ export class StatusWindow {
         freezeCombat(this.scene, false);
     }
 
-    destroy() {
-        if (this.scene?.tweens) {
+    destroy() { var __oc5;
+        if ((((__oc5 = this.scene) === null || __oc5 === void 0 ? void 0 : __oc5.tweens))) {
             this.elements.forEach(el => this.scene.tweens.killTweensOf(el));
         }
         this.elements.forEach(el => {
-            try { if (el?.scene && el.destroy) el.destroy(); } catch (e) { /* already destroyed */ }
+            try { if (((el === null || el === void 0 ? void 0 : el.scene)) && el.destroy) el.destroy(); } catch (e) { /* already destroyed */ }
         });
         this.elements = [];
         this.isOpen = false;

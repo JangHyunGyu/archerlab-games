@@ -17,12 +17,12 @@ export class GameOverScene extends Phaser.Scene {
     init(data) {
         this.finalData = data;
         this._transitioning = false;
-        this._viewState = data?.rankSyncDisabled || data?.__viewState === 'stats' ? 'stats' : 'name';
+        this._viewState = ((data === null || data === void 0 ? void 0 : data.rankSyncDisabled)) || ((data === null || data === void 0 ? void 0 : data.__viewState)) === 'stats' ? 'stats' : 'name';
         this._pendingPlayerName = Object.prototype.hasOwnProperty.call(data || {}, '__pendingPlayerName')
             ? String(data.__pendingPlayerName || '')
             : null;
-        this._nameStatus = String(data?.__nameStatus || '');
-        this._skipFadeIn = !!data?.__skipFadeIn;
+        this._nameStatus = String(((data === null || data === void 0 ? void 0 : data.__nameStatus)) || '');
+        this._skipFadeIn = !!((data === null || data === void 0 ? void 0 : data.__skipFadeIn));
         this._nameInputSubmitting = false;
         this._resizePending = false;
         this._resizeRestartPending = false;
@@ -64,11 +64,11 @@ export class GameOverScene extends Phaser.Scene {
         this._restartForCurrentLayout();
     }
 
-    _restartForCurrentLayout() {
-        if (this._resizeRestartPending || !this.sys?.isActive?.()) return;
+    _restartForCurrentLayout() { var __oc0, __oc1, __oc2, __oc3, __oc4;
+        if (this._resizeRestartPending || !(((__oc1 = (__oc0 = this.sys) === null || __oc0 === void 0 ? void 0 : __oc0.isActive) === null || __oc1 === void 0 ? void 0 : __oc1.call(__oc0)))) return;
         this._resizeRestartPending = true;
 
-        const pendingPlayerName = this._nameInput?.value ?? this._pendingPlayerName ?? '';
+        const pendingPlayerName = (((__oc4 = (__oc3 = (__oc2 = this._nameInput) === null || __oc2 === void 0 ? void 0 : __oc2.value) !== null && __oc3 !== void 0 ? __oc3 : this._pendingPlayerName) !== null && __oc4 !== void 0 ? __oc4 : ''));
         const restartData = {
             ...this.finalData,
             __viewState: this._viewState,
@@ -77,17 +77,17 @@ export class GameOverScene extends Phaser.Scene {
             __skipFadeIn: true,
         };
 
-        this._resizeRestartTimer = this.time.delayedCall(0, () => {
+        this._resizeRestartTimer = this.time.delayedCall(0, () => { var __oc5, __oc6;
             this._resizeRestartTimer = null;
-            if (!this.sys?.isActive?.()) return;
+            if (!(((__oc6 = (__oc5 = this.sys) === null || __oc5 === void 0 ? void 0 : __oc5.isActive) === null || __oc6 === void 0 ? void 0 : __oc6.call(__oc5)))) return;
             this.scene.restart(restartData);
         });
     }
 
     _getScreenMode() {
         const viewport = window.visualViewport;
-        const viewportW = viewport?.width || window.innerWidth || GAME_WIDTH;
-        const viewportH = viewport?.height || window.innerHeight || GAME_HEIGHT;
+        const viewportW = ((viewport === null || viewport === void 0 ? void 0 : viewport.width)) || window.innerWidth || GAME_WIDTH;
+        const viewportH = ((viewport === null || viewport === void 0 ? void 0 : viewport.height)) || window.innerHeight || GAME_HEIGHT;
         const isPortrait = GAME_HEIGHT > GAME_WIDTH * 1.08;
         const isShortLandscape = !isPortrait && viewportH <= 560 && viewportW > viewportH * 1.25;
         return { isPortrait, isShortLandscape };
@@ -95,8 +95,8 @@ export class GameOverScene extends Phaser.Scene {
 
     _getCssPerUnit() {
         const viewport = window.visualViewport;
-        const viewportW = Math.max(1, viewport?.width || window.innerWidth || GAME_WIDTH);
-        const viewportH = Math.max(1, viewport?.height || window.innerHeight || GAME_HEIGHT);
+        const viewportW = Math.max(1, ((viewport === null || viewport === void 0 ? void 0 : viewport.width)) || window.innerWidth || GAME_WIDTH);
+        const viewportH = Math.max(1, ((viewport === null || viewport === void 0 ? void 0 : viewport.height)) || window.innerHeight || GAME_HEIGHT);
         return Math.max(0.01, Math.min(viewportW / GAME_WIDTH, viewportH / GAME_HEIGHT));
     }
 
@@ -169,7 +169,7 @@ export class GameOverScene extends Phaser.Scene {
         };
     }
 
-    _showNameInput(time, level, rank, kills, shadowCount) {
+    _showNameInput(time, level, rank, kills, shadowCount) { var __oc7;
         this._cleanupNameInput();
         const cx = GAME_WIDTH / 2;
         const depth = 100;
@@ -295,7 +295,7 @@ export class GameOverScene extends Phaser.Scene {
         inputShell.appendChild(input);
 
         const lastName = localStorage.getItem('shadow_player_name') || '';
-        input.value = this._pendingPlayerName ?? lastName;
+        input.value = (((__oc7 = this._pendingPlayerName) !== null && __oc7 !== void 0 ? __oc7 : lastName));
         this._nameInput = input;
         this._nameInputShell = inputShell;
         this._mountNameInputShell(inputShell);
@@ -421,7 +421,7 @@ export class GameOverScene extends Phaser.Scene {
             this._showStats(time, level, rank, kills, shadowCount);
         };
 
-        const doSubmit = async () => {
+        const doSubmit = async () => { var __oc8, __oc9, __oc10, __oc11;
             if (isSubmitting) return;
             const name = input.value.trim().slice(0, 20);
             if (!name) { input.focus(); return; }
@@ -465,10 +465,10 @@ export class GameOverScene extends Phaser.Scene {
                     throw error;
                 }
                 cleanup();
-                if (!this.sys?.isActive?.()) return;
+                if (!(((__oc9 = (__oc8 = this.sys) === null || __oc8 === void 0 ? void 0 : __oc8.isActive) === null || __oc9 === void 0 ? void 0 : __oc9.call(__oc8)))) return;
                 showStats();
             } catch (e) {
-                if (!this.sys?.isActive?.()) return;
+                if (!(((__oc11 = (__oc10 = this.sys) === null || __oc10 === void 0 ? void 0 : __oc10.isActive) === null || __oc11 === void 0 ? void 0 : __oc11.call(__oc10)))) return;
                 if (!this.finalData.rankSyncDisabled) {
                     this._reportRankSubmitError(e, {
                         score: time,
@@ -519,7 +519,7 @@ export class GameOverScene extends Phaser.Scene {
         renderCanvas.setAttribute('layoutsubtree', 'true');
         const context = renderCanvas.getContext('2d');
         const supportsHtmlInCanvas = (
-            typeof context?.drawElementImage === 'function'
+            typeof ((context === null || context === void 0 ? void 0 : context.drawElementImage)) === 'function'
             && typeof renderCanvas.requestPaint === 'function'
         );
 
@@ -539,9 +539,9 @@ export class GameOverScene extends Phaser.Scene {
 
     _requestNameInputCanvasPaint() {
         if (!this._nameInputCanvas || this._nameInputCanvasPaintFrame) return;
-        this._nameInputCanvasPaintFrame = requestAnimationFrame(() => {
+        this._nameInputCanvasPaintFrame = requestAnimationFrame(() => { var __oc12;
             this._nameInputCanvasPaintFrame = null;
-            this._nameInputCanvas?.requestPaint();
+            (((__oc12 = this._nameInputCanvas) === null || __oc12 === void 0 ? void 0 : __oc12.requestPaint()));
         });
     }
 
@@ -564,7 +564,7 @@ export class GameOverScene extends Phaser.Scene {
             shell.style.transform = transform.toString();
             this._nameInputCanvasPaintRetries = 0;
         } catch (error) {
-            if (error?.name === 'InvalidStateError' && (this._nameInputCanvasPaintRetries || 0) < 2) {
+            if (((error === null || error === void 0 ? void 0 : error.name)) === 'InvalidStateError' && (this._nameInputCanvasPaintRetries || 0) < 2) {
                 this._nameInputCanvasPaintRetries = (this._nameInputCanvasPaintRetries || 0) + 1;
                 this._requestNameInputCanvasPaint();
                 return;
@@ -580,7 +580,7 @@ export class GameOverScene extends Phaser.Scene {
         if (!canvas) return;
 
         canvas.onpaint = null;
-        if (shell?.parentNode === canvas) document.body.appendChild(shell);
+        if (((shell === null || shell === void 0 ? void 0 : shell.parentNode)) === canvas) document.body.appendChild(shell);
         canvas.remove();
 
         this._nameInputCanvas = null;
@@ -601,25 +601,25 @@ export class GameOverScene extends Phaser.Scene {
         }
     }
 
-    _installNameInputPositioning(gameX, gameY, gameWidth) {
-        const syncPosition = () => {
+    _installNameInputPositioning(gameX, gameY, gameWidth) { var __oc15, __oc16;
+        const syncPosition = () => { var __oc13, __oc14;
             const shell = this._nameInputShell;
-            const canvas = this.game?.canvas;
+            const canvas = (((__oc13 = this.game) === null || __oc13 === void 0 ? void 0 : __oc13.canvas));
             if (!shell || !shell.isConnected || !canvas) return;
 
             const rect = canvas.getBoundingClientRect();
             if (!rect.width || !rect.height) return;
 
-            const gameSize = this.scale?.gameSize;
-            const gameW = gameSize?.width || GAME_WIDTH;
-            const gameH = gameSize?.height || GAME_HEIGHT;
+            const gameSize = (((__oc14 = this.scale) === null || __oc14 === void 0 ? void 0 : __oc14.gameSize));
+            const gameW = ((gameSize === null || gameSize === void 0 ? void 0 : gameSize.width)) || GAME_WIDTH;
+            const gameH = ((gameSize === null || gameSize === void 0 ? void 0 : gameSize.height)) || GAME_HEIGHT;
             const scaleX = rect.width / Math.max(1, gameW);
             const scaleY = rect.height / Math.max(1, gameH);
             const viewport = window.visualViewport;
-            const viewLeft = viewport?.offsetLeft || 0;
-            const viewTop = viewport?.offsetTop || 0;
-            const viewWidth = viewport?.width || window.innerWidth;
-            const viewHeight = viewport?.height || window.innerHeight;
+            const viewLeft = ((viewport === null || viewport === void 0 ? void 0 : viewport.offsetLeft)) || 0;
+            const viewTop = ((viewport === null || viewport === void 0 ? void 0 : viewport.offsetTop)) || 0;
+            const viewWidth = ((viewport === null || viewport === void 0 ? void 0 : viewport.width)) || window.innerWidth;
+            const viewHeight = ((viewport === null || viewport === void 0 ? void 0 : viewport.height)) || window.innerHeight;
             const maxAvailableW = Math.max(216, Math.min(440, rect.width - 28, viewWidth - 28));
             const minTargetW = Math.min(280, maxAvailableW);
             const targetW = Math.min(maxAvailableW, Math.max(minTargetW, gameWidth * scaleX));
@@ -680,15 +680,15 @@ export class GameOverScene extends Phaser.Scene {
         this._nameInputPositionHandler = handlePositionChange;
         window.addEventListener('resize', handlePositionChange);
         window.addEventListener('orientationchange', handlePositionChange);
-        window.visualViewport?.addEventListener('resize', handlePositionChange);
-        window.visualViewport?.addEventListener('scroll', handlePositionChange);
+        (((__oc15 = window.visualViewport) === null || __oc15 === void 0 ? void 0 : __oc15.addEventListener('resize', handlePositionChange)));
+        (((__oc16 = window.visualViewport) === null || __oc16 === void 0 ? void 0 : __oc16.addEventListener('scroll', handlePositionChange)));
         this.events.on('game-resize', handlePositionChange);
         requestAnimationFrame(syncPosition);
     }
 
-    _reportRankSubmitError(error, context = {}) {
+    _reportRankSubmitError(error, context = {}) { var __oc17;
         console.warn('[SoloLeveling] rank submit failed:', error);
-        if (window.ArcherLabClientErrorReporter?.report) {
+        if ((((__oc17 = window.ArcherLabClientErrorReporter) === null || __oc17 === void 0 ? void 0 : __oc17.report))) {
             window.ArcherLabClientErrorReporter.report(error, {
                 scope: 'rank-submit',
                 ...context,
@@ -696,7 +696,7 @@ export class GameOverScene extends Phaser.Scene {
         }
     }
 
-    _cleanupNameInput() {
+    _cleanupNameInput() { var __oc18, __oc19, __oc20, __oc21, __oc22;
         if (this._nameInputFocusTimer) {
             clearTimeout(this._nameInputFocusTimer);
             this._nameInputFocusTimer = null;
@@ -708,8 +708,8 @@ export class GameOverScene extends Phaser.Scene {
         if (this._nameInputPositionHandler) {
             window.removeEventListener('resize', this._nameInputPositionHandler);
             window.removeEventListener('orientationchange', this._nameInputPositionHandler);
-            window.visualViewport?.removeEventListener('resize', this._nameInputPositionHandler);
-            window.visualViewport?.removeEventListener('scroll', this._nameInputPositionHandler);
+            (((__oc18 = window.visualViewport) === null || __oc18 === void 0 ? void 0 : __oc18.removeEventListener('resize', this._nameInputPositionHandler)));
+            (((__oc19 = window.visualViewport) === null || __oc19 === void 0 ? void 0 : __oc19.removeEventListener('scroll', this._nameInputPositionHandler)));
             this.events.off('game-resize', this._nameInputPositionHandler);
         }
         if (this._nameInput && this._nameInputKeydownHandler) {
@@ -722,12 +722,12 @@ export class GameOverScene extends Phaser.Scene {
         if (this._nameInputCanvasPaintFrame) {
             cancelAnimationFrame(this._nameInputCanvasPaintFrame);
         }
-        if (this._nameInputShell?.parentNode) {
+        if ((((__oc20 = this._nameInputShell) === null || __oc20 === void 0 ? void 0 : __oc20.parentNode))) {
             this._nameInputShell.parentNode.removeChild(this._nameInputShell);
-        } else if (this._nameInput?.parentNode) {
+        } else if ((((__oc21 = this._nameInput) === null || __oc21 === void 0 ? void 0 : __oc21.parentNode))) {
             this._nameInput.parentNode.removeChild(this._nameInput);
         }
-        if (this.input?.keyboard) this.input.keyboard.enabled = true;
+        if ((((__oc22 = this.input) === null || __oc22 === void 0 ? void 0 : __oc22.keyboard))) this.input.keyboard.enabled = true;
         this._nameInput = null;
         this._nameInputShell = null;
         this._nameInputKeydownHandler = null;

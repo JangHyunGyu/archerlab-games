@@ -15,7 +15,7 @@ class LobbyManager {
         this.setupEventListeners();
     }
 
-    setupEventListeners() {
+    setupEventListeners() { var __oc0;
         // Header back button: go to main menu if not already there
         document.getElementById('header-back').addEventListener('click', (e) => {
             if (this.currentScreen === 'main-menu') return;
@@ -201,9 +201,9 @@ class LobbyManager {
             this.hideConfirmModal();
         });
 
-        document.getElementById('btn-info-ok')?.addEventListener('click', () => {
-            this.hideInfo();
-        });
+        (((__oc0 = document.getElementById('btn-info-ok')) === null || __oc0 === void 0 ? void 0 : __oc0.addEventListener('click', () => {
+        this.hideInfo();
+    })));
 
         window.addEventListener('slimevolley:languagechange', () => {
             this.refreshLocalizedContent();
@@ -266,7 +266,7 @@ class LobbyManager {
     format(key, fallback, values = {}) {
         let text = this.t(key, fallback);
         for (const [name, value] of Object.entries(values)) {
-            text = text.replaceAll(`{${name}}`, value);
+            text = text.split(`{${name}}`).join(value);
         }
         return text;
     }
@@ -335,7 +335,7 @@ class LobbyManager {
         }
     }
 
-    renderRoomList(rooms) {
+    renderRoomList(rooms) { var __oc1, __oc2, __oc3;
         this.lastRooms = rooms;
         const listEl = document.getElementById('room-list');
 
@@ -348,11 +348,11 @@ class LobbyManager {
         for (const room of rooms) {
             const item = document.createElement('div');
             const isPlaying = room.gameStarted;
-            const isPrivate = room.metadata?.password;
+            const isPrivate = (((__oc1 = room.metadata) === null || __oc1 === void 0 ? void 0 : __oc1.password));
             item.className = `room-item ${isPlaying ? 'room-playing' : 'room-waiting'}`;
 
-            const sets = room.metadata?.sets || 1;
-            const score = room.metadata?.scorePerSet || 25;
+            const sets = (((__oc2 = room.metadata) === null || __oc2 === void 0 ? void 0 : __oc2.sets)) || 1;
+            const score = (((__oc3 = room.metadata) === null || __oc3 === void 0 ? void 0 : __oc3.scorePerSet)) || 25;
             const setsLabel = sets === 1
                 ? this.t('room.setSingle', '단판')
                 : this.format('room.setBestOf', `${sets}세트`, { sets, wins: Math.ceil(sets / 2) });
@@ -385,11 +385,11 @@ class LobbyManager {
     }
 
     // === Password Modal ===
-    tryJoinRoom(room) {
+    tryJoinRoom(room) { var __oc4;
         const name = this.getNameFromInput();
         if (!name) return;
 
-        if (room.metadata?.password) {
+        if ((((__oc4 = room.metadata) === null || __oc4 === void 0 ? void 0 : __oc4.password))) {
             // 비밀방: 비밀번호 입력 팝업
             this.pendingJoinRoom = room;
             document.getElementById('join-password').value = '';
@@ -418,14 +418,14 @@ class LobbyManager {
     }
 
     // === Create Room ===
-    async createRoom() {
+    async createRoom() { var __oc5;
         const name = this.playerName;
         if (!name) {
             this.showError(this.t('error.enterNicknameFirst', '닉네임을 먼저 입력해주세요'));
             return;
         }
 
-        const isPrivate = document.querySelector('.room-type-btn.active')?.dataset.type === 'private';
+        const isPrivate = (((__oc5 = document.querySelector('.room-type-btn.active')) === null || __oc5 === void 0 ? void 0 : __oc5.dataset.type)) === 'private';
         let password = null;
         if (isPrivate) {
             password = document.getElementById('create-password').value.trim();
@@ -484,7 +484,7 @@ class LobbyManager {
         const typeEl = document.getElementById('room-type-display');
         if (!typeEl) return;
 
-        const isPrivate = metadata?.password;
+        const isPrivate = ((metadata === null || metadata === void 0 ? void 0 : metadata.password));
         typeEl.innerHTML = isPrivate
             ? `<span class="room-type-badge badge-private">&#128274; ${this.t('room.private', '비밀방')}</span>`
             : `<span class="room-type-badge badge-public">${this.t('room.public', '공개방')}</span>`;

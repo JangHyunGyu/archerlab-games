@@ -66,11 +66,11 @@ export class SystemMessage {
         this._mountMessage(msg, false);
     }
 
-    _clearElements(elements) {
+    _clearElements(elements) { var __oc0;
         for (const el of elements || []) {
             try {
-                if (this.scene?.tweens) this.scene.tweens.killTweensOf(el);
-                if (el?.active) el.destroy();
+                if ((((__oc0 = this.scene) === null || __oc0 === void 0 ? void 0 : __oc0.tweens))) this.scene.tweens.killTweensOf(el);
+                if (((el === null || el === void 0 ? void 0 : el.active))) el.destroy();
             } catch (e) { /* already gone */ }
         }
     }
@@ -250,8 +250,8 @@ export class SystemMessage {
         }
     }
 
-    _delay(ms, callback) {
-        if (!this.scene?.time) return null;
+    _delay(ms, callback) { var __oc1;
+        if (!(((__oc1 = this.scene) === null || __oc1 === void 0 ? void 0 : __oc1.time))) return null;
         const timer = this.scene.time.delayedCall(ms, () => {
             this._timers.delete(timer);
             if (!this._destroyed && this.scene) callback();
@@ -260,7 +260,7 @@ export class SystemMessage {
         return timer;
     }
 
-    destroy() {
+    destroy() { var __oc2;
         this._destroyed = true;
         this.queue = [];
         this.isShowing = false;
@@ -274,8 +274,8 @@ export class SystemMessage {
         const elements = this.currentElements || [];
         for (const el of elements) {
             try {
-                if (this.scene?.tweens) this.scene.tweens.killTweensOf(el);
-                if (el?.scene && el.destroy) el.destroy();
+                if ((((__oc2 = this.scene) === null || __oc2 === void 0 ? void 0 : __oc2.tweens))) this.scene.tweens.killTweensOf(el);
+                if (((el === null || el === void 0 ? void 0 : el.scene)) && el.destroy) el.destroy();
             } catch (e) { /* already destroyed */ }
         }
         this.currentElements = [];

@@ -788,9 +788,9 @@ class UIManager {
         onPress,
         registerActive = false,
         hitPad = null,
-    }) {
+    }) { var __oc0;
         const resolvedHitPad = hitPad == null
-            ? ((typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches) ? 12 : 8)
+            ? ((typeof window !== 'undefined' && (((__oc0 = window.matchMedia) === null || __oc0 === void 0 ? void 0 : __oc0.call(window, '(pointer: coarse)').matches))) ? 12 : 8)
             : hitPad;
         const btn = new PIXI.Container();
         btn.position.set(x, y);
@@ -919,7 +919,7 @@ class UIManager {
     // ══════════════════════════════════════
     // ══  TITLE SCREEN
     // ══════════════════════════════════════
-    showTitleScreen() {
+    showTitleScreen() { var __oc1, __oc2, __oc3, __oc4;
         // Resize rebuilds this screen on top of the stage. Mobile browser chrome
         // often resizes on the same tap that opens rankings, which buried the
         // overlay and then ignored every later tap.
@@ -957,8 +957,8 @@ class UIManager {
         const splashTexture = getBlockpangTexture('titleBackdropClean') || getBlockpangTexture('titleSplash');
         if (splashTexture) {
             const splash = new PIXI.Sprite(splashTexture);
-            const tw = splashTexture.width || splashTexture.orig?.width || 1;
-            const th = splashTexture.height || splashTexture.orig?.height || 1;
+            const tw = splashTexture.width || (((__oc1 = splashTexture.orig) === null || __oc1 === void 0 ? void 0 : __oc1.width)) || 1;
+            const th = splashTexture.height || (((__oc2 = splashTexture.orig) === null || __oc2 === void 0 ? void 0 : __oc2.height)) || 1;
             const scale = Math.max(w / tw, h / th);
             splash.anchor.set(0.5);
             splash.scale.set(scale);
@@ -1320,7 +1320,7 @@ class UIManager {
         const langFontSize = Math.max(11, Math.min(12, w * 0.03)) * sc;
         const langBtnW = Math.min(110, w * 0.28);
         const langX = 14;
-        const canvasTop = this.game.app.canvas?.getBoundingClientRect().top || 0;
+        const canvasTop = (((__oc3 = this.game.app.canvas) === null || __oc3 === void 0 ? void 0 : __oc3.getBoundingClientRect().top)) || 0;
         const langY = archRect ? Math.max(8, archRect.top - canvasTop) : 14;
 
         const langTrigger = new PIXI.Graphics();
@@ -1513,7 +1513,7 @@ class UIManager {
             .filter(Boolean);
         if (resumeBtn) liftTargets.push(resumeBtn);
         const reduceMotion = typeof window !== 'undefined'
-            && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+            && (((__oc4 = window.matchMedia) === null || __oc4 === void 0 ? void 0 : __oc4.call(window, '(prefers-reduced-motion: reduce)').matches));
         if (reduceMotion) {
             container.alpha = 1;
         } else {
@@ -1570,7 +1570,7 @@ class UIManager {
         if (rankingWasOpen) this.showHallOfFame();
     }
 
-    hideTitleScreen(onComplete) {
+    hideTitleScreen(onComplete) { var __oc5;
         this._activeButtons = [];
         this._clearTitleTweens();
         if (!this.titleContainer || this.titleContainer.destroyed) {
@@ -1596,7 +1596,7 @@ class UIManager {
         };
 
         if (typeof window !== 'undefined'
-            && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+            && (((__oc5 = window.matchMedia) === null || __oc5 === void 0 ? void 0 : __oc5.call(window, '(prefers-reduced-motion: reduce)').matches))) {
             this._destroyDynamicTree(container);
             finish();
             return;
@@ -2420,7 +2420,7 @@ class UIManager {
     // ══  NAME INPUT POPUP (Game Over)
     // ══════════════════════════════════════
 
-    showNameInput(score, onComplete) {
+    showNameInput(score, onComplete) { var __oc6, __oc7;
         this._destroyNameInputDom();
         if (this._nameInputLoadingTicker) {
             this.game.app.ticker.remove(this._nameInputLoadingTicker);
@@ -2566,7 +2566,7 @@ class UIManager {
         this._nameInputElement = input;
         this._nameInputFocusHandler = onFocus;
         this._nameInputBlurHandler = onBlur;
-        const hasFinePointer = window.matchMedia?.('(pointer: fine)')?.matches === true;
+        const hasFinePointer = (((__oc7 = (__oc6 = window.matchMedia) === null || __oc6 === void 0 ? void 0 : __oc6.call(window, '(pointer: fine)')) === null || __oc7 === void 0 ? void 0 : __oc7.matches)) === true;
         if (hasFinePointer) {
             this._nameInputFocusTimer = setTimeout(() => {
                 this._nameInputFocusTimer = null;
@@ -2688,15 +2688,15 @@ class UIManager {
         this.game.app.ticker.add(updateLoading);
         this._nameInputLoadingTicker = updateLoading;
 
-        const reportRankSubmitFailure = (error, extra = {}) => {
-            const message = error?.message || String(error || 'rank submit failed');
+        const reportRankSubmitFailure = (error, extra = {}) => { var __oc8, __oc9, __oc10;
+            const message = ((error === null || error === void 0 ? void 0 : error.message)) || String(error || 'rank submit failed');
             const context = this.game && typeof this.game.getErrorMetadata === 'function'
                 ? this.game.getErrorMetadata('rank-submit', extra)
                 : { scope: 'rank-submit', ...extra };
 
-            window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-submit' }, 'ranking_client_exception');
+            (((__oc9 = (__oc8 = window.ArcherLabClientErrorReporter) === null || __oc8 === void 0 ? void 0 : __oc8.reportCodeException) === null || __oc9 === void 0 ? void 0 : __oc9.call(__oc8, error, { phase: 'rank-submit' }, 'ranking_client_exception')));
             console.warn('[Blockpang] rank submit failed:', error);
-            if (window.ArcherLabClientErrorReporter?.report) {
+            if ((((__oc10 = window.ArcherLabClientErrorReporter) === null || __oc10 === void 0 ? void 0 : __oc10.report))) {
                 window.ArcherLabClientErrorReporter.report(error, context);
                 return;
             }
@@ -2704,7 +2704,7 @@ class UIManager {
                 window._sendGameError(
                     'RankSubmitError',
                     message,
-                    error?.stack || '',
+                    ((error === null || error === void 0 ? void 0 : error.stack)) || '',
                     'UIManager.js:showNameInput',
                     context
                 );

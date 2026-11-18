@@ -401,9 +401,9 @@ export class AudioManager {
     return node;
   }
 
-  disconnectNodes(nodes) {
+  disconnectNodes(nodes) { var __oc0;
     for (const node of nodes) {
-      try { node?.disconnect?.(); } catch {}
+      try { (((__oc0 = node === null || node === void 0 ? void 0 : node.disconnect) === null || __oc0 === void 0 ? void 0 : __oc0.call(node))); } catch (_err) {}
     }
   }
 
@@ -709,9 +709,9 @@ export class AudioManager {
     this.fadeOutMusic(0.34);
   }
 
-  async playMusic(track) {
+  async playMusic(track) { var __oc1;
     if (!this.ctx || !this.master || !this.enabled) return;
-    if (this.music?.track === track) return;
+    if ((((__oc1 = this.music) === null || __oc1 === void 0 ? void 0 : __oc1.track)) === track) return;
     const buffer = await this.loadBuffer(`music:${track}`, MUSIC_ASSETS[track]);
     if (!buffer || !this.ctx || !this.master || !this.enabled || this.desiredMusic !== track) return;
     const now = this.ctx.currentTime;
@@ -741,7 +741,7 @@ export class AudioManager {
     gain.gain.cancelScheduledValues(now);
     gain.gain.setValueAtTime(Math.max(0.0001, gain.gain.value), now);
     gain.gain.exponentialRampToValueAtTime(0.0001, stopAt);
-    try { source.stop(stopAt + 0.03); } catch {}
+    try { source.stop(stopAt + 0.03); } catch (_err) {}
     this.music = null;
   }
 }

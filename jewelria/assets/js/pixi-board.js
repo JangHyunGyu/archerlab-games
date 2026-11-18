@@ -21,7 +21,7 @@ const SUPPORTS_WEBP = (() => {
     canvas.width = 1;
     canvas.height = 1;
     return canvas.toDataURL('image/webp').startsWith('data:image/webp');
-  } catch {
+  } catch (_err) {
     return false;
   }
 })();
@@ -395,10 +395,10 @@ export class PixiBoard {
     this._updateSelection();
   }
 
-  _animateFall(sprite, move, row, col) {
+  _animateFall(sprite, move, row, col) { var __oc0, __oc1;
     const tx = this.cellX(col);
     const ty = this.cellY(row);
-    const fromRow = Number(move.from?.row ?? row);
+    const fromRow = Number((((__oc1 = (__oc0 = move.from) === null || __oc0 === void 0 ? void 0 : __oc0.row) !== null && __oc1 !== void 0 ? __oc1 : row)));
     const distance = Math.max(1, fromRow < 0 ? row + 1.6 : row - fromRow);
     const dur = Math.min(820, 320 + distance * 64);
     const delay = Math.min(150, col * 10 + Math.max(0, 7 - row) * 4);
@@ -813,7 +813,7 @@ export class PixiBoard {
     this.gsapTweens.clear();
   }
 
-  _tween(target, props, duration, ease = easeOutCubic, delay = 0) {
+  _tween(target, props, duration, ease = easeOutCubic, delay = 0) { var __oc2, __oc3;
     // 지연 호출(setTimeout) 사이에 판이 다시 그려지면 스프라이트가 이미 파괴돼 scale이 null이다. 그때는 트윈을 만들지 않는다.
     if (!target || target.destroyed) return null;
     if (this._motionEnabled()) {
@@ -825,7 +825,7 @@ export class PixiBoard {
 
       for (const key of Object.keys(props)) {
         if (key === 'scale') {
-          scaleState = { value: target.scale?.x ?? 1, to: props.scale };
+          scaleState = { value: (((__oc3 = (__oc2 = target.scale) === null || __oc2 === void 0 ? void 0 : __oc2.x) !== null && __oc3 !== void 0 ? __oc3 : 1)), to: props.scale };
         } else {
           direct[key] = props[key];
         }
@@ -847,12 +847,12 @@ export class PixiBoard {
           value: scaleState.to,
           duration: seconds,
           ease: this._motionEase(ease),
-          onUpdate: () => {
+          onUpdate: () => { var __oc4, __oc5;
             if (target.destroyed) {
               timeline.kill();
               return;
             }
-            target.scale?.set?.(scaleState.value);
+            (((__oc5 = (__oc4 = target.scale) === null || __oc4 === void 0 ? void 0 : __oc4.set) === null || __oc5 === void 0 ? void 0 : __oc5.call(__oc4, scaleState.value)));
           }
         }, 0);
       }
@@ -1027,7 +1027,7 @@ export class PixiBoard {
     this.pointerStart = { ...cell, x: e.clientX, y: e.clientY };
   }
 
-  _onPointerUp(e) {
+  _onPointerUp(e) { var __oc6, __oc7, __oc8, __oc9;
     if (!this.enabled || !this.pointerStart) return;
     const start = this.pointerStart;
     this.pointerStart = null;
@@ -1041,13 +1041,13 @@ export class PixiBoard {
         row: start.row + (absY > absX ? Math.sign(dy) : 0),
         col: start.col + (absX >= absY ? Math.sign(dx) : 0)
       };
-      this.callbacks.swipe?.({ row: start.row, col: start.col }, to);
+      (((__oc7 = (__oc6 = this.callbacks).swipe) === null || __oc7 === void 0 ? void 0 : __oc7.call(__oc6, { row: start.row, col: start.col }, to)));
       return;
     }
-    this.callbacks.tap?.({ row: start.row, col: start.col });
+    (((__oc9 = (__oc8 = this.callbacks).tap) === null || __oc9 === void 0 ? void 0 : __oc9.call(__oc8, { row: start.row, col: start.col })));
   }
 
-  _onKeyDown(e) {
+  _onKeyDown(e) { var __oc10, __oc11;
     if (!this.enabled) return;
     const map = {
       ArrowUp: { row: -1, col: 0 },
@@ -1058,7 +1058,7 @@ export class PixiBoard {
     const dir = map[e.key];
     if (!dir) return;
     e.preventDefault();
-    this.callbacks.keyboardMove?.(dir);
+    (((__oc11 = (__oc10 = this.callbacks).keyboardMove) === null || __oc11 === void 0 ? void 0 : __oc11.call(__oc10, dir)));
   }
 
   _onResize() {

@@ -21,9 +21,9 @@ const files = {
 };
 
 export class GameAudio {
-    constructor() {
+    constructor() { var __oc0;
         this.enabled = storage.get('sound') !== 'off';
-        this.volume = Math.max(0, Math.min(1, Number(storage.get('volume') ?? 0.45)));
+        this.volume = Math.max(0, Math.min(1, Number((((__oc0 = storage.get('volume')) !== null && __oc0 !== void 0 ? __oc0 : 0.45)))));
         this.buffers = new Map();
         this.loading = new Map();
         this.voices = new Set();
@@ -45,8 +45,8 @@ export class GameAudio {
         if (!this.enabled) return;
         try {
             const first = !this.ctx;
-            this.ctx ||= new (window.AudioContext || window.webkitAudioContext)();
-            this.master ||= this.ctx.createGain();
+            ((this.ctx || (this.ctx = new (window.AudioContext || window.webkitAudioContext)())));
+            ((this.master || (this.master = this.ctx.createGain())));
             if (!this.connected) {
                 const compressor = this.ctx.createDynamicsCompressor();
                 compressor.threshold.value = -12;
@@ -62,7 +62,7 @@ export class GameAudio {
                 await this.load('click');
                 this.play('click', { gain: 0.55 });
             }
-        } catch { /* 오디오 초기화 실패 시에도 게임 진행 유지 */ }
+        } catch (_err) { /* 오디오 초기화 실패 시에도 게임 진행 유지 */ }
     }
 
     load(key) {
@@ -85,7 +85,7 @@ export class GameAudio {
         source.buffer = this.buffers.get(key);
         source.playbackRate.value = rate;
         const start = this.ctx.currentTime + delay;
-        const length = Math.min(duration ?? source.buffer.duration / rate, source.buffer.duration / rate);
+        const length = Math.min(((duration !== null && duration !== void 0 ? duration : source.buffer.duration / rate)), source.buffer.duration / rate);
         volume.gain.setValueAtTime(gain, start);
         volume.gain.setValueAtTime(gain, start + Math.max(0, length - 0.06));
         volume.gain.linearRampToValueAtTime(0, start + length);
@@ -103,15 +103,15 @@ export class GameAudio {
 
     // 유사도 순위와 정답 여부에 따라 계층형 효과음 재생
     result(event, game) {
-        if (!event?.requestId || event.replayed || this.events.has(event.requestId)) return;
+        if (!((event === null || event === void 0 ? void 0 : event.requestId)) || event.replayed || this.events.has(event.requestId)) return;
         this.events.add(event.requestId);
-        if (game?.status === 'won' && event.code === 'won') {
+        if (((game === null || game === void 0 ? void 0 : game.status)) === 'won' && event.code === 'won') {
             this.play('solveBurst', { gain: 0.72 });
             this.play('solveFanfare', { delay: 0.08, gain: 0.85 });
             this.play(event.recordImproved ? 'record' : 'streak', { delay: 0.45, gain: 0.65 });
             return;
         }
-        if (game?.status === 'given_up' && event.code === 'given_up') {
+        if (((game === null || game === void 0 ? void 0 : game.status)) === 'given_up' && event.code === 'given_up') {
             this.play('end', { gain: 0.45, duration: 0.75 });
             return;
         }
@@ -152,7 +152,7 @@ export class GameAudio {
 
     stop() {
         for (const source of this.voices) {
-            try { source.stop(); } catch {}
+            try { source.stop(); } catch (_err) {}
         }
         this.voices.clear();
     }

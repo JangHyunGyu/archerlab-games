@@ -26,7 +26,7 @@ assert.match(
 );
 assert.match(
   pollGamepadInput,
-  /error\?\.name === "SecurityError"[\s\S]*?this\.gamepadAccessDenied = true[\s\S]*?this\.gamepadButtons\.clear\(\)[\s\S]*?return/,
+  /(?:error\?\.name|\(\(error === null \|\| error === void 0 \? void 0 : error\.name\)\)) === "SecurityError"[\s\S]*?this\.gamepadAccessDenied = true[\s\S]*?this\.gamepadButtons\.clear\(\)[\s\S]*?return/,
   "SecurityError must disable later polls without affecting keyboard or touch input"
 );
 assert.match(indexSource, /js\/game\.js\?v=20260913-diva-elite-v1/);

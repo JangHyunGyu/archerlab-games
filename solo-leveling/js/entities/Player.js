@@ -2,7 +2,7 @@ import { PLAYER_BASE_STATS, RANKS, RANK_ORDER, getXpToNext, COLORS, WORLD_SIZE, 
 import { getCharacter } from '../utils/Characters.js';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, x, y, characterId) {
+    constructor(scene, x, y, characterId) { var __oc0, __oc1;
         const character = getCharacter(characterId);
         const characterTexture = `${character.texturePrefix}_idle_0`;
         const initialTexture = scene.textures.exists(characterTexture) ? characterTexture : 'player_idle_0';
@@ -56,7 +56,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this._hitReactDuration = 0;
         this._lastAfterimageAt = 0;
         this._reducedMotion = typeof window !== 'undefined' &&
-            !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+            !!(((__oc0 = window.matchMedia) === null || __oc0 === void 0 ? void 0 : __oc0.call(window, '(prefers-reduced-motion: reduce)').matches));
         this._allEnemiesFrame = -1;
         this._allEnemiesCache = [];
         this._allEnemiesMergedCache = [];
@@ -91,7 +91,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         // Glow filter (rank-based)
         try {
             this.enableFilters();
-            this._glowFilter = this.filters.internal.addGlow(character.accent ?? 0x7b2fff, 2, 0, 1, false, 8, 8);
+            this._glowFilter = this.filters.internal.addGlow((((__oc1 = character.accent) !== null && __oc1 !== void 0 ? __oc1 : 0x7b2fff)), 2, 0, 1, false, 8, 8);
             this._glowFilter.setActive(true);
         } catch (e) { /* filters not available */ }
 
@@ -148,11 +148,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     _animName(animKey) {
         const prefix = `${this.texturePrefix}_`;
-        return animKey?.startsWith(prefix) ? animKey.slice(prefix.length) : animKey;
+        return ((animKey === null || animKey === void 0 ? void 0 : animKey.startsWith(prefix))) ? animKey.slice(prefix.length) : animKey;
     }
 
-    _usesDirectionalAttackAnimations() {
-        return this.character?.useDirectionalAttackAnimations !== false;
+    _usesDirectionalAttackAnimations() { var __oc2;
+        return (((__oc2 = this.character) === null || __oc2 === void 0 ? void 0 : __oc2.useDirectionalAttackAnimations)) !== false;
     }
 
     update(time, delta) {
@@ -277,15 +277,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.setFlipX(this.facingRight);
     }
 
-    getHurtboxCenter() {
+    getHurtboxCenter() { var __oc3, __oc4, __oc5, __oc6, __oc7, __oc8;
         return {
-            x: this.body?.center?.x ?? this.x,
-            y: this.body?.center?.y ?? this.y,
+            x: (((__oc5 = (__oc4 = (__oc3 = this.body) === null || __oc3 === void 0 ? void 0 : __oc3.center) === null || __oc4 === void 0 ? void 0 : __oc4.x) !== null && __oc5 !== void 0 ? __oc5 : this.x)),
+            y: (((__oc8 = (__oc7 = (__oc6 = this.body) === null || __oc6 === void 0 ? void 0 : __oc6.center) === null || __oc7 === void 0 ? void 0 : __oc7.y) !== null && __oc8 !== void 0 ? __oc8 : this.y)),
         };
     }
 
-    _walkDirectionForAnimation(direction) {
-        if (this.character?.swapHorizontalWalkAnimations && (direction === 'left' || direction === 'right')) {
+    _walkDirectionForAnimation(direction) { var __oc9;
+        if ((((__oc9 = this.character) === null || __oc9 === void 0 ? void 0 : __oc9.swapHorizontalWalkAnimations)) && (direction === 'left' || direction === 'right')) {
             return direction === 'left' ? 'right' : 'left';
         }
         return direction;
@@ -331,7 +331,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this._applyFacingFlip();
     }
 
-    _updateAnimation(time, delta) {
+    _updateAnimation(time, delta) { var __oc10, __oc11;
         const dt = Math.min(delta || 16.67, 50);
         const targetMove = this.isMoving ? this.moveIntensity : 0;
         this._moveBlend += (targetMove - this._moveBlend) * Math.min(1, dt / 90);
@@ -341,7 +341,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this._stepPhase += dt * (0.0085 + speedRatio * 0.0065);
 
         const activeAnim = this._getActiveAnimationKey();
-        if (this.anims?.currentAnim?.key !== activeAnim) {
+        if ((((__oc11 = (__oc10 = this.anims) === null || __oc10 === void 0 ? void 0 : __oc10.currentAnim) === null || __oc11 === void 0 ? void 0 : __oc11.key)) !== activeAnim) {
             this.play(activeAnim, true);
         }
 
@@ -379,7 +379,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this._emitMovementAfterimage(time, speedRatio, walkWeight);
     }
 
-    _emitMovementAfterimage(time, speedRatio, walkWeight) {
+    _emitMovementAfterimage(time, speedRatio, walkWeight) { var __oc12, __oc13;
         if (this._reducedMotion) return;
         if (walkWeight < 0.55 || speedRatio < 0.45 || this._attackPose.active || this._hitReactTimer > 0) return;
         if (time - this._lastAfterimageAt < 105) return;
@@ -393,7 +393,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             )
                 .setDepth(this.depth - 1)
                 .setAlpha(0.18)
-                .setTint(this.character?.accent ?? 0x7b2fff)
+                .setTint((((__oc13 = (__oc12 = this.character) === null || __oc12 === void 0 ? void 0 : __oc12.accent) !== null && __oc13 !== void 0 ? __oc13 : 0x7b2fff)))
                 .setBlendMode(Phaser.BlendModes.ADD)
                 .setScale(this.scaleX * 0.99, this.scaleY * 0.99)
                 .setRotation(this.rotation)
@@ -411,8 +411,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         } catch (e) { /* afterimage optional */ }
     }
 
-    _emitAttackAfterimage() {
-        if (this._reducedMotion || !this.scene?.add?.sprite || !this.texture?.key) return;
+    _emitAttackAfterimage() { var __oc14, __oc15, __oc16, __oc17, __oc18, __oc19;
+        if (this._reducedMotion || !(((__oc15 = (__oc14 = this.scene) === null || __oc14 === void 0 ? void 0 : __oc14.add) === null || __oc15 === void 0 ? void 0 : __oc15.sprite)) || !(((__oc16 = this.texture) === null || __oc16 === void 0 ? void 0 : __oc16.key))) return;
         const angle = this._attackPose.angle || 0;
         try {
             const echo = this.scene.add.sprite(
@@ -422,25 +422,25 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             )
                 .setDepth(this.depth - 1)
                 .setAlpha(0.24)
-                .setTint(this.character?.accent ?? 0x7b2fff)
+                .setTint((((__oc18 = (__oc17 = this.character) === null || __oc17 === void 0 ? void 0 : __oc17.accent) !== null && __oc18 !== void 0 ? __oc18 : 0x7b2fff)))
                 .setBlendMode(Phaser.BlendModes.ADD)
                 .setScale((this.scaleX || this.visualBaseScale) * 1.04, (this.scaleY || this.visualBaseScale) * 1.04)
                 .setRotation(this.rotation || 0)
                 .setFlipX(!!this.flipX);
 
-            this.scene.tweens?.add({
-                targets: echo,
-                alpha: 0,
-                scaleX: echo.scaleX * 1.05,
-                scaleY: echo.scaleY * 1.05,
-                duration: 175,
-                ease: 'Quad.Out',
-                onComplete: () => echo.destroy(),
-            });
+            (((__oc19 = this.scene.tweens) === null || __oc19 === void 0 ? void 0 : __oc19.add({
+        targets: echo,
+        alpha: 0,
+        scaleX: echo.scaleX * 1.05,
+        scaleY: echo.scaleY * 1.05,
+        duration: 175,
+        ease: 'Quad.Out',
+        onComplete: () => echo.destroy(),
+    })));
         } catch (e) { /* afterimage optional */ }
     }
 
-    _sampleAttackPose(delta) {
+    _sampleAttackPose(delta) { var __oc20, __oc21;
         const pose = this._attackPose;
         if (!pose.active) {
             return { lean: 0, twist: 0, scaleX: 0, scaleY: 0 };
@@ -496,13 +496,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         // The authored limbs now carry the action. Caster gestures need a
         // quieter root than a claw strike, rather than the same full-body
         // sword lunge on all five characters.
-        const rootWeight = this._reducedMotion ? 0 : ({
-            shadowMonarch: 0.7,
-            lightSwordswoman: 0.55,
-            whiteTigerBrawler: 0.85,
-            flameMage: 0.28,
-            sanctuaryHealer: 0.2,
-        }[this.character?.id] ?? 1);
+        const rootWeight = this._reducedMotion ? 0 : (((__oc21 = {
+        shadowMonarch: 0.7,
+        lightSwordswoman: 0.55,
+        whiteTigerBrawler: 0.85,
+        flameMage: 0.28,
+        sanctuaryHealer: 0.2,
+    }[(__oc20 = this.character) === null || __oc20 === void 0 ? void 0 : __oc20.id]) !== null && __oc21 !== void 0 ? __oc21 : 1));
         return { lean: lean * rootWeight, twist: twist * rootWeight,
             scaleX: scaleX * rootWeight, scaleY: scaleY * rootWeight };
     }
@@ -734,8 +734,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
                 quantity: 2,
             });
             wisps.setDepth(11);
-            scene.time.delayedCall(1200, () => {
-                if (!scene.scene?.isActive?.() || !wisps.scene) return;
+            scene.time.delayedCall(1200, () => { var __oc22, __oc23;
+                if (!(((__oc23 = (__oc22 = scene.scene) === null || __oc22 === void 0 ? void 0 : __oc22.isActive) === null || __oc23 === void 0 ? void 0 : __oc23.call(__oc22))) || !wisps.scene) return;
                 wisps.stop();
                 scene.time.delayedCall(1600, () => {
                     if (burst.scene) burst.destroy();
@@ -766,15 +766,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             angle: this.facingRight ? 90 : -90,
             duration: 600,
             ease: 'Power2',
-            onComplete: () => {
-                if (!this.scene || !scene.scene?.isActive?.()) return;
+            onComplete: () => { var __oc24, __oc25;
+                if (!this.scene || !(((__oc25 = (__oc24 = scene.scene) === null || __oc24 === void 0 ? void 0 : __oc24.isActive) === null || __oc25 === void 0 ? void 0 : __oc25.call(__oc24)))) return;
                 // Dissolve into shadow
                 scene.tweens.add({
                     targets: this,
                     alpha: 0,
                     duration: 500,
-                    onComplete: () => {
-                        if (!this.scene || !scene.scene?.isActive?.()) return;
+                    onComplete: () => { var __oc26, __oc27;
+                        if (!this.scene || !(((__oc27 = (__oc26 = scene.scene) === null || __oc26 === void 0 ? void 0 : __oc26.isActive) === null || __oc27 === void 0 ? void 0 : __oc27.call(__oc26)))) return;
                         // Hide aura
                         if (this.aura) this.aura.setAlpha(0);
                         scene.onPlayerDeath();
@@ -873,8 +873,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    _recalcStat(statKey, bonusPerLevel) {
-        const base = this.baseStats?.[statKey] ?? PLAYER_BASE_STATS[statKey];
+    _recalcStat(statKey, bonusPerLevel) { var __oc28, __oc29;
+        const base = (((__oc29 = (__oc28 = this.baseStats) === null || __oc28 === void 0 ? void 0 : __oc28[statKey]) !== null && __oc29 !== void 0 ? __oc29 : PLAYER_BASE_STATS[statKey]));
         const lvl = this.passiveLevels[statKey] || 0;
 
         // Diminishing returns: each stack is worth slightly less than the previous
@@ -912,11 +912,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     }
 
-    getAllEnemies() {
-        const frame = this.scene?.game?.loop?.frame ?? 0;
+    getAllEnemies() { var __oc30, __oc31, __oc32, __oc33, __oc34;
+        const frame = (((__oc33 = (__oc32 = (__oc31 = (__oc30 = this.scene) === null || __oc30 === void 0 ? void 0 : __oc30.game) === null || __oc31 === void 0 ? void 0 : __oc31.loop) === null || __oc32 === void 0 ? void 0 : __oc32.frame) !== null && __oc33 !== void 0 ? __oc33 : 0));
         if (this._allEnemiesFrame === frame) return this._allEnemiesCache;
 
-        const enemies = this.scene.enemyManager?.getActiveEnemies() || [];
+        const enemies = (((__oc34 = this.scene.enemyManager) === null || __oc34 === void 0 ? void 0 : __oc34.getActiveEnemies())) || [];
         const bosses = this.scene.activeBosses || [];
         if (!bosses.length) {
             this._allEnemiesCache = enemies;
@@ -928,7 +928,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         merged.length = 0;
         for (const enemy of enemies) merged.push(enemy);
         for (const boss of bosses) {
-            if (boss?.active) merged.push(boss);
+            if (((boss === null || boss === void 0 ? void 0 : boss.active))) merged.push(boss);
         }
         this._allEnemiesCache = merged;
         this._allEnemiesFrame = frame;
@@ -951,8 +951,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         return closest;
     }
 
-    destroy(fromScene) {
-        if (this.scene?.tweens) {
+    destroy(fromScene) { var __oc35;
+        if ((((__oc35 = this.scene) === null || __oc35 === void 0 ? void 0 : __oc35.tweens))) {
             this.scene.tweens.killTweensOf(this);
             if (this.aura) this.scene.tweens.killTweensOf(this.aura);
         }

@@ -1183,9 +1183,9 @@ class SoundManager {
         this.stopAmbient();
         const synths = [this._membrane, this._bass, this._click, this._bell,
                         this._poly, this._fm, this._am, this._metal, this._sweep, this._noise];
-        for (const s of synths) { try { if (s?.dispose) s.dispose(); } catch(e) {} }
+        for (const s of synths) { try { if (((s === null || s === void 0 ? void 0 : s.dispose))) s.dispose(); } catch(e) {} }
         for (const node of [this._reverb, this._compressor, this._dryChannel, this._wetChannel]) {
-            try { if (node?.dispose) node.dispose(); } catch(e) {}
+            try { if (((node === null || node === void 0 ? void 0 : node.dispose))) node.dispose(); } catch(e) {}
         }
         for (const node of [this._masterSum, this._limiter, this._outputGain]) {
             try { if (node && node.disconnect) node.disconnect(); } catch(e) {}

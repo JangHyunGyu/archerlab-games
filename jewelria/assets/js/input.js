@@ -36,10 +36,10 @@ export class InputController {
       x: event.clientX,
       y: event.clientY
     };
-    try { cell.setPointerCapture(event.pointerId); } catch {}
+    try { cell.setPointerCapture(event.pointerId); } catch (_err) {}
   }
 
-  onPointerUp(event) {
+  onPointerUp(event) { var __oc0, __oc1, __oc2, __oc3;
     if (!this.enabled || !this.pointerStart) return;
     const start = this.pointerStart;
     this.pointerStart = null;
@@ -53,17 +53,17 @@ export class InputController {
         row: start.row + (absY > absX ? Math.sign(dy) : 0),
         col: start.col + (absX >= absY ? Math.sign(dx) : 0)
       };
-      this.callbacks.swipe?.({ row: start.row, col: start.col }, to);
+      (((__oc1 = (__oc0 = this.callbacks).swipe) === null || __oc1 === void 0 ? void 0 : __oc1.call(__oc0, { row: start.row, col: start.col }, to)));
       return;
     }
-    this.callbacks.tap?.({ row: start.row, col: start.col });
+    (((__oc3 = (__oc2 = this.callbacks).tap) === null || __oc3 === void 0 ? void 0 : __oc3.call(__oc2, { row: start.row, col: start.col })));
   }
 
   onPointerCancel() {
     this.pointerStart = null;
   }
 
-  onKeyDown(event) {
+  onKeyDown(event) { var __oc4, __oc5;
     if (!this.enabled) return;
     const keyMap = {
       ArrowUp: { row: -1, col: 0 },
@@ -74,6 +74,6 @@ export class InputController {
     const dir = keyMap[event.key];
     if (!dir) return;
     event.preventDefault();
-    this.callbacks.keyboardMove?.(dir);
+    (((__oc5 = (__oc4 = this.callbacks).keyboardMove) === null || __oc5 === void 0 ? void 0 : __oc5.call(__oc4, dir)));
   }
 }

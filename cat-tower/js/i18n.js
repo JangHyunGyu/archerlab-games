@@ -156,11 +156,11 @@
     try {
       const requested = new URLSearchParams(location.search).get('lang');
       if (requested === 'ko' || requested === 'en') return requested;
-    } catch {}
+    } catch (_err) {}
     try {
       const saved = localStorage.getItem(LANG_KEY);
       if (saved === 'ko' || saved === 'en') return saved;
-    } catch {}
+    } catch (_err) {}
     // 브라우저 언어 감지
     const nav = (navigator.language || 'ko').toLowerCase();
     return nav.startsWith('ko') ? 'ko' : 'en';
@@ -171,7 +171,7 @@
     let v = dict[key];
     if (v == null) v = STRINGS.ko[key] || key;
     if (vars) {
-      for (const k in vars) v = v.replaceAll('{' + k + '}', vars[k]);
+      for (const k in vars) v = v.split('{' + k + '}').join(vars[k]);
     }
     return v;
   }
@@ -181,7 +181,7 @@
   function setLang(l) {
     if (l !== 'ko' && l !== 'en') return;
     lang = l;
-    try { localStorage.setItem(LANG_KEY, l); } catch {}
+    try { localStorage.setItem(LANG_KEY, l); } catch (_err) {}
     applyDom();
     document.documentElement.lang = l;
     global.dispatchEvent(new CustomEvent('cattower:langchange', { detail: { lang: l } }));

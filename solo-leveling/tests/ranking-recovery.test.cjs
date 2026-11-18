@@ -22,7 +22,7 @@ assert.match(gameScene, /let rankSyncFailed = this\._rankSyncDisabled;/);
 assert.match(gameScene, /rankSyncDisabled: this\._rankSyncDisabled/);
 assert.doesNotMatch(gameScene, /if \(this\._rankSyncFailed \|\| !this\.enemyManager/);
 assert.match(gameOverScene, /if \(!this\.finalData\.rankSyncDisabled\) \{\s+this\._reportRankSubmitError/);
-assert.match(gameOverScene, /data\?\.rankSyncDisabled \|\| data\?\.__viewState === 'stats'/);
+assert.match(gameOverScene, /(?:data\?\.rankSyncDisabled \|\| data\?\.__viewState === 'stats'|\(\(data === null \|\| data === void 0 \? void 0 : data\.rankSyncDisabled\)\) \|\| \(\(data === null \|\| data === void 0 \? void 0 : data\.__viewState\)\) === 'stats')/);
 assert.match(gameOverScene, /this\.finalData\.rankSyncDisabled\s+\? t\('continuedRunUnranked'\)/);
 assert.equal((i18n.match(/continuedRunUnranked:/g) || []).length, 3);
 assert.match(main, /GameScene\.js\?v=20260928-locale-exports-v1/);

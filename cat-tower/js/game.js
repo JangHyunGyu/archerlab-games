@@ -77,22 +77,22 @@
 
   // 전역 에러 핸들러 — 게임 내 어떤 예외든 바로 캐치 + 원격 전송
   if (!window.ArcherLabClientErrorReporter) {
-  window.addEventListener('error', (e) => {
+  window.addEventListener('error', (e) => { var __oc0, __oc1, __oc2;
     const src = (e.filename || '') + ':' + e.lineno + ':' + e.colno;
-    console.error('[CT✖]', _ts(), 'uncaught:', e.message, 'at', src, e.error?.stack || '');
-    _remoteError(e.error?.name || 'Error', e.message, e.error?.stack || '', src);
+    console.error('[CT✖]', _ts(), 'uncaught:', e.message, 'at', src, (((__oc0 = e.error) === null || __oc0 === void 0 ? void 0 : __oc0.stack)) || '');
+    _remoteError((((__oc1 = e.error) === null || __oc1 === void 0 ? void 0 : __oc1.name)) || 'Error', e.message, (((__oc2 = e.error) === null || __oc2 === void 0 ? void 0 : __oc2.stack)) || '', src);
   });
   window.addEventListener('unhandledrejection', (e) => {
     const reason = e.reason;
-    const msg = reason?.message || String(reason || 'Unhandled rejection');
-    console.error('[CT✖]', _ts(), 'unhandled promise:', msg, reason?.stack || '');
-    _remoteError('UnhandledRejection', msg, reason?.stack || '', location.href);
+    const msg = ((reason === null || reason === void 0 ? void 0 : reason.message)) || String(reason || 'Unhandled rejection');
+    console.error('[CT✖]', _ts(), 'unhandled promise:', msg, ((reason === null || reason === void 0 ? void 0 : reason.stack)) || '');
+    _remoteError('UnhandledRejection', msg, ((reason === null || reason === void 0 ? void 0 : reason.stack)) || '', location.href);
   });
   }
 
   // NaN 바디 감지 — 물리가 터지면 즉시 알림
   let _lastNanWarnAt = 0;
-  function assertBodiesFinite(label, bodiesSnapshot = null) {
+  function assertBodiesFinite(label, bodiesSnapshot = null) { var __oc3;
     if (!world) return;
     const now = performance.now();
     if (now - _lastNanWarnAt < 500) return; // 중복 알림 스팸 방지
@@ -100,7 +100,7 @@
       if (b.label !== 'cat') continue;
       if (!Number.isFinite(b.position.x) || !Number.isFinite(b.position.y)
           || !Number.isFinite(b.velocity.x) || !Number.isFinite(b.velocity.y)) {
-        err(`NaN body detected at [${label}] tier=${b.cat?.tier} pos=(${b.position.x}, ${b.position.y}) vel=(${b.velocity.x}, ${b.velocity.y}) mass=${b.mass} invMass=${b.inverseMass}`);
+        err(`NaN body detected at [${label}] tier=${(((__oc3 = b.cat) === null || __oc3 === void 0 ? void 0 : __oc3.tier))} pos=(${b.position.x}, ${b.position.y}) vel=(${b.velocity.x}, ${b.velocity.y}) mass=${b.mass} invMass=${b.inverseMass}`);
         _lastNanWarnAt = now;
         return;
       }
@@ -245,12 +245,12 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return 0;
       return JSON.parse(raw).best || 0;
-    } catch { return 0; }
+    } catch (_err) { return 0; }
   }
   function saveBest(v) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ best: v }));
-    } catch {}
+    } catch (_err) {}
   }
 
   // ── 진행중 게임 스냅샷 저장/복원 ──
@@ -260,7 +260,7 @@
     saveDirty = true;
   }
 
-  function autoSave(force = false, bodiesSnapshot = null) {
+  function autoSave(force = false, bodiesSnapshot = null) { var __oc4;
     if (!running || gameOver || !world) return;
     const now = performance.now();
     if (!force) {
@@ -283,7 +283,7 @@
           : null,
         nextTier,
         score,
-        rankSessionId: rankSessionId || window.ArcherRanking?.sessionId(GAME_ID),
+        rankSessionId: rankSessionId || (((__oc4 = window.ArcherRanking) === null || __oc4 === void 0 ? void 0 : __oc4.sessionId(GAME_ID))),
         rankEventQueue: getRankEventQueueSnapshot(),
         rankNextEventSeq,
         reachedFinal,
@@ -295,7 +295,7 @@
     } catch (_) { /* quota / privacy mode */ }
   }
   function clearSave() {
-    try { localStorage.removeItem(SAVE_KEY); } catch {}
+    try { localStorage.removeItem(SAVE_KEY); } catch (_err) {}
     saveDirty = false;
     lastAutoSaveAt = 0;
   }
@@ -306,13 +306,13 @@
       const data = JSON.parse(raw);
       // 진행도 없는 저장본은 이어서할 가치가 없음 — 버튼 감춤
       return (data.score > 0) || (Array.isArray(data.cats) && data.cats.length > 0);
-    } catch { return false; }
+    } catch (_err) { return false; }
   }
   function getSavedScore() {
     try {
       const data = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}');
       return data.score || 0;
-    } catch { return 0; }
+    } catch (_err) { return 0; }
   }
 
   // -------- 캔버스 & 리사이즈 --------
@@ -382,8 +382,8 @@
     if (rankSessionId) return Promise.resolve(rankSessionId);
     if (!rankSessionPromise) {
       const token = rankRunToken;
-      rankSessionPromise = createRankSession().catch((e) => {
-        window.ArcherLabClientErrorReporter?.reportCodeException?.(e, { phase: 'rank-session' }, 'ranking_client_exception');
+      rankSessionPromise = createRankSession().catch((e) => { var __oc5, __oc6;
+        (((__oc6 = (__oc5 = window.ArcherLabClientErrorReporter) === null || __oc5 === void 0 ? void 0 : __oc5.reportCodeException) === null || __oc6 === void 0 ? void 0 : __oc6.call(__oc5, e, { phase: 'rank-session' }, 'ranking_client_exception')));
         warn('rank session create failed:', e.message);
         return null;
       }).finally(() => {
@@ -424,13 +424,13 @@
     if (rankEventQueue.length > 0 && !rankSyncFailed) flushRankEvents();
   }
 
-  function queueRankScoreEvent(event) {
+  function queueRankScoreEvent(event) { var __oc7;
     if (rankSyncFailed || !event) return;
     const normalized = normalizeRankScoreEvent(event);
     if (!normalized) return;
     if (!Number.isFinite(normalized.seq)) normalized.seq = rankNextEventSeq++;
     else rankNextEventSeq = Math.max(rankNextEventSeq, normalized.seq + 1);
-    window.ArcherRanking?.track(GAME_ID, normalized, rankSessionId);
+    (((__oc7 = window.ArcherRanking) === null || __oc7 === void 0 ? void 0 : __oc7.track(GAME_ID, normalized, rankSessionId)));
     rankEventQueue.push(normalized);
     markSaveDirty();
     flushRankEvents();
@@ -471,7 +471,7 @@
         markSaveDirty();
       }
       return true;
-    })().catch((e) => {
+    })().catch((e) => { var __oc8, __oc9;
       if (token !== rankRunToken) return false;
       if ((e.status === 404 || e.status === 410) && canRestartRankSessionFromQueue()) {
         rankSessionId = null;
@@ -479,7 +479,7 @@
       } else if (e.status && e.status >= 400 && e.status < 500 && e.status !== 429) {
         rankSyncFailed = true;
       }
-      window.ArcherLabClientErrorReporter?.reportCodeException?.(e, { phase: 'rank-sync' }, 'ranking_client_exception');
+      (((__oc9 = (__oc8 = window.ArcherLabClientErrorReporter) === null || __oc8 === void 0 ? void 0 : __oc8.reportCodeException) === null || __oc9 === void 0 ? void 0 : __oc9.call(__oc8, e, { phase: 'rank-sync' }, 'ranking_client_exception')));
       warn('rank event sync failed:', e.message);
       return false;
     }).finally(() => {
@@ -726,10 +726,10 @@
         scoreDelta += bonus;
         score += bonus;
         showComboFlash(comboCount);
-        sound?.playCombo(comboCount);
+        ((sound === null || sound === void 0 ? void 0 : sound.playCombo(comboCount)));
         log(`콤보! ${comboCount}연쇄 +${bonus}pt`);
       } else {
-        sound?.playMerge(tier + 1);
+        ((sound === null || sound === void 0 ? void 0 : sound.playMerge(tier + 1)));
       }
 
       mergeEffects.push(createMergeEffect(midX, midY, TIERS[tier + 1].radius, '#FFB84D', false));
@@ -740,7 +740,7 @@
       if (tier + 1 === TIERS.length - 1 && !reachedFinal) {
         reachedFinal = true;
         showFlash(tt('flash.legend'), true);
-        sound?.playLegend();
+        ((sound === null || sound === void 0 ? void 0 : sound.playLegend()));
         log('사바나 최초 달성!');
       }
     } else {
@@ -749,7 +749,7 @@
       score += scoreDelta;
       mergeEffects.push(createMergeEffect(midX, midY, TIERS[tier].radius * 1.3, '#F2B43A', true));
       queueRankScoreEvent({ type: 'final_merge', tier, delta: scoreDelta });
-      sound?.playFinalMerge();
+      ((sound === null || sound === void 0 ? void 0 : sound.playFinalMerge()));
       log(`최종단계 소멸 (tier ${tier}) +${TIERS[tier].score * 2}pt score=${score}`);
     }
     updateScoreUI();
@@ -809,7 +809,7 @@
   }
 
   // merge 아닌 충돌(바닥/벽/다른 티어)에만 짧은 "톡" 재생
-  function handleBonk(evt) {
+  function handleBonk(evt) { var __oc10, __oc11, __oc12, __oc13;
     if (gameOver) return;
     const now = performance.now();
     for (const pair of evt.pairs) {
@@ -823,8 +823,8 @@
       if (aIsCat && now - a.cat.spawnedAt < BONK_DROP_GRACE_MS) continue;
       if (bIsCat && now - b.cat.spawnedAt < BONK_DROP_GRACE_MS) continue;
 
-      const vax = a.velocity?.x || 0, vay = a.velocity?.y || 0;
-      const vbx = b.velocity?.x || 0, vby = b.velocity?.y || 0;
+      const vax = (((__oc10 = a.velocity) === null || __oc10 === void 0 ? void 0 : __oc10.x)) || 0, vay = (((__oc11 = a.velocity) === null || __oc11 === void 0 ? void 0 : __oc11.y)) || 0;
+      const vbx = (((__oc12 = b.velocity) === null || __oc12 === void 0 ? void 0 : __oc12.x)) || 0, vby = (((__oc13 = b.velocity) === null || __oc13 === void 0 ? void 0 : __oc13.y)) || 0;
       const dvx = vax - vbx, dvy = vay - vby;
       const speed = Math.sqrt(dvx * dvx + dvy * dvy);
       if (speed < BONK_TRIGGER_SPEED) continue;
@@ -841,7 +841,7 @@
       const intensity = Math.min(1, (speed - BONK_TRIGGER_SPEED) / 9 + 0.2);
       const tier = aIsCat ? a.cat.tier : b.cat.tier;
       createLandingDustEffect(pair, intensity, tier);
-      sound?.playBonk(intensity, tier);
+      ((sound === null || sound === void 0 ? void 0 : sound.playBonk(intensity, tier)));
     }
   }
 
@@ -922,11 +922,11 @@
     log(`spawnCurrent tier=${tier}(${TIERS[tier].name}) next=${nextTier}`);
   }
 
-  function spawnCircleHitsCat(tier, x) {
+  function spawnCircleHitsCat(tier, x) { var __oc14, __oc15;
     const radius = TIERS[tier].radius;
     const bodies = Composite.allBodies(world).filter(b => b.label === 'cat' && !b.isStatic);
     for (const body of bodies) {
-      const other = TIERS[body.cat?.tier]?.radius || body.circleRadius || 0;
+      const other = (((__oc15 = TIERS[(__oc14 = body.cat) === null || __oc14 === void 0 ? void 0 : __oc14.tier]) === null || __oc15 === void 0 ? void 0 : __oc15.radius)) || body.circleRadius || 0;
       const dx = body.position.x - x;
       const dy = body.position.y - SPAWN_Y;
       const reach = radius + other;
@@ -973,7 +973,7 @@
       err(`dropCurrent: setStatic(false) 후 mass 이상 mass=${currentCat.mass} invMass=${currentCat.inverseMass} — _original이 누락됐을 가능성 (createCat 수정 회귀?)`);
     }
     currentCat.cat.spawnedAt = performance.now();
-    sound?.playDrop(tier);
+    ((sound === null || sound === void 0 ? void 0 : sound.playDrop(tier)));
     markSaveDirty();
     log(`dropCurrent tier=${tier} at (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)})`);
     currentCat = null;
@@ -1077,12 +1077,12 @@
     if (isNew) nr.classList.remove('hidden'); else nr.classList.add('hidden');
     resetRankSubmit();
     show(modals.gameover);
-    sound?.playGameOver();
+    ((sound === null || sound === void 0 ? void 0 : sound.playGameOver()));
     if (isNew) {
       if (newRecordTimeoutId) clearTimeout(newRecordTimeoutId);
       newRecordTimeoutId = setTimeout(() => {
         newRecordTimeoutId = null;
-        sound?.playNewRecord();
+        ((sound === null || sound === void 0 ? void 0 : sound.playNewRecord()));
       }, 1600);
     }
   }
@@ -1356,7 +1356,7 @@
     // 이전 게임의 pending 사운드/타이머 취소
     if (newRecordTimeoutId) { clearTimeout(newRecordTimeoutId); newRecordTimeoutId = null; }
     if (dropCooldownTimeoutId) { clearTimeout(dropCooldownTimeoutId); dropCooldownTimeoutId = null; }
-    sound?.stopAll();
+    ((sound === null || sound === void 0 ? void 0 : sound.stopAll()));
     clearSave();
     score = 0;
     comboCount = 0;
@@ -1406,7 +1406,7 @@
       // 이전 게임 상태 정리 (startGame과 동일한 루틴)
       if (newRecordTimeoutId) { clearTimeout(newRecordTimeoutId); newRecordTimeoutId = null; }
       if (dropCooldownTimeoutId) { clearTimeout(dropCooldownTimeoutId); dropCooldownTimeoutId = null; }
-      sound?.stopAll();
+      ((sound === null || sound === void 0 ? void 0 : sound.stopAll()));
       score = data.score || 0;
       comboCount = 0;      // 콤보 체인은 performance.now 기반이라 리로드 후 의미 없음
       lastMergeAt = 0;
@@ -1509,7 +1509,7 @@
     updateCurrentCatLabel(null);
     if (newRecordTimeoutId) { clearTimeout(newRecordTimeoutId); newRecordTimeoutId = null; }
     if (dropCooldownTimeoutId) { clearTimeout(dropCooldownTimeoutId); dropCooldownTimeoutId = null; }
-    sound?.stopAll();
+    ((sound === null || sound === void 0 ? void 0 : sound.stopAll()));
     landingDustEffects.length = 0;
     hide(modals.gameover);
     hide(screens.game);
@@ -1625,7 +1625,7 @@
       content.innerHTML = `<div class="rank-empty">${tt('rank.empty')}</div>`;
       return;
     }
-    const myName = (function () { try { return localStorage.getItem(NICK_KEY) || ''; } catch { return ''; } })();
+    const myName = (function () { try { return localStorage.getItem(NICK_KEY) || ''; } catch (_err) { return ''; } })();
     const html = rows.map((r, i) => {
       const pos = r.rank || (i + 1);
       const isMe = myName && r.player_name === myName;
@@ -1669,9 +1669,9 @@
         if (!rankSessionId || !synced || rankSyncFailed) throw new Error('rank score sync failed');
         res = await submitScore(name, score);
       }
-      try { localStorage.setItem(NICK_KEY, name); } catch {}
+      try { localStorage.setItem(NICK_KEY, name); } catch (_err) {}
       status.className = 'submit-status ok';
-      status.textContent = res?.pending ? tt('over.submitPending') : tt('over.submitOk') + (res && res.rank ? ` (#${res.rank})` : '');
+      status.textContent = ((res === null || res === void 0 ? void 0 : res.pending)) ? tt('over.submitPending') : tt('over.submitOk') + (res && res.rank ? ` (#${res.rank})` : '');
       setRankSubmitLoading(false);
       log(`랭킹 등록 성공: ${name} = ${score} rank=${res && res.rank}`);
     } catch (e) {
@@ -1715,7 +1715,7 @@
     setRankSubmitLoading(false);
     status.textContent = '';
     status.className = 'submit-status';
-    try { inp.value = localStorage.getItem(NICK_KEY) || ''; } catch { inp.value = ''; }
+    try { inp.value = localStorage.getItem(NICK_KEY) || ''; } catch (_err) { inp.value = ''; }
     // 점수 0은 등록 의미 없음 — 입력 영역 숨김
     row.style.display = score > 0 ? '' : 'none';
   }
@@ -1764,13 +1764,13 @@
       playBtn.disabled = true;
       playBtn.textContent = tt('menu.loading');
 
-      $('how-btn').addEventListener('click', () => { sound?.playButton(); log('UI: how 열기'); show(modals.how); });
-      $('how-close').addEventListener('click', () => { sound?.playButton(); log('UI: how 닫기'); hide(modals.how); });
+      $('how-btn').addEventListener('click', () => { ((sound === null || sound === void 0 ? void 0 : sound.playButton())); log('UI: how 열기'); show(modals.how); });
+      $('how-close').addEventListener('click', () => { ((sound === null || sound === void 0 ? void 0 : sound.playButton())); log('UI: how 닫기'); hide(modals.how); });
 
       // 홈 버튼 (HUD) — 바로 메인 메뉴로. 진행중이면 자동저장이 걸려있어 '이어서 하기'로 복귀 가능
-      $('home-btn').addEventListener('click', () => { sound?.playButton(); log('UI: 홈 클릭'); exitToMenu(); });
-      $('replay-btn').addEventListener('click', () => { sound?.playButton(); log('UI: 다시도전 클릭'); hide(modals.gameover); startGame(); });
-      $('menu-btn').addEventListener('click', () => { sound?.playButton(); exitToMenu(); });
+      $('home-btn').addEventListener('click', () => { ((sound === null || sound === void 0 ? void 0 : sound.playButton())); log('UI: 홈 클릭'); exitToMenu(); });
+      $('replay-btn').addEventListener('click', () => { ((sound === null || sound === void 0 ? void 0 : sound.playButton())); log('UI: 다시도전 클릭'); hide(modals.gameover); startGame(); });
+      $('menu-btn').addEventListener('click', () => { ((sound === null || sound === void 0 ? void 0 : sound.playButton())); exitToMenu(); });
 
       // 사운드 토글
       const soundBtn = $('sound-btn');
@@ -1787,12 +1787,12 @@
       }
 
       // 랭킹 모달
-      $('rank-btn').addEventListener('click', () => { sound?.playButton(); log('UI: 랭킹 클릭'); openRankModal(); });
-      $('rank-close').addEventListener('click', () => { sound?.playButton(); hide(modals.rank); });
+      $('rank-btn').addEventListener('click', () => { ((sound === null || sound === void 0 ? void 0 : sound.playButton())); log('UI: 랭킹 클릭'); openRankModal(); });
+      $('rank-close').addEventListener('click', () => { ((sound === null || sound === void 0 ? void 0 : sound.playButton())); hide(modals.rank); });
 
       // 게임오버 랭킹 등록 / Skip
-      $('submit-rank-btn').addEventListener('click', () => { sound?.playButton(); handleSubmitRank(); });
-      $('skip-rank-btn').addEventListener('click', () => { sound?.playButton(); handleSkipRank(); });
+      $('submit-rank-btn').addEventListener('click', () => { ((sound === null || sound === void 0 ? void 0 : sound.playButton())); handleSubmitRank(); });
+      $('skip-rank-btn').addEventListener('click', () => { ((sound === null || sound === void 0 ? void 0 : sound.playButton())); handleSkipRank(); });
       $('nickname-input').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); handleSubmitRank(); }
       });
@@ -1808,7 +1808,7 @@
         });
       }
       updateLangButtons();
-      window.addEventListener('cattower:langchange', () => {
+      window.addEventListener('cattower:langchange', () => { var __oc16;
         updateLangButtons();
         // 티어 프리뷰는 텍스트에 언어별 고양이 이름이 들어있어 재생성 필요
         buildTierPreview();
@@ -1817,7 +1817,7 @@
         pb.textContent = tt(playLabelState === 'failed' ? 'menu.loadFail' : playLabelState === 'loading' ? 'menu.loading' : 'menu.play');
         // 이어서 버튼은 점수 suffix가 붙어있어 applyDom 대신 직접 재갱신
         updateMenuResumeButton();
-        updateCurrentCatLabel(currentCat?.cat?.tier);
+        updateCurrentCatLabel((((__oc16 = currentCat === null || currentCat === void 0 ? void 0 : currentCat.cat) === null || __oc16 === void 0 ? void 0 : __oc16.tier)));
         updateNextCatLabel();
       });
 
@@ -1832,9 +1832,9 @@
 
       playBtn.addEventListener('click', () => {
         // 첫 user gesture에서 AudioContext 초기화 (iOS/Safari 대응)
-        sound?.ensureContext();
-        sound?.playButton();
-        if (sound?.enabled) {
+        ((sound === null || sound === void 0 ? void 0 : sound.ensureContext()));
+        ((sound === null || sound === void 0 ? void 0 : sound.playButton()));
+        if (((sound === null || sound === void 0 ? void 0 : sound.enabled))) {
           try {
             const catSfx = new Audio('sound/stu9-cute-cat-352656.mp3');
             catSfx.volume = 0.8;
@@ -1851,8 +1851,8 @@
       const resumeMenuBtn = $('resume-btn-menu');
       if (resumeMenuBtn) {
         resumeMenuBtn.addEventListener('click', () => {
-          sound?.ensureContext();
-          sound?.playButton();
+          ((sound === null || sound === void 0 ? void 0 : sound.ensureContext()));
+          ((sound === null || sound === void 0 ? void 0 : sound.playButton()));
           log('UI: 이어서 하기 클릭');
           hide(screens.menu);
           show(screens.game);
@@ -1869,7 +1869,7 @@
         buildGameTierStrip();
         // 사운드 합성 그래프 선행 구축 — AudioContext는 suspended지만 노드/reverb IR 생성은 가능.
         // 첫 플레이 시 Tone.js 초기화 블로킹으로 인한 100ms+ 히치 제거.
-        try { sound?.init(); log('SoundManager pre-init 완료'); } catch (e) { warn('SoundManager pre-init 실패:', e.message); }
+        try { ((sound === null || sound === void 0 ? void 0 : sound.init())); log('SoundManager pre-init 완료'); } catch (e) { warn('SoundManager pre-init 실패:', e.message); }
         playLabelState = 'ready';
         playBtn.disabled = false;
         playBtn.textContent = tt('menu.play');
@@ -1880,12 +1880,12 @@
       }
 
       // 키보드 접근성
-      window.addEventListener('keydown', (e) => {
+      window.addEventListener('keydown', (e) => { var __oc17;
         if (running && !gameOver && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')
-            && document.activeElement?.tagName !== 'INPUT') {
+            && (((__oc17 = document.activeElement) === null || __oc17 === void 0 ? void 0 : __oc17.tagName)) !== 'INPUT') {
           e.preventDefault();
           pointerX = Math.max(0, Math.min(FIELD_W, pointerX + (e.key === 'ArrowLeft' ? -18 : 18)));
-          if (currentCat?.isStatic) {
+          if (((currentCat === null || currentCat === void 0 ? void 0 : currentCat.isStatic))) {
             const r = TIERS[currentCat.cat.tier].radius;
             Body.setPosition(currentCat, { x: Math.max(r, Math.min(FIELD_W - r, pointerX)), y: SPAWN_Y });
           }

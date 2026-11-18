@@ -77,10 +77,10 @@
         const raw = localStorage.getItem('cat-tower.sound');
         if (raw === null) return true;
         return raw === '1';
-      } catch { return true; }
+      } catch (_err) { return true; }
     }
     _saveEnabled() {
-      try { localStorage.setItem('cat-tower.sound', this.enabled ? '1' : '0'); } catch {}
+      try { localStorage.setItem('cat-tower.sound', this.enabled ? '1' : '0'); } catch (_err) {}
     }
 
     // ── Initialization ────────────────────────────────────────────
@@ -269,7 +269,7 @@
         if (!ctx) return;
         if (typeof ctx.lookAhead === 'number') ctx.lookAhead = Math.min(ctx.lookAhead, 0.01);
         if (typeof ctx.updateInterval === 'number') ctx.updateInterval = Math.min(ctx.updateInterval, 0.01);
-      } catch {}
+      } catch (_err) {}
     }
 
     _now() {
@@ -281,7 +281,7 @@
         if (raw && typeof raw.currentTime === 'number') {
           return raw.currentTime + this._SCHEDULE_LEAD_SEC;
         }
-      } catch {}
+      } catch (_err) {}
       return Tone.now();
     }
 
@@ -299,7 +299,7 @@
 
     // 대기 중인 모든 레이어 취소 + 활성 신스 음소거
     // (startGame / exitToMenu 호출 시 이전 게임 사운드 꼬리 끊기)
-    stopAll() {
+    stopAll() { var __oc0, __oc1;
       for (const h of this._pendingTimeouts) clearTimeout(h);
       this._pendingTimeouts.clear();
       if (this._mergeTimer) { clearTimeout(this._mergeTimer); this._mergeTimer = null; }
@@ -314,10 +314,10 @@
         const now = this._now();
         // PolySynth: releaseAll, MonoSynth/Synth: triggerRelease
         const polys = [this._poly, this._bell, this._fm, this._am, this._sweep];
-        for (const p of polys) { try { p?.releaseAll?.(now); } catch {} }
+        for (const p of polys) { try { (((__oc0 = p === null || p === void 0 ? void 0 : p.releaseAll) === null || __oc0 === void 0 ? void 0 : __oc0.call(p, now))); } catch (_err) {} }
         const monos = [this._membrane, this._bass, this._click];
-        for (const s of monos) { try { s?.triggerRelease?.(now); } catch {} }
-      } catch {}
+        for (const s of monos) { try { (((__oc1 = s === null || s === void 0 ? void 0 : s.triggerRelease) === null || __oc1 === void 0 ? void 0 : __oc1.call(s, now))); } catch (_err) {} }
+      } catch (_err) {}
     }
 
     _safeTime(t) { return Math.max(t, this._now()); }
@@ -463,17 +463,17 @@
       }, this._COALESCE_MS);
     }
 
-    _playMergeImpl(t) {
+    _playMergeImpl(t) { var __oc2, __oc3, __oc4, __oc5, __oc6, __oc7, __oc8, __oc9;
       const now = this._now();
 
       // 이전 이벤트의 잔향/꼬리 즉시 차단 — 짧은 release로 누적 방지.
       // (인접 merge/combo 사이 wet 경로가 사실상 리셋됨)
       try {
-        this._poly?.releaseAll?.(now);
-        this._bell?.releaseAll?.(now);
-        this._fm?.releaseAll?.(now);
-        this._metal?.triggerRelease?.(now);
-      } catch {}
+        (((__oc3 = (__oc2 = this._poly) === null || __oc2 === void 0 ? void 0 : __oc2.releaseAll) === null || __oc3 === void 0 ? void 0 : __oc3.call(__oc2, now)));
+        (((__oc5 = (__oc4 = this._bell) === null || __oc4 === void 0 ? void 0 : __oc4.releaseAll) === null || __oc5 === void 0 ? void 0 : __oc5.call(__oc4, now)));
+        (((__oc7 = (__oc6 = this._fm) === null || __oc6 === void 0 ? void 0 : __oc6.releaseAll) === null || __oc7 === void 0 ? void 0 : __oc7.call(__oc6, now)));
+        (((__oc9 = (__oc8 = this._metal) === null || __oc8 === void 0 ? void 0 : __oc8.triggerRelease) === null || __oc9 === void 0 ? void 0 : __oc9.call(__oc8, now)));
+      } catch (_err) {}
       this._lastEventAt = performance.now();
       this._armWatchdog();
 
@@ -543,7 +543,7 @@
       }, this._COALESCE_MS);
     }
 
-    _playComboImpl(n) {
+    _playComboImpl(n) { var __oc10, __oc11, __oc12, __oc13, __oc14, __oc15, __oc16, __oc17, __oc18, __oc19, __oc20, __oc21, __oc22, __oc23, __oc24, __oc25, __oc26, __oc27, __oc28, __oc29;
       const now = this._now();
 
       // 이전 모든 보이스 + 펜딩 타이머 강제 해제 — 연쇄 콤보/인접 merge 꼬리 누적으로 인한
@@ -551,17 +551,17 @@
       try {
         for (const h of this._pendingTimeouts) clearTimeout(h);
         this._pendingTimeouts.clear();
-        this._poly?.releaseAll?.(now);
-        this._bell?.releaseAll?.(now);
-        this._fm?.releaseAll?.(now);
-        this._am?.releaseAll?.(now);
-        this._sweep?.releaseAll?.(now);
-        this._membrane?.triggerRelease?.(now);
-        this._metal?.triggerRelease?.(now);
-        this._noise?.triggerRelease?.(now);
-        this._bass?.triggerRelease?.(now);
-        this._click?.triggerRelease?.(now);
-      } catch {}
+        (((__oc11 = (__oc10 = this._poly) === null || __oc10 === void 0 ? void 0 : __oc10.releaseAll) === null || __oc11 === void 0 ? void 0 : __oc11.call(__oc10, now)));
+        (((__oc13 = (__oc12 = this._bell) === null || __oc12 === void 0 ? void 0 : __oc12.releaseAll) === null || __oc13 === void 0 ? void 0 : __oc13.call(__oc12, now)));
+        (((__oc15 = (__oc14 = this._fm) === null || __oc14 === void 0 ? void 0 : __oc14.releaseAll) === null || __oc15 === void 0 ? void 0 : __oc15.call(__oc14, now)));
+        (((__oc17 = (__oc16 = this._am) === null || __oc16 === void 0 ? void 0 : __oc16.releaseAll) === null || __oc17 === void 0 ? void 0 : __oc17.call(__oc16, now)));
+        (((__oc19 = (__oc18 = this._sweep) === null || __oc18 === void 0 ? void 0 : __oc18.releaseAll) === null || __oc19 === void 0 ? void 0 : __oc19.call(__oc18, now)));
+        (((__oc21 = (__oc20 = this._membrane) === null || __oc20 === void 0 ? void 0 : __oc20.triggerRelease) === null || __oc21 === void 0 ? void 0 : __oc21.call(__oc20, now)));
+        (((__oc23 = (__oc22 = this._metal) === null || __oc22 === void 0 ? void 0 : __oc22.triggerRelease) === null || __oc23 === void 0 ? void 0 : __oc23.call(__oc22, now)));
+        (((__oc25 = (__oc24 = this._noise) === null || __oc24 === void 0 ? void 0 : __oc24.triggerRelease) === null || __oc25 === void 0 ? void 0 : __oc25.call(__oc24, now)));
+        (((__oc27 = (__oc26 = this._bass) === null || __oc26 === void 0 ? void 0 : __oc26.triggerRelease) === null || __oc27 === void 0 ? void 0 : __oc27.call(__oc26, now)));
+        (((__oc29 = (__oc28 = this._click) === null || __oc28 === void 0 ? void 0 : __oc28.triggerRelease) === null || __oc29 === void 0 ? void 0 : __oc29.call(__oc28, now)));
+      } catch (_err) {}
       this._lastEventAt = performance.now();
       this._armWatchdog();
 
@@ -609,19 +609,19 @@
     // 보이스가 쌓이며 이후 모든 사운드를 찌지직거리게 하는 걸 주기적으로 청소한다.
     _armWatchdog() {
       if (this._watchdogTimer) return;
-      this._watchdogTimer = setTimeout(() => {
+      this._watchdogTimer = setTimeout(() => { var __oc30, __oc31, __oc32, __oc33, __oc34, __oc35, __oc36, __oc37, __oc38, __oc39;
         this._watchdogTimer = null;
         const idle = performance.now() - this._lastEventAt;
         if (idle < 900) { this._armWatchdog(); return; }
         if (!this._hasTone()) return;
         try {
           const now = this._now();
-          this._poly?.releaseAll?.(now);
-          this._bell?.releaseAll?.(now);
-          this._fm?.releaseAll?.(now);
-          this._am?.releaseAll?.(now);
-          this._sweep?.releaseAll?.(now);
-        } catch {}
+          (((__oc31 = (__oc30 = this._poly) === null || __oc30 === void 0 ? void 0 : __oc30.releaseAll) === null || __oc31 === void 0 ? void 0 : __oc31.call(__oc30, now)));
+          (((__oc33 = (__oc32 = this._bell) === null || __oc32 === void 0 ? void 0 : __oc32.releaseAll) === null || __oc33 === void 0 ? void 0 : __oc33.call(__oc32, now)));
+          (((__oc35 = (__oc34 = this._fm) === null || __oc34 === void 0 ? void 0 : __oc34.releaseAll) === null || __oc35 === void 0 ? void 0 : __oc35.call(__oc34, now)));
+          (((__oc37 = (__oc36 = this._am) === null || __oc36 === void 0 ? void 0 : __oc36.releaseAll) === null || __oc37 === void 0 ? void 0 : __oc37.call(__oc36, now)));
+          (((__oc39 = (__oc38 = this._sweep) === null || __oc38 === void 0 ? void 0 : __oc38.releaseAll) === null || __oc39 === void 0 ? void 0 : __oc39.call(__oc38, now)));
+        } catch (_err) {}
       }, 1000);
     }
 
@@ -968,15 +968,15 @@
       return this.enabled;
     }
 
-    destroy() {
+    destroy() { var __oc40, __oc41;
       if (this._visibilityHandler) {
         document.removeEventListener('visibilitychange', this._visibilityHandler);
       }
       const synths = [this._membrane, this._bass, this._click, this._bell,
                       this._poly, this._fm, this._am, this._metal, this._sweep, this._noise];
-      for (const s of synths) { try { s?.dispose?.(); } catch {} }
+      for (const s of synths) { try { (((__oc40 = s === null || s === void 0 ? void 0 : s.dispose) === null || __oc40 === void 0 ? void 0 : __oc40.call(s))); } catch (_err) {} }
       for (const node of [this._reverb, this._compressor, this._limiter, this._dryChannel, this._wetChannel]) {
-        try { node?.dispose?.(); } catch {}
+        try { (((__oc41 = node === null || node === void 0 ? void 0 : node.dispose) === null || __oc41 === void 0 ? void 0 : __oc41.call(node))); } catch (_err) {}
       }
     }
   }

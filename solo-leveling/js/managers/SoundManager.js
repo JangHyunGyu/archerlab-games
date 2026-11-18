@@ -8,12 +8,12 @@ const TONE_CLEANUP_GUARD = Symbol.for('archerlab.tone.disposed-oscillator-cleanu
 // Tone 15.5.25 can deliver onended after dispose has disconnected its control
 // signals. Repeating that targeted disconnect throws asynchronously, outside
 // the caller's dispose try/catch. A disposed graph needs no second cleanup.
-export function guardToneOscillatorCleanup(tone) {
-    const prototype = tone?.Oscillator?.prototype;
-    if (tone?.version !== '15.5.25' || !prototype || prototype[TONE_CLEANUP_GUARD] || typeof prototype._cleanUpConnections !== 'function') return;
+export function guardToneOscillatorCleanup(tone) { var __oc0;
+    const prototype = (((__oc0 = tone === null || tone === void 0 ? void 0 : tone.Oscillator) === null || __oc0 === void 0 ? void 0 : __oc0.prototype));
+    if (((tone === null || tone === void 0 ? void 0 : tone.version)) !== '15.5.25' || !prototype || prototype[TONE_CLEANUP_GUARD] || typeof prototype._cleanUpConnections !== 'function') return;
     const original = prototype._cleanUpConnections;
-    prototype._cleanUpConnections = function(source) {
-        if (this.disposed || this.frequency?.disposed || this.detune?.disposed) return;
+    prototype._cleanUpConnections = function(source) { var __oc1, __oc2;
+        if (this.disposed || (((__oc1 = this.frequency) === null || __oc1 === void 0 ? void 0 : __oc1.disposed)) || (((__oc2 = this.detune) === null || __oc2 === void 0 ? void 0 : __oc2.disposed))) return;
         return original.call(this, source);
     };
     Object.defineProperty(prototype, TONE_CLEANUP_GUARD, { value: true });
@@ -52,7 +52,18 @@ const CHARACTER_SFX_CONFIG = {
 };
 
 export class SoundManager {
-    constructor() {
+    constructor() { this._sfxVolume = {
+        dagger: 0.44, daggerThrow: 0.46, slash: 0.38, authority: 0.5, fear: 0.46,
+        hit: 0.4, burnHit: 0.46, kill: 0.46, playerHit: 0.52,
+        xp: 0.3, levelup: 0.62, rankup: 0.66,
+        system: 0.45, arise: 0.66, bossAppear: 0.62,
+        warning: 0.56, potion: 0.46, select: 0.38, bossKill: 0.66, gameOver: 0.62,
+        quest: 0.52, dungeonBreak: 0.62,
+        bossCharge: 0.5, bossSlash: 0.58, groundSlam: 0.64,
+        acidShot: 0.42, acidHit: 0.48, bossRage: 0.64,
+        shadowSoldierSlash: 0.3, shadowSoldierSlam: 0.38, shadowSoldierSpit: 0.3,
+        mana: 0.44, essence: 0.5, critHit: 0.52, eliteKill: 0.56,
+    };
         this.enabled = true;
         this._initialized = false;
         this._destroyed = false;
@@ -157,10 +168,10 @@ export class SoundManager {
         this._pools[name]._index = 0;
     }
 
-    _ensureMasterBus() {
+    _ensureMasterBus() { var __oc3;
         if (this._masterSum || typeof Tone === 'undefined') return;
         try {
-            const ctx = Tone.getContext()?.rawContext;
+            const ctx = (((__oc3 = Tone.getContext()) === null || __oc3 === void 0 ? void 0 : __oc3.rawContext));
             if (!ctx) return;
             this._sfxContext = ctx;
 
@@ -222,9 +233,9 @@ export class SoundManager {
         } catch (e) { /* silent */ }
     }
 
-    _watchContextState() {
+    _watchContextState() { var __oc4;
         if (this._onContextState || typeof Tone === 'undefined') return;
-        const raw = Tone.getContext()?.rawContext;
+        const raw = (((__oc4 = Tone.getContext()) === null || __oc4 === void 0 ? void 0 : __oc4.rawContext));
         if (!raw || typeof raw.addEventListener !== 'function') return;
         this._onContextState = () => {
             if (this._destroyed) return;
@@ -248,13 +259,13 @@ export class SoundManager {
         raw.addEventListener('statechange', this._onContextState);
     }
 
-    _audioNow() {
+    _audioNow() { var __oc5, __oc6;
         let now = 0;
         try {
             if (typeof Tone !== 'undefined') now = Tone.now() || 0;
         } catch (e) { now = 0; }
         try {
-            const raw = typeof Tone !== 'undefined' ? Tone.getContext()?.rawContext?.currentTime : 0;
+            const raw = typeof Tone !== 'undefined' ? (((__oc6 = (__oc5 = Tone.getContext()) === null || __oc5 === void 0 ? void 0 : __oc5.rawContext) === null || __oc6 === void 0 ? void 0 : __oc6.currentTime)) : 0;
             if (Number.isFinite(raw) && raw > now) now = raw;
         } catch (e) { /* Tone clock stands */ }
         return now;
@@ -368,7 +379,7 @@ export class SoundManager {
         } catch (e) { /* silent */ }
     }
 
-    _handleVisibilityChange() {
+    _handleVisibilityChange() { var __oc7, __oc8;
         if (typeof document === 'undefined') return;
         const hidden = document.hidden;
         const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
@@ -386,8 +397,8 @@ export class SoundManager {
             // live voices, and tear the synths down while the clock still runs.
             this._resumeSfxMutedUntil = now + 300;
             this.releaseCombatVoices();
-            this._setAudioParam(this._outputGain?.gain, 0, 0);
-            this._setAudioParam(this._sfxGain?.gain, 0, 0);
+            this._setAudioParam((((__oc7 = this._outputGain) === null || __oc7 === void 0 ? void 0 : __oc7.gain)), 0, 0);
+            this._setAudioParam((((__oc8 = this._sfxGain) === null || __oc8 === void 0 ? void 0 : __oc8.gain)), 0, 0);
             this._wakeBgm = !!this._bgmGain || !!this._bgmStarting;
             this._wakeIntro = (!!this._introGain || !!this._introStarting) && !this._wakeBgm;
             if (this._wakeBgm) this.stopGameBGM(true);
@@ -429,7 +440,7 @@ export class SoundManager {
         }
     }
 
-    async _settleOnce() {
+    async _settleOnce() { var __oc9, __oc10, __oc11, __oc12, __oc13, __oc14;
         if (this._pageHidden || !this.enabled || this._destroyed) return;
         // resume() flips the context to running. Drop the flag first so that
         // statechange cannot start another settle over this one.
@@ -440,18 +451,18 @@ export class SoundManager {
         const restartIntro = this._wakeIntro;
         this._wakeBgm = false;
         this._wakeIntro = false;
-        this._setAudioParam(this._outputGain?.gain, 0, 0);
+        this._setAudioParam((((__oc9 = this._outputGain) === null || __oc9 === void 0 ? void 0 : __oc9.gain)), 0, 0);
         let audioReady = await this.resume(false);
         if (!audioReady && this._userActivated && !this._pageHidden && typeof Tone !== 'undefined') {
             try {
-                const raw = Tone.getContext()?.rawContext;
+                const raw = (((__oc10 = Tone.getContext()) === null || __oc10 === void 0 ? void 0 : __oc10.rawContext));
                 if (raw && raw.state !== 'running') await raw.resume();
                 audioReady = !!raw && raw.state === 'running';
             } catch (e) { /* gesture-less resume can fail closed */ }
         }
         if (!audioReady || token !== this._settleToken || this._pageHidden || this._destroyed) return;
         this._rebuildLimiter();
-        this._setAudioParam(this._sfxGain?.gain, this.enabled ? this._sfxMaster : 0, 0);
+        this._setAudioParam((((__oc11 = this._sfxGain) === null || __oc11 === void 0 ? void 0 : __oc11.gain)), this.enabled ? this._sfxMaster : 0, 0);
         if (restartBgm) this.startGameBGM();
         else if (restartIntro) this.playIntroMusic();
         else this._restoreActiveMusicGains();
@@ -461,15 +472,15 @@ export class SoundManager {
         if (this._contextInterrupted) {
             this._contextInterrupted = false;
             try {
-                const raw = typeof Tone !== 'undefined' ? Tone.getContext()?.rawContext : null;
+                const raw = typeof Tone !== 'undefined' ? (((__oc12 = Tone.getContext()) === null || __oc12 === void 0 ? void 0 : __oc12.rawContext)) : null;
                 if (raw && raw.state !== 'running') await raw.resume();
             } catch (e) { /* stay gated if the context will not run */ }
             if (token !== this._settleToken || this._pageHidden || this._destroyed) return;
             this._rebuildLimiter();
         }
-        const raw = typeof Tone !== 'undefined' ? Tone.getContext()?.rawContext : null;
+        const raw = typeof Tone !== 'undefined' ? (((__oc13 = Tone.getContext()) === null || __oc13 === void 0 ? void 0 : __oc13.rawContext)) : null;
         if (!raw || raw.state !== 'running') return;
-        this._setAudioParam(this._outputGain?.gain, 1, 0.18);
+        this._setAudioParam((((__oc14 = this._outputGain) === null || __oc14 === void 0 ? void 0 : __oc14.gain)), 1, 0.18);
     }
 
     _ensureToneGraph() {
@@ -691,20 +702,9 @@ export class SoundManager {
     get wet() { return this._musicIn; }
 
     // SFX 볼륨 매핑 (사운드별 적절한 볼륨)
-    _sfxVolume = {
-        dagger: 0.44, daggerThrow: 0.46, slash: 0.38, authority: 0.5, fear: 0.46,
-        hit: 0.4, burnHit: 0.46, kill: 0.46, playerHit: 0.52,
-        xp: 0.3, levelup: 0.62, rankup: 0.66,
-        system: 0.45, arise: 0.66, bossAppear: 0.62,
-        warning: 0.56, potion: 0.46, select: 0.38, bossKill: 0.66, gameOver: 0.62,
-        quest: 0.52, dungeonBreak: 0.62,
-        bossCharge: 0.5, bossSlash: 0.58, groundSlam: 0.64,
-        acidShot: 0.42, acidHit: 0.48, bossRage: 0.64,
-        shadowSoldierSlash: 0.3, shadowSoldierSlam: 0.38, shadowSoldierSpit: 0.3,
-        mana: 0.44, essence: 0.5, critHit: 0.52, eliteKill: 0.56,
-    };
+    
 
-    play(soundName) {
+    play(soundName) { var __oc15;
         if (!this.enabled || !this._initialized) return;
         const now = performance.now();
         if (this._pageHidden || now < this._resumeSfxMutedUntil) return;
@@ -713,7 +713,7 @@ export class SoundManager {
             if (priority < 3 || this._activeSounds >= this._maxActiveSounds + 1) return;
         }
         const activeSame = this._activeSoundNames[soundName] || 0;
-        const sameLimit = this._sameSoundLimit[soundName] ?? (priority >= 3 ? 2 : 1);
+        const sameLimit = (((__oc15 = this._sameSoundLimit[soundName]) !== null && __oc15 !== void 0 ? __oc15 : (priority >= 3 ? 2 : 1)));
         if (activeSame >= sameLimit) return;
         const cooldown = this._throttleMs[soundName] || 0;
         if (cooldown > 0) {

@@ -29,7 +29,7 @@ for (const ref of refs) {
   const target = clean.startsWith('/')
     ? path.join(root, clean.replace(/^\/+/, ''))
     : path.resolve(path.dirname(entryPath), clean);
-  if (!fs.existsSync(target)) missing.push(ref);
+  if (!fs.existsSync(target) && !fs.existsSync(`${target}.html`)) missing.push(ref);
 }
 
 if (missing.length) {

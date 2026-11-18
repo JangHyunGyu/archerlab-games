@@ -45,7 +45,7 @@ const root = path.join(__dirname, '..');
 
     const enemySource = fs.readFileSync(path.join(root, 'js', 'managers', 'EnemyManager.js'), 'utf8');
     const dungeonEnd = enemySource.slice(enemySource.indexOf('_endDungeonBreak()'));
-    assert.match(dungeonEnd, /const leveled = this\.scene\.player\?\.addXP\(100\)/);
+    assert.match(dungeonEnd, /const leveled = (?:this\.scene\.player\?\.addXP\(100\)|\(\(\(__oc\d+ = this\.scene\.player\) === null \|\| __oc\d+ === void 0 \? void 0 : __oc\d+\.addXP\(100\)\)\))/);
     assert.match(dungeonEnd, /if \(leveled && this\.scene\.onLevelUp\) \{\s*this\.scene\.onLevelUp\(\);/);
 
     const orbSource = fs.readFileSync(path.join(root, 'js', 'entities', 'XPOrb.js'), 'utf8');

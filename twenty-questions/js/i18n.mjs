@@ -294,9 +294,11 @@ export const messages = {
 };
 
 export function translation(locale) {
-    return (key, values = {}) => {
-        const value = messages[locale]?.[key];
+    return (key, values = {}) => { var __oc0;
+        const value = (((__oc0 = messages[locale]) === null || __oc0 === void 0 ? void 0 : __oc0[key]));
         if (value === undefined) throw new Error(`Missing translation: ${locale}.${key}`);
-        return value.replace(/\{([^}]+)\}/g, (_, name) => String(values[name] ?? ''));
+        return value.replace(/\{([^}]+)\}/g, (_, name) => { var __oc1; return (
+String((((__oc1 = values[name]) !== null && __oc1 !== void 0 ? __oc1 : '')))
+); });
     };
 }

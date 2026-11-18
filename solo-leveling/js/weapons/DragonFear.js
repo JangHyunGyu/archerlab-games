@@ -7,18 +7,17 @@ export class DragonFear extends WeaponBase {
         this.auraSprite = null;
     }
 
-    fire() {
+    fire() { var __oc0, __oc1, __oc2, __oc3, __oc4, __oc5, __oc6, __oc7, __oc8, __oc9, __oc13;
         const range = (this.config.auraRange || 230) + this.extraRange;
-        const slowAmount = Math.max(0.1, (this.config.slowMultiplier ?? 0.4) - this.extraSlow);
+        const slowAmount = Math.max(0.1, (((__oc0 = this.config.slowMultiplier) !== null && __oc0 !== void 0 ? __oc0 : 0.4)) - this.extraSlow);
         const auraDuration = this.config.auraDuration || 2000;
         if (this.player.playAttackMotion) {
             const dirAngles = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
-            const facingAngle = dirAngles[this.player.facingDirection]
-                ?? (this.player.facingRight ? 0 : Math.PI);
+            const facingAngle = (((__oc1 = dirAngles[this.player.facingDirection]) !== null && __oc1 !== void 0 ? __oc1 : (this.player.facingRight ? 0 : Math.PI)));
             const angle = this.player.moveIntensity > 0.12
                 ? this.player.lastMoveAngle
                 : facingAngle;
-            const variantMotion = this.player.character?.basicAttackVariants?.[0];
+            const variantMotion = (((__oc3 = (__oc2 = this.player.character) === null || __oc2 === void 0 ? void 0 : __oc2.basicAttackVariants) === null || __oc3 === void 0 ? void 0 : __oc3[0]));
             this.player.playAttackMotion(angle, this.config.motionDuration || 280, 1, variantMotion);
         }
 
@@ -45,32 +44,32 @@ export class DragonFear extends WeaponBase {
             .setDepth(3)
             .setAlpha(0)
             .setBlendMode((useCharacterEffect || useEffectAsset) ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
-        const startRatio = this.config.smoothVisual ? (this.config.visualStartScaleRatio ?? 0.55) : 1;
+        const startRatio = this.config.smoothVisual ? (((__oc4 = this.config.visualStartScaleRatio) !== null && __oc4 !== void 0 ? __oc4 : 0.55)) : 1;
         this.auraSprite.setScale(targetScaleX * startRatio, targetScaleY * startRatio);
         const auraSprite = this.auraSprite;
 
         if (this.config.smoothVisual) {
-            const fadeInDuration = this.config.visualFadeInDuration ?? 320;
-            const fadeOutDuration = this.config.visualFadeOutDuration ?? 430;
+            const fadeInDuration = (((__oc5 = this.config.visualFadeInDuration) !== null && __oc5 !== void 0 ? __oc5 : 320));
+            const fadeOutDuration = (((__oc6 = this.config.visualFadeOutDuration) !== null && __oc6 !== void 0 ? __oc6 : 430));
             const holdDuration = Math.max(0, auraDuration - fadeInDuration - fadeOutDuration);
             this.scene.tweens.add({
                 targets: auraSprite,
-                alpha: this.config.visualPeakAlpha ?? ((useCharacterEffect || useEffectAsset) ? 0.76 : 0.58),
-                scaleX: targetScaleX * (this.config.visualPeakScaleRatio ?? 1),
-                scaleY: targetScaleY * (this.config.visualPeakScaleRatio ?? 1),
+                alpha: (((__oc7 = this.config.visualPeakAlpha) !== null && __oc7 !== void 0 ? __oc7 : ((useCharacterEffect || useEffectAsset) ? 0.76 : 0.58))),
+                scaleX: targetScaleX * (((__oc8 = this.config.visualPeakScaleRatio) !== null && __oc8 !== void 0 ? __oc8 : 1)),
+                scaleY: targetScaleY * (((__oc9 = this.config.visualPeakScaleRatio) !== null && __oc9 !== void 0 ? __oc9 : 1)),
                 duration: fadeInDuration,
                 ease: 'Sine.easeOut',
-                onComplete: () => {
+                onComplete: () => { var __oc10, __oc11, __oc12;
                     this.scene.tweens.add({
                         targets: auraSprite,
                         alpha: 0,
-                        scaleX: targetScaleX * (this.config.visualEndScaleRatio ?? 1.22),
-                        scaleY: targetScaleY * (this.config.visualEndScaleRatio ?? 1.22),
+                        scaleX: targetScaleX * (((__oc10 = this.config.visualEndScaleRatio) !== null && __oc10 !== void 0 ? __oc10 : 1.22)),
+                        scaleY: targetScaleY * (((__oc11 = this.config.visualEndScaleRatio) !== null && __oc11 !== void 0 ? __oc11 : 1.22)),
                         duration: fadeOutDuration,
-                        delay: this.config.visualHoldDuration ?? holdDuration,
+                        delay: (((__oc12 = this.config.visualHoldDuration) !== null && __oc12 !== void 0 ? __oc12 : holdDuration)),
                         ease: 'Sine.easeInOut',
                         onComplete: () => {
-                            if (auraSprite?.active) auraSprite.destroy();
+                            if (((auraSprite === null || auraSprite === void 0 ? void 0 : auraSprite.active))) auraSprite.destroy();
                             if (this.auraSprite === auraSprite) {
                                 this.auraSprite = null;
                             }
@@ -93,7 +92,7 @@ export class DragonFear extends WeaponBase {
                 duration: Math.max(500, auraDuration - 500),
                 delay: 500,
                 onComplete: () => {
-                    if (auraSprite?.active) auraSprite.destroy();
+                    if (((auraSprite === null || auraSprite === void 0 ? void 0 : auraSprite.active))) auraSprite.destroy();
                     if (this.auraSprite === auraSprite) {
                         this.auraSprite = null;
                     }
@@ -110,15 +109,15 @@ export class DragonFear extends WeaponBase {
         this._auraSlowAmount = slowAmount;
 
         // Apply damage & slow to enemies currently in range
-        this._damageEnemiesInAura(range, slowAmount, auraDuration, this.config.damageMult ?? 1);
+        this._damageEnemiesInAura(range, slowAmount, auraDuration, (((__oc13 = this.config.damageMult) !== null && __oc13 !== void 0 ? __oc13 : 1)));
 
         const tickCount = Math.max(0, this.config.tickCount || 0);
         const tickInterval = this.config.tickInterval || 600;
         for (let i = 0; i < tickCount; i++) {
-            this._delay((i + 1) * tickInterval, () => {
-                if (!this.scene?.scene?.isActive() || !this.player?.active) return;
+            this._delay((i + 1) * tickInterval, () => { var __oc14, __oc15, __oc16, __oc17;
+                if (!(((__oc15 = (__oc14 = this.scene) === null || __oc14 === void 0 ? void 0 : __oc14.scene) === null || __oc15 === void 0 ? void 0 : __oc15.isActive())) || !(((__oc16 = this.player) === null || __oc16 === void 0 ? void 0 : __oc16.active))) return;
                 const remaining = Math.max(300, this._auraEndTime - this.scene.time.now);
-                this._damageEnemiesInAura(range, slowAmount, remaining, this.config.tickDamageMult ?? 0.35);
+                this._damageEnemiesInAura(range, slowAmount, remaining, (((__oc17 = this.config.tickDamageMult) !== null && __oc17 !== void 0 ? __oc17 : 0.35)));
             });
         }
     }
@@ -155,9 +154,9 @@ export class DragonFear extends WeaponBase {
         }
     }
 
-    destroy() {
+    destroy() { var __oc18;
         if (this.auraSprite) {
-            if (this.scene?.tweens) this.scene.tweens.killTweensOf(this.auraSprite);
+            if ((((__oc18 = this.scene) === null || __oc18 === void 0 ? void 0 : __oc18.tweens))) this.scene.tweens.killTweensOf(this.auraSprite);
             this.auraSprite.destroy();
             this.auraSprite = null;
         }

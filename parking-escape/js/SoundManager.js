@@ -101,14 +101,14 @@
       this.nodes.sample = new Tone.Channel({ volume: 3 }).connect(this.nodes.comp);
 
       if (Tone.Player) {
-        Object.entries(SAMPLE_ASSETS).forEach(([key, url]) => {
+        Object.entries(SAMPLE_ASSETS).forEach(([key, url]) => { var __oc0;
           const settings = SAMPLE_SETTINGS[key] || {};
           this.players[key] = new Tone.Player({
             url,
             fadeIn: 0.004,
             fadeOut: 0.08,
           }).connect(this.nodes.sample);
-          this.players[key].volume.value = settings.volume ?? 0;
+          this.players[key].volume.value = (((__oc0 = settings.volume) !== null && __oc0 !== void 0 ? __oc0 : 0));
         });
       }
 
@@ -281,14 +281,14 @@
       node.triggerAttackRelease(duration, time + this.jitter(), this.clamp(velocity));
     }
 
-    playSample(key, now, options = {}) {
+    playSample(key, now, options = {}) { var __oc1, __oc2, __oc3;
       const player = this.players[key];
       if (!player || !player.loaded) return false;
       const settings = SAMPLE_SETTINGS[key] || {};
       player.stop(now);
-      player.playbackRate = options.playbackRate ?? 1;
-      const offset = options.offset ?? 0;
-      const duration = options.duration ?? settings.duration;
+      player.playbackRate = (((__oc1 = options.playbackRate) !== null && __oc1 !== void 0 ? __oc1 : 1));
+      const offset = (((__oc2 = options.offset) !== null && __oc2 !== void 0 ? __oc2 : 0));
+      const duration = (((__oc3 = options.duration) !== null && __oc3 !== void 0 ? __oc3 : settings.duration));
       if (duration === undefined || duration === null) {
         player.start(now, offset);
       } else {

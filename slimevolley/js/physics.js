@@ -726,13 +726,13 @@ class PhysicsEngine {
         return st;
     }
 
-    setState(state) {
+    setState(state) { var __oc0;
         this.ball.x = state.ball.x;
         this.ball.y = state.ball.y;
         this.ball.vx = state.ball.vx;
         this.ball.vy = state.ball.vy;
         this.ball.lastHitBy = state.ball.lastHitBy;
-        this.ball.lastHitSlimeId = state.ball.lastHitSlimeId ?? -1;
+        this.ball.lastHitSlimeId = (((__oc0 = state.ball.lastHitSlimeId) !== null && __oc0 !== void 0 ? __oc0 : -1));
         for (const ss of state.slimes) {
             const slime = this.slimes.find(s => s.id === ss.id);
             if (slime) {
@@ -759,7 +759,7 @@ class PhysicsEngine {
     }
 
     // 보간 상태 적용: 내 슬라임 제외, 나머지는 lerp
-    applyInterpolatedState(stateA, stateB, t, mySlimeId, skipBall) {
+    applyInterpolatedState(stateA, stateB, t, mySlimeId, skipBall) { var __oc1;
         const lerp = (a, b, f) => a + (b - a) * f;
 
         // 공 보간 (클라이언트 히트 오버라이드 중이면 로컬 물리 유지)
@@ -769,7 +769,7 @@ class PhysicsEngine {
             this.ball.vx = lerp(stateA.ball.vx, stateB.ball.vx, t);
             this.ball.vy = lerp(stateA.ball.vy, stateB.ball.vy, t);
             this.ball.lastHitBy = stateB.ball.lastHitBy;
-            this.ball.lastHitSlimeId = stateB.ball.lastHitSlimeId ?? -1;
+            this.ball.lastHitSlimeId = (((__oc1 = stateB.ball.lastHitSlimeId) !== null && __oc1 !== void 0 ? __oc1 : -1));
         }
 
         // 슬라임 보간 (내 슬라임 제외)
