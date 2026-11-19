@@ -548,14 +548,17 @@ export class BasicDagger extends WeaponBase {
             variant,
         });
         const hitRange = this.attackRange + this.extraRange + (((__oc17 = this.config.hitRangeBonus) !== null && __oc17 !== void 0 ? __oc17 : 0));
-        const flipY = side < 0;
+        // 좌향 공격 시 180도 회전 반전 보정과 상·하 베기 방향 일치
+        const mirrorLeft = Math.cos(baseAngle) < -0.15;
+        const flipY = mirrorLeft ? side < 0 : side > 0;
+        const sweepSign = mirrorLeft ? -side : side;
         const fit = this.getEffectForwardFit(texture, {
-            innerReach: 18, outerReach: hitRange * (((__oc18 = this.config.visualRangeRatio) !== null && __oc18 !== void 0 ? __oc18 : 0.9)),
+            innerReach: -58, outerReach: hitRange * (((__oc18 = this.config.visualRangeRatio) !== null && __oc18 !== void 0 ? __oc18 : 0.9)) * 0.80,
             rotationOffset: 0, flipY,
         });
         const arc = this.createEffectSprite(this.player.x, this.player.y - 16, texture, { frameMs: 46 })
             .setDepth(14).setAlpha(0).setFlipY(flipY)
-            .setScale(fit.scale, fit.scale * 0.58).setRotation(baseAngle).setBlendMode(Phaser.BlendModes.ADD);
+            .setScale(fit.scale * 0.92, fit.scale * 0.86).setRotation(baseAngle).setBlendMode(Phaser.BlendModes.ADD);
         const progress = { t: 0 };
         const entry = this._trackAttackObjects([arc]);
         entry.tween = this.scene.tweens.add({
@@ -563,8 +566,8 @@ export class BasicDagger extends WeaponBase {
             onUpdate: () => {
                 arc.setPosition(this.player.x + Math.cos(baseAngle) * fit.centerForward,
                     this.player.y - 16 + Math.sin(baseAngle) * fit.centerForward);
-                arc.setRotation(baseAngle + side * (0.12 - progress.t * 0.24));
-                arc.setAlpha(Math.sin(Math.PI * progress.t) * 0.74);
+                arc.setRotation(baseAngle + sweepSign * (-0.14 + progress.t * 0.28));
+                arc.setAlpha(Math.sin(Math.PI * progress.t) * 0.82);
             },
             onComplete: () => this._destroyAttackObjects(entry),
         });
@@ -638,9 +641,9 @@ export class BasicDagger extends WeaponBase {
         };
 
         const drawTrail = (trail, phase, laneSign, maxAlpha, origin) => {
-            const forward = effectFit.centerForward - 34 + phase.eased * 34;
-            const lateral = Phaser.Math.Linear(laneSign * 11, laneSign * -3, phase.eased);
-            const angleOffset = Phaser.Math.Linear(laneSign * -0.18, laneSign * -0.08, phase.eased);
+            const forward = effectFit.centerForward - 58 + phase.eased * 28;
+            const lateral = Phaser.Math.Linear(laneSign * 22, laneSign * -14, phase.eased);
+            const angleOffset = Phaser.Math.Linear(laneSign * -0.18, laneSign * -0.42, phase.eased);
             const frameIndex = Math.min(frameCount - 1, Math.floor(phase.phase * frameCount));
             const frameTexture = `${effectTexture}_${frameIndex}`;
             if (this.scene.textures.exists(frameTexture) && trail.texture.key !== frameTexture) {
@@ -704,7 +707,9 @@ export class BasicDagger extends WeaponBase {
         const originY = this.player.y - 18;
         const effectTexture = this._getConfiguredEffectTexture();
         const hitRange = this.attackRange + this.extraRange + (((__oc32 = this.config.hitRangeBonus) !== null && __oc32 !== void 0 ? __oc32 : 35));
-        const flipY = side < 0;
+        const mirrorLeft = Math.cos(baseAngle) < -0.15;
+        const flipY = mirrorLeft ? side > 0 : side < 0;
+        const sweepSign = mirrorLeft ? -side : side;
         const authoredOffset = (((__oc33 = this.config.effectRotationOffset) !== null && __oc33 !== void 0 ? __oc33 : 0));
         const mirroredOffset = flipY ? -authoredOffset : authoredOffset;
         const desiredOuterReach = hitRange * (((__oc34 = this.config.visualRangeRatio) !== null && __oc34 !== void 0 ? __oc34 : 0.9));
@@ -754,7 +759,7 @@ export class BasicDagger extends WeaponBase {
             const waveAlpha = Math.sin(Math.PI * clampedT) * peakAlpha;
             if (slashEcho && slashEcho !== slash) {
                 slashEcho.setPosition(this.player.x, this.player.y - 18);
-                slashEcho.setRotation(this.getMirroredEffectRotation(baseAngle, flipY) + side * 0.04);
+                slashEcho.setRotation(this.getMirroredEffectRotation(baseAngle, flipY) + sweepSign * 0.04);
                 slashEcho.setFlipY(flipY);
                 slashEcho.setAlpha(waveAlpha * 0.42);
                 slashEcho.setScale(targetScale * (0.9 + eased * 0.24));
@@ -810,8 +815,11 @@ export class BasicDagger extends WeaponBase {
         const glowColor = this.getEffectGlowColor(0xffffff);
         const effectTexture = this._getConfiguredEffectTexture();
         const hitRange = this.attackRange + this.extraRange + (((__oc43 = this.config.hitRangeBonus) !== null && __oc43 !== void 0 ? __oc43 : 0));
-        const flipY = side < 0;
-        const swipeRotationOffset = side * 0.08 + (flipY ? -1 : 1) * (((__oc44 = this.config.effectRotationOffset) !== null && __oc44 !== void 0 ? __oc44 : 0));
+        // 손톱 끝 곡률과 좌향 180도 회전을 함께 보정해 정면 적을 관통
+        const mirrorLeft = Math.cos(baseAngle) < -0.15;
+        const flipY = mirrorLeft ? side > 0 : side < 0;
+        const clawCurveBias = flipY ? 0.11 : -0.11;
+        const swipeRotationOffset = clawCurveBias + (flipY ? -1 : 1) * (((__oc44 = this.config.effectRotationOffset) !== null && __oc44 !== void 0 ? __oc44 : 0));
         const desiredOuterReach = hitRange * (((__oc45 = this.config.visualRangeRatio) !== null && __oc45 !== void 0 ? __oc45 : 0.9));
         const effectFit = effectTexture
             ? this.getEffectCenteredFit(effectTexture, {
@@ -827,7 +835,8 @@ export class BasicDagger extends WeaponBase {
                 .setDepth(15)
                 .setAlpha(0)
                 .setScale(targetScale * 0.88)
-                .setRotation(baseAngle)
+                .setRotation(this.getMirroredEffectRotation(baseAngle, flipY) + clawCurveBias * 0.82)
+                .setFlipY(flipY)
                 .setBlendMode(Phaser.BlendModes.ADD)
             : null;
         const swipeSprite = effectTexture
@@ -835,7 +844,8 @@ export class BasicDagger extends WeaponBase {
                 .setDepth(16)
                 .setAlpha(0)
                 .setScale(targetScale * 0.76)
-                .setRotation(baseAngle)
+                .setRotation(this.getMirroredEffectRotation(baseAngle, flipY) + clawCurveBias)
+                .setFlipY(flipY)
                 .setBlendMode(Phaser.BlendModes.ADD)
             : null;
         const progress = { t: 0 };
@@ -884,14 +894,14 @@ export class BasicDagger extends WeaponBase {
 
             if (swipeEcho && swipeEcho !== swipeSprite) {
                 swipeEcho.setPosition(this.player.x, this.player.y - 14);
-                swipeEcho.setRotation(this.getMirroredEffectRotation(baseAngle, flipY) + side * 0.03);
+                swipeEcho.setRotation(this.getMirroredEffectRotation(baseAngle, flipY) + clawCurveBias * 0.82);
                 swipeEcho.setFlipY(flipY);
                 swipeEcho.setAlpha(alpha * 0.4);
                 swipeEcho.setScale(targetScale * (0.88 + eased * 0.28));
             }
             if (swipeSprite) {
                 swipeSprite.setPosition(this.player.x, this.player.y - 14);
-                swipeSprite.setRotation(this.getMirroredEffectRotation(baseAngle, flipY) + side * 0.08);
+                swipeSprite.setRotation(this.getMirroredEffectRotation(baseAngle, flipY) + clawCurveBias);
                 swipeSprite.setFlipY(flipY);
                 swipeSprite.setAlpha(alpha * 0.86);
                 swipeSprite.setScale(targetScale * (0.76 + eased * 0.24));
@@ -930,14 +940,20 @@ export class BasicDagger extends WeaponBase {
         const sinA = Math.sin(baseAngle);
         const perpX = -sinA;
         const perpY = cosA;
-        const originX = this.player.x;
-        const originY = this.player.y - 22;
         const maxDist = this.attackRange + this.extraRange + (((__oc49 = this.config.impactRangeBonus) !== null && __oc49 !== void 0 ? __oc49 : -18));
-        const targetDist = target
-            ? Math.min(maxDist, Phaser.Math.Distance.Between(originX, originY, target.x, target.y))
-            : Math.min(maxDist, (((__oc50 = this.config.fallbackImpactDistance) !== null && __oc50 !== void 0 ? __oc50 : 118)));
-        const impactX = originX + cosA * targetDist;
-        const impactY = originY + sinA * targetDist;
+        let impactX;
+        let impactY;
+        if (target) {
+            const targetY = target.y - 4;
+            const aimToTarget = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, targetY);
+            const targetDist = Math.min(maxDist, Phaser.Math.Distance.Between(this.player.x, this.player.y, target.x, targetY));
+            impactX = this.player.x + Math.cos(aimToTarget) * targetDist;
+            impactY = this.player.y + Math.sin(aimToTarget) * targetDist;
+        } else {
+            const targetDist = Math.min(maxDist, (((__oc50 = this.config.fallbackImpactDistance) !== null && __oc50 !== void 0 ? __oc50 : 118)));
+            impactX = this.player.x + cosA * targetDist;
+            impactY = (this.player.y - 8) + sinA * targetDist;
+        }
         const effectTexture = this._getConfiguredEffectTexture();
         const impactRadius = (((__oc51 = this.config.impactRadius) !== null && __oc51 !== void 0 ? __oc51 : 56));
         const fittedScale = effectTexture
@@ -945,7 +961,7 @@ export class BasicDagger extends WeaponBase {
             : null;
         const slamSprite = effectTexture
             ? this.createEffectSprite(impactX, impactY, effectTexture, { frameMs: 52 })
-                .setOrigin(0.5, 0.68)
+                .setOrigin(0.5, 0.57)
                 .setDepth(16)
                 .setAlpha(0)
                 .setScale(0.16)
@@ -1003,25 +1019,36 @@ export class BasicDagger extends WeaponBase {
     }
 
     _fireball(variant = null) { var __oc55, __oc56, __oc57;
-        const { target, baseAngle, side } = this._getAttackSetup({
+        const { target, baseAngle: aimAngle, side } = this._getAttackSetup({
             rangeBonus: (((__oc55 = this.config.targetRangeBonus) !== null && __oc55 !== void 0 ? __oc55 : 130)),
             duration: this._currentMotionDuration || BASIC_ATTACK_MOTION_DURATION,
             variant,
         });
-        const cosA = Math.cos(baseAngle);
-        const sinA = Math.sin(baseAngle);
-        const perpX = -sinA;
-        const perpY = cosA;
+        const aimCos = Math.cos(aimAngle);
+        const aimSin = Math.sin(aimAngle);
         const originX = this.player.x;
         const originY = this.player.y - 18;
         const maxDist = this.attackRange + this.extraRange + (((__oc56 = this.config.projectileRangeBonus) !== null && __oc56 !== void 0 ? __oc56 : 80));
-        const targetDist = target
-            ? Math.min(maxDist, Phaser.Math.Distance.Between(originX, originY, target.x, target.y) + 18)
-            : maxDist;
-        const startX = originX + cosA * 32 + perpX * side * 8;
-        const startY = originY + sinA * 32 + perpY * side * 8;
-        const endX = originX + cosA * targetDist;
-        const endY = originY + sinA * targetDist;
+        // 시전 손 끝에서 목표 중심으로 직선 비행 벡터 계산 (수직 오차·횡이동 방지)
+        const startX = originX + aimCos * 28 - aimSin * side * 4;
+        const startY = originY + aimSin * 28 + aimCos * side * 4;
+        let endX;
+        let endY;
+        let targetDist;
+        if (target) {
+            const targetY = target.y - 8;
+            const aimToTarget = Phaser.Math.Angle.Between(startX, startY, target.x, targetY);
+            targetDist = Math.min(maxDist, Phaser.Math.Distance.Between(startX, startY, target.x, targetY) + 18);
+            endX = startX + Math.cos(aimToTarget) * targetDist;
+            endY = startY + Math.sin(aimToTarget) * targetDist;
+        } else {
+            targetDist = Math.max(40, maxDist - 28);
+            endX = startX + aimCos * targetDist;
+            endY = startY + aimSin * targetDist;
+        }
+        const baseAngle = Phaser.Math.Angle.Between(startX, startY, endX, endY);
+        const cosA = Math.cos(baseAngle);
+        const sinA = Math.sin(baseAngle);
         const effectTexture = this._getConfiguredEffectTexture();
         const usesImageEffect = !!effectTexture;
         const impactRadius = (((__oc57 = this.config.impactRadius) !== null && __oc57 !== void 0 ? __oc57 : 38));

@@ -5640,133 +5640,133 @@
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/flame_fireball.png",
-      "bytes": 6833,
-      "sha256": "80beeaf70f2ee3190bb63747caafd8e3bf9a360a20d38e2867a2dddaa03d27c7"
+      "bytes": 16197,
+      "sha256": "919baaf87b52ef8d393700875915fb7dc984e6cdcb51ca80bed8881678fe3e7f"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/flame_fireball.webp",
-      "bytes": 4534,
-      "sha256": "d53cd8560ad9086ad678b925b2057e9a33490d5a78e7603a8d069b87822afd51"
+      "bytes": 9152,
+      "sha256": "9f062110e3a4284c4256f275b7c600e4a95b029841d42c69b0cf5cf2efedf223"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/flame_fireball_0.png",
-      "bytes": 3250,
-      "sha256": "f72eb0aab73ebe53108a0e0c45b5e5f01b00a9b63ba6dfac964e5c892d711939"
+      "bytes": 15491,
+      "sha256": "326d454fd628bdcb9b5996183e87af027bc4ae1b765127947fc261ce51cd58c8"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/flame_fireball_0.webp",
-      "bytes": 1816,
-      "sha256": "04873e5f5e9c04ded4ce342d12b20f1628737d69b15c160562655d7b72ff1882"
+      "bytes": 8998,
+      "sha256": "2579017ee233987c02dac2db64eb611bb4bd024c45e64595c0d7d443980b5980"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/flame_fireball_1.png",
-      "bytes": 7299,
-      "sha256": "43ee59445adebd64df9751d0611a50084e497916b90a3ddc470a233962afc4b3"
+      "bytes": 16232,
+      "sha256": "8dd90d07ad2b8a5ae98a421a0faa30d0e06ac171bc12ad3170c6f628bec3e332"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/flame_fireball_1.webp",
-      "bytes": 4934,
-      "sha256": "a3b89cf1ca484b0c7ff4173a5c33679437472f3888887a41c4f24f1dc7693d0e"
+      "bytes": 9408,
+      "sha256": "9cf32d7c03ea58b4bd4cd931d63f411601490fd1364992460290b32288629206"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/flame_fireball_2.png",
-      "bytes": 9024,
-      "sha256": "9caca4d293b608d1b65eaf8ec601aff671614308a495f81e8f2b3302f2fd8312"
+      "bytes": 16190,
+      "sha256": "059b95fcc36a592843900ae6ba5881d589b8034e6bc5b7039f1b2f790d13cbe6"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/flame_fireball_2.webp",
-      "bytes": 6296,
-      "sha256": "b2af67261de232250f838973843229b9845369a1193fe682ada6b3d29f9cd6d5"
+      "bytes": 9266,
+      "sha256": "1c8f247423986c208cdddce4482b6ee7fa57ef95170a6d0e4250554c29cf33f9"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/flame_fireball_3.png",
-      "bytes": 9761,
-      "sha256": "a0d8bbf9fefb479fbb9a8a193a44883b943539b5e9eda9c0f58c87021e0b1138"
+      "bytes": 16197,
+      "sha256": "919baaf87b52ef8d393700875915fb7dc984e6cdcb51ca80bed8881678fe3e7f"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/flame_fireball_3.webp",
-      "bytes": 6888,
-      "sha256": "812e135e06a5be3e336d641bc54bd110d43e212c5a6215f5be90fd7d598e82a1"
+      "bytes": 9152,
+      "sha256": "9f062110e3a4284c4256f275b7c600e4a95b029841d42c69b0cf5cf2efedf223"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/flame_fireball_4.png",
-      "bytes": 8860,
-      "sha256": "dd8c1b94bb15ed9a2a6c14b5512675d6615d30ce8abfe2d34f1b2f556aadd182"
+      "bytes": 16042,
+      "sha256": "03d7fb609f8d69bad48a9c0e13b01e0bee4b8c81eef7ada2ef1dc662a3b5cc6c"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/flame_fireball_4.webp",
-      "bytes": 6536,
-      "sha256": "c79d026fd2c2cf3e71d1e1496b2c44750fc2bb87bae082a33976ce51be4b7534"
+      "bytes": 9140,
+      "sha256": "553169fb015d03c1a592fbaace26d3e76d64cf6c549a5a7824e10183f7822d6b"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/flame_fireball_5.png",
-      "bytes": 7419,
-      "sha256": "566e04d2a3cde6620cb61a6827dc3afef00449e976cd38ed2ce13749851b79c4"
+      "bytes": 16113,
+      "sha256": "8a427db6fa55f287f41e8143b09630953f41d87dc67a4b1420aab6e2aa4b0938"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/flame_fireball_5.webp",
-      "bytes": 5144,
-      "sha256": "26f3552f17660a490a36bc8609a7c12f3026669e3dbc3ec27f77362f00608d11"
+      "bytes": 9370,
+      "sha256": "b2ded7c3bba6629e8baaa1fd77de1df2e0cb34886f0dfc615fab372d38643f35"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/light_sword_slash_0.png",
-      "bytes": 4027,
-      "sha256": "74e83379b2441f367f1c2045b3998ff436b8e72bd36dd6ed4bc8a4b9ef2164bc"
+      "bytes": 32708,
+      "sha256": "1897d3c045e4eb8e09b19bb925702b595f5d8de4558b5c88680caacfe015aac6"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/light_sword_slash_0.webp",
-      "bytes": 2270,
-      "sha256": "925eab466d2eb3d976a018f8a7627e5411dbf873bd4cc5a89c0b51e38fb339f1"
+      "bytes": 25866,
+      "sha256": "b119d4408bfeb0abc610bddefdf7d83693302fe13bb1add4593482bdde40b573"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/light_sword_slash_1.png",
-      "bytes": 13191,
-      "sha256": "de3c2e1123af82d1151811a4179e25a3753e59b96dec4682c605f03b26d94ebc"
+      "bytes": 46651,
+      "sha256": "20bc4cb76456b0eab49f50a9c39ec915b77e0432846bd9f9c7215432222adc2f"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/light_sword_slash_1.webp",
-      "bytes": 9984,
-      "sha256": "edb8d2744d832f65a08adea2ddbda40ce382a784edb87b813062f180566f5d0c"
+      "bytes": 36828,
+      "sha256": "edb7ea97623beeb6d56062c3d5781732a1c1a71d57b2b6881e2fd76100518c68"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/light_sword_slash_2.png",
-      "bytes": 22824,
-      "sha256": "fc4c99419f1f87476b972ec841d798cc6a49c9fa01c533cec4f50dec4dc658e0"
+      "bytes": 61892,
+      "sha256": "331b9741964b6ce63dd6752e60f56446efe5c3808918cb8c1cb28f14a788a90a"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/light_sword_slash_2.webp",
-      "bytes": 18348,
-      "sha256": "30e4191d60e75c40443fbc59261a6b05d8c40da3d9550203d04ae9669fadcde8"
+      "bytes": 49568,
+      "sha256": "d874da1319fc4b2d711d1207a5f2db54b1de16166aa4547eb58f1dd70d3f2e4a"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/light_sword_slash_3.png",
-      "bytes": 26849,
-      "sha256": "68489b3cc1485ad85ea8b86da7b947424704f72f7bd1da33eb4737ecf62249b1"
+      "bytes": 62166,
+      "sha256": "5fcce4fdca67d63e2c57246107d9ea712567c18e467556f16cfa473282fe1a8f"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/light_sword_slash_3.webp",
-      "bytes": 21790,
-      "sha256": "ebd00fd51529388b967eb2ee9ce9b6daefda1c755d491de278171770e1a9154e"
+      "bytes": 50472,
+      "sha256": "2123470b2574e2b4f8ac02caa5f074f733e64850378392cd73d4c41eb7e95c72"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/light_sword_slash_4.png",
-      "bytes": 24917,
-      "sha256": "f89f401965cf8db56d2c7202a2edd090b51f30b3f4ed6ce969302f797d9101aa"
+      "bytes": 57822,
+      "sha256": "c83f0c691916c1e2d90fae1a3d3eb506f445265d6492d042d3bcdd5313dde95c"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/light_sword_slash_4.webp",
-      "bytes": 19966,
-      "sha256": "060a288629c84da174f2baca50618dd9ace408b93b0918c27a431bcc15c3e9fe"
+      "bytes": 47064,
+      "sha256": "a5947856db06692ba28639e2469e118a648ea4d4b05f9c553d8d614ffb3be21b"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/light_sword_slash_5.png",
-      "bytes": 22395,
-      "sha256": "a1202c7ceca47f2bbcd979fc7b10b49428b0aacc2e29036108a61f328f19a608"
+      "bytes": 37535,
+      "sha256": "02cac1f8bb720d99b177eebdc16833df51aaeefb29c299f6c260cb6cf875d5ca"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/light_sword_slash_5.webp",
-      "bytes": 15974,
-      "sha256": "4bb6ab17705192aaccf4ccf96b400576ccda66cb36ed31e40ad25b2dbe81ed45"
+      "bytes": 31040,
+      "sha256": "4321038f0835941bbdcbef203e738021af155f613c3729e302c20b0b6b1963b3"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/sanctuary_mace_slam_0.png",
@@ -6010,13 +6010,13 @@
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/light_sword_slash.png",
-      "bytes": 26849,
-      "sha256": "68489b3cc1485ad85ea8b86da7b947424704f72f7bd1da33eb4737ecf62249b1"
+      "bytes": 62166,
+      "sha256": "5fcce4fdca67d63e2c57246107d9ea712567c18e467556f16cfa473282fe1a8f"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/light_sword_slash.webp",
-      "bytes": 21790,
-      "sha256": "ebd00fd51529388b967eb2ee9ce9b6daefda1c755d491de278171770e1a9154e"
+      "bytes": 50472,
+      "sha256": "2123470b2574e2b4f8ac02caa5f074f733e64850378392cd73d4c41eb7e95c72"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/sanctuary_mace_slam.png",
@@ -11060,763 +11060,763 @@
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_0.png",
-      "bytes": 11341,
-      "sha256": "e468aaa06f85f698ab37b2b6d4bd978e93bbb6fa1ca182fe493ff22a6b6911d3"
+      "bytes": 11324,
+      "sha256": "82ab3844ee1849c6b12773d516c506043ab9224f303e415f697ba554fd410a37"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_0.webp",
-      "bytes": 8778,
-      "sha256": "5532e6df770b2d6b2713c08a38f884fdb83d66e0a8da374ca6fcaad3ccbdab1c"
+      "bytes": 8764,
+      "sha256": "9c1b9cecf292daba881ce26784b6833d59403f260da8c47c5da4ef14fa01ff83"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_1.png",
-      "bytes": 12133,
-      "sha256": "c8e6b6679a445716dd083d444e4110948ca6e538e86ca87ba2fc2164da761d4d"
+      "bytes": 12138,
+      "sha256": "a16f851eeb2e7ea7d4309eeec1e1c0fbca8a1d40e70272c3787157ec9bd16463"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_1.webp",
-      "bytes": 8776,
-      "sha256": "fbb0cf4bfee600d136f02d6d8cf1955c86100a54b6cb6074b0654d3d6665726e"
+      "bytes": 8634,
+      "sha256": "0e06e5e98a41edf71634aea9bdeef84c2c70cc8c59380da4323e126c8fbf94d5"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_2.png",
-      "bytes": 15094,
-      "sha256": "88c37507b810afa82b05a9f7494196a2f3b584dfb10d7036ca5b1c08e8d216b9"
+      "bytes": 17677,
+      "sha256": "eef505c042b2136cd2e71dd483b0615437b64ea0a835ee69a261d94a8255c9aa"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_2.webp",
-      "bytes": 11248,
-      "sha256": "7381519acb4edbea93b71b424a484980f1dcb3db9b4f60931003f232642c7b33"
+      "bytes": 13466,
+      "sha256": "320ad43ddfc429113d04aad43c98c3765b194fedce84e674f996de8ed0099098"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_3.png",
-      "bytes": 12337,
-      "sha256": "ecec077ae1634f9d2e63089ebf29193807d396bc00ef0785fd4a2bdb2ff987cf"
+      "bytes": 12158,
+      "sha256": "dc7531e9250891c664a49ef2d7afbb123509558599cc5ba951d2648892d08777"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_3.webp",
-      "bytes": 8758,
-      "sha256": "c9be824022ac360fa437b5dcde5d0e40689b46b8f91d6741ca2202ed2de7a094"
+      "bytes": 8440,
+      "sha256": "804c7911a868e4e4c7f01915b0e20ef8fbbb519e5e946e7990a5fc1a4d6f2aef"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_4.png",
-      "bytes": 11535,
-      "sha256": "c4c5b685baf5936910df242797ba0587e710de3176b3b71b84007f9d42f03a4d"
+      "bytes": 11636,
+      "sha256": "a142d138c7001c376c03fc1bf3f23ffbd35d14b857836fa83af4690539a5c6f8"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_4.webp",
-      "bytes": 9134,
-      "sha256": "1c6033047e21352a54fee7d7e2f1f2c8d036f2474eac5e2750a392af3f999bcf"
+      "bytes": 9180,
+      "sha256": "80c4f5f588226fa524c2834ffaf59bcc348b6df4d6595e96860ab241bdc95bf2"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_5.png",
-      "bytes": 11341,
-      "sha256": "e468aaa06f85f698ab37b2b6d4bd978e93bbb6fa1ca182fe493ff22a6b6911d3"
+      "bytes": 11324,
+      "sha256": "82ab3844ee1849c6b12773d516c506043ab9224f303e415f697ba554fd410a37"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_5.webp",
-      "bytes": 8778,
-      "sha256": "5532e6df770b2d6b2713c08a38f884fdb83d66e0a8da374ca6fcaad3ccbdab1c"
+      "bytes": 8764,
+      "sha256": "9c1b9cecf292daba881ce26784b6833d59403f260da8c47c5da4ef14fa01ff83"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_down_0.png",
-      "bytes": 11341,
-      "sha256": "e468aaa06f85f698ab37b2b6d4bd978e93bbb6fa1ca182fe493ff22a6b6911d3"
+      "bytes": 11324,
+      "sha256": "82ab3844ee1849c6b12773d516c506043ab9224f303e415f697ba554fd410a37"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_down_0.webp",
-      "bytes": 8778,
-      "sha256": "5532e6df770b2d6b2713c08a38f884fdb83d66e0a8da374ca6fcaad3ccbdab1c"
+      "bytes": 8764,
+      "sha256": "9c1b9cecf292daba881ce26784b6833d59403f260da8c47c5da4ef14fa01ff83"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_down_1.png",
-      "bytes": 12133,
-      "sha256": "c8e6b6679a445716dd083d444e4110948ca6e538e86ca87ba2fc2164da761d4d"
+      "bytes": 12138,
+      "sha256": "a16f851eeb2e7ea7d4309eeec1e1c0fbca8a1d40e70272c3787157ec9bd16463"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_down_1.webp",
-      "bytes": 8776,
-      "sha256": "fbb0cf4bfee600d136f02d6d8cf1955c86100a54b6cb6074b0654d3d6665726e"
+      "bytes": 8634,
+      "sha256": "0e06e5e98a41edf71634aea9bdeef84c2c70cc8c59380da4323e126c8fbf94d5"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_down_2.png",
-      "bytes": 15094,
-      "sha256": "88c37507b810afa82b05a9f7494196a2f3b584dfb10d7036ca5b1c08e8d216b9"
+      "bytes": 17677,
+      "sha256": "eef505c042b2136cd2e71dd483b0615437b64ea0a835ee69a261d94a8255c9aa"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_down_2.webp",
-      "bytes": 11248,
-      "sha256": "7381519acb4edbea93b71b424a484980f1dcb3db9b4f60931003f232642c7b33"
+      "bytes": 13466,
+      "sha256": "320ad43ddfc429113d04aad43c98c3765b194fedce84e674f996de8ed0099098"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_down_3.png",
-      "bytes": 12337,
-      "sha256": "ecec077ae1634f9d2e63089ebf29193807d396bc00ef0785fd4a2bdb2ff987cf"
+      "bytes": 12158,
+      "sha256": "dc7531e9250891c664a49ef2d7afbb123509558599cc5ba951d2648892d08777"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_down_3.webp",
-      "bytes": 8758,
-      "sha256": "c9be824022ac360fa437b5dcde5d0e40689b46b8f91d6741ca2202ed2de7a094"
+      "bytes": 8440,
+      "sha256": "804c7911a868e4e4c7f01915b0e20ef8fbbb519e5e946e7990a5fc1a4d6f2aef"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_down_4.png",
-      "bytes": 11535,
-      "sha256": "c4c5b685baf5936910df242797ba0587e710de3176b3b71b84007f9d42f03a4d"
+      "bytes": 11636,
+      "sha256": "a142d138c7001c376c03fc1bf3f23ffbd35d14b857836fa83af4690539a5c6f8"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_down_4.webp",
-      "bytes": 9134,
-      "sha256": "1c6033047e21352a54fee7d7e2f1f2c8d036f2474eac5e2750a392af3f999bcf"
+      "bytes": 9180,
+      "sha256": "80c4f5f588226fa524c2834ffaf59bcc348b6df4d6595e96860ab241bdc95bf2"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_down_5.png",
-      "bytes": 11341,
-      "sha256": "e468aaa06f85f698ab37b2b6d4bd978e93bbb6fa1ca182fe493ff22a6b6911d3"
+      "bytes": 11324,
+      "sha256": "82ab3844ee1849c6b12773d516c506043ab9224f303e415f697ba554fd410a37"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_down_5.webp",
-      "bytes": 8778,
-      "sha256": "5532e6df770b2d6b2713c08a38f884fdb83d66e0a8da374ca6fcaad3ccbdab1c"
+      "bytes": 8764,
+      "sha256": "9c1b9cecf292daba881ce26784b6833d59403f260da8c47c5da4ef14fa01ff83"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_left_0.png",
-      "bytes": 10263,
-      "sha256": "55affd18a6afd0877147d7510ddee98b0269e600b490c35bf33273b42f827368"
+      "bytes": 12707,
+      "sha256": "f6b7bd2ccda805b1bfe432c0bdc94e97e2544e6851af822326e38c9b7fc32a3b"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_left_0.webp",
-      "bytes": 7372,
-      "sha256": "c9d70a6d11002b94f8010feb15ab5b45a4a902279ee3ff216452e9e09c8a09f5"
+      "bytes": 8954,
+      "sha256": "a6af9149910f0f964fb815399986ad60d615d1953192dfe23f362d17f41c0363"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_left_1.png",
-      "bytes": 12679,
-      "sha256": "d76e9f8ad3c4e937195e3ca9f94d44bfa1ef10b77e1c6d08f1b90aa88b5ed238"
+      "bytes": 14432,
+      "sha256": "5e97a930a45e2e7262c57547aa2ca5b7e53cc7a75b2b6e9f4f2356d3ab15531e"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_left_1.webp",
-      "bytes": 8972,
-      "sha256": "6fec4bead5583ed84eeaccc3873d3437f05b67cfc512e6c2eab6079aaaf81cb0"
+      "bytes": 10252,
+      "sha256": "a57967e97300e789558239658d90337c4b2133725695e04ef7027ca10c27823e"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_left_2.png",
-      "bytes": 13215,
-      "sha256": "72aa968b6a52ac2d93e5cc26d9bb554f9eb71c9798cab7b492e243d31a0d0252"
+      "bytes": 21071,
+      "sha256": "f661ed67a48393bafcb1ec271a4ff713732a48afab3a49c4fbf69229d2f93f2b"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_left_2.webp",
-      "bytes": 9482,
-      "sha256": "030880bc37d8f1a7bbf26993d1594060fac5abf136f6bd305eb285c663c5b3bf"
+      "bytes": 16026,
+      "sha256": "cf0fd7a0522ce988cae23a6851605f6e36a2b2a8128081d48110d25b572caacd"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_left_3.png",
-      "bytes": 12071,
-      "sha256": "a7d71fe0233e6c140c3ad907416009336721efc566db540d9abf177aa0e91c48"
+      "bytes": 13687,
+      "sha256": "cabdcdf98a14eaf7cc193ddd546b9eaa758492ce5fda4a19e68c977be146da9c"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_left_3.webp",
-      "bytes": 8642,
-      "sha256": "36baecabfe7600899747ebabbdd7e40911766fbac94e1a39ea974d917a55493f"
+      "bytes": 9412,
+      "sha256": "27279d6ad43c34a1e5d861be0021b1d2704b8360b3deab7f1d6c87e36f7ec9b0"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_left_4.png",
-      "bytes": 10399,
-      "sha256": "4bc4763ddcdc53cae612c59e32d21c8e58042ebea3cc1e1b460b0267803b5524"
+      "bytes": 13101,
+      "sha256": "4ee930b5afdb3b2fe94a7a852d7e9cca27129687b520e50679e0a53584ae1fa1"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_left_4.webp",
-      "bytes": 7558,
-      "sha256": "b701c405a7eaa74b594a865068b05650ac2bffaa1310f8a519ae7d725afcab40"
+      "bytes": 9366,
+      "sha256": "50f611fcf84291c27a1a51008ae86747dca7b21737f2da5feeaa901e9f617bf9"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_left_5.png",
-      "bytes": 10263,
-      "sha256": "55affd18a6afd0877147d7510ddee98b0269e600b490c35bf33273b42f827368"
+      "bytes": 12707,
+      "sha256": "f6b7bd2ccda805b1bfe432c0bdc94e97e2544e6851af822326e38c9b7fc32a3b"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_left_5.webp",
-      "bytes": 7372,
-      "sha256": "c9d70a6d11002b94f8010feb15ab5b45a4a902279ee3ff216452e9e09c8a09f5"
+      "bytes": 8954,
+      "sha256": "a6af9149910f0f964fb815399986ad60d615d1953192dfe23f362d17f41c0363"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_right_0.png",
-      "bytes": 10310,
-      "sha256": "5557215f6685a29048833fe5f3a209f7b44b111770c3fe468f081585462ccc69"
+      "bytes": 12670,
+      "sha256": "e98d0b17e7738b3726f85f780b2be7f34b22193da179766a61a9210ca3ba85fc"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_right_0.webp",
-      "bytes": 7430,
-      "sha256": "bd128ed993d45bf8c7d0d2778ace56420a32e5d1b863ad94e200077cdd776394"
+      "bytes": 8922,
+      "sha256": "d77907686aac7690385e1c1e5bf2fc34fce49aa03ad81eb88849dbcc5fb92ae0"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_right_1.png",
-      "bytes": 12512,
-      "sha256": "03e5f3182a11c33dc3bc2b94e381d18622dad75250b4830e7395fea64f879c3d"
+      "bytes": 14253,
+      "sha256": "d6f6ca9055e76eb199df9a51f6f77998e84b89073a5fc2f00e57da347dea57dc"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_right_1.webp",
-      "bytes": 8948,
-      "sha256": "b0a1019535fd11e066820fd7397fa1a5f04722e3dc0724cf6ff1304023278762"
+      "bytes": 10188,
+      "sha256": "e89f7ec67a4d9c96c30823f818fbc61973ba372a3c0d0f2ecbb9a6f9c7f21400"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_right_2.png",
-      "bytes": 13002,
-      "sha256": "2f20fd2bcb8583fc8f8db3708af4cdb0ad63cbce15d4b62e16a096d77a633fef"
+      "bytes": 20873,
+      "sha256": "39df4f3325f34b5047b51b39a9f68a1e2312741fe4009e099b8e734cc6c8de82"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_right_2.webp",
-      "bytes": 9478,
-      "sha256": "60878db157a3ab445f883859e302e7e9ca3006c4b73e54b6fa226d45112e4375"
+      "bytes": 15954,
+      "sha256": "07c1584fd0b371d467775116c5c442ce23cd81e9965556e0fe4179867e2d3be5"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_right_3.png",
-      "bytes": 12066,
-      "sha256": "dafb28d847dc1f82fe3521d26185f6672a49155bfd0b75318f28723280891a68"
+      "bytes": 13690,
+      "sha256": "49cb721fc4403fd1f91624148713ff84631aad1df7c6a1b0eddc1b7bb3ebd370"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_right_3.webp",
-      "bytes": 8674,
-      "sha256": "751801adc9322d890494a8dd88661fdae2cdd4918ab4fcab9bc23e016a84a730"
+      "bytes": 9422,
+      "sha256": "54a93554aa358dc9a361946921b6e80fe95e1b90423ecb8c2aefd166f5cd6e05"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_right_4.png",
-      "bytes": 10404,
-      "sha256": "33ed01e6bc24c1332c5799d332e068fa0aad69724512ba7429045b2a9aa371ee"
+      "bytes": 13036,
+      "sha256": "0f64a3c9a887b8da36e3c02ff0fd69a559115f4d2d0b2c2a15bed1b20e972020"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_right_4.webp",
-      "bytes": 7596,
-      "sha256": "5f7acab71b67a0fc3e7d58a44f4e507deec344e876e02c9bae3f08ef4a895fc5"
+      "bytes": 9378,
+      "sha256": "5c74d72ba644c502e8c1eaf6cc187e23243c78de635568127ceb5bf9642679d4"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_right_5.png",
-      "bytes": 10310,
-      "sha256": "5557215f6685a29048833fe5f3a209f7b44b111770c3fe468f081585462ccc69"
+      "bytes": 12670,
+      "sha256": "e98d0b17e7738b3726f85f780b2be7f34b22193da179766a61a9210ca3ba85fc"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_right_5.webp",
-      "bytes": 7430,
-      "sha256": "bd128ed993d45bf8c7d0d2778ace56420a32e5d1b863ad94e200077cdd776394"
+      "bytes": 8922,
+      "sha256": "d77907686aac7690385e1c1e5bf2fc34fce49aa03ad81eb88849dbcc5fb92ae0"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_0.png",
-      "bytes": 12011,
-      "sha256": "67ab60f081d6ae363fdbf3c19700d4f79f4fa2f43ec26a5838c7acd4cbc079ef"
+      "bytes": 11623,
+      "sha256": "17d733a39d95b004a69dda47d2b401c81d4dfe7bc15096502970c32b319fa8f5"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_0.webp",
-      "bytes": 9098,
-      "sha256": "63c4ef552645fe6d7b71ef143bce642069e81e259fd2e60464743f4a69c22037"
+      "bytes": 9164,
+      "sha256": "b642ed5bbc21e31e9fbfc729deb3ecc5bf4264ae8fc5e621184f7502be164b3c"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_1.png",
-      "bytes": 12569,
-      "sha256": "ffe9640591513f5d6517aca9b9b28c4f624d7b707ca78f10d8d32722335d4688"
+      "bytes": 12962,
+      "sha256": "dc756336cda5daea801f8fc6831283ccb416436ff38a5ee77b02831d7e5e5f9a"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_1.webp",
-      "bytes": 9870,
-      "sha256": "6a40a403f452a7a73b82fecf62649d996be973eb7ba4b0b31c8b2c8a2e79f959"
+      "bytes": 10392,
+      "sha256": "5d0bd7995ed534ce635bc6e508e4596d99a04506c7a1c858c8ebffcae1901671"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_2.png",
-      "bytes": 17556,
-      "sha256": "01e7a4fb182c7e89aaa9ba854e9673f51dcd9d80342754435953b11dbf060aef"
+      "bytes": 21978,
+      "sha256": "b39b893a88d6ac5162e00ba3353242cba1d458819e05c1a160137de13fbbad4c"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_2.webp",
-      "bytes": 12834,
-      "sha256": "a15162971a22ff615e947a025c9a1fdd38a3dc3f7900e42c1fe8bb3b4bc9516c"
+      "bytes": 16730,
+      "sha256": "6a64227aea3853e0f34de5c5e9efbbc3f63a20076266c73d129476912eedd57a"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_3.png",
-      "bytes": 13226,
-      "sha256": "e4dbf8c8c2d219a87c8be42de61a9e49444905094a0c068d2caca311f923bd87"
+      "bytes": 14455,
+      "sha256": "a841399f2b2a004a36a73aef1a0b6b01da951b26b1d205e755a4338ac92c5ae4"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_3.webp",
-      "bytes": 10026,
-      "sha256": "a0deefce23d10913a9c96f571d7903a5541c82b982e721dd2a4902e36a9e62c8"
+      "bytes": 11164,
+      "sha256": "c718a220d04f3d24e392b7ce7438cd8cec8b470e796a9ac69c0fe633fcbb4c85"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_4.png",
-      "bytes": 12238,
-      "sha256": "b13ab18302bf636f926758db1b46474d8cb2756395fa5455693b769fb694d4d1"
+      "bytes": 11847,
+      "sha256": "4fdf7cb72fbd73d7318c89c5f133ead2dee18e2b641633e423b19ddb5e98f240"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_4.webp",
-      "bytes": 9466,
-      "sha256": "5c02738ad94b280fd0a1bb6f94e987722b028d18da6586355d76625cc1ab35b0"
+      "bytes": 9538,
+      "sha256": "19c76651db488fbd102801b8396b12d02b2b25bd8535492c04beb3732c984f4e"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_5.png",
-      "bytes": 11341,
-      "sha256": "e468aaa06f85f698ab37b2b6d4bd978e93bbb6fa1ca182fe493ff22a6b6911d3"
+      "bytes": 11324,
+      "sha256": "82ab3844ee1849c6b12773d516c506043ab9224f303e415f697ba554fd410a37"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_5.webp",
-      "bytes": 8702,
-      "sha256": "f25b84f3e489f9ec0e14422ffa4f5a1a9e1348f479eba2b0586cc86387eb8b7f"
+      "bytes": 8834,
+      "sha256": "81da922b3a350d692e3294dfbafb6a54b8f41208a4f7afe066d3692c435a1137"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_0.png",
-      "bytes": 17413,
-      "sha256": "0f304185e9f17353dd9396dbeae5baa1ac20072f43c9cbedfc10e224e4f1bee9"
+      "bytes": 12358,
+      "sha256": "6f54b29482d58d01ccf0b228bca5eee49af629b4c6dcfbd03ffc8041f80881de"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_0.webp",
-      "bytes": 12394,
-      "sha256": "5e9941a8878d91739c6561970cb866baefa5fb7e3464bd11bba43607dea602ea"
+      "bytes": 9696,
+      "sha256": "1e3c88abc999fd705b6b59b174349faf8027cf6c4a8aadf2746b7060b18c3c90"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_1.png",
-      "bytes": 14135,
-      "sha256": "686910af793419eab0f2c1d5d5da8c921f8ec9a239ab4dd848b89bfa34230b94"
+      "bytes": 14050,
+      "sha256": "3b4cddcbfb5b89f44236bb51aedd232826684c162cbb588b94b7e6a9eb421b58"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_1.webp",
-      "bytes": 10052,
-      "sha256": "80fec3af9484ba06921c0c151b94087f4c34d8229802899a06869f7fcb280bc5"
+      "bytes": 10514,
+      "sha256": "812b20232da58a7c70922dfee900895587879acaf58ef308fc28e58417b31ed6"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_2.png",
-      "bytes": 22501,
-      "sha256": "39a70c34d9b7cfaded946713ef3706e90b3ad7b8eab200890eedd870d4cd0aad"
+      "bytes": 24569,
+      "sha256": "8b33878bed046b1c340969ef9fa934b05db7bd0d40f67a9b47dc6807eea5dffe"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_2.webp",
-      "bytes": 16810,
-      "sha256": "cd5ace46fe8b12742351295498f28248e7546af6f1f20e7052fdf4d2309e4df1"
+      "bytes": 18812,
+      "sha256": "3c91b459c3265bcabb366b7dcec1935599865cd147c7005588f805daf3043f1e"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_3.png",
-      "bytes": 17965,
-      "sha256": "1d06c719da015265236c8e29e8269747da689c01e72b02fb6b85c4c2beea130b"
+      "bytes": 12774,
+      "sha256": "f10987096b60804c16e7da08037dd39803d4efe031cc6a2df62b9cdeb5c6aaac"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_3.webp",
-      "bytes": 12744,
-      "sha256": "2fe16ceac003b88a45b07a87a9106da4b1dce7b031763bdfad047355992ebf2f"
+      "bytes": 9902,
+      "sha256": "c758e220cb4af878f689dc9a656074b2960ac3ab885541a26a318205b71effb2"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_4.png",
-      "bytes": 17716,
-      "sha256": "1f6a99f16a073c4860b4f183e3efd9e347ccf356570f0954e4c76ecff7d3d62d"
+      "bytes": 12551,
+      "sha256": "6706ffea0e23368d1c8f6497e35a8a27c36d593be4d0f838450661691859ff28"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_4.webp",
-      "bytes": 12794,
-      "sha256": "637f9d1ae8ba5e740b5964af7c2d881dd2dbbfc932cfc706a8be122d37f85ed8"
+      "bytes": 10162,
+      "sha256": "37101ebc38b6acba3c51ee7a57b843c32416c8abdaf0b2e402d03aabad575980"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_5.png",
-      "bytes": 10263,
-      "sha256": "55affd18a6afd0877147d7510ddee98b0269e600b490c35bf33273b42f827368"
+      "bytes": 12707,
+      "sha256": "f6b7bd2ccda805b1bfe432c0bdc94e97e2544e6851af822326e38c9b7fc32a3b"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_5.webp",
-      "bytes": 8032,
-      "sha256": "1fa99435b94ff05632db6b5eb8412bac927917b7cbf2c66dd3c84a5a0169907f"
+      "bytes": 9640,
+      "sha256": "e6674e57bd538965069ac7053c8e076e2b853135ab2ec74dc777f24d2dbf32f3"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_0.png",
-      "bytes": 17464,
-      "sha256": "5915187d4d9abc3a55107de64d712b7d17bc39d9b21ca4dfc9824ec90f6292f8"
+      "bytes": 12339,
+      "sha256": "2871d5020674fbfc094b5a4bb23fd915506f9727632e132f3a59f483e6bb34dd"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_0.webp",
-      "bytes": 12424,
-      "sha256": "1c54fef96edaba5cc7f862027027ce6a0206f9d1ece73234858aac38aebab0d3"
+      "bytes": 9696,
+      "sha256": "0d6e515235709ac83f7724b3c7e1b8204301d1dbf6c7a5bb3488c4ab24e25d1b"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_1.png",
-      "bytes": 14013,
-      "sha256": "ffbac3ab81ed0c0ce9e5874308cca9afdcae97efb6ba4cfdd706fb0f2ac4e18b"
+      "bytes": 13905,
+      "sha256": "d3c2a3d643048a192d986e2654aa485e6a37a80cd6456d290d6e9895631fff7b"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_1.webp",
-      "bytes": 10150,
-      "sha256": "03fb688f1c319eac938a9d9f0c5f71275637393521a8f1938d440397853b70d3"
+      "bytes": 10534,
+      "sha256": "df126f8fd2468fa2f86dc005cecd2a15b80517ae537be2e55263717e3ed80610"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_2.png",
-      "bytes": 21989,
-      "sha256": "1560a1a7725ef8d0df3e46e7addf4d21f8ffc06d07494110a06872ac5dc4c6ed"
+      "bytes": 24380,
+      "sha256": "9e8f7ae5c584a19ee583fc0077115c5cc0a640af1329ddce6788b7a96ffab384"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_2.webp",
-      "bytes": 16900,
-      "sha256": "e83cd287098f251a606966b0334cdec2f20c6a62cb84a3a06bf79b98e8ae31dc"
+      "bytes": 18836,
+      "sha256": "8dc302c0058e3123b0006e842d920e64e02842e48ead72a624febd9293bdb33e"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_3.png",
-      "bytes": 17772,
-      "sha256": "cc984502373dabc00820a334fc28f1bdb92fdc106216fbed05da5fba6daa938a"
+      "bytes": 12756,
+      "sha256": "d1c819255421d06697d9d6d2195d6953f6c2787dd8ece0ca031f34cfe7cdc1c4"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_3.webp",
-      "bytes": 12782,
-      "sha256": "3f544cc210ca5b6cf58b43af516ec64967aad65eb78a3cefd5477eb9e4d85b4a"
+      "bytes": 9872,
+      "sha256": "e85cf7351ce886d149ef8981b313d9666f098b6442ddb7489497f156b60f8e30"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_4.png",
-      "bytes": 17771,
-      "sha256": "66f105528b26d5948e10f636f4c8166151d473fd5d101aff414c78cdf4cfeb12"
+      "bytes": 12589,
+      "sha256": "7dcdf3d5e83fb397c0ee6f3e751848bc704dc482cc7f05c3f1d3b00250cbcae2"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_4.webp",
-      "bytes": 12914,
-      "sha256": "2a14eda51c84a70618a75dbbdce71ad4fdf0ea36d7884547c05720030cbe141c"
+      "bytes": 10190,
+      "sha256": "6b9532e5a1c542fcaee2513f1c0490e019163b0211b2dbb41230deac9cc06a7c"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_5.png",
-      "bytes": 10310,
-      "sha256": "5557215f6685a29048833fe5f3a209f7b44b111770c3fe468f081585462ccc69"
+      "bytes": 12670,
+      "sha256": "e98d0b17e7738b3726f85f780b2be7f34b22193da179766a61a9210ca3ba85fc"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_5.webp",
-      "bytes": 7970,
-      "sha256": "9d5c58ee6246bb621fdb8f74b8b719aed3f0479cae4f77f38fbb227e63586de9"
+      "bytes": 9664,
+      "sha256": "cae26d8cee63f98887d0fcea4a07715f777954565c07749df4fd1a3e77bc8c25"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_0.png",
-      "bytes": 13460,
-      "sha256": "86264c6ffbb84e8cb4e22938fe03c774710d454f5906e7616fd90fd93223c0fa"
+      "bytes": 11579,
+      "sha256": "f32aa383f93decd260b29ead4ecade0ee7acd7fe8b1eb2e5e700449a3c320293"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_0.webp",
-      "bytes": 10146,
-      "sha256": "65e94af1031cf42c30f333aee9ce6011eb3cf3fdb90f79231da1221da32cb81e"
+      "bytes": 9238,
+      "sha256": "ce21ace368d35cc1461d5a6566cc34bd8841ecae75db481d812e461deb473917"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_1.png",
-      "bytes": 13486,
-      "sha256": "8545278d5e9f10621b5b72361d225e68b1dd01e8ca202b8e66e05c747ef5922b"
+      "bytes": 11417,
+      "sha256": "0e0e3c6f6fff4ad2b197fbe4622396babe15e75df9b1da7bb0f19e1bdc0d086f"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_1.webp",
-      "bytes": 10370,
-      "sha256": "80a06c58a7c1f33ea31be9ea674224b24678e7fba0a41513c31a44ecb08b6d27"
+      "bytes": 8522,
+      "sha256": "fa09811c1da5d6f77075b3b754a17b54a821be01f8b6219fd75ed0843000d0e6"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_2.png",
-      "bytes": 16806,
-      "sha256": "f2880e656accf35e26b70cc564859bb2357baff8f4040991d491a39e8acb1c0d"
+      "bytes": 19560,
+      "sha256": "1c29e6db41f54fb03f702e5ef9aba38a887ea1e6e511720fec409a934afb8ae4"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_2.webp",
-      "bytes": 12446,
-      "sha256": "bd2e47e788907c3cc792b062408e50e8bf7279007fe5925e9954bba26e34c4f8"
+      "bytes": 14762,
+      "sha256": "94460f898a1cbd3ad1c325a4dd2acec07d29f11c7803c2bb5ed9147950abccf3"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_3.png",
-      "bytes": 13995,
-      "sha256": "5200d4612e92483b286c052aa4a232c0607d7b4efd15d5c33052b7374f87f2db"
+      "bytes": 13750,
+      "sha256": "db204f60fa2350f3b0551770179ed729dc755f8f413abbf27e22f4b064b4fc58"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_3.webp",
-      "bytes": 10860,
-      "sha256": "a2239f172302bd2ceb8b5e51b80f06a3820289bd2529c419e79ddee54ee60a3b"
+      "bytes": 10690,
+      "sha256": "8da84bd2b4d2fd727e59d5f0023ace12d8e63e6a3539cf89a4c8382f6eca4ba8"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_4.png",
-      "bytes": 13909,
-      "sha256": "7edb79e86e36cb4c72ec8fd27a9c147cd56fd5f290f98ff27e8fbc864e63f6b1"
+      "bytes": 12049,
+      "sha256": "5e785ad19dd77d6f39ca5dfcb366cb40a5a3a36c1ec6320eb46ee3dacf68f267"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_4.webp",
-      "bytes": 11048,
-      "sha256": "6ea33a578124003a2beebf54fec5ebda9718fab4121a8d5cfa39b169d300fd64"
+      "bytes": 9736,
+      "sha256": "17baca6657c323e5e9d345f7f2a91df5702b21eddf40c9193b36b567923765e4"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_5.png",
-      "bytes": 11311,
-      "sha256": "aec08b3a437077c19bfccc12c1a5d7e4fe1a49109218f0b1e89418d4701865e8"
+      "bytes": 11720,
+      "sha256": "592e72705bf40350d1c0aa4a279ab528f6c55d775721ddd066145d16148eb55b"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_5.webp",
-      "bytes": 8950,
-      "sha256": "10d0a6f138aa4121b3431d7e04884becbf49126e066feaf3978ed657fd6402b0"
+      "bytes": 9160,
+      "sha256": "afbd05a94cae0b90ace70a7c6aaec1222144f0047e339cdeebb50f8ab381a946"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_up_0.png",
-      "bytes": 11311,
-      "sha256": "aec08b3a437077c19bfccc12c1a5d7e4fe1a49109218f0b1e89418d4701865e8"
+      "bytes": 11720,
+      "sha256": "592e72705bf40350d1c0aa4a279ab528f6c55d775721ddd066145d16148eb55b"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_up_0.webp",
-      "bytes": 8168,
-      "sha256": "345efae354fa029be9101f569b1be64be98734fd1fdc4c68e4c1b66b4e6dbc36"
+      "bytes": 8436,
+      "sha256": "47fb63a1bc9b59252b58ad554b148310e076ffec7f3e55be9fdf2041891a8185"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_up_1.png",
-      "bytes": 10857,
-      "sha256": "92b049860291fb3259fce35e3294772b46b1c54d3697d1858a19505fab1f8ccc"
+      "bytes": 11738,
+      "sha256": "eea2eac97c318531808c43f867a212b486070b988133702ddc3b3041dbe8b1e8"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_up_1.webp",
-      "bytes": 7746,
-      "sha256": "b40d20afc74f56235f6ac68690e333296242e2f95725044d93f1fff820f59ac9"
+      "bytes": 8356,
+      "sha256": "5537e40a86e933b595033e5dd3deabea928d9c780ef45cea5d5a04cf3d8f10e8"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_up_2.png",
-      "bytes": 14719,
-      "sha256": "85103ccd0f054cf6be9185ef3d32c3effa8b5e512f3ac0a753b0b10ffd348fe3"
+      "bytes": 21290,
+      "sha256": "0752d139aed43a27f5024903aa6a86f0dd12176c5ad5a802969ed54dcad03a9a"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_up_2.webp",
-      "bytes": 10858,
-      "sha256": "f154202f2ecafb6cc66c1b2feac853e62f0992aed7f69138b1a4f76af71a00b0"
+      "bytes": 16152,
+      "sha256": "d9d1b6c1b91c87df7c16c1f3fc03a499b7a8a6a78701555ca2aeeb5b34926061"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_up_3.png",
-      "bytes": 11550,
-      "sha256": "1af8070fa335467c34b92f778667cb83e0f5a97643a6ad8aa042746dd711ec09"
+      "bytes": 13062,
+      "sha256": "01a639d980ff9628d6df233c0ed183e482c70a8e8edcb4b4436d8e4aadd48a13"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_up_3.webp",
-      "bytes": 8380,
-      "sha256": "be71abedd04bc1faeefd9518127a287dbba73aba6c45a46af7b7f376cd4bb788"
+      "bytes": 8930,
+      "sha256": "4875ebae03f904300c85584617b9869f92277aea4867b1a25390c097b1d07028"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_up_4.png",
-      "bytes": 11574,
-      "sha256": "9e7b7a09c4c81b32bb0a3bc65e08f3fc1e9a0fd9b76647ac67635779e45d396b"
+      "bytes": 11971,
+      "sha256": "a87e3553de4513e040c2b08b012d2f15b1a71bd4f8342f3d554c4f8aaeb787c2"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_up_4.webp",
-      "bytes": 8570,
-      "sha256": "6e897faf3e5b0739917dc622884276c6f852ecdfbcaecb831122806b679439d2"
+      "bytes": 8768,
+      "sha256": "b1f70b785b4a4fce7eede3ba513c60549b6ae034c356dfcb2a4a1e7501f38d6e"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_up_5.png",
-      "bytes": 11311,
-      "sha256": "aec08b3a437077c19bfccc12c1a5d7e4fe1a49109218f0b1e89418d4701865e8"
+      "bytes": 11720,
+      "sha256": "592e72705bf40350d1c0aa4a279ab528f6c55d775721ddd066145d16148eb55b"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_up_5.webp",
-      "bytes": 8168,
-      "sha256": "345efae354fa029be9101f569b1be64be98734fd1fdc4c68e4c1b66b4e6dbc36"
+      "bytes": 8436,
+      "sha256": "47fb63a1bc9b59252b58ad554b148310e076ffec7f3e55be9fdf2041891a8185"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/hit_0.png",
-      "bytes": 11095,
-      "sha256": "eaccbc74bdffe7c6d1f2da70f7824d224778188acaaeccd5fed40d9445de340e"
+      "bytes": 11152,
+      "sha256": "9f907cda11d2cc5193494855aa6ccb2ca95028f203d0153299dcd5945034b8e3"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/hit_0.webp",
-      "bytes": 8714,
-      "sha256": "975f897f1e0f7b2bce0ce3854dd57298ce1da3c8124d6e742a86de226d976ad8"
+      "bytes": 8828,
+      "sha256": "22efdce1c7ac860a0d1f87ed50260c6712b6d6e7ed8631add152dbfbc32a7713"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/hit_1.png",
-      "bytes": 11341,
-      "sha256": "e468aaa06f85f698ab37b2b6d4bd978e93bbb6fa1ca182fe493ff22a6b6911d3"
+      "bytes": 11324,
+      "sha256": "82ab3844ee1849c6b12773d516c506043ab9224f303e415f697ba554fd410a37"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/hit_1.webp",
-      "bytes": 8778,
-      "sha256": "5532e6df770b2d6b2713c08a38f884fdb83d66e0a8da374ca6fcaad3ccbdab1c"
+      "bytes": 8764,
+      "sha256": "9c1b9cecf292daba881ce26784b6833d59403f260da8c47c5da4ef14fa01ff83"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_0.png",
-      "bytes": 11341,
-      "sha256": "e468aaa06f85f698ab37b2b6d4bd978e93bbb6fa1ca182fe493ff22a6b6911d3"
+      "bytes": 11324,
+      "sha256": "82ab3844ee1849c6b12773d516c506043ab9224f303e415f697ba554fd410a37"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_0.webp",
-      "bytes": 8778,
-      "sha256": "5532e6df770b2d6b2713c08a38f884fdb83d66e0a8da374ca6fcaad3ccbdab1c"
+      "bytes": 8764,
+      "sha256": "9c1b9cecf292daba881ce26784b6833d59403f260da8c47c5da4ef14fa01ff83"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_1.png",
-      "bytes": 11279,
-      "sha256": "ffdee4859f0b7cf185f3c1b876e2dda4f2e029b5246d6207a060e7e49e437095"
+      "bytes": 11336,
+      "sha256": "b91aa18a9a3d90cc7f1e1ef3093c949b3fe4f6f07cc60de2aeffab5837948bd0"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_1.webp",
-      "bytes": 8730,
-      "sha256": "b28f25a48a94905e42ac95cfe61ecfe0cd99fcef1c108ae761f3734055313ffc"
+      "bytes": 8794,
+      "sha256": "72f5008a486833ede393be13d5a77096898c9772b191df97c31eb1a788f443d1"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_2.png",
-      "bytes": 11279,
-      "sha256": "ffdee4859f0b7cf185f3c1b876e2dda4f2e029b5246d6207a060e7e49e437095"
+      "bytes": 11336,
+      "sha256": "b91aa18a9a3d90cc7f1e1ef3093c949b3fe4f6f07cc60de2aeffab5837948bd0"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_2.webp",
-      "bytes": 8730,
-      "sha256": "b28f25a48a94905e42ac95cfe61ecfe0cd99fcef1c108ae761f3734055313ffc"
+      "bytes": 8794,
+      "sha256": "72f5008a486833ede393be13d5a77096898c9772b191df97c31eb1a788f443d1"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_3.png",
-      "bytes": 11341,
-      "sha256": "e468aaa06f85f698ab37b2b6d4bd978e93bbb6fa1ca182fe493ff22a6b6911d3"
+      "bytes": 11324,
+      "sha256": "82ab3844ee1849c6b12773d516c506043ab9224f303e415f697ba554fd410a37"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_3.webp",
-      "bytes": 8778,
-      "sha256": "5532e6df770b2d6b2713c08a38f884fdb83d66e0a8da374ca6fcaad3ccbdab1c"
+      "bytes": 8764,
+      "sha256": "9c1b9cecf292daba881ce26784b6833d59403f260da8c47c5da4ef14fa01ff83"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_down_0.png",
-      "bytes": 11341,
-      "sha256": "e468aaa06f85f698ab37b2b6d4bd978e93bbb6fa1ca182fe493ff22a6b6911d3"
+      "bytes": 11324,
+      "sha256": "82ab3844ee1849c6b12773d516c506043ab9224f303e415f697ba554fd410a37"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_down_0.webp",
-      "bytes": 8778,
-      "sha256": "5532e6df770b2d6b2713c08a38f884fdb83d66e0a8da374ca6fcaad3ccbdab1c"
+      "bytes": 8764,
+      "sha256": "9c1b9cecf292daba881ce26784b6833d59403f260da8c47c5da4ef14fa01ff83"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_down_1.png",
-      "bytes": 11279,
-      "sha256": "ffdee4859f0b7cf185f3c1b876e2dda4f2e029b5246d6207a060e7e49e437095"
+      "bytes": 11336,
+      "sha256": "b91aa18a9a3d90cc7f1e1ef3093c949b3fe4f6f07cc60de2aeffab5837948bd0"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_down_1.webp",
-      "bytes": 8730,
-      "sha256": "b28f25a48a94905e42ac95cfe61ecfe0cd99fcef1c108ae761f3734055313ffc"
+      "bytes": 8794,
+      "sha256": "72f5008a486833ede393be13d5a77096898c9772b191df97c31eb1a788f443d1"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_down_2.png",
-      "bytes": 11279,
-      "sha256": "ffdee4859f0b7cf185f3c1b876e2dda4f2e029b5246d6207a060e7e49e437095"
+      "bytes": 11336,
+      "sha256": "b91aa18a9a3d90cc7f1e1ef3093c949b3fe4f6f07cc60de2aeffab5837948bd0"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_down_2.webp",
-      "bytes": 8730,
-      "sha256": "b28f25a48a94905e42ac95cfe61ecfe0cd99fcef1c108ae761f3734055313ffc"
+      "bytes": 8794,
+      "sha256": "72f5008a486833ede393be13d5a77096898c9772b191df97c31eb1a788f443d1"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_down_3.png",
-      "bytes": 11341,
-      "sha256": "e468aaa06f85f698ab37b2b6d4bd978e93bbb6fa1ca182fe493ff22a6b6911d3"
+      "bytes": 11324,
+      "sha256": "82ab3844ee1849c6b12773d516c506043ab9224f303e415f697ba554fd410a37"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_down_3.webp",
-      "bytes": 8778,
-      "sha256": "5532e6df770b2d6b2713c08a38f884fdb83d66e0a8da374ca6fcaad3ccbdab1c"
+      "bytes": 8764,
+      "sha256": "9c1b9cecf292daba881ce26784b6833d59403f260da8c47c5da4ef14fa01ff83"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_left_0.png",
-      "bytes": 10263,
-      "sha256": "55affd18a6afd0877147d7510ddee98b0269e600b490c35bf33273b42f827368"
+      "bytes": 12707,
+      "sha256": "f6b7bd2ccda805b1bfe432c0bdc94e97e2544e6851af822326e38c9b7fc32a3b"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_left_0.webp",
-      "bytes": 7372,
-      "sha256": "c9d70a6d11002b94f8010feb15ab5b45a4a902279ee3ff216452e9e09c8a09f5"
+      "bytes": 8954,
+      "sha256": "a6af9149910f0f964fb815399986ad60d615d1953192dfe23f362d17f41c0363"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_left_1.png",
-      "bytes": 10281,
-      "sha256": "7c83c0e9760b183d46f51672d2f1457c13922d1564987f5302f184bc5508d55d"
+      "bytes": 12788,
+      "sha256": "3a0ba40308fc6206576756881d7d6096342d7799dfdbb2078aca980de180c5ca"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_left_1.webp",
-      "bytes": 7448,
-      "sha256": "89e1b1cefc0556856f638619e662cb2ea07d3135b912156cb13a114edca2de1a"
+      "bytes": 8980,
+      "sha256": "077128d7ca3bdd2d8c72138fff55f1f72b42dc80fb7578eca966a82a46095861"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_left_2.png",
-      "bytes": 10281,
-      "sha256": "7c83c0e9760b183d46f51672d2f1457c13922d1564987f5302f184bc5508d55d"
+      "bytes": 12788,
+      "sha256": "3a0ba40308fc6206576756881d7d6096342d7799dfdbb2078aca980de180c5ca"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_left_2.webp",
-      "bytes": 7448,
-      "sha256": "89e1b1cefc0556856f638619e662cb2ea07d3135b912156cb13a114edca2de1a"
+      "bytes": 8980,
+      "sha256": "077128d7ca3bdd2d8c72138fff55f1f72b42dc80fb7578eca966a82a46095861"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_left_3.png",
-      "bytes": 10263,
-      "sha256": "55affd18a6afd0877147d7510ddee98b0269e600b490c35bf33273b42f827368"
+      "bytes": 12707,
+      "sha256": "f6b7bd2ccda805b1bfe432c0bdc94e97e2544e6851af822326e38c9b7fc32a3b"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_left_3.webp",
-      "bytes": 7372,
-      "sha256": "c9d70a6d11002b94f8010feb15ab5b45a4a902279ee3ff216452e9e09c8a09f5"
+      "bytes": 8954,
+      "sha256": "a6af9149910f0f964fb815399986ad60d615d1953192dfe23f362d17f41c0363"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_right_0.png",
-      "bytes": 10310,
-      "sha256": "5557215f6685a29048833fe5f3a209f7b44b111770c3fe468f081585462ccc69"
+      "bytes": 12670,
+      "sha256": "e98d0b17e7738b3726f85f780b2be7f34b22193da179766a61a9210ca3ba85fc"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_right_0.webp",
-      "bytes": 7430,
-      "sha256": "bd128ed993d45bf8c7d0d2778ace56420a32e5d1b863ad94e200077cdd776394"
+      "bytes": 8922,
+      "sha256": "d77907686aac7690385e1c1e5bf2fc34fce49aa03ad81eb88849dbcc5fb92ae0"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_right_1.png",
-      "bytes": 10282,
-      "sha256": "4dc4a96ef0c0a959379b90d70bc4d43f79d5d4c4f6686dcbe26d54b2bf44eac0"
+      "bytes": 12726,
+      "sha256": "b8fbee799d05a3b3acf78b77ca0b1d82d88983f118b3cf82daf9c930c5d89625"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_right_1.webp",
-      "bytes": 7514,
-      "sha256": "37f60c2b032dc15bb7e373e7477676ccce2181fdae8152b51f64a7d1f4b755aa"
+      "bytes": 9030,
+      "sha256": "654cc4dd7e79d1b9686797cf5cf410d68f19f9fde3cb63918fbaf93da8abf62f"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_right_2.png",
-      "bytes": 10282,
-      "sha256": "4dc4a96ef0c0a959379b90d70bc4d43f79d5d4c4f6686dcbe26d54b2bf44eac0"
+      "bytes": 12726,
+      "sha256": "b8fbee799d05a3b3acf78b77ca0b1d82d88983f118b3cf82daf9c930c5d89625"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_right_2.webp",
-      "bytes": 7514,
-      "sha256": "37f60c2b032dc15bb7e373e7477676ccce2181fdae8152b51f64a7d1f4b755aa"
+      "bytes": 9030,
+      "sha256": "654cc4dd7e79d1b9686797cf5cf410d68f19f9fde3cb63918fbaf93da8abf62f"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_right_3.png",
-      "bytes": 10310,
-      "sha256": "5557215f6685a29048833fe5f3a209f7b44b111770c3fe468f081585462ccc69"
+      "bytes": 12670,
+      "sha256": "e98d0b17e7738b3726f85f780b2be7f34b22193da179766a61a9210ca3ba85fc"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_right_3.webp",
-      "bytes": 7430,
-      "sha256": "bd128ed993d45bf8c7d0d2778ace56420a32e5d1b863ad94e200077cdd776394"
+      "bytes": 8922,
+      "sha256": "d77907686aac7690385e1c1e5bf2fc34fce49aa03ad81eb88849dbcc5fb92ae0"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_up_0.png",
-      "bytes": 11311,
-      "sha256": "aec08b3a437077c19bfccc12c1a5d7e4fe1a49109218f0b1e89418d4701865e8"
+      "bytes": 11720,
+      "sha256": "592e72705bf40350d1c0aa4a279ab528f6c55d775721ddd066145d16148eb55b"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_up_0.webp",
-      "bytes": 8168,
-      "sha256": "345efae354fa029be9101f569b1be64be98734fd1fdc4c68e4c1b66b4e6dbc36"
+      "bytes": 8436,
+      "sha256": "47fb63a1bc9b59252b58ad554b148310e076ffec7f3e55be9fdf2041891a8185"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_up_1.png",
-      "bytes": 11329,
-      "sha256": "c98300ae3a44e0fcce6b596aa6ee59e7a2db8c135a5ef1698c9b270d4766ab79"
+      "bytes": 11702,
+      "sha256": "8893444a9d71b073218d11c9785d97494bb3aea0f952e222a04038c442bae1dc"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_up_1.webp",
-      "bytes": 8292,
-      "sha256": "a0545660c4d7b3267dc22c302971f29f6326439f36e8cc7c56330fc4d09cd5ee"
+      "bytes": 8460,
+      "sha256": "968e16f401b4f1aaf5c3b14819c698f3bcdec46cf81e57ad7a2edc6da6cbc5de"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_up_2.png",
-      "bytes": 11329,
-      "sha256": "c98300ae3a44e0fcce6b596aa6ee59e7a2db8c135a5ef1698c9b270d4766ab79"
+      "bytes": 11702,
+      "sha256": "8893444a9d71b073218d11c9785d97494bb3aea0f952e222a04038c442bae1dc"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_up_2.webp",
-      "bytes": 8292,
-      "sha256": "a0545660c4d7b3267dc22c302971f29f6326439f36e8cc7c56330fc4d09cd5ee"
+      "bytes": 8460,
+      "sha256": "968e16f401b4f1aaf5c3b14819c698f3bcdec46cf81e57ad7a2edc6da6cbc5de"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_up_3.png",
-      "bytes": 11311,
-      "sha256": "aec08b3a437077c19bfccc12c1a5d7e4fe1a49109218f0b1e89418d4701865e8"
+      "bytes": 11720,
+      "sha256": "592e72705bf40350d1c0aa4a279ab528f6c55d775721ddd066145d16148eb55b"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/idle_up_3.webp",
-      "bytes": 8168,
-      "sha256": "345efae354fa029be9101f569b1be64be98734fd1fdc4c68e4c1b66b4e6dbc36"
+      "bytes": 8436,
+      "sha256": "47fb63a1bc9b59252b58ad554b148310e076ffec7f3e55be9fdf2041891a8185"
     },
     {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/walk_down_0.png",
@@ -15895,18 +15895,18 @@
     },
     {
       "path": "solo-leveling/assets/player/motion_v2_sources/native_rgba/basic_combos/light_swordswoman/rise_down.png",
-      "bytes": 1027803,
-      "sha256": "7dc0f207c37b93981a5362ed0e11f5c080b138920887e2eae3610655affbc996"
+      "bytes": 1165498,
+      "sha256": "643fb26d046c26409c1981cafa8266297928d7c8583035089be861bd2730331c"
     },
     {
       "path": "solo-leveling/assets/player/motion_v2_sources/native_rgba/basic_combos/light_swordswoman/rise_right.png",
-      "bytes": 876896,
-      "sha256": "c993b418a4945e51056378390823b6cb766403496941c3f2a555d01ea34c6fc6"
+      "bytes": 1056797,
+      "sha256": "bd73f3c7fcb9adbf51763a33570920f9a332f091b76af22c1685a1d418cdd91e"
     },
     {
       "path": "solo-leveling/assets/player/motion_v2_sources/native_rgba/basic_combos/light_swordswoman/rise_up.png",
-      "bytes": 966175,
-      "sha256": "0e003baed533c870597d811a6e9592e5b1c8f2b6b0d0837dfaeb6b9ff9370725"
+      "bytes": 1053734,
+      "sha256": "a9bb403e54159e48431ce66a3adc287584892701b87fc50c7e57eef35cda3179"
     },
     {
       "path": "solo-leveling/assets/player/motion_v2_sources/native_rgba/basic_combos/sanctuary_healer/blessing_down.png",
@@ -16000,18 +16000,18 @@
     },
     {
       "path": "solo-leveling/assets/player/motion_v2_sources/native_rgba/light_swordswoman/attack_down.png",
-      "bytes": 1151598,
-      "sha256": "6d7e4c5c3fbc36b786cb60f231556b3cf722d0cdcd0b1702546b27c3c8930663"
+      "bytes": 1105666,
+      "sha256": "3e23c3fb8a636e1e1a3aff36fc6827a90ab6324e112d578e674129bb07aa28e3"
     },
     {
       "path": "solo-leveling/assets/player/motion_v2_sources/native_rgba/light_swordswoman/attack_right.png",
-      "bytes": 916855,
-      "sha256": "5c8d170d815409ead74b95f2cdfd095841153c32f9644d14e1b20edeecde4271"
+      "bytes": 1036257,
+      "sha256": "8652b391a92afa258d5d5521dd3c9e4ae2a413d865dfbbfa23ea508248eacbf5"
     },
     {
       "path": "solo-leveling/assets/player/motion_v2_sources/native_rgba/light_swordswoman/attack_up.png",
-      "bytes": 957528,
-      "sha256": "071db4832c2ec43fdde569fc6ef544ebca15111c26193c9a3eb1d72f6eef0288"
+      "bytes": 965075,
+      "sha256": "c3c51126e87cadb37dc3086eb9f15548786167848dc77d575acb1675c01040de"
     },
     {
       "path": "solo-leveling/assets/player/motion_v2_sources/native_rgba/light_swordswoman/walk_down.png",

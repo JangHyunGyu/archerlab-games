@@ -133,8 +133,8 @@ const PLAYER_MOTION_NAMES = [
 // Character image URLs are otherwise stable across releases and can remain in
 // a browser/CDN cache after portraits or motion frames are rebuilt in place.
 export const CHARACTER_VISUAL_ASSET_VERSION = '20260714-integrated-character-motion-v2';
-export const CHARACTER_MOTION_ASSET_VERSION = '20261118-native-rgba-motion-v6';
-export const CHARACTER_COMBAT_VFX_ASSET_VERSION = '20261118-combat-vfx-polish-v17';
+export const CHARACTER_MOTION_ASSET_VERSION = '20261119-native-rgba-motion-v7';
+export const CHARACTER_COMBAT_VFX_ASSET_VERSION = '20261119-combat-vfx-polish-v18';
 export const CHARACTER_COMBAT_VFX_FRAME_COUNT = 6;
 
 const uiAsset = (key) => ({

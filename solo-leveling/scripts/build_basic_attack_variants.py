@@ -3,8 +3,10 @@
 One scale per strip, calibrated against the existing ready pose; never fit each
 pose independently. Existing walk, skill and hit frames are not rewritten.
 """
+import argparse
 import json
 from pathlib import Path
+import statistics
 from PIL import Image, ImageOps, ImageDraw
 import build_character_motion_v2 as motion
 
@@ -27,10 +29,15 @@ def resolve_variant_strip(char: str, track: str) -> tuple[Path, bool]:
     return LEGACY_SOURCE / char / f'{track}.png', False
 
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--character', action='append', dest='characters', help='Target character id (repeatable)')
+    args = parser.parse_args(argv)
+    targets = tuple(args.characters) if args.characters else tuple(VARIANTS.keys())
     previews = Path(r'C:\Users\user\.gemini\antigravity\brain\c8ced0e6-6919-4f8e-b341-2e89bfdc4ac2\scratch\basic_combo_previews')
     previews.mkdir(parents=True, exist_ok=True)
-    for char, variants in VARIANTS.items():
+    for char in targets:
+        variants = VARIANTS[char]
         profile = motion.CHARACTER_PROFILES[char]
         target = ROOT / profile.output_relative
         for variant in variants:
@@ -45,7 +52,7 @@ def main():
                     images = [ImageOps.mirror(im) for im in images]
                 ready = Image.open(target / f'{profile.filename_prefix}attack_{direction}_0.png').convert('RGBA')
                 bbox = motion.alpha_bbox(ready)
-                scale = (bbox[3] - bbox[1]) / images[0].height
+                scale = (bbox[3] - bbox[1]) / max(images[0].height, round(statistics.median(im.height for im in images) * 0.95))
                 rendered = [
                     motion.place_body(
                         im,

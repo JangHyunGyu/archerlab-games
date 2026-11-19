@@ -481,7 +481,7 @@ def _split_merged_native_components(clean: Image.Image) -> list[tuple[list[int],
     alpha = arr[:, :, 3]
     h, w = alpha.shape
     vis_mask = alpha > 8
-    for core_thresh in (24, 36, 48, 64, 96, 128, 160, 180):
+    for core_thresh in (24, 36, 48, 64, 96, 128, 160, 180, 200, 220, 240, 250):
         core = alpha >= core_thresh
         lbl, num = ndimage.label(core)
         if num < 4:
@@ -490,7 +490,7 @@ def _split_merged_native_components(clean: Image.Image) -> list[tuple[list[int],
         top_ids = np.argsort(sizes)[::-1]
         major_ids = [int(i) + 1 for i in top_ids[:4]]
         major_sizes = [float(sizes[i - 1]) for i in major_ids]
-        if min(major_sizes) <= 0 or max(major_sizes) / min(major_sizes) > 2.35:
+        if min(major_sizes) <= 0 or max(major_sizes) / min(major_sizes) > 2.95:
             continue
         if len(top_ids) > 4 and float(sizes[top_ids[4]]) >= min(major_sizes) * 0.22:
             continue
@@ -634,7 +634,7 @@ def split_strip(path: Path, track: str) -> list[CleanPose]:
         needs_resplit = len(components) < 4
         if not needs_resplit:
             top4 = [len(c[0]) for c in components[:4]]
-            if min(top4) <= 0 or max(top4) / min(top4) > 2.35:
+            if min(top4) <= 0 or max(top4) / min(top4) > 2.95:
                 needs_resplit = True
         if needs_resplit:
             merged_split = _split_merged_native_components(clean)
@@ -644,7 +644,7 @@ def split_strip(path: Path, track: str) -> list[CleanPose]:
         raise ValueError(f"{path}: found only {len(components)} visible components; expected four subjects")
     majors = components[:4]
     major_areas = [len(component[0]) for component in majors]
-    if max(major_areas) / min(major_areas) > 2.35:
+    if max(major_areas) / min(major_areas) > 2.95:
         raise ValueError(f"{path}: four dominant silhouette areas are inconsistent: {major_areas}")
     if len(components) > 4 and len(components[4][0]) >= min(major_areas) * 0.22:
         raise ValueError(
