@@ -1,5 +1,6 @@
 import { COLORS, BOSS_TYPES } from '../utils/Constants.js';
 import { ShadowSoldier } from '../entities/ShadowSoldier.js';
+import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v1';
 
 export class ShadowArmyManager {
     constructor(scene) { var __oc0;
@@ -179,6 +180,10 @@ export class ShadowArmyManager {
         const bossX = bossData.x;
         const bossY = bossData.y;
         const bossConfig = bossData.config;
+        SpriteFactory.ensureBossTexture(scene, bossData.bossKey);
+        if (bossConfig && bossConfig.shadowType) {
+            SpriteFactory.ensureShadowSoldierTexture(scene, bossConfig.shadowType);
+        }
 
         // Sound
         if (scene.soundManager) scene.soundManager.play('arise');

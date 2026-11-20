@@ -1,5 +1,6 @@
 import { ENEMY_TYPES, WAVE_CONFIG, GAME_WIDTH, GAME_HEIGHT, WORLD_SIZE } from '../utils/Constants.js';
 import { Enemy } from '../entities/Enemy.js';
+import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v1';
 
 const MAX_RESTORED_ENEMIES = 500;
 
@@ -16,6 +17,7 @@ export class EnemyManager {
         this._warmPoolTimer = null;
         this._inactiveEnemies = [];
 
+        SpriteFactory.ensureEnemyTexture(scene, 'goblin');
         this._createInactiveEnemies(Math.min((((__oc3 = options.initialPoolSize) !== null && __oc3 !== void 0 ? __oc3 : 50)), this._warmPoolTarget));
 
         this.spawnTimer = WAVE_CONFIG.baseSpawnInterval * 0.75;
@@ -562,6 +564,7 @@ export class EnemyManager {
 
     _spawnEnemy(typeKey, x, y) {
         if (!ENEMY_TYPES[typeKey]) return null;
+        SpriteFactory.ensureEnemyTexture(this.scene, typeKey);
         const enemy = this._getInactiveEnemy();
 
         const minutes = this.gameTime / 60000;
@@ -580,6 +583,7 @@ export class EnemyManager {
         if (minutes >= 10) elitePool.push('demonWarrior');
 
         const typeKey = Phaser.Utils.Array.GetRandom(elitePool);
+        SpriteFactory.ensureEnemyTexture(this.scene, typeKey);
         const pos = this._getSpawnPosition();
 
         const enemy = this._getInactiveEnemy();

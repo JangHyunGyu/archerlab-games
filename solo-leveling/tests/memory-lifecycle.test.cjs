@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 require('./menu-layout.test.cjs');
+require('./loading-optimization.test.cjs');
 
 const root = path.resolve(__dirname, "..");
 const source = fs.readFileSync(path.join(root, "js", "weapons", "ShadowDagger.js"), "utf8");

@@ -6,19 +6,21 @@ import {
 import { t, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
 import { Player } from '../entities/Player.js';
 import { ShadowSoldier } from '../entities/ShadowSoldier.js';
-import { EnemyManager } from '../managers/EnemyManager.js?v=20261009-orient-v1';
+import { EnemyManager } from '../managers/EnemyManager.js?v=20261009-orient-v1&fastload=20261120-v1';
 import { WeaponManager } from '../managers/WeaponManager.js';
-import { ShadowArmyManager } from '../managers/ShadowArmyManager.js?v=20261010-arise-v1';
-import { SoundManager } from '../managers/SoundManager.js?v=20261018-tone-cleanup-v1';
+import { ShadowArmyManager } from '../managers/ShadowArmyManager.js?v=20261010-arise-v1&fastload=20261120-v1';
+import { SoundManager } from '../managers/SoundManager.js?v=20261120-fastload-v1';
 import { XPOrbPool } from '../entities/XPOrb.js?v=20261009-levelup-v1';
 import { ItemDropManager } from '../entities/ItemDrop.js?v=20260928-locale-exports-v1';
-import { Boss } from '../entities/Boss.js';
+import { Boss } from '../entities/Boss.js?v=20261120-fastload-v1';
 import { Enemy } from '../entities/Enemy.js';
 import { HUD } from '../ui/HUD.js?v=20261009-orient-v1&audit=20261009-v1';
 import { SystemMessage } from '../ui/SystemMessage.js?v=20261009-orient-v1';
 import { StatusWindow } from '../ui/StatusWindow.js?v=20261009-orient-v1&audit=20261009-v1';
 import { MobileControls } from '../ui/MobileControls.js?v=20261009-orient-v1';
 import { DEFAULT_CHARACTER_ID, getCharacter, getCharacterRankingGameId, getCharacterWeaponKeys, getStarterWeaponKey } from '../utils/Characters.js';
+import { getGameplayDeferredBatches } from '../utils/AssetManifest.js?v=20261120-fastload-v1';
+import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v1';
 
 const SAVE_KEY = 'shadow_survival_save_v1';
 const SAVE_VERSION = 1;
@@ -48,6 +50,15 @@ export class GameScene extends Phaser.Scene {
         this._rankSyncedScore = 0;
         this._rankLastSyncGameTime = 0;
         this._rankSyncInFlight = null;
+        this._deferredQueue = [];
+        this._deferredActive = false;
+        this._deferredStopped = false;
+        this._deferredUpgradeQueue = [];
+        this._deferredUpgradeTimer = null;
+        this._deferredTimer = null;
+        this._deferredFallbackMap = new Map();
+        this._deferredListeners = null;
+        this._webpSupported = null;
     }
 
     create() {
@@ -65,6 +76,9 @@ export class GameScene extends Phaser.Scene {
             this.game._soundManager.init();
         }
         this.soundManager = this.game._soundManager;
+        if (this.soundManager.setActiveCharacter) {
+            this.soundManager.setActiveCharacter(this._selectedCharacterId);
+        }
         this.soundManager.stopIntroMusic();
         this.soundManager.resume();
 
@@ -180,7 +194,7 @@ export class GameScene extends Phaser.Scene {
 
             index += 1;
             this._setStartupProgress(index, total, step.label);
-            const timer = this.time.delayedCall((((__oc1 = step.delay) !== null && __oc1 !== void 0 ? __oc1 : 32)), runNext);
+            const timer = this.time.delayedCall((((__oc1 = step.delay) !== null && __oc1 !== void 0 ? __oc1 : 8)), runNext);
             this._startupTimers.push(timer);
         };
 
@@ -194,13 +208,159 @@ export class GameScene extends Phaser.Scene {
         this._setStartupProgress(1, 1, 'READY');
         this._destroyStartupOverlay();
 
-        this.cameras.main.fadeIn(500, 0, 0, 0);
+        this.cameras.main.fadeIn(260, 0, 0, 0);
         this.time.delayedCall(700, () => {
             if (this.soundManager && !this.isGameOver) this.soundManager.startGameBGM();
         });
 
         this._scheduleIntroMessages();
         this._setupSoundToggle();
+        this._scheduleDeferredAssetStreaming(300);
+    }
+
+    _supportsWebP() {
+        if (this._webpSupported !== null) return this._webpSupported;
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1;
+            canvas.height = 1;
+            this._webpSupported = canvas.toDataURL('image/webp').startsWith('data:image/webp');
+        } catch (e) {
+            this._webpSupported = false;
+        }
+        return this._webpSupported;
+    }
+
+    _queueDeferredImage(key, pngPath, options = {}) {
+        if (!this.textures || this.textures.exists(key) || !this.load) return false;
+        const useWebP = !options.preferPng && this._supportsWebP() && pngPath.endsWith('.png');
+        const rawPath = useWebP ? pngPath.replace(/\.png$/i, '.webp') : pngPath;
+        const versionSuffix = options.cacheVersion
+            ? `${rawPath.includes('?') ? '&' : '?'}v=${encodeURIComponent(options.cacheVersion)}`
+            : '';
+        const path = `${rawPath}${versionSuffix}`;
+        if (useWebP && this._deferredFallbackMap) {
+            const fallbackSuffix = options.cacheVersion
+                ? `${pngPath.includes('?') ? '&' : '?'}v=${encodeURIComponent(options.cacheVersion)}`
+                : '';
+            this._deferredFallbackMap.set(key, `${pngPath}${fallbackSuffix}`);
+        }
+        this.load.image(key, path);
+        return true;
+    }
+
+    _scheduleDeferredAssetStreaming(delayMs = 300) {
+        if (this._deferredStopped) return;
+        if (this._deferredTimer) {
+            this._deferredTimer.remove(false);
+            this._deferredTimer = null;
+        }
+        this._deferredTimer = this.time.delayedCall(delayMs, () => {
+            this._deferredTimer = null;
+            this._startDeferredAssetStreaming();
+        });
+    }
+
+    _startDeferredAssetStreaming() {
+        if (this._deferredStopped || this.isGameOver || !this.sys || !this.sys.isActive()) return;
+        const batches = getGameplayDeferredBatches(this._selectedCharacterId);
+        const queue = [];
+        for (let i = 0; i < batches.length; i++) {
+            const assets = batches[i].assets || [];
+            for (let j = 0; j < assets.length; j++) {
+                const asset = assets[j];
+                if (asset && asset.key && !this.textures.exists(asset.key)) {
+                    queue.push(asset);
+                }
+            }
+        }
+        this._deferredQueue = queue;
+        this._pumpDeferredBatch();
+    }
+
+    _pumpDeferredBatch() {
+        if (this._deferredStopped || this._deferredActive || this.isGameOver) return;
+        if (!this.sys || !this.sys.isActive() || !this.load) return;
+        if (this.load.isLoading()) {
+            this._deferredTimer = this.time.delayedCall(80, () => {
+                this._deferredTimer = null;
+                this._pumpDeferredBatch();
+            });
+            return;
+        }
+
+        const batch = [];
+        while (batch.length < 6 && this._deferredQueue.length > 0) {
+            const asset = this._deferredQueue.shift();
+            if (!asset || this.textures.exists(asset.key)) continue;
+            if (this._queueDeferredImage(asset.key, asset.path, asset)) {
+                batch.push(asset);
+            }
+        }
+        if (batch.length === 0) {
+            if (this._deferredQueue.length > 0) this._pumpDeferredBatch();
+            return;
+        }
+
+        this._deferredActive = true;
+        const onFileComplete = (key) => {
+            if (this._deferredStopped) return;
+            if (key.startsWith('ai_enemy_') || key.startsWith('ai_boss_')
+                || key.startsWith('asset_shadow_') || key === 'asset_arise_rune') {
+                this._deferredUpgradeQueue.push(key);
+                this._scheduleDeferredUpgrade();
+            }
+        };
+        const onError = (file) => {
+            const fallback = this._deferredFallbackMap ? this._deferredFallbackMap.get(file.key) : null;
+            if (fallback) {
+                this._deferredFallbackMap.delete(file.key);
+                this.load.image(file.key, fallback);
+            }
+        };
+        const cleanup = () => {
+            this._deferredActive = false;
+            if (this.load) {
+                this.load.off('filecomplete', onFileComplete);
+                this.load.off('loaderror', onError);
+                this.load.off('complete', onComplete);
+            }
+            this._deferredListeners = null;
+        };
+        const onComplete = () => {
+            cleanup();
+            if (this._deferredStopped || this.isGameOver || !this.sys || !this.sys.isActive()) return;
+            if (this._deferredQueue.length > 0) {
+                this._deferredTimer = this.time.delayedCall(80, () => {
+                    this._deferredTimer = null;
+                    this._pumpDeferredBatch();
+                });
+            }
+        };
+        this._deferredListeners = { cleanup };
+        this.load.on('filecomplete', onFileComplete);
+        this.load.on('loaderror', onError);
+        this.load.once('complete', onComplete);
+        this.load.start();
+    }
+
+    _scheduleDeferredUpgrade() {
+        if (this._deferredStopped || this._deferredUpgradeTimer || this._deferredUpgradeQueue.length === 0) return;
+        this._deferredUpgradeTimer = this.time.delayedCall(40, () => {
+            this._deferredUpgradeTimer = null;
+            if (this._deferredStopped || this.isGameOver || !this.sys || !this.sys.isActive()) return;
+            const key = this._deferredUpgradeQueue.shift();
+            if (key) {
+                try {
+                    SpriteFactory.upgradeLoadedTexture(this, key);
+                } catch (e) {
+                    console.warn('[GameScene] Deferred texture upgrade failed:', key, e);
+                }
+            }
+            if (this._deferredUpgradeQueue.length > 0) {
+                this._scheduleDeferredUpgrade();
+            }
+        });
     }
 
     _initRankSession() {
@@ -1407,7 +1567,22 @@ allowedKeys.has(((w === null || w === void 0 ? void 0 : w.key)))
 
     shutdown() { var __oc60;
         this._rankRunToken = {};
+        this._deferredStopped = true;
         try {
+            if (this._deferredTimer) {
+                try { this._deferredTimer.remove(false); } catch (e) { /* already removed */ }
+                this._deferredTimer = null;
+            }
+            if (this._deferredUpgradeTimer) {
+                try { this._deferredUpgradeTimer.remove(false); } catch (e) { /* already removed */ }
+                this._deferredUpgradeTimer = null;
+            }
+            if (this._deferredListeners && this._deferredListeners.cleanup) {
+                this._deferredListeners.cleanup();
+            }
+            this._deferredQueue = [];
+            this._deferredUpgradeQueue = [];
+            if (this._deferredFallbackMap) this._deferredFallbackMap.clear();
             if (!this.isGameOver) this._autoSave(true);
 
             if (this._startupTimers) {

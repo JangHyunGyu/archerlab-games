@@ -1,4 +1,5 @@
 import { COLORS, BOSS_TYPES } from '../utils/Constants.js';
+import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v1';
 
 const DEFAULT_BOSS_SPECIAL_COOLDOWN = { phase1: 6400, phase2: 5000 };
 const BOSS_SPECIAL_RETRY_DELAY = 700;
@@ -207,6 +208,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
     constructor(scene, x, y, bossKey, difficultyMult = 1, hp = null, atkMult = 1) {
         const config = BOSS_TYPES[bossKey];
+        SpriteFactory.ensureBossTexture(scene, bossKey);
         super(scene, x, y, 'boss_' + bossKey + '_0');
 
         scene.add.existing(this);

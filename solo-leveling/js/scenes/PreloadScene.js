@@ -1,6 +1,7 @@
-import { SpriteFactory } from '../utils/SpriteFactory.js';
+import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v1';
 import { SYSTEM, UI_FONT_MONO, fs, uv, drawSystemPanel, fitText, padText } from '../utils/Constants.js';
-import { getMenuAssetList } from '../utils/AssetManifest.js?v=20260913-crafted-ui-v1';
+import { getMenuCoreAssetList } from '../utils/AssetManifest.js?v=20261120-fastload-v1';
+import { getStoredCharacterId } from '../utils/Characters.js';
 
 export class PreloadScene extends Phaser.Scene {
     constructor() {
@@ -266,7 +267,7 @@ export class PreloadScene extends Phaser.Scene {
     }
 
     create() {
-        SpriteFactory.createAll(this);
+        SpriteFactory.createMenuTextures(this);
         this.scene.start('MenuScene');
     }
 
@@ -320,6 +321,6 @@ export class PreloadScene extends Phaser.Scene {
         };
         this.load.on('loaderror', this._onPreloadLoadError);
 
-        getMenuAssetList().forEach(asset => this._loadImage(asset.key, asset.path, asset));
+        getMenuCoreAssetList(getStoredCharacterId()).forEach(asset => this._loadImage(asset.key, asset.path, asset));
     }
 }

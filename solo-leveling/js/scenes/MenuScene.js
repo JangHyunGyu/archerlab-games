@@ -6,17 +6,32 @@ import {
     SYSTEM, UI_FONT_MONO, UI_FONT_KR,
     fs, uv, drawSystemPanel, padText,
 } from '../utils/Constants.js';
-import { SpriteFactory } from '../utils/SpriteFactory.js';
-import { SoundManager } from '../managers/SoundManager.js?v=20261018-tone-cleanup-v1';
+import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v1';
+import { SoundManager } from '../managers/SoundManager.js?v=20261120-fastload-v1';
 import { t, LANG, LANGUAGES, setLang, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
-import { GameScene } from './GameScene.js?v=20260928-locale-exports-v1&ranking=20261006-client-exception-v1&levelup=20261009-audio-v3&orient=20261009-orient-v1&audit=20261009-v1';
+import { GameScene } from './GameScene.js?v=20260928-locale-exports-v1&ranking=20261006-client-exception-v1&levelup=20261009-audio-v3&orient=20261009-orient-v1&audit=20261009-v1&arise=20261010-v1&audiofix=20261018-cleanup-v1&fastload=20261120-v1';
 import { CHARACTER_DEFS, getCharacter, getStoredCharacterId, setStoredCharacterId, getCharacterRankingGameId } from '../utils/Characters.js';
-import { getGameplayAssetList } from '../utils/AssetManifest.js?v=20260913-crafted-ui-v1';
+import {
+    getCharacterMenuPortraitAsset,
+    getMenuDeferredAssetList,
+    getSharedGameplayCoreAssetList,
+    getCharacterStarterAssetList,
+    getGameplayCoreAssetList,
+} from '../utils/AssetManifest.js?v=20261120-fastload-v1';
 import { getCharacterMenuLabels, getCharacterText } from '../utils/CharacterLocalization.js';
 
 export class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
+        this._webpSupported = null;
+        this._idleWarmupTimer = null;
+        this._idleWarmupActive = false;
+        this._idleWarmupStopped = false;
+        this._idleWarmupQueue = [];
+        this._idleWarmupQueuedKeys = new Set();
+        this._idleWarmupFallbacks = new Map();
+        this._idleWarmupListeners = null;
+        this._portraitSwapListeners = [];
     }
 
     create() {
@@ -302,6 +317,12 @@ export class MenuScene extends Phaser.Scene {
         this._characterSelectOpen = false;
         this._reduceMenuMotion = reduceMotion;
         this._menuKeyboardActions = [];
+        this._portraitSwapListeners = [];
+        this._idleWarmupStopped = false;
+        this._idleWarmupActive = false;
+        this._idleWarmupQueue = [];
+        this._idleWarmupQueuedKeys = new Set();
+        this._idleWarmupFallbacks.clear();
         this.selectedCharacterId = getStoredCharacterId();
         this._createMenuBackdrop({ isPortrait: layout.portrait, isShortLandscape: layout.short });
 
@@ -324,8 +345,9 @@ export class MenuScene extends Phaser.Scene {
         const startGame = async (resume = false, characterIdOverride = null) => { var __oc2, __oc3, __oc4;
             if (this._startingGame) return;
             this._startingGame = true;
+            const savedData = resume ? GameScene.getSavedGameData() : null;
             const characterId = resume
-                ? ((((__oc2 = GameScene.getSavedSummary()) === null || __oc2 === void 0 ? void 0 : __oc2.characterId)) || characterIdOverride || this.selectedCharacterId)
+                ? ((((__oc2 = savedData && savedData.player) === null || __oc2 === void 0 ? void 0 : __oc2.characterId)) || characterIdOverride || this.selectedCharacterId)
                 : setStoredCharacterId(characterIdOverride || this.selectedCharacterId);
             this.selectedCharacterId = characterId;
             if (!this.game._soundManager) {
@@ -333,11 +355,12 @@ export class MenuScene extends Phaser.Scene {
                 this.game._soundManager.init();
             }
             const sm = this.game._soundManager;
+            if (sm.setActiveCharacter) sm.setActiveCharacter(characterId);
             sm.stopIntroMusic();
             await sm.resume(true);
-            const assetsReady = await this._ensureGameplayAssetsLoaded(characterId);
+            const assetsReady = await this._ensureGameplayAssetsLoaded(characterId, { resume, savedData });
             if (!assetsReady || !(((__oc4 = (__oc3 = this.sys) === null || __oc3 === void 0 ? void 0 : __oc3.isActive) === null || __oc4 === void 0 ? void 0 : __oc4.call(__oc3)))) { this._startingGame = false; return; }
-            const duration = reduceMotion ? 0 : 300;
+            const duration = reduceMotion ? 0 : 140;
             if (duration) this.cameras.main.fadeOut(duration, 0, 0, 0);
             this.time.delayedCall(duration, () => this.scene.start('GameScene', { resume, characterId }));
         };
@@ -377,6 +400,8 @@ export class MenuScene extends Phaser.Scene {
         (((__oc10 = this.input.keyboard) === null || __oc10 === void 0 ? void 0 : __oc10.on('keydown', onMenuKey)));
         if (!reduceMotion) this.cameras.main.fadeIn(300, 0, 0, 0);
         this.events.once('shutdown', () => { var __oc11;
+            this._stopIdleWarmupNow();
+            this._clearPortraitSwapListeners();
             (((__oc11 = this.input.keyboard) === null || __oc11 === void 0 ? void 0 : __oc11.off('keydown', onMenuKey)));
             this._menuKeyboardActions = [];
             [...this._dropdownElements, ...this._modalElements].forEach(el => { if (((el === null || el === void 0 ? void 0 : el.active))) el.destroy(); });
@@ -387,10 +412,12 @@ export class MenuScene extends Phaser.Scene {
             if (this._startingGame) return;
             if (!this.game._soundManager) { this.game._soundManager = new SoundManager(); this.game._soundManager.init(); }
             const sm = this.game._soundManager;
+            if (sm.setActiveCharacter) sm.setActiveCharacter(this.selectedCharacterId);
             await sm.resume(true);
             sm.warmup();
             sm.playIntroMusic();
         });
+        this._scheduleIdleWarmup(180);
     }
 
     _makePremiumAction(x, y, w, h, px, { label, meta = '', primary = false, onClick }) {
@@ -689,18 +716,177 @@ export class MenuScene extends Phaser.Scene {
         const portraitKey = `char_${character.assetKey}_portrait`;
         if (this.textures.exists(menuKey)) return menuKey;
         if (this.textures.exists(portraitKey)) return portraitKey;
-        return 'player_idle_0';
+        if (this.textures.exists('player_idle_0')) return 'player_idle_0';
+        return this.textures.exists('icon_loading_core') ? 'icon_loading_core' : null;
+    }
+
+    _isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+            || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     }
 
     _supportsWebP() {
+        if (this._webpSupported !== null) return this._webpSupported;
         try {
             const canvas = document.createElement('canvas');
             canvas.width = 1;
             canvas.height = 1;
-            return canvas.toDataURL('image/webp').startsWith('data:image/webp');
+            this._webpSupported = canvas.toDataURL('image/webp').startsWith('data:image/webp');
         } catch (e) {
-            return false;
+            this._webpSupported = false;
         }
+        return this._webpSupported;
+    }
+
+    _clearPortraitSwapListeners() {
+        if (!this._portraitSwapListeners || this._portraitSwapListeners.length === 0) return;
+        for (let i = 0; i < this._portraitSwapListeners.length; i++) {
+            const item = this._portraitSwapListeners[i];
+            if (this.load && item && item.event && item.fn) {
+                this.load.off(item.event, item.fn);
+            }
+        }
+        this._portraitSwapListeners = [];
+    }
+
+    _enqueueIdleAssets(assets, prepend = false) {
+        const additions = [];
+        for (let i = 0; i < assets.length; i++) {
+            const asset = assets[i];
+            if (!asset || !asset.key || this.textures.exists(asset.key)) continue;
+            if (this._idleWarmupQueuedKeys.has(asset.key)) continue;
+            this._idleWarmupQueuedKeys.add(asset.key);
+            additions.push(asset);
+        }
+        if (additions.length === 0) return;
+        if (prepend) {
+            this._idleWarmupQueue = [...additions, ...this._idleWarmupQueue];
+        } else {
+            this._idleWarmupQueue.push(...additions);
+        }
+    }
+
+    _scheduleIdleWarmup(delayMs = 180) {
+        if (this._idleWarmupTimer) {
+            this._idleWarmupTimer.remove(false);
+            this._idleWarmupTimer = null;
+        }
+        this._idleWarmupTimer = this.time.delayedCall(delayMs, () => {
+            this._idleWarmupTimer = null;
+            if (this._idleWarmupStopped || this._startingGame || !this.sys || !this.sys.isActive()) return;
+            this._enqueueIdleAssets([
+                ...getMenuDeferredAssetList(this.selectedCharacterId),
+                ...getSharedGameplayCoreAssetList({ includeFloor: !this._isMobileDevice() }),
+                ...getCharacterStarterAssetList(this.selectedCharacterId),
+            ]);
+            this._pumpIdleWarmupBatch();
+        });
+    }
+
+    _prioritizePortraitWarmup(characters) {
+        if (this._idleWarmupStopped || this._startingGame) return;
+        const missing = [];
+        for (let i = 0; i < characters.length; i++) {
+            const ch = characters[i];
+            const key = `char_${ch.assetKey}_menu_portrait`;
+            if (this.textures.exists(key)) continue;
+            this._idleWarmupQueuedKeys.delete(key);
+            missing.push(getCharacterMenuPortraitAsset(ch.id));
+        }
+        if (missing.length === 0) return;
+        this._idleWarmupQueue = this._idleWarmupQueue.filter(a => !missing.some(m => m.key === a.key));
+        this._enqueueIdleAssets(missing, true);
+        if (!this._idleWarmupActive && !this.load.isLoading()) {
+            this._pumpIdleWarmupBatch();
+        }
+    }
+
+    _stopIdleWarmupNow() {
+        this._idleWarmupStopped = true;
+        if (this._idleWarmupTimer) {
+            this._idleWarmupTimer.remove(false);
+            this._idleWarmupTimer = null;
+        }
+        this._idleWarmupQueue = [];
+        if (this._idleWarmupListeners && this._idleWarmupListeners.cleanup) {
+            this._idleWarmupListeners.cleanup();
+        }
+        this._idleWarmupFallbacks.clear();
+    }
+
+    _stopIdleWarmupAndWait() {
+        this._idleWarmupStopped = true;
+        if (this._idleWarmupTimer) {
+            this._idleWarmupTimer.remove(false);
+            this._idleWarmupTimer = null;
+        }
+        this._idleWarmupQueue = [];
+        if (!this.load || !this.load.isLoading()) {
+            if (this._idleWarmupListeners && this._idleWarmupListeners.cleanup) {
+                this._idleWarmupListeners.cleanup();
+            }
+            return Promise.resolve();
+        }
+        // 진행 중인 6개 이하 소형 배치만 안전하게 완료 대기 후 본 로더로 전환
+        return new Promise((resolve) => {
+            const done = () => {
+                if (this._idleWarmupListeners && this._idleWarmupListeners.cleanup) {
+                    this._idleWarmupListeners.cleanup();
+                }
+                resolve();
+            };
+            this.load.once('complete', done);
+        });
+    }
+
+    _pumpIdleWarmupBatch() {
+        if (this._idleWarmupStopped || this._startingGame || this._idleWarmupActive) return;
+        if (!this.sys || !this.sys.isActive() || !this.load) return;
+        if (this.load.isLoading()) return;
+
+        const batch = [];
+        while (batch.length < 6 && this._idleWarmupQueue.length > 0) {
+            const asset = this._idleWarmupQueue.shift();
+            if (!asset || this.textures.exists(asset.key)) continue;
+            if (this._queueRuntimeImage(asset.key, asset.path, this._idleWarmupFallbacks, asset)) {
+                batch.push(asset);
+            }
+        }
+        if (batch.length === 0) {
+            if (this._idleWarmupQueue.length > 0) this._pumpIdleWarmupBatch();
+            return;
+        }
+
+        this._idleWarmupActive = true;
+        const onError = (file) => {
+            const fallback = this._idleWarmupFallbacks.get(file.key);
+            if (fallback) {
+                this._idleWarmupFallbacks.delete(file.key);
+                this.load.image(file.key, fallback);
+            }
+        };
+        const cleanup = () => {
+            this._idleWarmupActive = false;
+            if (this.load) {
+                this.load.off('loaderror', onError);
+                this.load.off('complete', onComplete);
+            }
+            this._idleWarmupListeners = null;
+        };
+        const onComplete = () => {
+            cleanup();
+            if (this._idleWarmupStopped || this._startingGame || !this.sys || !this.sys.isActive()) return;
+            if (this._idleWarmupQueue.length > 0) {
+                this._idleWarmupTimer = this.time.delayedCall(40, () => {
+                    this._idleWarmupTimer = null;
+                    this._pumpIdleWarmupBatch();
+                });
+            }
+        };
+        this._idleWarmupListeners = { cleanup };
+        this.load.on('loaderror', onError);
+        this.load.once('complete', onComplete);
+        this.load.start();
     }
 
     _queueRuntimeImage(key, pngPath, fallbackMap = null, options = {}) {
@@ -721,10 +907,15 @@ export class MenuScene extends Phaser.Scene {
         return true;
     }
 
-    _ensureGameplayAssetsLoaded(characterId) {
+    async _ensureGameplayAssetsLoaded(characterId, options = {}) {
+        await this._stopIdleWarmupAndWait();
+        if (!this.sys || !this.sys.isActive()) return false;
+
+        const isMobile = this._isMobileDevice();
+        const savedData = options && options.savedData ? options.savedData : null;
         const fallbackMap = new Map();
         const pendingKeys = new Set();
-        const queued = getGameplayAssetList(characterId)
+        const queued = getGameplayCoreAssetList(characterId, { includeFloor: !isMobile, savedData })
             .filter((asset) => {
                 if (this.textures.exists(asset.key) || pendingKeys.has(asset.key)) return false;
                 pendingKeys.add(asset.key);
@@ -732,8 +923,8 @@ export class MenuScene extends Phaser.Scene {
             });
 
         if (queued.length === 0) {
-            SpriteFactory.createAll(this);
-            return Promise.resolve(true);
+            SpriteFactory.createGameplayCoreTextures(this, { characterId, isMobile, savedData });
+            return true;
         }
 
         return new Promise((resolve) => {
@@ -833,7 +1024,7 @@ export class MenuScene extends Phaser.Scene {
 
             onComplete = () => {
                 destroyLoadingUi();
-                SpriteFactory.createAll(this);
+                SpriteFactory.createGameplayCoreTextures(this, { characterId, isMobile, savedData });
                 finish(true);
             };
             onShutdown = () => {
@@ -1875,10 +2066,13 @@ export class MenuScene extends Phaser.Scene {
         const closeAll = () => { var __oc32;
             if (!this._characterSelectOpen) return;
             this._characterSelectOpen = false;
+            this._clearPortraitSwapListeners();
             (((__oc32 = this.input.keyboard) === null || __oc32 === void 0 ? void 0 : __oc32.off('keydown', onSelectKey)));
             elements.forEach(el => { if (el && el.destroy) el.destroy(); });
             this._modalElements = this._modalElements.filter(el => !elements.includes(el));
         };
+
+        this._prioritizePortraitWarmup(characters);
 
         characters.forEach((character, i) => {
             const characterText = getCharacterText(character);
@@ -1895,10 +2089,25 @@ export class MenuScene extends Phaser.Scene {
                 .setDepth(depth + 8)
                 .setInteractive({ useHandCursor: true });
             const portraitSize = Math.min(isShortLandscape ? 44 * px : uv(78), cardH * 0.46);
-            const portraitKey = this._getCharacterPortraitTexture(character);
+            const desiredPortraitKey = `char_${character.assetKey}_menu_portrait`;
+            const portraitReady = this.textures.exists(desiredPortraitKey);
+            const portraitKey = portraitReady ? desiredPortraitKey : (this._getCharacterPortraitTexture(character) || 'icon_loading_core');
             const portrait = this.add.image(x + cardW / 2, y + cardH * 0.28, portraitKey)
                 .setDepth(depth + 6)
                 .setOrigin(0.5);
+            if (!portraitReady) {
+                portrait.setTint(character.accent).setAlpha(0.45);
+                const eventName = `filecomplete-image-${desiredPortraitKey}`;
+                const onPortraitReady = () => {
+                    if (!portrait.active || !this.textures.exists(desiredPortraitKey)) return;
+                    portrait.clearTint().setAlpha(1).setTexture(desiredPortraitKey);
+                    this._fitImageDisplay(portrait, desiredPortraitKey, portraitSize, portraitSize);
+                };
+                if (this.load) {
+                    this.load.once(eventName, onPortraitReady);
+                    this._portraitSwapListeners.push({ event: eventName, fn: onPortraitReady });
+                }
+            }
             this._fitImageDisplay(portrait, portraitKey, portraitSize, portraitSize);
             const name = this.add.text(x + cardW / 2, y + cardH * 0.53, characterText.name, {
                 fontSize: `${14 * px}px`,

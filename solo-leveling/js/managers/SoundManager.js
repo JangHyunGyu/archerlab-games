@@ -51,6 +51,45 @@ const CHARACTER_SFX_CONFIG = {
     sanctuaryField: { file: 'effects/characters/sanctuary_healer/sanctuary_healer_sanctuary_field.wav', pool: 2, throttle: 820, release: 2380, volume: 0.62, priority: 3 },
 };
 
+const CHARACTER_SFX_BY_ID = {
+    shadowMonarch: [
+        'shadowMonarchBasicDagger',
+        'shadowMonarchShadowDagger',
+        'shadowMonarchShadowSlash',
+        'shadowMonarchRulersAuthority',
+        'shadowMonarchDragonFear',
+    ],
+    lightSwordswoman: [
+        'lightSwordSlash',
+        'lightLance',
+        'lightCrescent',
+        'lightJudgment',
+        'lightSanctum',
+    ],
+    whiteTigerBrawler: [
+        'tigerClaw',
+        'tigerFang',
+        'tigerRend',
+        'tigerQuake',
+        'tigerGuard',
+    ],
+    flameMage: [
+        'flameSpark',
+        'flameBolt',
+        'flameArc',
+        'flameMeteor',
+        'flameInferno',
+        'burnHit',
+    ],
+    sanctuaryHealer: [
+        'sanctuaryStaffCast',
+        'sanctuaryOrb',
+        'sanctuaryArc',
+        'sanctuarySeal',
+        'sanctuaryField',
+    ],
+};
+
 export class SoundManager {
     constructor() { this._sfxVolume = {
         dagger: 0.44, daggerThrow: 0.46, slash: 0.38, authority: 0.5, fear: 0.46,
@@ -120,6 +159,8 @@ export class SoundManager {
         this._pools = {};
         this._sfxSources = {};
         this._sfxBuffers = new Map();
+        this._sfxLoadingKeys = new Set();
+        this._activeCharacterId = null;
         this._liveSfx = new Set();
         this._levelUpDuck = false;
         this._sfxLoadPromise = null;
@@ -296,21 +337,104 @@ export class SoundManager {
         }
     }
 
+    _getAllowedSfxEntries() {
+        const entries = Object.entries(this._sfxSources);
+        const charAllowed = this._activeCharacterId && CHARACTER_SFX_BY_ID[this._activeCharacterId]
+            ? new Set(CHARACTER_SFX_BY_ID[this._activeCharacterId])
+            : null;
+        const filtered = [];
+        for (let i = 0; i < entries.length; i++) {
+            const entry = entries[i];
+            const name = entry[0];
+            if (CHARACTER_SFX_CONFIG[name] || name === 'burnHit') {
+                if (!charAllowed || !charAllowed.has(name)) continue;
+            }
+            filtered.push(entry);
+        }
+        return filtered;
+    }
+
+    async _decodeSfxEntries(entries, loadContext) {
+        if (!loadContext || typeof fetch === 'undefined' || !entries || entries.length === 0) return true;
+        const queue = [];
+        for (let i = 0; i < entries.length; i++) {
+            const name = entries[i][0];
+            if (!this._sfxBuffers.has(name) && !this._sfxLoadingKeys.has(name)) {
+                queue.push(entries[i]);
+            }
+        }
+        if (queue.length === 0) return true;
+
+        // 소형 청크 단위로 디코딩해 4G 환경에서 이미지 로딩 대역폭 점유 방지
+        const CHUNK_SIZE = 4;
+        for (let i = 0; i < queue.length; i += CHUNK_SIZE) {
+            if (this._destroyed || !this._initialized || this._sfxContext !== loadContext) return false;
+            const chunk = queue.slice(i, i + CHUNK_SIZE);
+            await Promise.all(chunk.map(async ([name, src]) => {
+                if (this._sfxBuffers.has(name) || this._sfxLoadingKeys.has(name)) return;
+                this._sfxLoadingKeys.add(name);
+                try {
+                    const response = await fetch(src);
+                    if (!response.ok) return;
+                    const data = await response.arrayBuffer();
+                    const buffer = await loadContext.decodeAudioData(data.slice(0));
+                    if (this._destroyed || !this._initialized || this._sfxContext !== loadContext) return;
+                    this._sfxBuffers.set(name, buffer);
+                } catch (e) { /* pool playback handles fallback */ }
+                finally {
+                    this._sfxLoadingKeys.delete(name);
+                }
+            }));
+        }
+        return true;
+    }
+
+    setActiveCharacter(characterId) {
+        this._activeCharacterId = characterId || null;
+        if (!this._sfxContext || !this._initialized || this._destroyed || !this._sfxLoadPromise) return null;
+        const keys = CHARACTER_SFX_BY_ID[this._activeCharacterId] || [];
+        const missing = [];
+        for (let i = 0; i < keys.length; i++) {
+            const name = keys[i];
+            const src = this._sfxSources[name];
+            if (src && !this._sfxBuffers.has(name) && !this._sfxLoadingKeys.has(name)) {
+                missing.push([name, src]);
+            }
+        }
+        if (missing.length > 0) {
+            return this._decodeSfxEntries(missing, this._sfxContext);
+        }
+        return null;
+    }
+
+    _waitForTone(timeoutMs = 2500) {
+        if (typeof Tone !== 'undefined') return Promise.resolve(true);
+        if (typeof document === 'undefined' || !document.querySelector) return Promise.resolve(false);
+        const script = document.querySelector('script[src*="tone-"]');
+        if (!script) return Promise.resolve(false);
+        return new Promise((resolve) => {
+            let settled = false;
+            const finish = () => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                script.removeEventListener('load', finish);
+                script.removeEventListener('error', finish);
+                resolve(typeof Tone !== 'undefined');
+            };
+            const timer = setTimeout(finish, timeoutMs);
+            script.addEventListener('load', finish, { once: true });
+            script.addEventListener('error', finish, { once: true });
+            if (typeof Tone !== 'undefined') finish();
+        });
+    }
+
     _loadSfxBuffers() {
         if (this._sfxLoadPromise || !this._sfxContext || typeof fetch === 'undefined') return this._sfxLoadPromise;
         const loadContext = this._sfxContext;
-        const entries = Object.entries(this._sfxSources);
-        this._sfxLoadPromise = Promise.all(entries.map(async ([name, src]) => {
-            if (this._sfxBuffers.has(name)) return;
-            try {
-                const response = await fetch(src);
-                if (!response.ok) return;
-                const data = await response.arrayBuffer();
-                const buffer = await loadContext.decodeAudioData(data.slice(0));
-                if (this._destroyed || !this._initialized || this._sfxContext !== loadContext) return;
-                this._sfxBuffers.set(name, buffer);
-            } catch (e) { /* pool playback handles fallback */ }
-        })).then(() => true).catch(() => false);
+        const entries = this._getAllowedSfxEntries();
+        this._sfxLoadPromise = this._decodeSfxEntries(entries, loadContext)
+            .catch(() => false);
         return this._sfxLoadPromise;
     }
 
@@ -666,6 +790,10 @@ export class SoundManager {
             if (userGesture) this._userActivated = true;
             if (!this.enabled || !this._initialized || !this._userActivated) return false;
             if (this._pageHidden) return false;
+            if (userGesture && typeof Tone === 'undefined') {
+                await this._waitForTone(2500);
+                if (!this.enabled || !this._initialized || this._destroyed || this._pageHidden) return false;
+            }
 
             // Keep every Tone node on the library's single default context. Replacing
             // it leaves deprecated static context exports pointing at the old graph and
@@ -1237,6 +1365,7 @@ export class SoundManager {
             if (this._masterSum) { this._masterSum.disconnect(); this._masterSum = null; }
             this._sfxContext = null;
             this._sfxBuffers.clear();
+            this._sfxLoadingKeys.clear();
             this._sfxLoadPromise = null;
             if (this._musicIn) { this._musicIn.dispose(); this._musicIn = null; }
             if (this._masterVol) { this._masterVol.dispose(); this._masterVol = null; }

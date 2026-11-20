@@ -1,4 +1,5 @@
-import { COLORS, ENEMY_TYPES, BOSS_TYPES, WEAPONS } from './Constants.js';
+import { COLORS, ENEMY_TYPES, BOSS_TYPES, PASSIVES, WEAPONS } from './Constants.js';
+import { getCharacter, getCharacterWeaponKeys, getStoredCharacterId } from './Characters.js';
 
 export class SpriteFactory {
     // --- Color helpers ---
@@ -166,25 +167,129 @@ export class SpriteFactory {
         } catch (e) { return false; }
     }
 
-    static createAll(scene) {
-        // Try AI-generated player sprites first (with chroma key background removal)
-        const motionPlayerLoaded = this._loadMotionPlayerTextures(scene);
-        const aiPlayerLoaded = motionPlayerLoaded || this._loadAIPlayerTextures(scene);
-        if (!motionPlayerLoaded && !aiPlayerLoaded) {
-            this.createPlayerTextures(scene);
+    static _getBuiltSet(scene) {
+        const host = scene && scene.game ? scene.game : scene;
+        if (!host) return new Set();
+        if (!host.__spriteBuiltSet) host.__spriteBuiltSet = new Set();
+        return host.__spriteBuiltSet;
+    }
+
+    static createMenuTextures(scene) {
+        this._createParticleTextures(scene);
+    }
+
+    static createGameplayCoreTextures(scene, options = {}) {
+        const built = this._getBuiltSet(scene);
+        const character = getCharacter(options.characterId || getStoredCharacterId());
+        const hasCustomCharSprite = !character.usesExistingPlayerMotion &&
+            scene.textures.exists(`${character.texturePrefix}_idle_0`);
+
+        if (!hasCustomCharSprite) {
+            if (!built.has('motion_player')) {
+                const motionPlayerLoaded = this._loadMotionPlayerTextures(scene);
+                const aiPlayerLoaded = motionPlayerLoaded || this._loadAIPlayerTextures(scene);
+                if (motionPlayerLoaded) {
+                    built.add('motion_player');
+                } else if (!aiPlayerLoaded && !scene.textures.exists('player_idle_0')) {
+                    this.createPlayerTextures(scene);
+                }
+            }
+        } else if (!scene.textures.exists('player_aura')) {
+            this._createPlayerAuraTexture(scene);
         }
-        this.createEnemyTextures(scene);
-        this.createBossTextures(scene);
+
+        // 초기 로딩 시점에는 이미 수신된 적/보스 원본만 AI 텍스처로 빌드
+        for (const key of Object.keys(ENEMY_TYPES)) {
+            if (scene.textures.exists('ai_enemy_' + key)) {
+                this.ensureEnemyTexture(scene, key);
+            }
+        }
+        for (const key of Object.keys(BOSS_TYPES)) {
+            if (scene.textures.exists('ai_boss_' + key)) {
+                this.ensureBossTexture(scene, key);
+            }
+        }
+
         this.createProjectileTextures(scene);
         this.createEffectTextures(scene);
-        this.createUITextures(scene);
-        this.createShadowSoldierTextures(scene);
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-            || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-        if (isMobile || !this._loadAIDungeonFloor(scene)) {
-            this.createFloorTexture(scene);
+        this.createUITextures(scene, { weaponKeys: getCharacterWeaponKeys(character.id) });
+
+        for (const type of ['melee', 'tank', 'ranged']) {
+            this.ensureShadowSoldierTexture(scene, type);
+        }
+
+        if (!built.has('floor_tile')) {
+            const isMobile = typeof options.isMobile === 'boolean'
+                ? options.isMobile
+                : (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                    || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
+            if (isMobile || !this._loadAIDungeonFloor(scene)) {
+                this.createFloorTexture(scene);
+            }
+            built.add('floor_tile');
         }
         this._createParticleTextures(scene);
+    }
+
+    static upgradeLoadedTexture(scene, assetKey) {
+        if (!scene || !scene.textures || !assetKey) return false;
+        if (assetKey.startsWith('ai_enemy_')) {
+            const enemyKey = assetKey.slice('ai_enemy_'.length);
+            if (!this.ensureEnemyTexture(scene, enemyKey)) return false;
+            const children = scene.enemyManager && scene.enemyManager.pool && scene.enemyManager.pool.getChildren
+                ? scene.enemyManager.pool.getChildren() : null;
+            if (children) {
+                for (let i = 0; i < children.length; i++) {
+                    const e = children[i];
+                    if (e && e.active && e.enemyType === enemyKey) {
+                        e.setTexture('enemy_' + enemyKey + '_' + (e.animFrame || 0));
+                    }
+                }
+            }
+            return true;
+        }
+        if (assetKey.startsWith('ai_boss_')) {
+            const bossKey = assetKey.slice('ai_boss_'.length);
+            if (!this.ensureBossTexture(scene, bossKey)) return false;
+            const bosses = scene.activeBosses || [];
+            for (let i = 0; i < bosses.length; i++) {
+                const b = bosses[i];
+                if (b && b.active && b.bossKey === bossKey) {
+                    b.setTexture('boss_' + bossKey + '_' + (b.animFrame || 0));
+                }
+            }
+            return true;
+        }
+        if (assetKey.startsWith('asset_shadow_')) {
+            const type = assetKey.slice('asset_shadow_'.length);
+            if (!this.ensureShadowSoldierTexture(scene, type)) return false;
+            const soldiers = scene.shadowArmyManager && scene.shadowArmyManager.soldiers
+                ? scene.shadowArmyManager.soldiers : null;
+            if (soldiers) {
+                for (let i = 0; i < soldiers.length; i++) {
+                    const s = soldiers[i];
+                    if (s && s.active && s.soldierType === type) {
+                        s.setTexture('shadow_' + type);
+                        s.clearTint();
+                        s.setAlpha(0.92);
+                        s._usesLocalShadowSprite = true;
+                        s._usesDedicatedSprite = true;
+                    }
+                }
+            }
+            return true;
+        }
+        if (assetKey === 'asset_arise_rune') {
+            return this.upgradeAriseRuneTexture(scene);
+        }
+        return false;
+    }
+
+    static createAll(scene) {
+        this.createGameplayCoreTextures(scene, {});
+        this.createEnemyTextures(scene);
+        this.createBossTextures(scene);
+        this.createUITextures(scene);
     }
 
     static _clearPlayerAnimations(scene) {
@@ -966,8 +1071,32 @@ export class SpriteFactory {
     //  ENEMY TEXTURES
     // =============================================
     static createEnemyTextures(scene) {
-        // Goblin
-        this._createEnemySprite(scene, 'goblin', ENEMY_TYPES.goblin.size, (g, s, frame) => {
+        for (const key of Object.keys(ENEMY_TYPES)) {
+            this.ensureEnemyTexture(scene, key);
+        }
+    }
+
+    static ensureEnemyTexture(scene, key) {
+        const typeData = ENEMY_TYPES[key];
+        if (!typeData || !scene || !scene.textures) return false;
+        const built = this._getBuiltSet(scene);
+        if (built.has('enemy_ai_' + key)) return true;
+        if (scene.textures.exists('ai_enemy_' + key)) {
+            if (this._loadAIEnemyTexture(scene, key, typeData.size)) {
+                built.add('enemy_ai_' + key);
+                return true;
+            }
+        }
+        if (scene.textures.exists('enemy_' + key + '_0')) return true;
+        const drawFn = this._getEnemyDrawer(key);
+        if (!drawFn) return false;
+        this._createEnemySprite(scene, key, typeData.size, drawFn);
+        return true;
+    }
+
+    static _getEnemyDrawer(key) {
+        switch (key) {
+            case 'goblin': return (g, s, frame) => {
             const wobble = Math.sin(frame * Math.PI / 2) * 1.5;
             const c = ENEMY_TYPES.goblin.color;
             // Body
@@ -995,10 +1124,9 @@ export class SpriteFactory {
             g.fillRect(s + s*0.5, s - s*0.1 + wobble + wobble * 1.3, 2, 10);
             g.fillStyle(0x665544);
             g.fillRect(s + s*0.5 - 1, s + 4 + wobble + wobble * 1.3, 4, 3);
-        });
+        };
 
-        // Orc
-        this._createEnemySprite(scene, 'orc', ENEMY_TYPES.orc.size, (g, s, frame) => {
+            case 'orc': return (g, s, frame) => {
             const wobble = Math.sin(frame * Math.PI / 2) * 1;
             const c = ENEMY_TYPES.orc.color;
             // Body (bulky)
@@ -1029,10 +1157,9 @@ export class SpriteFactory {
             // Armor belt
             g.fillStyle(0x443322);
             g.fillRect(s * 0.3, s * 1.2 + wobble, s * 1.4, 4);
-        });
+        };
 
-        // Ice Bear
-        this._createEnemySprite(scene, 'iceBear', ENEMY_TYPES.iceBear.size, (g, s, frame) => {
+            case 'iceBear': return (g, s, frame) => {
             const wobble = Math.sin(frame * Math.PI / 2) * 1;
             const c = ENEMY_TYPES.iceBear.color;
             // Body
@@ -1070,10 +1197,9 @@ export class SpriteFactory {
             g.fillCircle(s - 6, s * 1.1, 1.5);
             g.fillCircle(s + 8, s * 0.9, 1);
             g.fillCircle(s + 3, s * 1.3, 1.5);
-        });
+        };
 
-        // Ant Soldier
-        this._createEnemySprite(scene, 'antSoldier', ENEMY_TYPES.antSoldier.size, (g, s, frame) => {
+            case 'antSoldier': return (g, s, frame) => {
             const wobble = Math.sin(frame * Math.PI / 2) * 1.5;
             const c = ENEMY_TYPES.antSoldier.color;
             const cd = this._darken(c, 0x20);
@@ -1102,10 +1228,9 @@ export class SpriteFactory {
                 g.beginPath(); g.moveTo(s, s * 0.8 + wobble); g.lineTo(s + side * s * 0.85, s * 0.8); g.strokePath();
                 g.beginPath(); g.moveTo(s, s * 0.9); g.lineTo(s + side * s * 0.75, s * 1.15 - legAngle * side * 10); g.strokePath();
             }
-        });
+        };
 
-        // Stone Golem
-        this._createEnemySprite(scene, 'stoneGolem', ENEMY_TYPES.stoneGolem.size, (g, s, frame) => {
+            case 'stoneGolem': return (g, s, frame) => {
             const wobble = Math.sin(frame * Math.PI / 2) * 1;
             const c = ENEMY_TYPES.stoneGolem.color;
             // Body (massive)
@@ -1136,10 +1261,9 @@ export class SpriteFactory {
             g.fillStyle(0x445533, 0.35);
             g.fillCircle(s * 0.5, s * 1.3, 4);
             g.fillCircle(s * 1.5, s * 0.8 + wobble, 3);
-        });
+        };
 
-        // Dark Mage
-        this._createEnemySprite(scene, 'darkMage', ENEMY_TYPES.darkMage.size, (g, s, frame) => {
+            case 'darkMage': return (g, s, frame) => {
             const wobble = Math.sin(frame * Math.PI / 2) * 1.5;
             const c = ENEMY_TYPES.darkMage.color;
             // Robe body (triangular)
@@ -1172,10 +1296,9 @@ export class SpriteFactory {
             g.fillStyle(0xcc66ff, 0.5);
             g.fillCircle(s * 1.65 + Math.cos(angle) * 10, s * 0.15 + Math.sin(angle) * 10, 2);
             g.fillCircle(s * 1.65 + Math.cos(angle + 2) * 8, s * 0.15 + Math.sin(angle + 2) * 8, 1.5);
-        });
+        };
 
-        // Iron Knight
-        this._createEnemySprite(scene, 'ironKnight', ENEMY_TYPES.ironKnight.size, (g, s, frame) => {
+            case 'ironKnight': return (g, s, frame) => {
             const wobble = Math.sin(frame * Math.PI / 2) * 1;
             const c = ENEMY_TYPES.ironKnight.color;
             // Armor body
@@ -1222,10 +1345,9 @@ export class SpriteFactory {
             // Legs
             this._outlinedRect(g, s * 0.5, s * 1.55, s * 0.35, s * 0.4, 0x666688, this._darken(c, 0x20), 2);
             this._outlinedRect(g, s * 1.15, s * 1.55, s * 0.35, s * 0.4, 0x666688, this._darken(c, 0x20), 2);
-        });
+        };
 
-        // Demon Warrior
-        this._createEnemySprite(scene, 'demonWarrior', ENEMY_TYPES.demonWarrior.size, (g, s, frame) => {
+            case 'demonWarrior': return (g, s, frame) => {
             const wobble = Math.sin(frame * Math.PI / 2) * 1;
             const c = ENEMY_TYPES.demonWarrior.color;
             // Demonic energy aura
@@ -1267,7 +1389,9 @@ export class SpriteFactory {
             g.fillCircle(s * 0.3 + wispOff, s * 0.3, 3);
             g.fillCircle(s * 1.7 - wispOff, s * 0.5, 2.5);
             g.fillCircle(s, s * 1.7, 3);
-        });
+        };
+            default: return null;
+        }
     }
 
     static _createEnemySprite(scene, key, size, drawFn) {
@@ -1376,8 +1500,32 @@ export class SpriteFactory {
     //  BOSS TEXTURES
     // =============================================
     static createBossTextures(scene) {
-        // Igris - Red armored knight
-        this._createBossSprite(scene, 'igris', BOSS_TYPES.igris, (g, s, frame, breathe) => {
+        for (const key of Object.keys(BOSS_TYPES)) {
+            this.ensureBossTexture(scene, key);
+        }
+    }
+
+    static ensureBossTexture(scene, key) {
+        const config = BOSS_TYPES[key];
+        if (!config || !scene || !scene.textures) return false;
+        const built = this._getBuiltSet(scene);
+        if (built.has('boss_ai_' + key)) return true;
+        if (scene.textures.exists('ai_boss_' + key)) {
+            if (this._loadAIBossTexture(scene, key, config)) {
+                built.add('boss_ai_' + key);
+                return true;
+            }
+        }
+        if (scene.textures.exists('boss_' + key + '_0')) return true;
+        const drawFn = this._getBossDrawer(key);
+        if (!drawFn) return false;
+        this._createBossSprite(scene, key, config, drawFn);
+        return true;
+    }
+
+    static _getBossDrawer(key) {
+        switch (key) {
+            case 'igris': return (g, s, frame, breathe) => {
             // Armor body
             this._outlinedRect(g, s * 0.3, s * 0.3 + breathe, s * 1.4, s * 1.3, 0x880000, 0x440000, 6);
             const b = breathe;
@@ -1427,10 +1575,9 @@ export class SpriteFactory {
             // Legs
             this._outlinedRect(g, s * 0.5, s * 1.5, s * 0.35, s * 0.5, 0x770000, 0x440000, 2);
             this._outlinedRect(g, s * 1.15, s * 1.5, s * 0.35, s * 0.5, 0x770000, 0x440000, 2);
-        });
+        };
 
-        // Tusk - Giant Orc King
-        this._createBossSprite(scene, 'tusk', BOSS_TYPES.tusk, (g, s, frame, breathe) => {
+            case 'tusk': return (g, s, frame, breathe) => {
             const b = breathe;
             // Massive body
             this._outlinedRect(g, s * 0.15, s * 0.25 + b, s * 1.7, s * 1.5, 0x4a2a0a, 0x2a1a00, 10);
@@ -1479,10 +1626,9 @@ export class SpriteFactory {
             g.fillStyle(0x8b6914, 0.6);
             g.fillRect(s * -0.1, s * 0.65 + armSwing, s * 0.3, 4);
             g.fillRect(s * 1.8, s * 0.65 - armSwing, s * 0.3, 4);
-        });
+        };
 
-        // Beru - Ant King
-        this._createBossSprite(scene, 'beru', BOSS_TYPES.beru, (g, s, frame, breathe) => {
+            case 'beru': return (g, s, frame, breathe) => {
             const b = breathe;
             const wingFlap = Math.sin(frame * Math.PI / 2) * 0.08;
             // Wings (behind body) - flutter animation
@@ -1535,7 +1681,9 @@ export class SpriteFactory {
                 g.beginPath(); g.moveTo(s, s * 0.8 + b); g.lineTo(s + side * s * 0.8, s * 0.7); g.lineTo(s + side * s * 1.05, s * 0.8); g.strokePath();
                 g.beginPath(); g.moveTo(s, s * 1.0); g.lineTo(s + side * s * (0.7 - legMove), s * 1.1); g.lineTo(s + side * s * (0.95 - legMove), s * 1.3); g.strokePath();
             }
-        });
+        };
+            default: return null;
+        }
     }
 
     static _createBossSprite(scene, key, config, drawFn) {
@@ -1662,6 +1810,7 @@ export class SpriteFactory {
     //  PROJECTILE TEXTURES
     // =============================================
     static createProjectileTextures(scene) {
+        if (scene.textures.exists('proj_dagger') && scene.textures.exists('proj_beru')) return;
         // Shadow Dagger (32x64 — 고퀄리티 투척용 단검)
         const dg = scene.make.graphics({ add: false });
         const cx = 16;
@@ -2014,71 +2163,89 @@ export class SpriteFactory {
     // =============================================
     static createEffectTextures(scene) {
         // Particle (glow dot)
-        const pg = scene.make.graphics({ add: false });
-        pg.fillStyle(0xffffff, 0.4);
-        pg.fillCircle(4, 4, 4);
-        pg.fillStyle(0xffffff, 0.9);
-        pg.fillCircle(4, 4, 2);
-        pg.generateTexture('particle', 8, 8);
-        pg.destroy();
+        if (!scene.textures.exists('particle')) {
+            const pg = scene.make.graphics({ add: false });
+            pg.fillStyle(0xffffff, 0.4);
+            pg.fillCircle(4, 4, 4);
+            pg.fillStyle(0xffffff, 0.9);
+            pg.fillCircle(4, 4, 2);
+            pg.generateTexture('particle', 8, 8);
+            pg.destroy();
+        }
 
         // XP Orb
-        const xg = scene.make.graphics({ add: false });
-        xg.fillStyle(COLORS.XP_ORB, 0.3);
-        xg.fillCircle(6, 6, 6);
-        xg.fillStyle(COLORS.XP_ORB, 0.8);
-        xg.fillCircle(6, 6, 4);
-        xg.fillStyle(0xffffff, 0.6);
-        xg.fillCircle(5, 4, 2);
-        xg.generateTexture('xp_orb', 12, 12);
-        xg.destroy();
+        if (!scene.textures.exists('xp_orb')) {
+            const xg = scene.make.graphics({ add: false });
+            xg.fillStyle(COLORS.XP_ORB, 0.3);
+            xg.fillCircle(6, 6, 6);
+            xg.fillStyle(COLORS.XP_ORB, 0.8);
+            xg.fillCircle(6, 6, 4);
+            xg.fillStyle(0xffffff, 0.6);
+            xg.fillCircle(5, 4, 2);
+            xg.generateTexture('xp_orb', 12, 12);
+            xg.destroy();
+        }
 
         // Large XP Orb
-        const lxg = scene.make.graphics({ add: false });
-        lxg.fillStyle(0xffcc00, 0.3);
-        lxg.fillCircle(8, 8, 8);
-        lxg.fillStyle(0xffcc00, 0.8);
-        lxg.fillCircle(8, 8, 6);
-        lxg.fillStyle(0xffffff, 0.6);
-        lxg.fillCircle(6, 5, 3);
-        lxg.generateTexture('xp_orb_large', 16, 16);
-        lxg.destroy();
+        if (!scene.textures.exists('xp_orb_large')) {
+            const lxg = scene.make.graphics({ add: false });
+            lxg.fillStyle(0xffcc00, 0.3);
+            lxg.fillCircle(8, 8, 8);
+            lxg.fillStyle(0xffcc00, 0.8);
+            lxg.fillCircle(8, 8, 6);
+            lxg.fillStyle(0xffffff, 0.6);
+            lxg.fillCircle(6, 5, 3);
+            lxg.generateTexture('xp_orb_large', 16, 16);
+            lxg.destroy();
+        }
 
         // Damage number bg
-        const dmg = scene.make.graphics({ add: false });
-        dmg.fillStyle(0x000000, 0.5);
-        dmg.fillRoundedRect(0, 0, 40, 20, 4);
-        dmg.generateTexture('dmg_bg', 40, 20);
-        dmg.destroy();
+        if (!scene.textures.exists('dmg_bg')) {
+            const dmg = scene.make.graphics({ add: false });
+            dmg.fillStyle(0x000000, 0.5);
+            dmg.fillRoundedRect(0, 0, 40, 20, 4);
+            dmg.generateTexture('dmg_bg', 40, 20);
+            dmg.destroy();
+        }
 
+        this.upgradeAriseRuneTexture(scene);
+    }
+
+    static upgradeAriseRuneTexture(scene) {
+        if (!scene || !scene.textures) return false;
+        const built = this._getBuiltSet(scene);
+        if (built.has('arise_rune_ai')) return true;
         if (scene.textures.exists('asset_arise_rune')) {
             this._copyTexture(scene, 'asset_arise_rune', 'arise_rune', 160, 160);
-        } else {
-            // Arise rune circle
-            const ag = scene.make.graphics({ add: false });
-            ag.lineStyle(3, COLORS.SHADOW_PRIMARY, 0.8);
-            ag.strokeCircle(60, 60, 55);
-            ag.lineStyle(2, COLORS.SHADOW_GLOW, 0.5);
-            ag.strokeCircle(60, 60, 45);
-            ag.lineStyle(1.5, COLORS.SHADOW_LIGHT, 0.3);
-            ag.strokeCircle(60, 60, 35);
-            ag.lineStyle(1, COLORS.SHADOW_PRIMARY, 0.2);
-            ag.strokeCircle(60, 60, 25);
-            for (let i = 0; i < 12; i++) {
-                const angle = (i / 12) * Math.PI * 2;
-                const x = 60 + Math.cos(angle) * 50;
-                const y = 60 + Math.sin(angle) * 50;
-                ag.fillStyle(COLORS.SHADOW_GLOW, 0.7);
-                ag.fillRect(x - 2, y - 5, 4, 10);
-                // Inner rune dots
-                const x2 = 60 + Math.cos(angle + 0.26) * 40;
-                const y2 = 60 + Math.sin(angle + 0.26) * 40;
-                ag.fillStyle(COLORS.SHADOW_PRIMARY, 0.5);
-                ag.fillCircle(x2, y2, 2);
-            }
-            ag.generateTexture('arise_rune', 120, 120);
-            ag.destroy();
+            built.add('arise_rune_ai');
+            return true;
         }
+        if (scene.textures.exists('arise_rune')) return true;
+        // Arise rune circle
+        const ag = scene.make.graphics({ add: false });
+        ag.lineStyle(3, COLORS.SHADOW_PRIMARY, 0.8);
+        ag.strokeCircle(60, 60, 55);
+        ag.lineStyle(2, COLORS.SHADOW_GLOW, 0.5);
+        ag.strokeCircle(60, 60, 45);
+        ag.lineStyle(1.5, COLORS.SHADOW_LIGHT, 0.3);
+        ag.strokeCircle(60, 60, 35);
+        ag.lineStyle(1, COLORS.SHADOW_PRIMARY, 0.2);
+        ag.strokeCircle(60, 60, 25);
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const x = 60 + Math.cos(angle) * 50;
+            const y = 60 + Math.sin(angle) * 50;
+            ag.fillStyle(COLORS.SHADOW_GLOW, 0.7);
+            ag.fillRect(x - 2, y - 5, 4, 10);
+            // Inner rune dots
+            const x2 = 60 + Math.cos(angle + 0.26) * 40;
+            const y2 = 60 + Math.sin(angle + 0.26) * 40;
+            ag.fillStyle(COLORS.SHADOW_PRIMARY, 0.5);
+            ag.fillCircle(x2, y2, 2);
+        }
+        ag.generateTexture('arise_rune', 120, 120);
+        ag.destroy();
+        return true;
     }
 
     // =============================================
@@ -2086,86 +2253,98 @@ export class SpriteFactory {
     // =============================================
     static createShadowSoldierTextures(scene) {
         const types = ['melee', 'tank', 'ranged'];
-        const sizes = [32, 40, 30];
+        for (let i = 0; i < types.length; i++) {
+            this.ensureShadowSoldierTexture(scene, types[i]);
+        }
+    }
 
-        types.forEach((type, idx) => {
-            const localKey = 'asset_shadow_' + type;
-            if (scene.textures.exists(localKey)) {
-                this._copyTexture(scene, localKey, 'shadow_' + type, sizes[idx] * 2, sizes[idx] * 2);
-                return;
-            }
+    static ensureShadowSoldierTexture(scene, type) {
+        if (!scene || !scene.textures) return false;
+        const sizeMap = { melee: 32, tank: 40, ranged: 30 };
+        const s = sizeMap[type];
+        if (!s) return false;
+        const built = this._getBuiltSet(scene);
+        if (built.has('shadow_ai_' + type)) return true;
 
-            // Try external CDN texture first
-            const extKey = 'ext_shadow_' + type;
-            const s = sizes[idx];
-            if (scene.textures.exists(extKey)) {
-                this._scaleExtTexture(scene, extKey, 'shadow_' + type, s, s);
-                return;
-            }
-            // Fallback: procedural generation
-            const g = scene.make.graphics({ add: false });
-            const half = s / 2;
+        const localKey = 'asset_shadow_' + type;
+        if (scene.textures.exists(localKey)) {
+            this._copyTexture(scene, localKey, 'shadow_' + type, s * 2, s * 2);
+            built.add('shadow_ai_' + type);
+            return true;
+        }
+        if (scene.textures.exists('shadow_' + type)) return true;
 
-            // Shadow aura (double layer)
-            g.fillStyle(COLORS.SHADOW_PRIMARY, 0.1);
-            g.fillCircle(half, half, half);
-            g.fillStyle(COLORS.SHADOW_PRIMARY, 0.2);
-            g.fillCircle(half, half, half * 0.7);
+        // Try external CDN texture first
+        const extKey = 'ext_shadow_' + type;
+        if (scene.textures.exists(extKey)) {
+            this._scaleExtTexture(scene, extKey, 'shadow_' + type, s, s);
+            return true;
+        }
+        // Fallback: procedural generation
+        const g = scene.make.graphics({ add: false });
+        const half = s / 2;
 
-            // Body
-            this._outlinedRect(g, half * 0.35, half * 0.5, half * 1.3, half * 1.4, 0x110022, 0x06000e, 3);
-            // Body shading
-            g.fillStyle(0x1a0033, 0.3);
-            g.fillRect(half * 0.4, half * 0.55, half * 0.4, half * 1.3);
+        // Shadow aura (double layer)
+        g.fillStyle(COLORS.SHADOW_PRIMARY, 0.1);
+        g.fillCircle(half, half, half);
+        g.fillStyle(COLORS.SHADOW_PRIMARY, 0.2);
+        g.fillCircle(half, half, half * 0.7);
 
-            // Head
-            this._outlinedCircle(g, half, half * 0.45, half * 0.32, 0x0a0015, 0x06000e);
+        // Body
+        this._outlinedRect(g, half * 0.35, half * 0.5, half * 1.3, half * 1.4, 0x110022, 0x06000e, 3);
+        // Body shading
+        g.fillStyle(0x1a0033, 0.3);
+        g.fillRect(half * 0.4, half * 0.55, half * 0.4, half * 1.3);
 
-            // Glowing eyes
-            this._glowEyes(g, half - 3, half * 0.42, half + 3, half * 0.42, COLORS.SHADOW_PRIMARY, 2);
+        // Head
+        this._outlinedCircle(g, half, half * 0.45, half * 0.32, 0x0a0015, 0x06000e);
 
-            // Type-specific details
-            if (type === 'melee') {
-                // Sword with glow
-                g.fillStyle(0x8833cc, 0.3);
-                g.fillRect(half + half * 0.55, half * 0.15, 5, half * 1.3);
-                g.fillStyle(0x6622cc, 0.9);
-                g.fillRect(half + half * 0.6, half * 0.2, 3, half * 1.2);
-                g.fillStyle(0xaa55ff, 0.4);
-                g.fillRect(half + half * 0.62, half * 0.25, 1.5, half * 0.4);
-            } else if (type === 'tank') {
-                // Shield with glow
-                this._outlinedRect(g, half * 0.05, half * 0.55, half * 0.45, half * 0.85, 0x3311aa, 0x1a0066, 2);
-                g.fillStyle(COLORS.SHADOW_GLOW, 0.2);
-                g.fillCircle(half * 0.27, half * 0.97, 4);
-            } else if (type === 'ranged') {
-                // Magic orb with glow
-                g.fillStyle(COLORS.SHADOW_GLOW, 0.25);
-                g.fillCircle(half + half * 0.5, half * 0.6, 6);
-                g.fillStyle(COLORS.SHADOW_GLOW, 0.7);
-                g.fillCircle(half + half * 0.5, half * 0.6, 4);
-                g.fillStyle(0xffffff, 0.3);
-                g.fillCircle(half + half * 0.47, half * 0.56, 1.5);
-            }
+        // Glowing eyes
+        this._glowEyes(g, half - 3, half * 0.42, half + 3, half * 0.42, COLORS.SHADOW_PRIMARY, 2);
 
-            // Smoke effect at bottom
-            g.fillStyle(COLORS.SHADOW_PRIMARY, 0.12);
-            g.fillEllipse(half, s - 3, half * 1.3, 7);
-            g.fillStyle(COLORS.SHADOW_DARK, 0.08);
-            g.fillEllipse(half, s - 1, half * 1.0, 5);
+        // Type-specific details
+        if (type === 'melee') {
+            // Sword with glow
+            g.fillStyle(0x8833cc, 0.3);
+            g.fillRect(half + half * 0.55, half * 0.15, 5, half * 1.3);
+            g.fillStyle(0x6622cc, 0.9);
+            g.fillRect(half + half * 0.6, half * 0.2, 3, half * 1.2);
+            g.fillStyle(0xaa55ff, 0.4);
+            g.fillRect(half + half * 0.62, half * 0.25, 1.5, half * 0.4);
+        } else if (type === 'tank') {
+            // Shield with glow
+            this._outlinedRect(g, half * 0.05, half * 0.55, half * 0.45, half * 0.85, 0x3311aa, 0x1a0066, 2);
+            g.fillStyle(COLORS.SHADOW_GLOW, 0.2);
+            g.fillCircle(half * 0.27, half * 0.97, 4);
+        } else if (type === 'ranged') {
+            // Magic orb with glow
+            g.fillStyle(COLORS.SHADOW_GLOW, 0.25);
+            g.fillCircle(half + half * 0.5, half * 0.6, 6);
+            g.fillStyle(COLORS.SHADOW_GLOW, 0.7);
+            g.fillCircle(half + half * 0.5, half * 0.6, 4);
+            g.fillStyle(0xffffff, 0.3);
+            g.fillCircle(half + half * 0.47, half * 0.56, 1.5);
+        }
 
-            // 3D gradient lighting
-            this._applyLighting(g, half, half * 0.7, half * 0.8);
+        // Smoke effect at bottom
+        g.fillStyle(COLORS.SHADOW_PRIMARY, 0.12);
+        g.fillEllipse(half, s - 3, half * 1.3, 7);
+        g.fillStyle(COLORS.SHADOW_DARK, 0.08);
+        g.fillEllipse(half, s - 1, half * 1.0, 5);
 
-            g.generateTexture('shadow_' + type, s, s);
-            g.destroy();
-        });
+        // 3D gradient lighting
+        this._applyLighting(g, half, half * 0.7, half * 0.8);
+
+        g.generateTexture('shadow_' + type, s, s);
+        g.destroy();
+        return true;
     }
 
     // =============================================
     //  UI TEXTURES
     // =============================================
-    static createUITextures(scene) {
+    static createUITextures(scene, options = {}) {
+        const built = this._getBuiltSet(scene);
         const icons = {
             basicDagger: (g) => {
                 g.fillStyle(0xbbbbcc);
@@ -2217,12 +2396,19 @@ export class SpriteFactory {
             },
         };
 
-        for (const [key, config] of Object.entries(WEAPONS)) {
+        const targetWeaponKeys = Array.isArray(options.weaponKeys) ? options.weaponKeys : Object.keys(WEAPONS);
+        for (let i = 0; i < targetWeaponKeys.length; i++) {
+            const key = targetWeaponKeys[i];
+            const config = WEAPONS[key];
+            if (!config) continue;
+            if (built.has('icon_ai_' + key)) continue;
             const assetKey = 'asset_icon_' + key;
             if (scene.textures.exists(assetKey)) {
                 this._copyTexture(scene, assetKey, 'icon_' + key, 32, 32);
+                built.add('icon_ai_' + key);
                 continue;
             }
+            if (scene.textures.exists('icon_' + key)) continue;
             const drawFn = icons[key] || icons[config.baseWeaponKey] || icons.basicDagger;
             const g = scene.make.graphics({ add: false });
             g.fillStyle(config.effectDarkColor || 0x2a1a4a, 0.8);
@@ -2246,11 +2432,14 @@ export class SpriteFactory {
         };
 
         for (const [key, color] of Object.entries(passiveColors)) {
+            if (built.has('icon_ai_' + key)) continue;
             const assetKey = 'asset_icon_' + key;
             if (scene.textures.exists(assetKey)) {
                 this._copyTexture(scene, assetKey, 'icon_' + key, 32, 32);
+                built.add('icon_ai_' + key);
                 continue;
             }
+            if (scene.textures.exists('icon_' + key)) continue;
             const g = scene.make.graphics({ add: false });
             g.fillStyle(0x1a1a2e, 0.8);
             g.fillRoundedRect(0, 0, 32, 32, 4);
@@ -2275,6 +2464,7 @@ export class SpriteFactory {
     //  FLOOR TEXTURE
     // =============================================
     static createFloorTexture(scene) {
+        if (scene.textures.exists('floor_tile')) return;
         const g = scene.make.graphics({ add: false });
         const ts = 128; // Larger tile for more detail
         const half = ts / 2;
