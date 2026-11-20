@@ -1,5 +1,5 @@
 import {
-    RULESET, SESSION_MS, roundSlotAt, previousRoundSlot, selectRoundSecretIndex,
+    RULESET, SESSION_MS, ROUND_MS, roundSlotAt, previousRoundSlot, selectRoundSecretIndex,
     parseLang, rulesetFor, dbRoundIdFor,
     normalizeWord, isValidWord, sanitizePlayerName,
     deriveSimScale, calibrateSim, nextRecord, fault, fingerprint, publicProfile,
@@ -694,24 +694,53 @@ async function performExplore(db, env, player, ipHash, game, body, currentRound,
     };
 }
 
-export async function leaderboard(db, playerId, lang = 'ko') {
-    const query = `SELECT id, name, name_key, sync_best_time_ms, sync_best_time_guesses, sync_wins, sync_best_streak, sync_best_at,
-        ROW_NUMBER() OVER (ORDER BY sync_best_time_ms ASC, sync_best_time_guesses ASC, sync_best_at ASC, id ASC) AS rank
-        FROM sm_players WHERE lang = ? AND sync_best_time_ms IS NOT NULL`;
-    const top = await db.prepare(`SELECT * FROM (${query}) LIMIT 50`).bind(lang).all();
-    const mine = playerId ? await db.prepare(`SELECT * FROM (${query}) WHERE id = ?`).bind(lang, playerId).first() : null;
+// 현재·이전 회차 랭킹 조회 (회차가 바뀌면 해당 회차 기준으로 초기화)
+export async function leaderboard(db, playerId, lang = 'ko', currentSlot = roundSlotAt(Date.now()), requestedRoundNo = null) {
+    const currentRoundNo = currentSlot.roundNo;
+    const minRoundNo = Math.min(1, currentRoundNo);
+    let targetRoundNo = currentRoundNo;
+    if (requestedRoundNo !== null && requestedRoundNo !== undefined && requestedRoundNo !== '') {
+        if (!/^\d+$/.test(String(requestedRoundNo))) throw fault('invalid_request', 400);
+        const parsed = Number(requestedRoundNo);
+        if (!Number.isSafeInteger(parsed) || parsed < minRoundNo || parsed > currentRoundNo) {
+            throw fault('invalid_request', 400);
+        }
+        targetRoundNo = parsed;
+    }
+    const targetSlot = targetRoundNo === currentRoundNo
+        ? currentSlot
+        : roundSlotAt(currentSlot.startedAt - (currentRoundNo - targetRoundNo) * ROUND_MS);
+    const dbRoundId = dbRoundIdFor(lang, targetSlot.roundId);
+    const query = `SELECT g.player_id AS id, p.name, p.name_key, g.solved_ms, g.guess_count, g.solved_at,
+        ROW_NUMBER() OVER (ORDER BY g.solved_ms ASC, g.guess_count ASC, g.solved_at ASC, g.player_id ASC) AS rank
+        FROM sm_games g
+        JOIN sm_players p ON p.id = g.player_id
+        WHERE g.round_id = ? AND g.status = 'won' AND g.ranked = 1`;
+    const top = await db.prepare(`SELECT * FROM (${query}) LIMIT 50`).bind(dbRoundId).all();
+    const mine = playerId ? await db.prepare(`SELECT * FROM (${query}) WHERE id = ?`).bind(dbRoundId, playerId).first() : null;
     const visible = row => row ? ({
         rank: row.rank,
         name: row.name,
         hasCustomName: Boolean(row.name_key),
-        bestTimeMs: row.sync_best_time_ms,
-        guesses: row.sync_best_time_guesses,
-        wins: row.sync_wins,
-        streak: row.sync_best_streak,
-        turns: row.sync_best_time_guesses,
+        solvedMs: row.solved_ms,
+        bestTimeMs: row.solved_ms,
+        guesses: row.guess_count,
+        turns: row.guess_count,
         own: row.id === playerId,
     }) : null;
-    return { entries: top.results.map(visible), mine: visible(mine), lang, ruleset: rulesetFor(lang) };
+    return {
+        entries: (top.results || []).map(visible),
+        mine: visible(mine),
+        lang,
+        ruleset: rulesetFor(lang),
+        roundNo: targetSlot.roundNo,
+        roundId: targetSlot.roundId,
+        currentRoundNo,
+        minRoundNo,
+        isCurrentRound: targetSlot.roundNo === currentRoundNo,
+        hasPrev: targetSlot.roundNo > minRoundNo,
+        hasNext: targetSlot.roundNo < currentRoundNo,
+    };
 }
 
 export async function handleRoomRequest(request, env, runtime = null) {
@@ -726,7 +755,8 @@ export async function handleRoomRequest(request, env, runtime = null) {
 
         if (request.method === 'GET' && path === 'leaderboard') {
             await runtime?.flushBatch?.();
-            return response(await leaderboard(env.DB, id, lang));
+            const currentSlot = roundSlotAt(nowMs(env));
+            return response(await leaderboard(env.DB, id, lang, currentSlot, url.searchParams.get('round')));
         }
 
         if (!dataReady(env)) throw fault('service_unavailable', 503);

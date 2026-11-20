@@ -45,10 +45,10 @@ for (const locale of ['ko', 'en']) {
   <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': ['VideoGame', 'WebApplication'], name: t.title, description: `${t.intro} ${t.rules}`, url, image: 'https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png', inLanguage: locale, applicationCategory: 'GameApplication', operatingSystem: 'Any', gamePlatform: ['Web Browser', 'Mobile Browser'], playMode: 'SinglePlayer', isAccessibleForFree: true, dateModified: '2026-11-20', author: { '@type': 'Organization', name: 'ArcherLab', url: 'https://archerlab.dev' } })}</script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261120-v9">
+  <link rel="stylesheet" href="css/style.css?v=20261120-v10">
   <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
   <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
-  <script type="module" src="js/main.mjs?v=20261120-v9"></script>
+  <script type="module" src="js/main.mjs?v=20261120-v10"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 </head>
 <body data-no-fullscreen data-screen="title">
@@ -224,7 +224,13 @@ for (const locale of ['ko', 'en']) {
 
   <dialog id="ranking-dialog" class="game-dialog crafted-frame" aria-labelledby="ranking-title">
     <button class="dialog-close icon-button" data-close aria-label="${text('close')}">✕</button>
-    <h2 id="ranking-title">${text('ranking')}</h2>
+    <div class="ranking-header">
+      <div class="ranking-round-nav" role="group" aria-label="${text('ranking_nav')}">
+        <button type="button" id="ranking-prev" class="ranking-nav-btn" aria-label="${text('ranking_prev')}" disabled>&lt;</button>
+        <h2 id="ranking-title">${text('ranking')}</h2>
+        <button type="button" id="ranking-next" class="ranking-nav-btn" aria-label="${text('ranking_next')}" disabled>&gt;</button>
+      </div>
+    </div>
     <p class="dialog-intro">${text('ranking_rule')}</p>
     <div id="leaderboard" class="leaderboard"></div>
     <p id="own-rank" class="own-rank"></p>

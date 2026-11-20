@@ -83,6 +83,23 @@ try {
     await page.locator('#ranking-open').click();
     await page.locator('#ranking-dialog').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#name-form').count(), 0);
+    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '3회차 랭킹' && Boolean(document.querySelector('.leaderboard-empty-title, .leaderboard table')));
+    assert.equal(await page.locator('#ranking-prev').isEnabled(), true);
+    assert.equal(await page.locator('#ranking-next').isDisabled(), true);
+    assert.equal(await page.locator('.leaderboard-empty-title').textContent(), '3회차에는 아직 랭커가 없어요');
+    await page.locator('#ranking-prev').click();
+    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '2회차 랭킹' && Boolean(document.querySelector('.leaderboard-empty-title, .leaderboard table')));
+    assert.equal(await page.locator('.leaderboard-empty-title').textContent(), '2회차에는 등록된 랭커가 없어요');
+    await page.screenshot({ path: path.join(output, 'ko-ranking-empty-past.png') });
+    await page.locator('#ranking-prev').click();
+    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '1회차 랭킹' && Boolean(document.querySelector('.leaderboard-empty-title, .leaderboard table')));
+    assert.equal(await page.locator('#ranking-prev').isDisabled(), true);
+    assert.equal(await page.locator('#ranking-next').isEnabled(), true);
+    await page.locator('#ranking-next').click();
+    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '2회차 랭킹' && Boolean(document.querySelector('.leaderboard-empty-title, .leaderboard table')));
+    await page.locator('#ranking-next').click();
+    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '3회차 랭킹' && Boolean(document.querySelector('.leaderboard-empty-title, .leaderboard table')));
+    assert.equal(await page.locator('#ranking-next').isDisabled(), true);
     await page.locator('#ranking-dialog [data-close]').click();
     assert.doesNotMatch(await page.locator('body').textContent(), /FastText|Wiktionary|서버 시간 검증/);
     assert.ok(await page.locator('.example-card').isVisible());
@@ -250,9 +267,13 @@ try {
     await page.locator('#result-name-save').click();
     await page.waitForFunction(() => Boolean(document.querySelector('#result-name-status')?.textContent.trim()));
     await page.locator('#open-ranking-result').click();
-    await page.locator('.leaderboard tbody tr').first().waitFor();
+    await page.locator('#ranking-dialog').waitFor({ state: 'visible' });
+    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === 'Round #3 Ranking' && Boolean(document.querySelector('.leaderboard tbody tr')));
     assert.equal((await page.locator('#leaderboard tbody tr').count()), 1);
     assert.ok((await page.locator('#leaderboard tbody tr:first-child').textContent()).includes('EnChamp'));
+    await page.locator('#ranking-prev').click();
+    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === 'Round #2 Ranking' && Boolean(document.querySelector('.leaderboard-empty-title')));
+    assert.equal(await page.locator('.leaderboard-empty-title').textContent(), 'No ranked solvers in Round #2');
     await page.locator('#ranking-dialog [data-close]').click();
 
     await page.locator('#home').click();
@@ -314,12 +335,14 @@ try {
     ]);
     await page.waitForFunction(() => Boolean(document.querySelector('#result-name-status')?.textContent.trim()));
 
-    // Open Hall of Fame (All-Time only, read-only without #name-form) -> verify StarGazerPro appears
+    // Open round ranking (read-only without #name-form) -> verify Round #3 shows AlphaSolver & StarGazerPro
     await page.locator('#open-ranking-result').click();
     await page.locator('#ranking-dialog').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#name-form').count(), 0);
+    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '3회차 랭킹');
     await page.locator('.leaderboard tbody tr').first().waitFor();
     await page.waitForFunction(() => document.querySelector('#leaderboard tbody tr:nth-child(2)')?.textContent.includes('StarGazerPro'));
+    assert.ok((await page.locator('#own-rank').textContent()).includes('내 순위 · #2'));
     await page.screenshot({ path: path.join(output, 'ko-ranking-desktop.png') });
     await page.locator('#ranking-dialog [data-close]').click();
     assert.equal(await page.locator('#result-name-input').inputValue(), 'StarGazerPro');
@@ -363,6 +386,19 @@ try {
     assert.ok((await page.locator('#nearest-title').textContent()).includes(roundAnswer));
     await page.waitForFunction(() => document.querySelectorAll('#nearest-body tr').length === 1000);
     await page.locator('#nearest-dialog [data-close]').click();
+
+    // Round #4 ranking resets cleanly on rollover while '<' arrow still browses Round #3 ranking
+    await page.locator('#ranking-open').click();
+    await page.locator('#ranking-dialog').waitFor({ state: 'visible' });
+    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '4회차 랭킹' && Boolean(document.querySelector('.leaderboard-empty-title')));
+    assert.equal(await page.locator('.leaderboard-empty-title').textContent(), '4회차에는 아직 랭커가 없어요');
+    assert.equal(await page.locator('#own-rank').textContent(), '');
+    await page.screenshot({ path: path.join(output, 'ko-ranking-rollover-reset.png') });
+    await page.locator('#ranking-prev').click();
+    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '3회차 랭킹' && Boolean(document.querySelector('#leaderboard tbody tr:nth-child(2)')?.textContent.includes('StarGazerPro')));
+    assert.ok((await page.locator('#own-rank').textContent()).includes('내 순위 · #2'));
+    await page.screenshot({ path: path.join(output, 'ko-ranking-prev-round.png') });
+    await page.locator('#ranking-dialog [data-close]').click();
 
     // Responsive check across all mobile & tablet viewports
     for (const [width, height] of [[320, 568], [360, 800], [390, 844], [430, 932], [768, 1024], [844, 390]]) {

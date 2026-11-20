@@ -1,5 +1,5 @@
-import { messages, translation } from './i18n.mjs?v=20261120-v9';
-import { request, requestId, storage, reportException } from './api.mjs?v=20261120-v9';
+import { messages, translation } from './i18n.mjs?v=20261120-v10';
+import { request, requestId, storage, reportException } from './api.mjs?v=20261120-v10';
 import { GameAudio } from './audio.mjs';
 
 const locale = document.documentElement.lang === 'en' ? 'en' : 'ko';
@@ -35,6 +35,7 @@ let latestHighlightWord = null;
 let sortState = { key: 'similarity', dir: 'desc' };
 let nearestWords = [];
 let nearestKey = null;
+let rankingState = { roundNo: null, currentRoundNo: null, minRoundNo: 1, requestSeq: 0 };
 let rolloverInFlight = false;
 let rolloverRoundId = null;
 let rolloverRetryAt = 0;
@@ -402,6 +403,7 @@ async function handleRoundRollover(expiredRoundId) {
         rolloverRetryAt = 0;
         clearLocalRoundProgress();
         render(data, { navigate: screen === 'game' });
+        if ($('ranking-dialog') && $('ranking-dialog').open) showRanking();
         if (!(data.event && data.event.code === 'round_reset')) {
             notifyRoundReset(data.round, null);
         }
@@ -1075,49 +1077,100 @@ function openDialog(id) {
     $(id).showModal();
 }
 
-async function showRanking() {
+async function showRanking(requestedRoundNo) {
     var __oc18, __oc19;
+    const prevBtn = $('ranking-prev');
+    const nextBtn = $('ranking-next');
+    const titleEl = $('ranking-title');
     if (!$('ranking-dialog').open) openDialog('ranking-dialog');
+    const initialRoundNo = requestedRoundNo || (state.round && state.round.roundNo) || null;
+    if (titleEl) {
+        titleEl.textContent = initialRoundNo ? t('ranking_round_title', { no: initialRoundNo }) : t('ranking');
+    }
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+    const seq = ++rankingState.requestSeq;
     $('leaderboard').textContent = t('loading');
     $('own-rank').textContent = '';
     try {
-        const data = await request('leaderboard');
-        const table = document.createElement('table');
-        const head = document.createElement('thead');
-        const row = document.createElement('tr');
-        for (const key of ['rank_col', 'explorer_col', 'time_col', 'guesses_col']) {
-            const th = document.createElement('th');
-            th.scope = 'col';
-            th.textContent = t(key);
-            row.append(th);
+        const endpoint = requestedRoundNo ? ('leaderboard?round=' + encodeURIComponent(String(requestedRoundNo))) : 'leaderboard';
+        const data = await request(endpoint);
+        if (seq !== rankingState.requestSeq) return;
+        const roundNo = data.roundNo || requestedRoundNo || (state.round && state.round.roundNo) || null;
+        const currentRoundNo = data.currentRoundNo || (state.round && state.round.roundNo) || roundNo;
+        const minRoundNo = data.minRoundNo || 1;
+        const isCurrentRound = typeof data.isCurrentRound === 'boolean' ? data.isCurrentRound : (!currentRoundNo || roundNo === currentRoundNo);
+        const hasPrev = typeof data.hasPrev === 'boolean' ? data.hasPrev : Boolean(roundNo && roundNo > minRoundNo);
+        const hasNext = typeof data.hasNext === 'boolean' ? data.hasNext : Boolean(roundNo && currentRoundNo && roundNo < currentRoundNo);
+        rankingState.roundNo = roundNo;
+        rankingState.currentRoundNo = currentRoundNo;
+        rankingState.minRoundNo = minRoundNo;
+        if (titleEl) {
+            titleEl.textContent = roundNo ? t('ranking_round_title', { no: roundNo }) : t('ranking');
         }
-        head.append(row);
-        table.append(head);
-        const body = document.createElement('tbody');
-        for (const entry of data.entries) {
-            const tr = document.createElement('tr');
-            if (entry.own) tr.className = 'own';
-            const cells = [
-                String(entry.rank),
-                displaySolverName(entry),
-                formatRecordTime(entry.bestTimeMs),
-                t('guesses_unit', { count: (((__oc19 = (__oc18 = entry.guesses) !== null && __oc18 !== void 0 ? __oc18 : entry.turns) !== null && __oc19 !== void 0 ? __oc19 : 0)) }),
-            ];
-            for (const value of cells) {
-                const td = document.createElement('td');
-                td.textContent = value;
-                tr.append(td);
+        if (prevBtn) prevBtn.disabled = !hasPrev;
+        if (nextBtn) nextBtn.disabled = !hasNext;
+        if (data.entries && data.entries.length) {
+            const table = document.createElement('table');
+            const head = document.createElement('thead');
+            const row = document.createElement('tr');
+            for (const key of ['rank_col', 'explorer_col', 'time_col', 'guesses_col']) {
+                const th = document.createElement('th');
+                th.scope = 'col';
+                th.textContent = t(key);
+                row.append(th);
             }
-            body.append(tr);
+            head.append(row);
+            table.append(head);
+            const body = document.createElement('tbody');
+            for (const entry of data.entries) {
+                const tr = document.createElement('tr');
+                if (entry.own) tr.className = 'own';
+                const solvedMs = (entry.solvedMs !== undefined && entry.solvedMs !== null) ? entry.solvedMs : entry.bestTimeMs;
+                const cells = [
+                    String(entry.rank),
+                    displaySolverName(entry),
+                    formatRecordTime(solvedMs),
+                    t('guesses_unit', { count: (((__oc19 = (__oc18 = entry.guesses) !== null && __oc18 !== void 0 ? __oc18 : entry.turns) !== null && __oc19 !== void 0 ? __oc19 : 0)) }),
+                ];
+                for (const value of cells) {
+                    const td = document.createElement('td');
+                    td.textContent = value;
+                    tr.append(td);
+                }
+                body.append(tr);
+            }
+            table.append(body);
+            $('leaderboard').replaceChildren(table);
+        } else {
+            const emptyBox = document.createElement('div');
+            emptyBox.className = 'leaderboard-empty';
+            const emptyTitle = document.createElement('p');
+            emptyTitle.className = 'leaderboard-empty-title';
+            const emptyDesc = document.createElement('p');
+            emptyDesc.className = 'leaderboard-empty-desc';
+            if (roundNo) {
+                emptyTitle.textContent = t(isCurrentRound ? 'no_records_current_title' : 'no_records_past_title', { no: roundNo });
+                emptyDesc.textContent = t(isCurrentRound ? 'no_records_current_desc' : 'no_records_past_desc', { no: roundNo });
+                emptyBox.append(emptyTitle, emptyDesc);
+            } else {
+                emptyTitle.textContent = t('no_records');
+                emptyBox.append(emptyTitle);
+            }
+            $('leaderboard').replaceChildren(emptyBox);
         }
-        table.append(body);
-        $('leaderboard').replaceChildren(data.entries.length ? table : document.createTextNode(t('no_records')));
         if (data.mine) {
-            $('own-rank').textContent = `${t('your_record')} · #${data.mine.rank} · ${formatRecordTime(data.mine.bestTimeMs)} (${t('guesses_unit', { count: data.mine.guesses })})`;
+            const mineMs = (data.mine.solvedMs !== undefined && data.mine.solvedMs !== null) ? data.mine.solvedMs : data.mine.bestTimeMs;
+            $('own-rank').textContent = `${t('your_record')} · #${data.mine.rank} · ${formatRecordTime(mineMs)} (${t('guesses_unit', { count: data.mine.guesses })})`;
+        } else {
+            $('own-rank').textContent = '';
         }
     } catch (error) {
+        if (seq !== rankingState.requestSeq) return;
         reportException(error, 'leaderboard');
         $('leaderboard').textContent = t(Object.prototype.hasOwnProperty.call(messages[locale], error.code) ? error.code : 'network_error');
+        if (prevBtn) prevBtn.disabled = !(rankingState.roundNo && rankingState.roundNo > rankingState.minRoundNo);
+        if (nextBtn) nextBtn.disabled = !(rankingState.roundNo && rankingState.currentRoundNo && rankingState.roundNo < rankingState.currentRoundNo);
     }
 }
 
@@ -1186,6 +1239,22 @@ $('open-ranking-result').addEventListener('click', () => showRanking());
 $('nearest-filter').addEventListener('input', event => renderNearestRows(event.target.value));
 $('share-result').addEventListener('click', copyShare);
 $('ranking-open').addEventListener('click', () => showRanking());
+if ($('ranking-prev')) {
+    $('ranking-prev').addEventListener('click', () => {
+        if (rankingState.roundNo && rankingState.roundNo > rankingState.minRoundNo) {
+            audio.play('click');
+            showRanking(rankingState.roundNo - 1);
+        }
+    });
+}
+if ($('ranking-next')) {
+    $('ranking-next').addEventListener('click', () => {
+        if (rankingState.roundNo && rankingState.currentRoundNo && rankingState.roundNo < rankingState.currentRoundNo) {
+            audio.play('click');
+            showRanking(rankingState.roundNo + 1);
+        }
+    });
+}
 $('guide-open').addEventListener('click', showGuide);
 $('settings-open').addEventListener('click', () => openDialog('settings-dialog'));
 

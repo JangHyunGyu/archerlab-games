@@ -182,16 +182,43 @@ test('Option A round-open ranking, anti-cheat filters, current solver display, a
     await h.call('profile', { name: 'SecondSolver' }, 'PATCH', tokenP2);
 
     const lb = await h.call('leaderboard', null, 'GET', tokenP1);
+    assert.equal(lb.data.roundNo, 3);
+    assert.equal(lb.data.currentRoundNo, 3);
+    assert.equal(lb.data.isCurrentRound, true);
+    assert.equal(lb.data.hasPrev, true);
+    assert.equal(lb.data.hasNext, false);
     assert.equal(lb.data.entries.length, 2);
     assert.equal(lb.data.entries[0].name, 'FirstSolver');
     assert.equal(lb.data.entries[0].hasCustomName, true);
+    assert.equal(lb.data.entries[0].solvedMs, 15000);
     assert.equal(lb.data.entries[0].bestTimeMs, 15000);
     assert.equal(lb.data.entries[1].name, 'SecondSolver');
     assert.equal(lb.data.entries[1].hasCustomName, true);
+    assert.equal(lb.data.entries[1].solvedMs, 25000);
     assert.equal(lb.data.entries[1].bestTimeMs, 25000);
     assert.equal(lb.data.mine.rank, 1);
     assert.equal(lb.data.mine.hasCustomName, true);
     assert.ok(lb.data.entries.every(row => !Object.hasOwn(row, 'id')));
+
+    // Past & boundary round browsing on leaderboard (?round=2, ?round=1, invalid rounds)
+    const lbR2 = await h.call('leaderboard?round=2', null, 'GET', tokenP1);
+    assert.equal(lbR2.status, 200);
+    assert.equal(lbR2.data.roundNo, 2);
+    assert.equal(lbR2.data.isCurrentRound, false);
+    assert.equal(lbR2.data.hasPrev, true);
+    assert.equal(lbR2.data.hasNext, true);
+    assert.deepEqual(lbR2.data.entries, []);
+    assert.equal(lbR2.data.mine, null);
+
+    const lbR1 = await h.call('leaderboard?round=1', null, 'GET', tokenP1);
+    assert.equal(lbR1.status, 200);
+    assert.equal(lbR1.data.roundNo, 1);
+    assert.equal(lbR1.data.hasPrev, false);
+    assert.equal(lbR1.data.hasNext, true);
+
+    for (const bad of ['4', '0', '-1', 'abc']) {
+        assert.equal((await h.call(`leaderboard?round=${bad}`, null, 'GET', tokenP1)).status, 400);
+    }
 
     // Nearest 1k & post-win explore match calibrated scores.
     const nearest = await h.call(`games/${p1Start.game.id}/nearest`, null, 'GET', tokenP1);
@@ -214,8 +241,12 @@ test('6-hour rollover expires old rounds, resets guess history, reveals previous
     const r3Start = await h.start(token);
     const r3Answer = h.answer(r3Start.game.id);
     const r3G1 = (await h.guess(r3Start.game, '사람', crypto.randomUUID(), token)).data;
+    h.advanceMs(2500);
     const r3Win = await h.guess(r3G1.game, r3Answer, crypto.randomUUID(), token);
     assert.equal(r3Win.data.profile.streak, 1);
+    const lbBeforeRollover = (await h.call('leaderboard', null, 'GET', token)).data;
+    assert.equal(lbBeforeRollover.roundNo, 3);
+    assert.equal(lbBeforeRollover.entries.length, 1);
 
     // Second player leaves an unsolved active game in Round #3.
     const idleR3 = await h.start(tokenIdle);
@@ -223,6 +254,14 @@ test('6-hour rollover expires old rounds, resets guess history, reveals previous
 
     // Rollover to Round #4 (18:00 KST).
     h.advanceMs(6 * 60 * 60 * 1000);
+    const lbAfterRollover = (await h.call('leaderboard', null, 'GET', token)).data;
+    assert.equal(lbAfterRollover.roundNo, 4);
+    assert.equal(lbAfterRollover.entries.length, 0);
+    assert.equal(lbAfterRollover.mine, null);
+    const lbPrevRound = (await h.call('leaderboard?round=3', null, 'GET', token)).data;
+    assert.equal(lbPrevRound.roundNo, 3);
+    assert.equal(lbPrevRound.entries.length, 1);
+    assert.equal(lbPrevRound.mine.rank, 1);
 
     // Late guess & explore against Round #3 fail cleanly with 409 round_expired.
     const lateGuess = await h.guess(r3Win.data.game, '사랑', crypto.randomUUID(), token);
@@ -476,8 +515,16 @@ test('dual ko/en sessions stay strictly isolated while sharing the 6h KST schedu
     assert.equal(enLb.ruleset, 'semantle-en-sync-v1');
     assert.equal(koLb.entries.length, 0);
 
-    // Rollover advances EN cleanly and exposes previous EN answer via rounds/previous/nearest?lang=en
+    // Rollover advances EN cleanly, resets current EN ranking while retaining Round #3 archive, and exposes previous EN answer via rounds/previous/nearest?lang=en
     h.advanceMs(6 * 60 * 60 * 1000);
+    const enLbReset = (await h.call('leaderboard', null, 'GET', tokenB, 'en')).data;
+    assert.equal(enLbReset.roundNo, 4);
+    assert.equal(enLbReset.entries.length, 0);
+    const enLbR3 = (await h.call('leaderboard?round=3', null, 'GET', tokenB, 'en')).data;
+    assert.equal(enLbR3.entries.length, 1);
+    assert.equal(enLbR3.entries[0].name, 'EnChamp');
+    const koLbR3 = (await h.call('leaderboard?round=3', null, 'GET', tokenA, 'ko')).data;
+    assert.equal(koLbR3.entries.length, 0);
     const enReset = await h.call(`games/${enGame.id}`, null, 'GET', tokenA, 'en');
     assert.equal(enReset.status, 200);
     assert.equal(enReset.data.event.code, 'round_reset');

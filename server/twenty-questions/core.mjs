@@ -130,7 +130,7 @@ export function calibrateSim(rawCenti, simScale = 10000, exact = false) {
     return Math.max(-9999, Math.min(9999, scaled));
 }
 
-// 정답 시 연속 라운드 연승 통계와 역대 최단 시간 랭킹 등록 자격(2회 이상·라운드 시작 1.5초 이상) 판정
+// 정답 시 연속 라운드 연승 통계와 회차별 최단 시간 랭킹 등록 자격(2회 이상·라운드 시작 1.5초 이상) 판정
 export function nextRecord(player, solvedMs, guessesUsed, roundNo, now) {
     const streak = player.last_won_round_no === roundNo - 1
         ? (player.sync_streak || 0) + 1
