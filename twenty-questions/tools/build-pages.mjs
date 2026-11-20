@@ -35,12 +35,12 @@ for (const locale of ['ko', 'en']) {
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="1200">
   <meta name="twitter:card" content="summary_large_image">
-  <script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': ['VideoGame', 'WebApplication'], name: t.title, description: `${t.intro} ${t.rules}`, url, image: 'https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png', inLanguage: locale, applicationCategory: 'GameApplication', operatingSystem: 'Any', gamePlatform: ['Web Browser', 'Mobile Browser'], playMode: 'SinglePlayer', isAccessibleForFree: true, dateModified: '2026-11-17', author: { '@type': 'Organization', name: 'ArcherLab', url: 'https://archerlab.dev' } })}</script>
+  <script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': ['VideoGame', 'WebApplication'], name: t.title, description: `${t.intro} ${t.rules}`, url, image: 'https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png', inLanguage: locale, applicationCategory: 'GameApplication', operatingSystem: 'Any', gamePlatform: ['Web Browser', 'Mobile Browser'], playMode: 'SinglePlayer', isAccessibleForFree: true, dateModified: '2026-11-20', author: { '@type': 'Organization', name: 'ArcherLab', url: 'https://archerlab.dev' } })}</script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261117-v4">
+  <link rel="stylesheet" href="css/style.css?v=20261120-v5">
   <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
   <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
-  <script type="module" src="js/main.mjs?v=20261117-v4"></script>
+  <script type="module" src="js/main.mjs?v=20261120-v5"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 </head>
 <body data-no-fullscreen data-screen="title">
@@ -72,12 +72,19 @@ for (const locale of ['ko', 'en']) {
         </div>
         <div class="hero-actions">
           <button id="start" class="primary-btn"><span>${text('start')}</span><span class="btn-arrow" aria-hidden="true">▶</span></button>
-          <button id="resume" class="secondary-btn" hidden><span>${text('resume')}</span><span id="resume-timer" class="resume-timer">00:00.0</span></button>
+          <button id="resume" class="secondary-btn" hidden><span>${text('resume')}</span><span id="resume-timer" class="resume-timer">06:00:00</span></button>
         </div>
         <div class="hero-records">
-          <div class="hero-stat accent"><span>${text('best_time_label')}</span><strong id="hero-best-time">-</strong></div>
+          <div class="hero-stat accent"><span>${text('timer_label')}</span><strong id="hero-countdown">06:00:00</strong></div>
+          <div class="hero-stat"><span>${text('solver_label')}</span><strong id="hero-solver">${text('solver_none')}</strong></div>
           <div class="hero-stat"><span>${text('wins')}</span><strong id="hero-wins">0</strong></div>
-          <div class="hero-stat"><span>${text('streak')}</span><strong id="hero-streak">0</strong></div>
+        </div>
+        <div id="hero-prev-round" class="prev-round-strip" hidden>
+          <div class="prev-round-meta">
+            <span id="hero-prev-label"></span>
+            <strong id="hero-prev-answer"></strong>
+          </div>
+          <button type="button" id="hero-prev-nearest" class="ghost-btn">${text('prev_nearest_btn')}</button>
         </div>
       </div>
       <div class="hero-art">
@@ -105,16 +112,16 @@ for (const locale of ['ko', 'en']) {
       <div class="game-toolbar">
         <button id="home" class="ghost-btn">← ${text('home')}</button>
         <span id="case-label" class="case-label"></span>
-        <button id="give-up" class="ghost-btn">${text('give_up')}</button>
+        <button type="button" id="prev-answer-btn" class="ghost-btn prev-answer-btn" hidden><span id="prev-answer-btn-text"></span></button>
       </div>
       <div class="chronometer-console crafted-frame">
         <div class="hud-primary">
           <div class="hud-card timer-card">
             <span><img class="timer-emblem" src="assets/ui/compass-chronograph-160.webp?v=3" alt="" width="18" height="22" decoding="async">${text('timer_label')}</span>
-            <strong id="game-timer" aria-live="off">00:00.0</strong>
+            <strong id="game-timer" aria-live="off">06:00:00</strong>
           </div>
           <div class="hud-card"><span>${text('guess_count')}</span><strong id="guess-count-display">0</strong></div>
-          <div class="hud-card accent"><span>${text('best_time_label')}</span><strong id="game-best-time">-</strong></div>
+          <button type="button" id="current-solver-btn" class="hud-card accent solver-card"><span>${text('solver_label')}</span><strong id="current-solver-display">${text('solver_none')}</strong></button>
         </div>
         <div class="benchmark-strip">
           <span class="bench-prefix">${text('benchmark_prefix')}</span>
@@ -140,12 +147,20 @@ for (const locale of ['ko', 'en']) {
           <div class="result-stats">
             <div><span>${text('stat_time')}</span><strong id="result-time">00:00.00</strong></div>
             <div><span>${text('stat_guesses')}</span><strong id="result-guesses">0</strong></div>
-            <div><span>${text('stat_best')}</span><strong id="result-best-time">-</strong></div>
+            <div><span>${text('stat_next_round')}</span><strong id="result-next-timer">06:00:00</strong></div>
             <div><span>${text('stat_streak')}</span><strong id="result-streak">0</strong></div>
           </div>
+          <form id="result-name-form" class="result-name-form" hidden>
+            <p id="result-name-label" class="result-name-label">${text('result_name_prompt')}</p>
+            <div class="result-name-row">
+              <label class="sr-only" for="result-name-input">${text('name_label')}</label>
+              <input id="result-name-input" type="text" maxlength="16" placeholder="${text('name_placeholder')}" aria-label="${text('name_label')}">
+              <button id="result-name-save" class="secondary-btn" type="submit">${text('result_name_submit')}</button>
+            </div>
+            <p id="result-name-status" class="name-status" role="status"></p>
+          </form>
           <div class="result-actions">
-            <button id="next-game" class="primary-btn"><span>${text('next_game')}</span><span class="btn-arrow" aria-hidden="true">▶</span></button>
-            <button id="open-nearest" class="secondary-btn">${text('open_nearest')}</button>
+            <button id="open-nearest" class="primary-btn">${text('open_nearest')}</button>
             <button id="open-ranking-result" class="secondary-btn">${text('open_ranking')}</button>
             <button id="share-result" class="ghost-btn">${text('share_result')}</button>
           </div>
@@ -241,9 +256,9 @@ for (const locale of ['ko', 'en']) {
     <div class="stats-grid">
       <div><span>${text('stat_played')}</span><strong id="stat-played">0</strong></div>
       <div><span>${text('stat_wins')}</span><strong id="stat-wins">0</strong></div>
-      <div><span>${text('stat_giveups')}</span><strong id="stat-giveups">0</strong></div>
       <div><span>${text('stat_total_guesses')}</span><strong id="stat-total-guesses">0</strong></div>
       <div><span>${text('stat_streak')}</span><strong id="stat-streak">0</strong></div>
+      <div><span>${text('stat_best_streak')}</span><strong id="stat-best-streak">0</strong></div>
       <div><span>${text('stat_best')}</span><strong id="stat-best-time">-</strong></div>
     </div>
     <p class="dialog-intro">${text('faq_heading')}</p>
@@ -265,15 +280,6 @@ for (const locale of ['ko', 'en']) {
     <label class="setting-row" for="share-guesses"><span>${text('share_guesses')}</span><input type="checkbox" id="share-guesses" checked></label>
     <label class="setting-row" for="share-time"><span>${text('share_time')}</span><input type="checkbox" id="share-time" checked></label>
     <label class="setting-row" for="share-max"><span>${text('share_max')}</span><input type="checkbox" id="share-max" checked></label>
-  </dialog>
-
-  <dialog id="give-up-dialog" class="game-dialog confirm-dialog crafted-frame" aria-labelledby="give-up-title">
-    <h2 id="give-up-title">${text('give_up_confirm')}</h2>
-    <p class="dialog-intro">${text('give_up_note')}</p>
-    <div class="confirm-actions">
-      <button id="confirm-give-up" class="primary-btn">${text('give_up')}</button>
-      <button data-close class="secondary-btn">${text('cancel')}</button>
-    </div>
   </dialog>
 </body>
 </html>

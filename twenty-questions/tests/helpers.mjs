@@ -318,11 +318,12 @@ export function createSemantleStore({ secretWords = ['행복', '학교', '사과
     return { store, words, secrets, metaJson, decodedVecs };
 }
 
-export function harness(storeOptions) {
+export function harness(storeOptions = {}) {
     clearVectorCache();
     const db = database();
     const semantleStore = createSemantleStore(storeOptions);
-    const env = { DB: db, SEMANTLE_STORE: semantleStore.store };
+    let now = storeOptions.initialNow ?? Date.parse('2026-11-20T12:00:15+09:00');
+    const env = { DB: db, SEMANTLE_STORE: semantleStore.store, NOW_FN: () => now };
     const queues = new Map();
 
     async function fetch(request) {
@@ -368,5 +369,8 @@ export function harness(storeOptions) {
         guess,
         answer,
         row: sqliteRow,
+        getNow: () => now,
+        setNow: ms => { now = ms; },
+        advanceMs: ms => { now += ms; },
     };
 }

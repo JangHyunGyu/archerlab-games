@@ -7,25 +7,24 @@ const t = translation(locale);
 const $ = id => document.getElementById(id);
 const audio = new GameAudio();
 
+const ROUND_DURATION_SECONDS = 6 * 3600;
 const blankProfile = {
     name: '',
+    hasCustomName: false,
     gamesPlayed: 0,
     wins: 0,
-    giveUps: 0,
     totalGuesses: 0,
     streak: 0,
-    streakGuesses: 0,
     bestStreak: 0,
-    bestGuesses: 0,
     bestTimeMs: null,
     bestTimeGuesses: null,
     activeGame: null,
 };
 
-let state = { profile: blankProfile, game: null };
+let state = { profile: blankProfile, round: null, game: null };
 let busy = false;
 let noticeTimer;
-let stopwatchTimer = 0;
+let countdownTimer = 0;
 let serverClockOffset = 0;
 let composing = false;
 let screen = 'title';
@@ -34,7 +33,10 @@ let pendingCommand;
 let latestHighlightWord = null;
 let sortState = { key: 'similarity', dir: 'desc' };
 let nearestWords = [];
-let nearestGameId = null;
+let nearestKey = null;
+let rolloverInFlight = false;
+let rolloverRoundId = null;
+let rolloverRetryAt = 0;
 let syncKeyboard = () => {};
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -233,6 +235,18 @@ function notify(key, values = {}, permanent = false) {
     if (!permanent) noticeTimer = setTimeout(() => { $('notice').hidden = true; }, 5500);
 }
 
+function notifyRoundReset(round, event) {
+    const roundNo = (round && round.roundNo) ? round.roundNo : '';
+    const prevWord = (event && event.previousAnswer)
+        || (round && round.previous && round.previous.answer)
+        || '';
+    if (prevWord) {
+        notify('round_reset_with_answer', { no: roundNo, word: prevWord });
+    } else {
+        notify('round_reset', { no: roundNo });
+    }
+}
+
 function showTurnFeedback(key, values = {}, kind = 'info') {
     const el = $('turn-feedback');
     if (!key) {
@@ -247,12 +261,13 @@ function showTurnFeedback(key, values = {}, kind = 'info') {
 }
 
 function changeScreen(next) {
+    const changed = next !== screen;
     screen = next;
     document.body.dataset.screen = next;
     $('title-screen').hidden = next !== 'title';
     $('game-screen').hidden = next !== 'game';
     storage.set('view', next);
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    if (changed) window.scrollTo({ top: 0, behavior: 'instant' });
     syncKeyboard();
 }
 
@@ -294,7 +309,7 @@ function finishGuessLoading(immediate = false) {
 
 function setBusy(value) {
     busy = value;
-    for (const id of ['start', 'resume', 'send', 'next-game', 'give-up', 'confirm-give-up', 'home', 'open-nearest', 'open-ranking-result', 'share-result']) {
+    for (const id of ['start', 'resume', 'send', 'home', 'open-nearest', 'open-ranking-result', 'share-result', 'prev-answer-btn', 'hero-prev-nearest', 'current-solver-btn', 'result-name-save']) {
         const el = $(id);
         if (el) el.disabled = value;
     }
@@ -303,23 +318,21 @@ function setBusy(value) {
     for (const link of document.querySelectorAll('.languages a')) link.setAttribute('aria-disabled', String(value));
 }
 
-// 서버 기준 경과 시간(ms)을 계산해 백그라운드·새로고침 뒤에도 끊기지 않게 표시
-function activeElapsedMs() { var __oc0;
-    const createdAt = (((__oc0 = state.game) === null || __oc0 === void 0 ? void 0 : __oc0.createdAt));
-    if (!Number.isFinite(createdAt)) return 0;
-    return Math.max(0, Date.now() + serverClockOffset - createdAt);
+// 서버 기준 6시간 라운드 종료 시각까지 남은 시간(ms) 계산
+function remainingRoundMs() {
+    const endsAt = state.round ? state.round.endsAt : null;
+    if (!Number.isFinite(endsAt)) return 0;
+    return Math.max(0, endsAt - (Date.now() + serverClockOffset));
 }
 
-function formatLiveTimer(ms) {
-    if (!Number.isFinite(ms) || ms < 0) return '00:00.0';
-    const totalTenths = Math.floor(ms / 100);
-    const tenths = totalTenths % 10;
-    const totalSec = Math.floor(totalTenths / 10);
-    const h = Math.floor(totalSec / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    const s = totalSec % 60;
+function formatCountdown(ms) {
+    if (!Number.isFinite(ms) || ms <= 0) return '00:00:00';
+    const cappedSec = Math.min(ROUND_DURATION_SECONDS, Math.ceil(ms / 1000));
+    const h = Math.floor(cappedSec / 3600);
+    const m = Math.floor((cappedSec % 3600) / 60);
+    const s = cappedSec % 60;
     const pad = n => String(n).padStart(2, '0');
-    return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}.${tenths}`;
+    return `${pad(h)}:${pad(m)}:${pad(s)}`;
 }
 
 function formatRecordTime(ms) {
@@ -334,34 +347,88 @@ function formatRecordTime(ms) {
     return h > 0 ? `${h}:${pad(m)}:${pad(s)}.${pad(cc)}` : `${pad(m)}:${pad(s)}.${pad(cc)}`;
 }
 
-function tickTimer() {
-    const game = state.game;
-    const timerEl = $('game-timer');
-    const resumeTimerEl = $('resume-timer');
-    if (!game) {
-        if (timerEl) timerEl.textContent = '00:00.0';
-        return;
-    }
-    if (game.status === 'active') {
-        const text = formatLiveTimer(activeElapsedMs());
-        if (timerEl) timerEl.textContent = text;
-        if (resumeTimerEl) resumeTimerEl.textContent = text;
-    } else if (game.status === 'won' && Number.isFinite(game.solvedMs)) {
-        if (timerEl) timerEl.textContent = formatRecordTime(game.solvedMs);
-    } else {
-        const endedMs = Math.max(0, (game.updatedAt || Date.now()) - (game.createdAt || Date.now()));
-        if (timerEl) timerEl.textContent = formatRecordTime(endedMs);
+function clearLocalRoundProgress() {
+    const nearestDlg = $('nearest-dialog');
+    if (nearestDlg && nearestDlg.open) nearestDlg.close();
+    if ($('guess-input')) $('guess-input').value = '';
+    if ($('result-name-status')) $('result-name-status').textContent = '';
+    storage.remove('draft');
+    pendingCommand = null;
+    storage.remove('pending');
+    latestHighlightWord = null;
+    nearestWords = [];
+    nearestKey = null;
+    showTurnFeedback(null);
+}
+
+// 6시간 정각 도달 시 진행 중 화면과 추측 기록을 새 라운드로 강제 전환
+async function handleRoundRollover(expiredRoundId) {
+    if (busy || rolloverInFlight) return;
+    rolloverInFlight = true;
+    rolloverRoundId = expiredRoundId;
+    const epoch = mutationEpoch;
+    try {
+        const gameId = (state.game && state.game.id) || storage.get('game');
+        const data = (screen === 'game' && gameId)
+            ? await request(`games/${gameId}`)
+            : await request('profile');
+        if (epoch !== mutationEpoch) return;
+        if (data.round && data.round.id === expiredRoundId) {
+            rolloverRoundId = null;
+            rolloverRetryAt = Date.now() + 1000;
+            render(data, { navigate: screen === 'game' });
+            return;
+        }
+        rolloverRoundId = null;
+        rolloverRetryAt = 0;
+        clearLocalRoundProgress();
+        render(data, { navigate: screen === 'game' });
+        if (!(data.event && data.event.code === 'round_reset')) {
+            notifyRoundReset(data.round, null);
+        }
+    } catch (_err) {
+        rolloverRoundId = null;
+        rolloverRetryAt = Date.now() + 2000;
+    } finally {
+        rolloverInFlight = false;
     }
 }
 
-function syncStopwatchLoop() { var __oc1;
-    if ((((__oc1 = state.game) === null || __oc1 === void 0 ? void 0 : __oc1.status)) === 'active') {
+function tickTimer() {
+    const round = state.round;
+    const gameTimerEl = $('game-timer');
+    const heroTimerEl = $('hero-countdown');
+    const resumeTimerEl = $('resume-timer');
+    const resultNextEl = $('result-next-timer');
+    if (!round) {
+        if (gameTimerEl) gameTimerEl.textContent = '06:00:00';
+        if (heroTimerEl) heroTimerEl.textContent = '06:00:00';
+        if (resumeTimerEl) resumeTimerEl.textContent = '06:00:00';
+        if (resultNextEl) resultNextEl.textContent = '06:00:00';
+        return;
+    }
+    const remMs = remainingRoundMs();
+    const text = formatCountdown(remMs);
+    if (gameTimerEl) gameTimerEl.textContent = text;
+    if (heroTimerEl) heroTimerEl.textContent = text;
+    if (resumeTimerEl) resumeTimerEl.textContent = text;
+    if (resultNextEl) resultNextEl.textContent = text;
+
+    if (remMs <= 0 && !busy && !rolloverInFlight && Date.now() >= rolloverRetryAt) {
+        if (rolloverRoundId !== round.id) {
+            handleRoundRollover(round.id);
+        }
+    }
+}
+
+function syncCountdownLoop() {
+    if (state.round) {
         tickTimer();
-        if (!stopwatchTimer) stopwatchTimer = setInterval(tickTimer, 100);
+        if (!countdownTimer) countdownTimer = setInterval(tickTimer, 250);
     } else {
-        if (stopwatchTimer) {
-            clearInterval(stopwatchTimer);
-            stopwatchTimer = 0;
+        if (countdownTimer) {
+            clearInterval(countdownTimer);
+            countdownTimer = 0;
         }
         tickTimer();
     }
@@ -376,7 +443,8 @@ function thermalClass(entry) {
     return 'tier-cold';
 }
 
-function closenessLabel(entry) { var __oc2, __oc3, __oc4;
+function closenessLabel(entry) {
+    var __oc2, __oc3, __oc4;
     if (entry.rank === 0) return t('rank_exact');
     if (entry.rank !== null) {
         const tierKey = entry.rank <= 10 ? 'tier_molten' : entry.rank <= 100 ? 'tier_hot' : 'tier_warm';
@@ -538,25 +606,92 @@ function renderResonanceBar(game) {
     label.textContent = t('resonance_best', { word: best.word, sim: best.similarity.toFixed(2), rank: rankStr });
 }
 
-function render(data, { navigate = true, effects = false } = {}) { var __oc5, __oc6, __oc7, __oc8, __oc9;
+function displaySolverName(entry) {
+    return (entry && entry.hasCustomName && entry.name) ? entry.name : t('anonymous_solver');
+}
+
+function formatSolverSummary(round) {
+    if (!round || !round.solverCount || !round.firstSolver) {
+        return { text: t('solver_none'), title: '', hasSolver: false };
+    }
+    const first = round.firstSolver;
+    const solverName = displaySolverName(first);
+    const text = round.solverCount > 1
+        ? t('solver_more', { name: solverName, others: round.solverCount - 1 })
+        : solverName;
+    const title = t('solver_tooltip', {
+        name: solverName,
+        time: formatRecordTime(first.solvedMs),
+        count: first.guesses,
+    });
+    return { text, title, hasSolver: true };
+}
+
+function renderRoundInfo(round) {
+    const solver = formatSolverSummary(round);
+    if ($('hero-solver')) {
+        $('hero-solver').textContent = solver.text;
+        $('hero-solver').title = solver.title;
+    }
+    if ($('current-solver-display')) {
+        $('current-solver-display').textContent = solver.text;
+    }
+    if ($('current-solver-btn')) {
+        $('current-solver-btn').title = solver.title;
+        $('current-solver-btn').classList.toggle('has-solver', solver.hasSolver);
+    }
+
+    const prev = round && round.previous ? round.previous : null;
+    if ($('hero-prev-round')) {
+        $('hero-prev-round').hidden = !prev;
+        if (prev) {
+            $('hero-prev-label').textContent = t('prev_answer_label', { no: prev.roundNo });
+            $('hero-prev-answer').textContent = prev.answer;
+        }
+    }
+    if ($('prev-answer-btn')) {
+        $('prev-answer-btn').hidden = !prev;
+        if (prev) {
+            $('prev-answer-btn-text').textContent = t('prev_answer_badge', { word: prev.answer });
+            $('prev-answer-btn').title = `${t('prev_answer_label', { no: prev.roundNo })}: ${prev.answer}`;
+        }
+    }
+}
+
+function render(data, { navigate = true, effects = false } = {}) {
+    var __oc5, __oc6, __oc7, __oc8, __oc9, __ocPrev;
     if (data.game && (((__oc5 = state.game) === null || __oc5 === void 0 ? void 0 : __oc5.id)) === data.game.id && data.game.version < state.game.version) return;
     if (Number.isFinite(data.serverNow)) {
         serverClockOffset = data.serverNow - Date.now();
     }
     effects = effects && !(((__oc6 = data.event) === null || __oc6 === void 0 ? void 0 : __oc6.replayed));
     const prevGameId = (((__oc7 = state.game) === null || __oc7 === void 0 ? void 0 : __oc7.id));
+    const prevRoundId = (((__ocPrev = state.round) === null || __ocPrev === void 0 ? void 0 : __ocPrev.id));
     state = data;
     const profile = data.profile || blankProfile;
 
-    $('hero-best-time').textContent = formatRecordTime(profile.bestTimeMs);
-    $('hero-wins').textContent = String(profile.wins || 0);
-    $('hero-streak').textContent = String(profile.streak || 0);
+    if ($('hero-wins')) $('hero-wins').textContent = String(profile.wins || 0);
     $('resume').hidden = !profile.activeGame;
+    renderRoundInfo(data.round);
+
+    if (prevRoundId && data.round && data.round.id !== prevRoundId) {
+        clearLocalRoundProgress();
+    }
+    if (data.event && data.event.code === 'round_reset') {
+        clearLocalRoundProgress();
+        notifyRoundReset(data.round, data.event);
+    }
 
     if (!data.game) {
-        syncStopwatchLoop();
+        if ($('guesses-body')) $('guesses-body').replaceChildren();
+        if ($('guesses-table')) $('guesses-table').hidden = true;
+        if ($('empty-history')) $('empty-history').hidden = false;
+        if ($('result-banner')) $('result-banner').hidden = true;
+        if (screen === 'game' && navigate === false) changeScreen('title');
+        syncCountdownLoop();
         return;
     }
+
     const game = data.game;
     storage.remove('start_request');
     storage.remove('start_locale');
@@ -565,8 +700,10 @@ function render(data, { navigate = true, effects = false } = {}) { var __oc5, __
     if (game.id !== prevGameId) {
         latestHighlightWord = null;
         nearestWords = [];
-        nearestGameId = null;
-        showTurnFeedback(null);
+        nearestKey = null;
+        if (!(data.event && data.event.code === 'round_reset')) {
+            showTurnFeedback(null);
+        }
     }
 
     if ((((__oc8 = data.event) === null || __oc8 === void 0 ? void 0 : __oc8.word)) && ['guess', 'duplicate', 'won'].includes(data.event.code)) {
@@ -578,10 +715,8 @@ function render(data, { navigate = true, effects = false } = {}) { var __oc5, __
     const active = game.status === 'active';
     const finished = !active;
     $('game-screen').dataset.status = game.status;
-    $('case-label').textContent = t('case_badge', { no: game.caseNo });
-    $('give-up').hidden = finished;
+    $('case-label').textContent = t('case_badge', { no: (data.round && data.round.roundNo) || game.roundNo || game.caseNo });
     $('guess-count-display').textContent = String(game.guessCount);
-    $('game-best-time').textContent = formatRecordTime(profile.bestTimeMs);
 
     if (game.benchmarks) {
         $('top1-score').textContent = game.benchmarks.top1.toFixed(2);
@@ -591,7 +726,7 @@ function render(data, { navigate = true, effects = false } = {}) { var __oc5, __
 
     renderResonanceBar(game);
     renderGuessesTable(game, effects && ['guess', 'won'].includes((((__oc9 = data.event) === null || __oc9 === void 0 ? void 0 : __oc9.code))));
-    syncStopwatchLoop();
+    syncCountdownLoop();
 
     $('guess-input').placeholder = t(active ? 'guess_placeholder' : 'explore_placeholder');
     $('send').firstElementChild.textContent = t(active ? 'send' : 'explore_send');
@@ -601,7 +736,7 @@ function render(data, { navigate = true, effects = false } = {}) { var __oc5, __
     if (finished) {
         const won = game.status === 'won';
         $('result-banner').classList.toggle('is-won', won);
-        $('result-title').textContent = t(won ? 'won_title' : 'given_up_title');
+        $('result-title').textContent = t('won_title');
         $('result-answer').textContent = game.answer || '';
         $('record-badge').hidden = !won || !game.recordImproved;
         const unranked = won && !game.ranked;
@@ -609,13 +744,26 @@ function render(data, { navigate = true, effects = false } = {}) { var __oc5, __
         if (unranked) {
             $('unranked-note').textContent = t(game.unrankedReason === 'too_fast' ? 'unranked_too_fast' : 'unranked_single_guess');
         }
-        const elapsed = won && Number.isFinite(game.solvedMs)
-            ? game.solvedMs
-            : Math.max(0, (game.updatedAt || Date.now()) - (game.createdAt || Date.now()));
+        const elapsed = Number.isFinite(game.solvedMs) ? game.solvedMs : 0;
         $('result-time').textContent = formatRecordTime(elapsed);
         $('result-guesses').textContent = String(game.guessCount);
-        $('result-best-time').textContent = formatRecordTime(profile.bestTimeMs);
+        $('result-next-timer').textContent = formatCountdown(remainingRoundMs());
         $('result-streak').textContent = String(profile.streak);
+
+        const nameForm = $('result-name-form');
+        if (nameForm) {
+            nameForm.hidden = !(won && game.ranked);
+            $('result-name-label').textContent = t(profile.hasCustomName ? 'result_name_saved_hint' : 'result_name_prompt');
+            if (document.activeElement !== $('result-name-input')) {
+                $('result-name-input').value = profile.hasCustomName ? profile.name : '';
+            }
+            if (game.id !== prevGameId) {
+                $('result-name-status').textContent = '';
+            }
+            if (effects && won && game.ranked && !profile.hasCustomName) {
+                $('result-name-input').focus({ preventScroll: true });
+            }
+        }
     }
 
     if (effects) {
@@ -625,15 +773,17 @@ function render(data, { navigate = true, effects = false } = {}) { var __oc5, __
     requestAnimationFrame(syncKeyboard);
 }
 
-async function recover() { var __oc10;
+async function recover() {
+    var __oc10;
     const epoch = mutationEpoch;
     const gameId = (((__oc10 = state.game) === null || __oc10 === void 0 ? void 0 : __oc10.id)) || storage.get('game');
-    const data = gameId ? await request(`games/${gameId}`) : await request('profile');
+    const data = (screen === 'game' && gameId) ? await request(`games/${gameId}`) : await request('profile');
     if (epoch === mutationEpoch) render(data, { navigate: screen !== 'title' });
     return data;
 }
 
-async function action(callback) { var __oc11, __oc12;
+async function action(callback) {
+    var __oc11, __oc12;
     if (busy) return;
     mutationEpoch++;
     audio.unlock();
@@ -643,7 +793,10 @@ async function action(callback) { var __oc11, __oc12;
         await callback();
     } catch (error) {
         reportException(error, 'game_action');
-        if (['stale_state', 'game_finished', 'network_error'].includes(error.code)) {
+        if (['stale_state', 'game_finished', 'round_expired', 'network_error'].includes(error.code)) {
+            if (error.code === 'round_expired') {
+                clearLocalRoundProgress();
+            }
             try {
                 const recovered = await recover();
                 if (pendingCommand && (((__oc12 = (__oc11 = recovered.game) === null || __oc11 === void 0 ? void 0 : __oc11.guesses) === null || __oc12 === void 0 ? void 0 : __oc12.some(g => g.requestId === pendingCommand.body.requestId)))) {
@@ -652,13 +805,16 @@ async function action(callback) { var __oc11, __oc12;
                     storage.remove('pending');
                     storage.remove('draft');
                 }
-            } catch (_err) { /* 서버 재연결 실패 시 대기 중인 요청 보존 */ }
+            } catch (_err) {
+                /* 서버 재연결 실패 시 대기 중인 요청 보존 */
+                if (error.code === 'round_expired') notify('round_expired');
+            }
         }
         if (error.code === 'stale_state') {
             pendingCommand = null;
             storage.remove('pending');
         }
-        notify(error.code || 'network_error');
+        if (error.code !== 'round_expired') notify(error.code || 'network_error');
     } finally {
         setBusy(false);
     }
@@ -687,7 +843,8 @@ async function start() {
     });
 }
 
-async function submitGuess(wordText) { var __oc15;
+async function submitGuess(wordText) {
+    var __oc15;
     const text = String(((wordText !== null && wordText !== void 0 ? wordText : $('guess-input').value))).normalize('NFC').trim();
     if (!text) {
         $('guess-input').focus();
@@ -726,7 +883,8 @@ async function submitGuess(wordText) { var __oc15;
 
     startGuessLoading();
     try {
-        await action(async () => { var __oc13, __oc14;
+        await action(async () => {
+            var __oc13, __oc14;
             const path = `games/${game.id}/guesses`;
             const samePending = ((pendingCommand === null || pendingCommand === void 0 ? void 0 : pendingCommand.path)) === path && pendingCommand.body.text === text;
             const body = samePending ? pendingCommand.body : { text, locale, requestId: requestId(), expectedVersion: game.version };
@@ -767,16 +925,13 @@ async function submitGuess(wordText) { var __oc15;
 function buildShareText() {
     const game = state.game;
     if (!game) return '';
-    const won = game.status === 'won';
+    const roundNo = (state.round && state.round.roundNo) || game.roundNo || game.caseNo;
     const header = locale === 'en'
-        ? (won ? `ArcherLab Korean Semantle #${game.caseNo} Solved!` : `ArcherLab Korean Semantle #${game.caseNo} Given Up`)
-        : (won ? `아처랩 시맨틀 #${game.caseNo} 정답!` : `아처랩 시맨틀 #${game.caseNo} 포기`);
+        ? `ArcherLab Korean Semantle Round #${roundNo} Solved!`
+        : `아처랩 시맨틀 라운드 #${roundNo} 정답!`;
     const lines = [header];
-    if (settings.shareTime) {
-        const elapsed = won && Number.isFinite(game.solvedMs)
-            ? game.solvedMs
-            : Math.max(0, (game.updatedAt || Date.now()) - (game.createdAt || Date.now()));
-        lines.push(locale === 'en' ? `Time: ${formatRecordTime(elapsed)}` : `걸린 시간: ${formatRecordTime(elapsed)}`);
+    if (settings.shareTime && Number.isFinite(game.solvedMs)) {
+        lines.push(locale === 'en' ? `Round clear: ${formatRecordTime(game.solvedMs)}` : `라운드 클리어: ${formatRecordTime(game.solvedMs)}`);
     }
     if (settings.shareGuesses) {
         lines.push(locale === 'en' ? `Guesses: ${game.guessCount}` : `추측 횟수: ${game.guessCount}회`);
@@ -788,7 +943,8 @@ function buildShareText() {
     return lines.join('\n');
 }
 
-async function copyShare() { var __oc16;
+async function copyShare() {
+    var __oc16;
     const text = buildShareText();
     if (!text) return;
     try {
@@ -831,19 +987,34 @@ function renderNearestRows(filter = '') {
     body.replaceChildren(frag);
 }
 
-async function openNearestModal() {
+async function openNearestModal(mode) {
+    const usePrev = mode === 'previous';
     const game = state.game;
-    if (!game || game.status === 'active') return;
+    const prev = state.round && state.round.previous ? state.round.previous : null;
+    let key;
+    let titleWord;
+    let endpoint;
+    if (usePrev) {
+        if (!prev) return;
+        key = `prev:${prev.id}`;
+        titleWord = prev.answer;
+        endpoint = 'rounds/previous/nearest';
+    } else {
+        if (!game || game.status !== 'won') return;
+        key = `current:${game.id}`;
+        titleWord = game.answer || '';
+        endpoint = `games/${game.id}/nearest`;
+    }
     openDialog('nearest-dialog');
-    $('nearest-title').textContent = t('nearest_title', { word: game.answer || '' });
+    $('nearest-title').textContent = t('nearest_title', { word: titleWord });
     $('nearest-filter').value = '';
-    if (nearestGameId !== game.id) {
+    if (nearestKey !== key) {
         $('nearest-body').replaceChildren();
         $('nearest-loading').hidden = false;
         try {
-            const data = await request(`games/${game.id}/nearest`);
+            const data = await request(endpoint);
             nearestWords = data.words || [];
-            nearestGameId = game.id;
+            nearestKey = key;
         } catch (error) {
             reportException(error, 'nearest');
             notify(error.code || 'network_error');
@@ -861,12 +1032,13 @@ function openDialog(id) {
     $(id).showModal();
 }
 
-async function showRanking() { var __oc17, __oc18, __oc19;
-    openDialog('ranking-dialog');
+async function showRanking(preserveStatus = false) {
+    var __oc18, __oc19;
+    if (!$('ranking-dialog').open) openDialog('ranking-dialog');
     $('leaderboard').textContent = t('loading');
     $('own-rank').textContent = '';
-    $('name-input').value = (((__oc17 = state.profile) === null || __oc17 === void 0 ? void 0 : __oc17.name)) || '';
-    $('name-status').textContent = '';
+    $('name-input').value = (state.profile && state.profile.hasCustomName) ? state.profile.name : '';
+    if (!preserveStatus) $('name-status').textContent = '';
     try {
         const data = await request('leaderboard');
         const table = document.createElement('table');
@@ -886,7 +1058,7 @@ async function showRanking() { var __oc17, __oc18, __oc19;
             if (entry.own) tr.className = 'own';
             const cells = [
                 String(entry.rank),
-                entry.name,
+                displaySolverName(entry),
                 formatRecordTime(entry.bestTimeMs),
                 t('guesses_unit', { count: (((__oc19 = (__oc18 = entry.guesses) !== null && __oc18 !== void 0 ? __oc18 : entry.turns) !== null && __oc19 !== void 0 ? __oc19 : 0)) }),
             ];
@@ -912,16 +1084,15 @@ function showGuide() {
     const p = state.profile || blankProfile;
     $('stat-played').textContent = String(p.gamesPlayed || 0);
     $('stat-wins').textContent = String(p.wins || 0);
-    $('stat-giveups').textContent = String(p.giveUps || 0);
     $('stat-total-guesses').textContent = String(p.totalGuesses || 0);
     $('stat-streak').textContent = String(p.streak || 0);
+    $('stat-best-streak').textContent = String(p.bestStreak || 0);
     $('stat-best-time').textContent = formatRecordTime(p.bestTimeMs);
     openDialog('guide-dialog');
 }
 
 $('guess-input').value = storage.get('draft') || '';
 $('start').addEventListener('click', start);
-$('next-game').addEventListener('click', start);
 $('resume').addEventListener('click', () => action(async () => {
     const data = await request(`games/${state.profile.activeGame}`);
     render(data);
@@ -949,7 +1120,8 @@ $('guess-input').addEventListener('keydown', event => {
 });
 
 for (const chip of document.querySelectorAll('.starter-chip')) {
-    chip.addEventListener('click', () => { var __oc20;
+    chip.addEventListener('click', () => {
+        var __oc20;
         if (busy || (((__oc20 = state.game) === null || __oc20 === void 0 ? void 0 : __oc20.status)) !== 'active') return;
         submitGuess(chip.dataset.word);
     });
@@ -968,41 +1140,46 @@ $('home').addEventListener('click', () => {
     audio.play('click');
     changeScreen('title');
 });
-$('give-up').addEventListener('click', () => openDialog('give-up-dialog'));
-$('confirm-give-up').addEventListener('click', () => action(async () => {
-    const data = await request(`games/${state.game.id}/give-up`, {
-        requestId: requestId(),
-        expectedVersion: state.game.version,
-    });
-    $('give-up-dialog').close();
-    render(data, { effects: true });
-}));
 
-$('open-nearest').addEventListener('click', openNearestModal);
-$('open-ranking-result').addEventListener('click', showRanking);
+$('open-nearest').addEventListener('click', () => openNearestModal('current'));
+if ($('prev-answer-btn')) $('prev-answer-btn').addEventListener('click', () => openNearestModal('previous'));
+if ($('hero-prev-nearest')) $('hero-prev-nearest').addEventListener('click', () => openNearestModal('previous'));
+if ($('current-solver-btn')) $('current-solver-btn').addEventListener('click', () => showRanking());
+$('open-ranking-result').addEventListener('click', () => showRanking());
 $('nearest-filter').addEventListener('input', event => renderNearestRows(event.target.value));
 $('share-result').addEventListener('click', copyShare);
-$('ranking-open').addEventListener('click', showRanking);
+$('ranking-open').addEventListener('click', () => showRanking());
 $('guide-open').addEventListener('click', showGuide);
 $('settings-open').addEventListener('click', () => openDialog('settings-dialog'));
 
-$('name-form').addEventListener('submit', async event => {
-    event.preventDefault();
-    const cleaned = $('name-input').value.normalize('NFKC').replace(/\s+/g, ' ').trim();
+async function saveDisplayName(inputEl, statusEl, refreshRanking = false) {
+    const cleaned = inputEl.value.normalize('NFKC').replace(/\s+/g, ' ').trim();
     const alnumCount = (cleaned.match(/[\p{L}\p{N}]/gu) || []).length;
     if (!/^[\p{L}\p{N} ._-]{2,16}$/u.test(cleaned) || alnumCount < 2) {
-        $('name-status').textContent = t('invalid_name');
+        statusEl.textContent = t('invalid_name');
         return;
     }
     try {
         const data = await request('profile', { name: cleaned }, 'PATCH');
-        state.profile = data.profile;
-        $('name-status').textContent = t('saved_name');
-        await showRanking();
+        render(data, { navigate: false });
+        statusEl.textContent = t('saved_name');
+        if (refreshRanking) await showRanking(true);
     } catch (error) {
-        $('name-status').textContent = t(Object.prototype.hasOwnProperty.call(messages[locale], error.code) ? error.code : 'network_error');
+        statusEl.textContent = t(Object.prototype.hasOwnProperty.call(messages[locale], error.code) ? error.code : 'network_error');
     }
+}
+
+$('name-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    await saveDisplayName($('name-input'), $('name-status'), true);
 });
+
+if ($('result-name-form')) {
+    $('result-name-form').addEventListener('submit', async event => {
+        event.preventDefault();
+        await saveDisplayName($('result-name-input'), $('result-name-status'), false);
+    });
+}
 
 $('sound-enabled').checked = audio.enabled;
 $('sound-volume').value = Math.round(audio.volume * 100);
@@ -1054,14 +1231,14 @@ document.querySelectorAll('dialog').forEach(dialog => {
 
 window.addEventListener('online', () => {
     tickTimer();
-    if (!busy && screen === 'game') recover().catch(() => {});
+    if (!busy && !rolloverInFlight) recover().catch(() => {});
 });
 window.addEventListener('offline', () => notify('offline', {}, true));
 
-// 백그라운드·잠금·탭 전환 복귀 즉시 서버 기준 시간으로 타이머 동기화
-function handleForeground() { var __oc21;
+// 백그라운드·잠금·탭 전환 복귀 즉시 서버 기준 시간·라운드 상태 동기화
+function handleForeground() {
     tickTimer();
-    if (!document.hidden && !busy && (screen === 'game' || (((__oc21 = state.game) === null || __oc21 === void 0 ? void 0 : __oc21.status)) === 'active')) {
+    if (!document.hidden && !busy && !rolloverInFlight) {
         recover().catch(() => {});
     }
 }
@@ -1123,10 +1300,11 @@ async function initialize() {
         const profile = await request('profile');
         if (epoch !== mutationEpoch) return;
         render(profile, { navigate: false });
-        if (previousView === 'game' && profile.game) render(profile);
-        else if (previousView === 'game' && storage.get('game') && !profile.game) {
-            const finished = await request(`games/${storage.get('game')}`).catch(() => null);
-            if (finished && epoch === mutationEpoch) render(finished);
+        if (previousView === 'game' && profile.game) {
+            render(profile);
+        } else if (previousView === 'game' && storage.get('game') && !profile.game) {
+            const recovered = await request(`games/${storage.get('game')}`).catch(() => null);
+            if (recovered && epoch === mutationEpoch) render(recovered);
         }
     } catch (error) {
         reportException(error, 'initial_state');

@@ -8,13 +8,13 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="manifest-en.json">
   <title>Korean Semantle | Word Similarity Puzzle - ArcherLab</title>
-  <meta name="description" content="Enter any Korean word to see a semantic similarity score (-100 to +100) showing how close its meaning and context are to the secret word. Unlimited rounds with no daily lock. Guess and give up only — no hints, pure deduction.">
+  <meta name="description" content="Enter any Korean word to see a semantic similarity score (-100 to +100) showing how close its meaning and context are to the secret word. Everyone shares the same secret word every 6 hours (00:00, 06:00, 12:00, 18:00 KST), resetting automatically at cutoff.">
   <link rel="canonical" href="https://game.archerlab.dev/twenty-questions/index-en">
   <link rel="alternate" hreflang="ko" href="https://game.archerlab.dev/twenty-questions/">
   <link rel="alternate" hreflang="en" href="https://game.archerlab.dev/twenty-questions/index-en">
   <link rel="alternate" hreflang="x-default" href="https://game.archerlab.dev/twenty-questions/">
   <meta property="og:title" content="Korean Semantle | Word Similarity Puzzle - ArcherLab">
-  <meta property="og:description" content="Enter any Korean word to see a semantic similarity score (-100 to +100) showing how close its meaning and context are to the secret word. Unlimited rounds with no daily lock. Guess and give up only — no hints, pure deduction.">
+  <meta property="og:description" content="Enter any Korean word to see a semantic similarity score (-100 to +100) showing how close its meaning and context are to the secret word. Everyone shares the same secret word every 6 hours (00:00, 06:00, 12:00, 18:00 KST), resetting automatically at cutoff.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://game.archerlab.dev/twenty-questions/index-en">
   <meta property="og:image" content="https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png">
@@ -29,7 +29,7 @@
     "WebApplication"
   ],
   "name": "Korean Semantle",
-  "description": "Enter any Korean word to see a semantic similarity score (-100 to +100) showing how close its meaning and context are to the secret word. Unlimited rounds with no daily lock. Guess and give up only — no hints, pure deduction.",
+  "description": "Enter any Korean word to see a semantic similarity score (-100 to +100) showing how close its meaning and context are to the secret word. Everyone shares the same secret word every 6 hours (00:00, 06:00, 12:00, 18:00 KST), resetting automatically at cutoff.",
   "url": "https://game.archerlab.dev/twenty-questions/index-en",
   "image": "https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png",
   "inLanguage": "en",
@@ -41,7 +41,7 @@
   ],
   "playMode": "SinglePlayer",
   "isAccessibleForFree": true,
-  "dateModified": "2026-11-17",
+  "dateModified": "2026-11-20",
   "author": {
     "@type": "Organization",
     "name": "ArcherLab",
@@ -50,15 +50,15 @@
 }
     </script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261117-v4">
+  <link rel="stylesheet" href="css/style.css?v=20261120-v5">
   <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
   <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
-  <script type="module" src="js/main.mjs?v=20261117-v4"></script>
+  <script type="module" src="js/main.mjs?v=20261120-v5"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 
     <meta name="twitter:title" content="Korean Semantle | Word Similarity Puzzle - ArcherLab">
 
-    <meta name="twitter:description" content="Enter any Korean word to see a semantic similarity score (-100 to +100) showing how close its meaning and context are to the secret word. Unlimited rounds with no daily lock. Guess and give up only — no hints, pure deduction.">
+    <meta name="twitter:description" content="Enter any Korean word to see a semantic similarity score (-100 to +100) showing how close its meaning and context are to the secret word. Everyone shares the same secret word every 6 hours (00:00, 06:00, 12:00, 18:00 KST), resetting automatically at cutoff.">
 
     <meta name="twitter:image" content="https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png">
 </head>
@@ -84,19 +84,26 @@
         <h1 id="game-title">Korean Semantle</h1>
         <p class="hero-subtitle">Find the hidden Korean word by meaning distance, not spelling</p>
         <p class="hero-intro">Enter any Korean word to see a semantic similarity score (-100 to +100) showing how close its meaning and context are to the secret word.</p>
-        <div class="rule-strip" aria-label="Unlimited rounds with no daily lock. Guess and give up only — no hints, pure deduction.">
+        <div class="rule-strip" aria-label="Everyone shares the same secret word every 6 hours (00:00, 06:00, 12:00, 18:00 KST), resetting automatically at cutoff.">
           <span class="rule-token">Top-1,000 Proximity Ranks</span>
-          <span class="rule-token">Live Timer &amp; Fastest-Solve Ranking</span>
-          <span class="rule-token">No Daily Lock &amp; No Hints</span>
+          <span class="rule-token">6-Hour Sync · Countdown</span>
+          <span class="rule-token">No Give-Up · All-Time Ranking</span>
         </div>
         <div class="hero-actions">
-          <button id="start" class="primary-btn"><span>Start Game</span><span class="btn-arrow" aria-hidden="true">▶</span></button>
-          <button id="resume" class="secondary-btn" hidden><span>Resume Game</span><span id="resume-timer" class="resume-timer">00:00.0</span></button>
+          <button id="start" class="primary-btn"><span>Play Now</span><span class="btn-arrow" aria-hidden="true">▶</span></button>
+          <button id="resume" class="secondary-btn" hidden><span>Resume Round</span><span id="resume-timer" class="resume-timer">06:00:00</span></button>
         </div>
         <div class="hero-records">
-          <div class="hero-stat accent"><span>Best Time</span><strong id="hero-best-time">-</strong></div>
+          <div class="hero-stat accent"><span>Next Word In</span><strong id="hero-countdown">06:00:00</strong></div>
+          <div class="hero-stat"><span>Current Solver</span><strong id="hero-solver">None yet</strong></div>
           <div class="hero-stat"><span>Solved</span><strong id="hero-wins">0</strong></div>
-          <div class="hero-stat"><span>Streak</span><strong id="hero-streak">0</strong></div>
+        </div>
+        <div id="hero-prev-round" class="prev-round-strip" hidden>
+          <div class="prev-round-meta">
+            <span id="hero-prev-label"></span>
+            <strong id="hero-prev-answer"></strong>
+          </div>
+          <button type="button" id="hero-prev-nearest" class="ghost-btn">Top 1,000</button>
         </div>
       </div>
       <div class="hero-art">
@@ -124,16 +131,16 @@
       <div class="game-toolbar">
         <button id="home" class="ghost-btn">← Lobby</button>
         <span id="case-label" class="case-label"></span>
-        <button id="give-up" class="ghost-btn">Give Up</button>
+        <button type="button" id="prev-answer-btn" class="ghost-btn prev-answer-btn" hidden><span id="prev-answer-btn-text"></span></button>
       </div>
       <div class="chronometer-console crafted-frame">
         <div class="hud-primary">
           <div class="hud-card timer-card">
-            <span><img class="timer-emblem" src="assets/ui/compass-chronograph-160.webp?v=3" alt="" width="18" height="22" decoding="async">Elapsed</span>
-            <strong id="game-timer" aria-live="off">00:00.0</strong>
+            <span><img class="timer-emblem" src="assets/ui/compass-chronograph-160.webp?v=3" alt="" width="18" height="22" decoding="async">Next Word In</span>
+            <strong id="game-timer" aria-live="off">06:00:00</strong>
           </div>
           <div class="hud-card"><span>Guesses</span><strong id="guess-count-display">0</strong></div>
-          <div class="hud-card accent"><span>Best Time</span><strong id="game-best-time">-</strong></div>
+          <button type="button" id="current-solver-btn" class="hud-card accent solver-card"><span>Current Solver</span><strong id="current-solver-display">None yet</strong></button>
         </div>
         <div class="benchmark-strip">
           <span class="bench-prefix">This answer:</span>
@@ -157,18 +164,26 @@
           <h2 id="result-title"></h2>
           <div class="result-answer-line"><span>Secret Word</span><strong id="result-answer"></strong></div>
           <div class="result-stats">
-            <div><span>Clear Time</span><strong id="result-time">00:00.00</strong></div>
+            <div><span>Round Clear</span><strong id="result-time">00:00.00</strong></div>
             <div><span>Guesses</span><strong id="result-guesses">0</strong></div>
-            <div><span>Best Time</span><strong id="result-best-time">-</strong></div>
+            <div><span>Next Word In</span><strong id="result-next-timer">06:00:00</strong></div>
             <div><span>Streak</span><strong id="result-streak">0</strong></div>
           </div>
+          <form id="result-name-form" class="result-name-form" hidden>
+            <p id="result-name-label" class="result-name-label">Leave your name for the solver badge &amp; Hall of Fame</p>
+            <div class="result-name-row">
+              <label class="sr-only" for="result-name-input">Display Name</label>
+              <input id="result-name-input" type="text" maxlength="16" placeholder="2–16 characters" aria-label="Display Name">
+              <button id="result-name-save" class="secondary-btn" type="submit">Save Name</button>
+            </div>
+            <p id="result-name-status" class="name-status" role="status"></p>
+          </form>
           <div class="result-actions">
-            <button id="next-game" class="primary-btn"><span>Next Word</span><span class="btn-arrow" aria-hidden="true">▶</span></button>
-            <button id="open-nearest" class="secondary-btn">Top 1,000 Words</button>
+            <button id="open-nearest" class="primary-btn">Top 1,000 Words</button>
             <button id="open-ranking-result" class="secondary-btn">Hall of Fame</button>
             <button id="share-result" class="ghost-btn">Share Result</button>
           </div>
-          <p class="explore-banner-note">Round complete — test other words or inspect the Top 1,000 neighbors.</p>
+          <p class="explore-banner-note">Round complete — test other words or inspect the Top 1,000 neighbors until the next reset.</p>
         </div>
       </div>
       <div class="composer-wrap">
@@ -226,7 +241,7 @@
   <dialog id="ranking-dialog" class="game-dialog crafted-frame" aria-labelledby="ranking-title">
     <button class="dialog-close icon-button" data-close aria-label="Close">✕</button>
     <h2 id="ranking-title">Hall of Fame</h2>
-    <p class="dialog-intro">Ranked by fastest verified clear time (fewer guesses break ties).</p>
+    <p class="dialog-intro">All-time Hall of Fame ranks the fastest verified clears measured from each 6-hour round open (00/06/12/18 KST; fewer guesses break ties).</p>
     <form id="name-form" class="name-form">
       <label class="sr-only" for="name-input">Display Name</label>
       <input id="name-input" type="text" maxlength="16" placeholder="2–16 characters" aria-label="Display Name">
@@ -258,19 +273,19 @@
     <h2 id="guide-title">Guide &amp; Stats</h2>
     <p class="dialog-intro">Your Statistics</p>
     <div class="stats-grid">
-      <div><span>Played</span><strong id="stat-played">0</strong></div>
+      <div><span>Rounds Joined</span><strong id="stat-played">0</strong></div>
       <div><span>Solved</span><strong id="stat-wins">0</strong></div>
-      <div><span>Give-ups</span><strong id="stat-giveups">0</strong></div>
       <div><span>Total Guesses</span><strong id="stat-total-guesses">0</strong></div>
       <div><span>Streak</span><strong id="stat-streak">0</strong></div>
+      <div><span>Best Streak</span><strong id="stat-best-streak">0</strong></div>
       <div><span>Best Time</span><strong id="stat-best-time">-</strong></div>
     </div>
     <p class="dialog-intro">How It Works</p>
     <div class="faq-list">
       <div class="faq-item"><h3>How do I play Korean Semantle?</h3><p>Every guess returns a semantic similarity score (-100 to +100). If your guess is among the 1,000 closest words to the secret, its exact rank also appears.</p></div>
-      <div class="faq-item"><h3>How does the live timer &amp; leaderboard work?</h3><p>The stopwatch anchors to server time the moment a round starts and keeps counting even when minimized or closed. Verified solves with 2+ guesses compete for the fastest Hall of Fame clear time.</p></div>
+      <div class="faq-item"><h3>When do rounds reset and how is time measured?</h3><p>Every 6 hours at 00:00, 06:00, 12:00, and 18:00 KST, everyone resets to the same new word and prior guess history clears. All-time ranking time is measured from that round open until you solve it with 2+ guesses.</p></div>
       <div class="faq-item"><h3>Why can antonyms score high?</h3><p>Similarity reflects how often words appear in related contexts, so opposites used in the same situations (like &quot;사랑&quot; love and &quot;증오&quot; hate) can both score high.</p></div>
-      <div class="faq-item"><h3>Is there a daily limit?</h3><p>No. Play unlimited rounds back to back anytime.</p></div>
+      <div class="faq-item"><h3>Can I give up? Where do I check previous answers?</h3><p>There is no give-up during a live round so everyone competes fairly. As soon as the 6-hour countdown finishes, the previous round’s answer and Top 1,000 words unlock at the top bar and lobby.</p></div>
     </div>
   </dialog>
 
@@ -284,15 +299,6 @@
     <label class="setting-row" for="share-guesses"><span>Include guess count when sharing</span><input type="checkbox" id="share-guesses" checked></label>
     <label class="setting-row" for="share-time"><span>Include clear time when sharing</span><input type="checkbox" id="share-time" checked></label>
     <label class="setting-row" for="share-max"><span>Include max similarity when sharing</span><input type="checkbox" id="share-max" checked></label>
-  </dialog>
-
-  <dialog id="give-up-dialog" class="game-dialog confirm-dialog crafted-frame" aria-labelledby="give-up-title">
-    <h2 id="give-up-title">Reveal the secret word and end this round?</h2>
-    <p class="dialog-intro">Giving up resets your current winning streak to 0.</p>
-    <div class="confirm-actions">
-      <button id="confirm-give-up" class="primary-btn">Give Up</button>
-      <button data-close class="secondary-btn">Keep Playing</button>
-    </div>
   </dialog>
 </body>
 </html>

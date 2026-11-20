@@ -3,63 +3,104 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { harness } from './helpers.mjs';
 import { twentyQuestionsRoute, handleRoomRequest } from '../../server/twenty-questions/service.mjs';
-import { calibrateSim, sanitizePlayerName } from '../../server/twenty-questions/core.mjs';
+import {
+    RULESET, roundSlotAt, previousRoundSlot, selectRoundSecretIndex,
+    calibrateSim, sanitizePlayerName,
+} from '../../server/twenty-questions/core.mjs';
 import { submitRanking } from '../../game-api-worker.js';
 
-test('start, resume, idempotent start, active timer immutability, and secret isolation work end to end', async () => {
-    const h = harness();
+test('6-hour KST round schedule aligns to 00:00, 06:00, 12:00, 18:00 and rotates secrets cleanly', async () => {
+    const s00 = roundSlotAt(Date.parse('2026-11-20T00:00:00+09:00'));
+    const s0559 = roundSlotAt(Date.parse('2026-11-20T05:59:59+09:00'));
+    const s06 = roundSlotAt(Date.parse('2026-11-20T06:00:00+09:00'));
+    const s12 = roundSlotAt(Date.parse('2026-11-20T12:00:00+09:00'));
+    const s18 = roundSlotAt(Date.parse('2026-11-20T18:00:00+09:00'));
+    const s2359 = roundSlotAt(Date.parse('2026-11-20T23:59:59+09:00'));
+    const sNext00 = roundSlotAt(Date.parse('2026-11-21T00:00:00+09:00'));
+
+    assert.equal(s00.roundId, '2026-11-20T00');
+    assert.equal(s00.roundNo, 1);
+    assert.equal(s0559.roundId, s00.roundId);
+    assert.equal(s06.roundId, '2026-11-20T06');
+    assert.equal(s06.roundNo, 2);
+    assert.equal(s12.roundId, '2026-11-20T12');
+    assert.equal(s12.roundNo, 3);
+    assert.equal(s18.roundId, '2026-11-20T18');
+    assert.equal(s18.roundNo, 4);
+    assert.equal(s2359.roundId, s18.roundId);
+    assert.equal(sNext00.roundId, '2026-11-21T00');
+    assert.equal(sNext00.roundNo, 5);
+    assert.equal(s12.endsAt - s12.startedAt, 6 * 3600 * 1000);
+    assert.equal(previousRoundSlot(s12).roundId, '2026-11-20T06');
+
+    const picked = new Set();
+    for (let i = 0; i < 4; i++) {
+        picked.add(await selectRoundSecretIndex(s00.slotIndex + i, 4));
+    }
+    assert.equal(picked.size, 4);
+});
+
+test('all players share identical round secret and scores while give-up and secret leaks stay blocked', async () => {
+    const h = harness({ secretWords: ['행복', '학교', '사과'] });
     const id = crypto.randomUUID();
-    const a = await h.call('games', { requestId: id, locale: 'ko' });
-    const b = await h.call('games', { requestId: id, locale: 'ko' });
-    const c = await h.start();
+    const tokenA = 'a'.repeat(64);
+    const tokenB = 'b'.repeat(64);
+
+    const a = await h.call('games', { requestId: id, locale: 'ko' }, 'POST', tokenA);
+    const aDup = await h.call('games', { requestId: id, locale: 'ko' }, 'POST', tokenA);
+    const b = await h.start(tokenB);
+
     assert.equal(a.status, 200);
-    assert.equal(a.data.game.id, b.data.game.id);
-    assert.equal(c.game.id, a.data.game.id);
-    assert.equal(c.game.createdAt, a.data.game.createdAt);
-    assert.ok(Number.isFinite(a.data.serverNow));
+    assert.equal(a.data.game.id, aDup.data.game.id);
+    assert.equal(a.data.round.id, b.round.id);
+    assert.equal(a.data.round.roundNo, 3);
     assert.equal(a.data.game.answer, undefined);
-    assert.ok(a.data.game.benchmarks.top1 > a.data.game.benchmarks.top10);
-    assert.ok(a.data.game.benchmarks.top10 >= a.data.game.benchmarks.top1000);
+    assert.deepEqual(a.data.game.benchmarks, b.game.benchmarks);
+    assert.equal(h.answer(a.data.game.id), h.answer(b.game.id));
     assert.doesNotMatch(JSON.stringify(a.data), /answer_word|secret_id|sim_scale/);
-    const foreign = await h.call(`games/${a.data.game.id}`, null, 'GET', 'b'.repeat(64));
-    assert.equal(foreign.status, 404);
+
+    // Same guess scores identically for both players.
+    const ga = await h.guess(a.data.game, '사람', crypto.randomUUID(), tokenA);
+    const gb = await h.guess(b.game, '사람', crypto.randomUUID(), tokenB);
+    assert.equal(ga.data.event.similarity, gb.data.event.similarity);
+
+    // Give-up endpoint is permanently removed (404), foreign game is 404, nearest/explore are 403 while active.
+    assert.equal((await h.call(`games/${a.data.game.id}/give-up`, { requestId: crypto.randomUUID(), expectedVersion: 1 }, 'POST', tokenA)).status, 404);
+    assert.equal((await h.call(`games/${a.data.game.id}`, null, 'GET', tokenB)).status, 404);
+    assert.equal((await h.call(`games/${a.data.game.id}/nearest`, null, 'GET', tokenA)).status, 403);
+    assert.equal((await h.call(`games/${a.data.game.id}/explore`, { text: '사랑' }, 'POST', tokenA)).status, 403);
     h.db.sqlite.close();
 });
 
-test('parallel starts are serialized and consume only one secret', async () => {
+test('parallel starts are serialized and create only one game per player per round', async () => {
     const h = harness();
     const results = await Promise.all([h.start(), h.start(), h.start()]);
     assert.equal(new Set(results.map(r => r.game.id)).size, 1);
-    assert.equal(h.row('SELECT COUNT(*) n FROM sm_seen').n, 1);
+    assert.equal(h.row('SELECT COUNT(*) n FROM sm_games').n, 1);
     h.db.sqlite.close();
 });
 
 test('guesses charge count cleanly while OOV and duplicates do not alter version or guessCount', async () => {
-    const h = harness({ secretWords: ['행복'] });
+    const h = harness({ secretWords: ['행복', '학교', '사과'] });
     let { game } = await h.start();
 
     let res = await h.guess(game, '기쁨');
     assert.equal(res.status, 200);
     assert.equal(res.data.event.code, 'guess');
-    assert.equal(res.data.event.rank, 1);
     assert.equal(res.data.game.guessCount, 1);
     game = res.data.game;
 
-    // Outside Top-1,000 valid word still scores similarity and increments guessCount.
     res = await h.guess(game, '물');
     assert.equal(res.status, 200);
-    assert.equal(res.data.event.rank, null);
     assert.equal(res.data.game.guessCount, 2);
     game = res.data.game;
 
-    // Duplicate word does not increment guessCount or version.
     res = await h.guess(game, '기쁨');
     assert.equal(res.status, 200);
     assert.equal(res.data.event.code, 'duplicate');
     assert.equal(res.data.game.guessCount, 2);
     assert.equal(res.data.game.version, game.version);
 
-    // Unknown or non-Hangul word does not increment guessCount or version.
     res = await h.guess(game, '뷁뷁뷁');
     assert.equal(res.status, 200);
     assert.equal(res.data.event.code, 'unknown_word');
@@ -70,7 +111,6 @@ test('guesses charge count cleanly while OOV and duplicates do not alter version
     assert.equal(res.data.event.code, 'unknown_word');
     assert.equal(res.data.game.guessCount, 2);
 
-    // Idempotent replay with same requestId returns exact replay without double increment.
     const reqId = crypto.randomUUID();
     const g1 = await h.guess(game, '사랑', reqId);
     const g2 = await h.guess(game, '사랑', reqId);
@@ -82,95 +122,165 @@ test('guesses charge count cleanly while OOV and duplicates do not alter version
     h.db.sqlite.close();
 });
 
-test('fastest-time ranking, anti-cheat unranked filters, calibration consistency, and post-game explore hold', async () => {
-    const h = harness({ secretWords: ['행복', '학교', '사과'] });
+test('Option A round-open ranking, anti-cheat filters, current solver display, and name updates work end to end', async () => {
+    // 500ms after 12:00 KST round open: too fast (<1.5s) to block round-start bot sniping.
+    const roundStart = Date.parse('2026-11-20T12:00:00+09:00');
+    const h = harness({ secretWords: ['행복', '학교', '사과'], initialNow: roundStart + 500 });
+    const tokenFastBot = '1'.repeat(64);
+    const tokenSingle = '2'.repeat(64);
+    const tokenP1 = '3'.repeat(64);
+    const tokenP2 = '4'.repeat(64);
 
-    // Round 1: Single-guess solve wins locally but stays unranked on leaderboard.
-    const s1 = await h.start();
-    const a1 = h.answer(s1.game.id);
-    const w1 = await h.guess(s1.game, a1);
-    assert.equal(w1.status, 200);
-    assert.equal(w1.data.game.status, 'won');
-    assert.equal(w1.data.game.ranked, false);
-    assert.equal(w1.data.game.unrankedReason, 'single_guess');
-    assert.equal(w1.data.profile.bestTimeMs, null);
+    // Sub-1.5s multi-guess solve stays unranked and off the solver display.
+    const botStart = await h.start(tokenFastBot);
+    const answer = h.answer(botStart.game.id);
+    const botG1 = (await h.guess(botStart.game, '사람', crypto.randomUUID(), tokenFastBot)).data;
+    const botWin = await h.guess(botG1.game, answer, crypto.randomUUID(), tokenFastBot);
+    assert.equal(botWin.data.game.status, 'won');
+    assert.equal(botWin.data.game.ranked, false);
+    assert.equal(botWin.data.game.unrankedReason, 'too_fast');
+    assert.equal(botWin.data.round.solverCount, 0);
 
-    // Round 2: Sub-1.5s multi-guess solve also stays unranked to block bot sniping.
-    const s2 = await h.start();
-    const a2 = h.answer(s2.game.id);
-    const g2a = (await h.guess(s2.game, '사람')).data;
-    const w2 = await h.guess(g2a.game, a2);
-    assert.equal(w2.data.game.status, 'won');
-    assert.equal(w2.data.game.ranked, false);
-    assert.equal(w2.data.game.unrankedReason, 'too_fast');
-    assert.equal(w2.data.profile.bestTimeMs, null);
+    // Advance past 1.5s: single-guess solve stays unranked (anti-spoiler).
+    h.setNow(roundStart + 5000);
+    const singleStart = await h.start(tokenSingle);
+    const singleWin = await h.guess(singleStart.game, answer, crypto.randomUUID(), tokenSingle);
+    assert.equal(singleWin.data.game.status, 'won');
+    assert.equal(singleWin.data.game.ranked, false);
+    assert.equal(singleWin.data.game.unrankedReason, 'single_guess');
+    assert.equal(singleWin.data.round.solverCount, 0);
 
-    // Round 3: Valid >=2 guesses and >=1.5s elapsed -> ranked on Hall of Fame!
-    const s3 = await h.start();
-    const a3 = h.answer(s3.game.id);
-    assert.equal((await h.call(`games/${s3.game.id}/nearest`, null, 'GET')).status, 403);
-    assert.equal((await h.call(`games/${s3.game.id}/explore`, { text: '사랑' })).status, 403);
+    // Player 1 joins late (at +10s) and solves at +15s -> Option A solvedMs = 15,000ms.
+    h.setNow(roundStart + 10000);
+    const p1Start = await h.start(tokenP1);
+    const p1G1 = (await h.guess(p1Start.game, '사람', crypto.randomUUID(), tokenP1)).data;
+    h.setNow(roundStart + 15000);
+    const p1Win = await h.guess(p1G1.game, answer, crypto.randomUUID(), tokenP1);
+    assert.equal(p1Win.data.game.ranked, true);
+    assert.equal(p1Win.data.game.solvedMs, 15000);
+    assert.equal(p1Win.data.profile.bestTimeMs, 15000);
+    assert.equal(p1Win.data.profile.hasCustomName, false);
+    assert.equal(p1Win.data.round.solverCount, 1);
+    assert.equal(p1Win.data.round.firstSolver.hasCustomName, false);
+    assert.equal(p1Win.data.round.firstSolver.solvedMs, 15000);
 
-    const g3a = (await h.guess(s3.game, '사람')).data;
-    h.db.sqlite.prepare('UPDATE sm_games SET created_at = ? WHERE id = ?').run(Date.now() - 8500, s3.game.id);
-    const w3 = await h.guess(g3a.game, a3);
-    assert.equal(w3.status, 200);
-    assert.equal(w3.data.game.status, 'won');
-    assert.equal(w3.data.game.ranked, true);
-    assert.equal(w3.data.game.unrankedReason, null);
-    assert.ok(w3.data.game.solvedMs >= 8000);
-    assert.equal(w3.data.profile.bestTimeMs, w3.data.game.solvedMs);
-    assert.equal(w3.data.profile.bestTimeGuesses, 2);
-    assert.equal(w3.data.game.recordImproved, true);
+    // Player 2 tries to snipe after seeing P1's answer (+25s): even with 2s personal play, solvedMs is 25,000ms so P2 cannot overtake P1!
+    h.setNow(roundStart + 23000);
+    const p2Start = await h.start(tokenP2);
+    const p2G1 = (await h.guess(p2Start.game, '사랑', crypto.randomUUID(), tokenP2)).data;
+    h.setNow(roundStart + 25000);
+    const p2Win = await h.guess(p2G1.game, answer, crypto.randomUUID(), tokenP2);
+    assert.equal(p2Win.data.game.ranked, true);
+    assert.equal(p2Win.data.game.solvedMs, 25000);
+    assert.equal(p2Win.data.round.solverCount, 2);
 
-    // Calibrated nearest-1k and post-game explore share identical similarity scores.
-    const nearest = await h.call(`games/${s3.game.id}/nearest`, null, 'GET');
+    // Renaming P1 immediately updates round.firstSolver and leaderboard without leaking player IDs.
+    const renamed = await h.call('profile', { name: 'FirstSolver' }, 'PATCH', tokenP1);
+    assert.equal(renamed.data.profile.hasCustomName, true);
+    assert.equal(renamed.data.round.firstSolver.name, 'FirstSolver');
+    assert.equal(renamed.data.round.firstSolver.hasCustomName, true);
+    await h.call('profile', { name: 'SecondSolver' }, 'PATCH', tokenP2);
+
+    const lb = await h.call('leaderboard', null, 'GET', tokenP1);
+    assert.equal(lb.data.entries.length, 2);
+    assert.equal(lb.data.entries[0].name, 'FirstSolver');
+    assert.equal(lb.data.entries[0].hasCustomName, true);
+    assert.equal(lb.data.entries[0].bestTimeMs, 15000);
+    assert.equal(lb.data.entries[1].name, 'SecondSolver');
+    assert.equal(lb.data.entries[1].hasCustomName, true);
+    assert.equal(lb.data.entries[1].bestTimeMs, 25000);
+    assert.equal(lb.data.mine.rank, 1);
+    assert.equal(lb.data.mine.hasCustomName, true);
+    assert.ok(lb.data.entries.every(row => !Object.hasOwn(row, 'id')));
+
+    // Nearest 1k & post-win explore match calibrated scores.
+    const nearest = await h.call(`games/${p1Start.game.id}/nearest`, null, 'GET', tokenP1);
     assert.equal(nearest.status, 200);
     assert.equal(nearest.data.words.length, 1000);
     const probeWord = nearest.data.words[0].word;
-    const explored = await h.call(`games/${s3.game.id}/explore`, { text: probeWord });
+    const explored = await h.call(`games/${p1Start.game.id}/explore`, { text: probeWord }, 'POST', tokenP1);
     assert.equal(explored.status, 200);
     assert.equal(explored.data.similarity, nearest.data.words[0].similarity);
-    assert.equal(h.row('SELECT guess_count FROM sm_games WHERE id = ?', s3.game.id).guess_count, 2);
-
-    // Pool wraps cleanly on 4th round with streak intact.
-    const s4 = await h.start();
-    assert.equal(s4.profile.streak, 3);
-    assert.equal(s4.game.caseNo, 4);
-
-    // Leaderboard orders fastest bestTimeMs ASC, breaking ties by guesses ASC.
-    h.db.sqlite.prepare('INSERT INTO sm_players(id, name, name_key, best_time_ms, best_time_guesses, wins, best_streak, best_at, last_seen) VALUES (?, ?, ?, ?, ?, 1, 1, 999, 0)')
-        .run('p-faster', 'SpeedRunner', 'speedrunner', 4200, 5);
-    h.db.sqlite.prepare('INSERT INTO sm_players(id, name, name_key, best_time_ms, best_time_guesses, wins, best_streak, best_at, last_seen) VALUES (?, ?, ?, ?, ?, 1, 1, 999, 0)')
-        .run('p-tie-fewer', 'PreciseRunner', 'preciserunner', 4200, 3);
-    const lb = await h.call('leaderboard');
-    assert.equal(lb.data.entries[0].name, 'PreciseRunner');
-    assert.equal(lb.data.entries[0].bestTimeMs, 4200);
-    assert.equal(lb.data.entries[1].name, 'SpeedRunner');
-    assert.ok(lb.data.entries.every(row => !Object.hasOwn(row, 'id')));
 
     h.db.sqlite.close();
 });
 
-test('anti-cheat blocks give-up reroll farming, duplicate nicknames, CSRF, prototype pollution, and leaks', async () => {
+test('6-hour rollover expires old rounds, resets guess history, reveals previous answer, and preserves consecutive streak', async () => {
+    const h = harness({ secretWords: ['행복', '학교', '사과', '도서관'] });
+    const token = 'a'.repeat(64);
+    const tokenIdle = 'b'.repeat(64);
+
+    // Solve in Round #3 (12:00 KST).
+    const r3Start = await h.start(token);
+    const r3Answer = h.answer(r3Start.game.id);
+    const r3G1 = (await h.guess(r3Start.game, '사람', crypto.randomUUID(), token)).data;
+    const r3Win = await h.guess(r3G1.game, r3Answer, crypto.randomUUID(), token);
+    assert.equal(r3Win.data.profile.streak, 1);
+
+    // Second player leaves an unsolved active game in Round #3.
+    const idleR3 = await h.start(tokenIdle);
+    await h.guess(idleR3.game, '물', crypto.randomUUID(), tokenIdle);
+
+    // Rollover to Round #4 (18:00 KST).
+    h.advanceMs(6 * 60 * 60 * 1000);
+
+    // Late guess & explore against Round #3 fail cleanly with 409 round_expired.
+    const lateGuess = await h.guess(r3Win.data.game, '사랑', crypto.randomUUID(), token);
+    assert.equal(lateGuess.status, 409);
+    assert.equal(lateGuess.data.error, 'round_expired');
+    const lateExplore = await h.call(`games/${r3Start.game.id}/explore`, { text: '사랑' }, 'POST', token);
+    assert.equal(lateExplore.status, 409);
+    assert.equal(lateExplore.data.error, 'round_expired');
+
+    // Recovering via old game ID automatically transitions into Round #4 with empty guesses and previous answer revealed.
+    const resetRes = await h.call(`games/${idleR3.game.id}`, null, 'GET', tokenIdle);
+    assert.equal(resetRes.status, 200);
+    assert.equal(resetRes.data.event.code, 'round_reset');
+    assert.equal(resetRes.data.event.previousAnswer, r3Answer);
+    assert.equal(resetRes.data.round.roundNo, 4);
+    assert.equal(resetRes.data.round.previous.answer, r3Answer);
+    assert.equal(resetRes.data.game.guesses.length, 0);
+    assert.equal(resetRes.data.game.guessCount, 0);
+    assert.notEqual(h.answer(resetRes.data.game.id), r3Answer);
+    assert.equal(h.row('SELECT status FROM sm_games WHERE id = ?', idleR3.game.id).status, 'expired');
+
+    // Previous round Top-1,000 endpoint unlocks after rollover.
+    const prevNearest = await h.call('rounds/previous/nearest', null, 'GET', tokenIdle);
+    assert.equal(prevNearest.status, 200);
+    assert.equal(prevNearest.data.answer, r3Answer);
+    assert.equal(prevNearest.data.words.length, 1000);
+
+    // Solving Round #4 increments consecutive streak to 2; skipping Round #5 resets streak to 1.
+    const r4Start = await h.start(token);
+    const r4Answer = h.answer(r4Start.game.id);
+    const r4G1 = (await h.guess(r4Start.game, '사람', crypto.randomUUID(), token)).data;
+    const r4Win = await h.guess(r4G1.game, r4Answer, crypto.randomUUID(), token);
+    assert.equal(r4Win.data.profile.streak, 2);
+
+    h.advanceMs(12 * 60 * 60 * 1000);
+    const r6Start = await h.start(token);
+    const r6Answer = h.answer(r6Start.game.id);
+    const r6G1 = (await h.guess(r6Start.game, '사람', crypto.randomUUID(), token)).data;
+    const r6Win = await h.guess(r6G1.game, r6Answer, crypto.randomUUID(), token);
+    assert.equal(r6Win.data.profile.streak, 1);
+    assert.equal(r6Win.data.profile.bestStreak, 2);
+
+    h.db.sqlite.close();
+});
+
+test('1-secret test fixture does not leak answer through rounds/previous/nearest', async () => {
+    const h = harness({ secretWords: ['행복'] });
+    const prev = await h.call('rounds/previous/nearest', null, 'GET');
+    assert.equal(prev.status, 404);
+    h.db.sqlite.close();
+});
+
+test('anti-cheat blocks duplicate nicknames, CSRF, prototype pollution, score-event leaks, and client JS modern syntax regressions', async () => {
     const h = harness({ secretWords: ['행복', '학교', '사과'] });
 
-    // Zero-guess give-up spam is throttled after 4 attempts in 10 minutes.
-    for (let i = 0; i < 4; i++) {
-        const s = await h.start();
-        const gu = await h.call(`games/${s.game.id}/give-up`, { requestId: crypto.randomUUID(), expectedVersion: s.game.version });
-        assert.equal(gu.status, 200);
-    }
-    const s5 = await h.start();
-    const blockedGu = await h.call(`games/${s5.game.id}/give-up`, { requestId: crypto.randomUUID(), expectedVersion: s5.game.version });
-    assert.equal(blockedGu.status, 429);
-    assert.equal(blockedGu.data.error, 'rate_limited');
-
-    // Name sanitization & uniqueness.
     assert.equal(sanitizePlayerName('\u202EStar\u200BGazer'), 'StarGazer');
     assert.equal(sanitizePlayerName('..'), null);
-    const inv = await h.call('profile', { name: '..' }, 'PATCH');
-    assert.equal(inv.status, 400);
+    assert.equal((await h.call('profile', { name: '..' }, 'PATCH')).status, 400);
 
     const tokenB = 'b'.repeat(64);
     assert.equal((await h.call('profile', { name: 'AlphaUser' }, 'PATCH')).status, 200);
@@ -178,11 +288,9 @@ test('anti-cheat blocks give-up reroll farming, duplicate nicknames, CSRF, proto
     assert.equal(taken.status, 409);
     assert.equal(taken.data.error, 'name_taken');
 
-    // Monotone calibration check.
     assert.equal(calibrateSim(10000, 9812, true), 10000);
     assert.ok(calibrateSim(6000, 9812, false) > calibrateSim(5000, 9812, false));
 
-    // Security headers, Origin/Sec-Fetch-Site blocks, prototype pollution, and score-event isolation.
     const forbiddenOrigin = await twentyQuestionsRoute(
         new Request('https://api/twenty-questions/status', { headers: { Origin: 'https://evil.example' } }),
         h.env
@@ -204,7 +312,8 @@ test('anti-cheat blocks give-up reroll farming, duplicate nicknames, CSRF, proto
     assert.equal(okStatus.headers.get('X-Frame-Options'), 'DENY');
     const statusJson = await okStatus.json();
     assert.equal(statusJson.ready, true);
-    assert.equal(statusJson.ruleset, 'semantle-ko-v1');
+    assert.equal(statusJson.ruleset, RULESET);
+    assert.equal(statusJson.round.roundId || statusJson.round.id, '2026-11-20T12');
 
     const protoPollute = await h.fetch(new Request('https://api/twenty-questions/profile', {
         method: 'PATCH',
@@ -219,20 +328,22 @@ test('anti-cheat blocks give-up reroll farming, duplicate nicknames, CSRF, proto
     for (const file of ['main.mjs', 'api.mjs', 'audio.mjs', 'i18n.mjs']) {
         const src = fs.readFileSync(new URL('../js/' + file, import.meta.url), 'utf8');
         assert.doesNotMatch(src, /answer_word|secrets-top1k|vectors\.f16|hot-pack|OPENROUTER_API_KEY|sim_scale/);
+        assert.doesNotMatch(src, /catch\s*\{/, `${file}: bare catch breaks iOS 12`);
     }
     h.db.sqlite.close();
 });
 
-test('DO room cache + deferred batch flushes cleanly before solve and give-up', async () => {
-    const h = harness({ secretWords: ['행복'] });
+test('DO room cache + deferred batch flushes cleanly before solve', async () => {
+    const h = harness({ secretWords: ['행복', '학교'] });
     const pendingFlushes = [];
     const queued = [];
     const runtime = {
-        roomCache: { player: null, game: null, guesses: null },
+        roomCache: { player: null, game: null, guesses: null, roundSummary: null },
         clearCache: () => {
             runtime.roomCache.player = null;
             runtime.roomCache.game = null;
             runtime.roomCache.guesses = null;
+            runtime.roomCache.roundSummary = null;
         },
         deferBatch: statements => {
             queued.push(statements);
@@ -261,20 +372,19 @@ test('DO room cache + deferred batch flushes cleanly before solve and give-up', 
 
     const g1 = await callRoom(`games/${game.id}/guesses`, { text: '드라이기', expectedVersion: game.version, requestId: crypto.randomUUID() });
     assert.equal(g1.status, 200);
-    assert.equal(g1.data.event.code, 'guess');
     assert.equal(queued.length, 1);
     game = g1.data.game;
 
     const g2 = await callRoom(`games/${game.id}/guesses`, { text: '에어프라이어', expectedVersion: game.version, requestId: crypto.randomUUID() });
     assert.equal(g2.status, 200);
-    assert.equal(g2.data.event.code, 'guess');
     assert.equal(queued.length, 2);
     game = g2.data.game;
 
-    const gu = await callRoom(`games/${game.id}/give-up`, { expectedVersion: game.version, requestId: crypto.randomUUID() });
-    assert.equal(gu.status, 200);
-    assert.equal(gu.data.game.status, 'given_up');
-    assert.equal(h.row('SELECT COUNT(*) n FROM sm_guesses WHERE game_id = ?', game.id).n, 2);
+    const answer = h.answer(game.id);
+    const win = await callRoom(`games/${game.id}/guesses`, { text: answer, expectedVersion: game.version, requestId: crypto.randomUUID() });
+    assert.equal(win.status, 200);
+    assert.equal(win.data.game.status, 'won');
+    assert.equal(h.row('SELECT COUNT(*) n FROM sm_guesses WHERE game_id = ?', game.id).n, 3);
     await runtime.flushBatch();
     h.db.sqlite.close();
 });

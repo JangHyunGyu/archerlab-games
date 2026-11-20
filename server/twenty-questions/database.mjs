@@ -1,7 +1,7 @@
 import { SCHEMA_TABLES, SCHEMA_INDEXES } from './schema.mjs';
 import { fault } from './core.mjs';
 
-export const SCHEMA_VERSION = 'semantle-20261117-v2';
+export const SCHEMA_VERSION = 'semantle-20261120-v3';
 
 const ready = new WeakMap();
 const rateBucketsByDb = new WeakMap();
@@ -41,9 +41,18 @@ export async function initialize(db) {
                 ['name_key', 'TEXT'],
                 ['best_time_ms', 'INTEGER'],
                 ['best_time_guesses', 'INTEGER'],
+                ['sync_wins', 'INTEGER NOT NULL DEFAULT 0'],
+                ['sync_streak', 'INTEGER NOT NULL DEFAULT 0'],
+                ['sync_best_streak', 'INTEGER NOT NULL DEFAULT 0'],
+                ['sync_best_time_ms', 'INTEGER'],
+                ['sync_best_time_guesses', 'INTEGER'],
+                ['sync_best_at', 'INTEGER NOT NULL DEFAULT 0'],
+                ['last_won_round_no', 'INTEGER'],
             ]);
             await ensureColumns(db, 'sm_games', [
+                ['round_id', 'TEXT'],
                 ['sim_scale', 'INTEGER NOT NULL DEFAULT 10000'],
+                ['solved_at', 'INTEGER'],
                 ['ranked', 'INTEGER NOT NULL DEFAULT 0'],
                 ['unranked_reason', 'TEXT'],
             ]);
@@ -62,8 +71,7 @@ export async function initialize(db) {
 }
 
 // DO/워커 메모리 슬라이딩 버킷으로 레이트 리미트를 즉시 판정해 추측당 D1 왕복 제거
-export async function limit(db, key, maximum, expiresAt) {
-    const now = Date.now();
+export async function limit(db, key, maximum, expiresAt, now = Date.now()) {
     const map = bucketsFor(db);
     if (map.size > 5000) {
         for (const [k, entry] of map) {

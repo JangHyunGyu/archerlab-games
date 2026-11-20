@@ -1,10 +1,14 @@
-export const RULESET = 'semantle-ko-v1';
+export const RULESET = 'semantle-ko-sync-v1';
 export const SESSION_MS = 24 * 60 * 60 * 1000;
+export const ROUND_MS = 6 * 60 * 60 * 1000;
+export const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+export const ROUND_EPOCH_MS = Date.parse('2026-11-20T00:00:00+09:00');
 export const HANGUL_WORD_RE = /^[가-힣]{1,15}$/u;
 export const MIN_RANKED_GUESSES = 2;
 export const MIN_RANKED_SOLVE_MS = 1500;
 const NAME_PATTERN = /^[\p{L}\p{N} ._-]{2,16}$/u;
 const INVISIBLE_CHARS = /[\u0000-\u001F\u007F-\u009F\u00AD\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/gu;
+const roundPermutationCache = new Map();
 
 export function normalizeWord(value) {
     return String(value ?? '').normalize('NFC').trim();
@@ -27,42 +31,96 @@ export function sanitizePlayerName(raw) {
     return cleaned;
 }
 
-// 게임별 단조 유사도 스케일(9700~10300bp)을 생성해 외부 벡터 지문 대조 꼼수를 차단
-export async function deriveSimScale(gameId, secretId) {
+// KST(UTC+9) 00·06·12·18시 기준 6시간 라운드 슬롯 계산
+export function roundSlotAt(nowMs = Date.now()) {
+    const shifted = nowMs + KST_OFFSET_MS;
+    const slotIndex = Math.floor(shifted / ROUND_MS);
+    const startedAt = slotIndex * ROUND_MS - KST_OFFSET_MS;
+    const endsAt = startedAt + ROUND_MS;
+    const epochSlot = Math.floor((ROUND_EPOCH_MS + KST_OFFSET_MS) / ROUND_MS);
+    const roundNo = slotIndex - epochSlot + 1;
+    const kst = new Date(startedAt + KST_OFFSET_MS);
+    const pad = n => String(n).padStart(2, '0');
+    const roundId = `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth() + 1)}-${pad(kst.getUTCDate())}T${pad(kst.getUTCHours())}`;
+    return { roundId, roundNo, slotIndex, startedAt, endsAt };
+}
+
+export function previousRoundSlot(slot) {
+    return roundSlotAt(slot.startedAt - 1);
+}
+
+// 사이클마다 SHA-256 시드로 전체 어휘 순열을 결정해 중복 없이 라운드 정답 선택
+export async function selectRoundSecretIndex(slotIndex, totalSecrets, salt = 'archerlab-semantle-sync-k9v1') {
+    if (!Number.isInteger(totalSecrets) || totalSecrets <= 1) return 0;
+    const cycle = Math.floor(slotIndex / totalSecrets);
+    const pos = ((slotIndex % totalSecrets) + totalSecrets) % totalSecrets;
+    const key = `${salt}:${totalSecrets}:${cycle}`;
+    let perm = roundPermutationCache.get(key);
+    if (!perm) {
+        const digest = await crypto.subtle.digest(
+            'SHA-256',
+            new TextEncoder().encode(`semantle-round-perm-v1:${key}`),
+        );
+        const bytes = new Uint8Array(digest);
+        let state = ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) >>> 0;
+        const nextRand = () => {
+            state = (state + 0x6D2B79F5) >>> 0;
+            let t = Math.imul(state ^ (state >>> 15), 1 | state);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+        perm = new Uint32Array(totalSecrets);
+        for (let i = 0; i < totalSecrets; i++) perm[i] = i;
+        for (let i = totalSecrets - 1; i > 0; i--) {
+            const j = Math.floor(nextRand() * (i + 1));
+            const tmp = perm[i];
+            perm[i] = perm[j];
+            perm[j] = tmp;
+        }
+        if (roundPermutationCache.size >= 4) {
+            const oldest = roundPermutationCache.keys().next().value;
+            roundPermutationCache.delete(oldest);
+        }
+        roundPermutationCache.set(key, perm);
+    } else {
+        roundPermutationCache.delete(key);
+        roundPermutationCache.set(key, perm);
+    }
+    return perm[pos];
+}
+
+// 라운드별 단조 유사도 스케일(9700~10300bp)로 외부 벡터 지문 대조 차단
+export async function deriveSimScale(scopeId, secretId) {
     const digest = await crypto.subtle.digest(
         'SHA-256',
-        new TextEncoder().encode(`semantle-scale-v1:${gameId}:${secretId}`),
+        new TextEncoder().encode(`semantle-scale-v1:${scopeId}:${secretId}`),
     );
     const bytes = new Uint8Array(digest);
     const value = (bytes[0] << 8) | bytes[1];
     return 9700 + (value % 601);
 }
 
-// 원시 코사인 유사도(centipoints)에 게임별 단조 보정 계수를 적용해 순위를 유지한 채 점수 지문을 가림
+// 원시 코사인 유사도(centipoints)에 라운드별 단조 보정 계수를 적용해 순위 보존 및 점수 지문 은닉
 export function calibrateSim(rawCenti, simScale = 10000, exact = false) {
     if (exact || rawCenti >= 10000) return 10000;
     const scaled = Math.round((rawCenti * (simScale || 10000)) / 10000);
     return Math.max(-9999, Math.min(9999, scaled));
 }
 
-// 정답 시 연승 통계와 최단 시간 명예의 전당 등록 자격(2회 이상·1.5초 이상)을 판정
-export function nextRecord(player, solvedMs, guessesUsed, now) {
-    const streak = (player.streak || 0) + 1;
-    const streakGuesses = (player.streak_guesses || 0) + guessesUsed;
-    const bestStreak = Math.max(streak, player.best_streak || 0);
-    const bestGuesses = streak > (player.best_streak || 0)
-        ? streakGuesses
-        : streak === (player.best_streak || 0)
-            ? Math.min(streakGuesses, player.best_guesses || streakGuesses)
-            : (player.best_guesses || 0);
+// 정답 시 연속 라운드 연승 통계와 역대 최단 시간 랭킹 등록 자격(2회 이상·라운드 시작 1.5초 이상) 판정
+export function nextRecord(player, solvedMs, guessesUsed, roundNo, now) {
+    const streak = player.last_won_round_no === roundNo - 1
+        ? (player.sync_streak || 0) + 1
+        : 1;
+    const bestStreak = Math.max(streak, player.sync_best_streak || 0);
 
     let unrankedReason = null;
     if (guessesUsed < MIN_RANKED_GUESSES) unrankedReason = 'single_guess';
     else if (solvedMs < MIN_RANKED_SOLVE_MS) unrankedReason = 'too_fast';
     const ranked = unrankedReason === null;
 
-    const prevBestTime = player.best_time_ms ?? null;
-    const prevBestTimeGuesses = player.best_time_guesses ?? Number.MAX_SAFE_INTEGER;
+    const prevBestTime = player.sync_best_time_ms ?? null;
+    const prevBestTimeGuesses = player.sync_best_time_guesses ?? Number.MAX_SAFE_INTEGER;
     const improved = ranked && (
         prevBestTime === null
         || solvedMs < prevBestTime
@@ -71,12 +129,11 @@ export function nextRecord(player, solvedMs, guessesUsed, now) {
 
     return {
         streak,
-        streak_guesses: streakGuesses,
         best_streak: bestStreak,
-        best_guesses: bestGuesses,
         best_time_ms: improved ? solvedMs : prevBestTime,
-        best_time_guesses: improved ? guessesUsed : (player.best_time_guesses ?? null),
-        best_at: improved ? now : (player.best_at || 0),
+        best_time_guesses: improved ? guessesUsed : (player.sync_best_time_guesses ?? null),
+        best_at: improved ? now : (player.sync_best_at || 0),
+        last_won_round_no: roundNo,
         improved,
         ranked,
         unrankedReason,
@@ -95,17 +152,15 @@ export async function fingerprint(value) {
 export function publicProfile(player) {
     return {
         name: player.name,
+        hasCustomName: Boolean(player.name_key),
         gamesPlayed: player.games_played || 0,
-        wins: player.wins || 0,
-        giveUps: player.give_ups || 0,
+        wins: player.sync_wins || 0,
         totalGuesses: player.total_guesses || 0,
-        streak: player.streak || 0,
-        streakGuesses: player.streak_guesses || 0,
-        bestStreak: player.best_streak || 0,
-        bestGuesses: player.best_guesses || 0,
-        bestTimeMs: player.best_time_ms ?? null,
-        bestTimeGuesses: player.best_time_guesses ?? null,
-        bestAt: player.best_at || 0,
+        streak: player.sync_streak || 0,
+        bestStreak: player.sync_best_streak || 0,
+        bestTimeMs: player.sync_best_time_ms ?? null,
+        bestTimeGuesses: player.sync_best_time_guesses ?? null,
+        bestAt: player.sync_best_at || 0,
         activeGame: player.active_game || null,
     };
 }

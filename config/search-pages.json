@@ -98,21 +98,21 @@
     },
     "twenty-questions/index.html": {
       "title": "시맨틀 | 한국어 단어 유사도 추측 게임 - ArcherLab",
-      "description": "단어를 입력하면 숨겨진 정답과 뜻·문맥이 얼마나 비슷한지 -100부터 +100까지 점수로 알려줘요. 하루 횟수 제한 없이 계속 풀 수 있어요. 힌트 없이 추측하기와 포기하기로만 도전합니다.",
+      "description": "단어를 입력하면 숨겨진 정답과 뜻·문맥이 얼마나 비슷한지 -100부터 +100까지 점수로 알려줘요. 6시간마다(00·06·12·18시 KST) 모든 플레이어에게 같은 문제가 출제되며 정각이 되면 기록이 초기화돼요.",
       "gameName": "시맨틀",
       "image": "https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png",
       "imageWidth": 1200,
       "imageHeight": 1200,
-      "updatedAt": "2026-11-17"
+      "updatedAt": "2026-11-20"
     },
     "twenty-questions/index-en.html": {
       "title": "Korean Semantle | Word Similarity Puzzle - ArcherLab",
-      "description": "Enter any Korean word to see a semantic similarity score (-100 to +100) showing how close its meaning and context are to the secret word. Unlimited rounds with no daily lock. Guess and give up only — no hints, pure deduction.",
+      "description": "Enter any Korean word to see a semantic similarity score (-100 to +100) showing how close its meaning and context are to the secret word. Everyone shares the same secret word every 6 hours (00:00, 06:00, 12:00, 18:00 KST), resetting automatically at cutoff.",
       "gameName": "Korean Semantle",
       "image": "https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png",
       "imageWidth": 1200,
       "imageHeight": 1200,
-      "updatedAt": "2026-11-17"
+      "updatedAt": "2026-11-20"
     }
   }
 }

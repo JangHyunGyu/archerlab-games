@@ -8,13 +8,13 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="manifest.json">
   <title>시맨틀 | 한국어 단어 유사도 추측 게임 - ArcherLab</title>
-  <meta name="description" content="단어를 입력하면 숨겨진 정답과 뜻·문맥이 얼마나 비슷한지 -100부터 +100까지 점수로 알려줘요. 하루 횟수 제한 없이 계속 풀 수 있어요. 힌트 없이 추측하기와 포기하기로만 도전합니다.">
+  <meta name="description" content="단어를 입력하면 숨겨진 정답과 뜻·문맥이 얼마나 비슷한지 -100부터 +100까지 점수로 알려줘요. 6시간마다(00·06·12·18시 KST) 모든 플레이어에게 같은 문제가 출제되며 정각이 되면 기록이 초기화돼요.">
   <link rel="canonical" href="https://game.archerlab.dev/twenty-questions/">
   <link rel="alternate" hreflang="ko" href="https://game.archerlab.dev/twenty-questions/">
   <link rel="alternate" hreflang="en" href="https://game.archerlab.dev/twenty-questions/index-en">
   <link rel="alternate" hreflang="x-default" href="https://game.archerlab.dev/twenty-questions/">
   <meta property="og:title" content="시맨틀 | 한국어 단어 유사도 추측 게임 - ArcherLab">
-  <meta property="og:description" content="단어를 입력하면 숨겨진 정답과 뜻·문맥이 얼마나 비슷한지 -100부터 +100까지 점수로 알려줘요. 하루 횟수 제한 없이 계속 풀 수 있어요. 힌트 없이 추측하기와 포기하기로만 도전합니다.">
+  <meta property="og:description" content="단어를 입력하면 숨겨진 정답과 뜻·문맥이 얼마나 비슷한지 -100부터 +100까지 점수로 알려줘요. 6시간마다(00·06·12·18시 KST) 모든 플레이어에게 같은 문제가 출제되며 정각이 되면 기록이 초기화돼요.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://game.archerlab.dev/twenty-questions/">
   <meta property="og:image" content="https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png">
@@ -29,7 +29,7 @@
     "WebApplication"
   ],
   "name": "시맨틀",
-  "description": "단어를 입력하면 숨겨진 정답과 뜻·문맥이 얼마나 비슷한지 -100부터 +100까지 점수로 알려줘요. 하루 횟수 제한 없이 계속 풀 수 있어요. 힌트 없이 추측하기와 포기하기로만 도전합니다.",
+  "description": "단어를 입력하면 숨겨진 정답과 뜻·문맥이 얼마나 비슷한지 -100부터 +100까지 점수로 알려줘요. 6시간마다(00·06·12·18시 KST) 모든 플레이어에게 같은 문제가 출제되며 정각이 되면 기록이 초기화돼요.",
   "url": "https://game.archerlab.dev/twenty-questions/",
   "image": "https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png",
   "inLanguage": "ko",
@@ -41,7 +41,7 @@
   ],
   "playMode": "SinglePlayer",
   "isAccessibleForFree": true,
-  "dateModified": "2026-11-17",
+  "dateModified": "2026-11-20",
   "author": {
     "@type": "Organization",
     "name": "ArcherLab",
@@ -50,15 +50,15 @@
 }
     </script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261117-v4">
+  <link rel="stylesheet" href="css/style.css?v=20261120-v5">
   <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
   <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
-  <script type="module" src="js/main.mjs?v=20261117-v4"></script>
+  <script type="module" src="js/main.mjs?v=20261120-v5"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 
     <meta name="twitter:title" content="시맨틀 | 한국어 단어 유사도 추측 게임 - ArcherLab">
 
-    <meta name="twitter:description" content="단어를 입력하면 숨겨진 정답과 뜻·문맥이 얼마나 비슷한지 -100부터 +100까지 점수로 알려줘요. 하루 횟수 제한 없이 계속 풀 수 있어요. 힌트 없이 추측하기와 포기하기로만 도전합니다.">
+    <meta name="twitter:description" content="단어를 입력하면 숨겨진 정답과 뜻·문맥이 얼마나 비슷한지 -100부터 +100까지 점수로 알려줘요. 6시간마다(00·06·12·18시 KST) 모든 플레이어에게 같은 문제가 출제되며 정각이 되면 기록이 초기화돼요.">
 
     <meta name="twitter:image" content="https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png">
 </head>
@@ -72,7 +72,7 @@
     </a>
     <div class="header-controls">
       <nav class="languages" aria-label="언어"><a href="./" lang="ko" aria-current="page">한국어</a><span aria-hidden="true">/</span><a href="index-en" lang="en" >English</a></nav>
-      <button class="icon-button" id="ranking-open" aria-label="명예의 전당"><img src="assets/ui/icon-trophy-48.webp?v=3" srcset="assets/ui/icon-trophy-48.webp?v=3 1x, assets/ui/icon-trophy-96.webp?v=3 2x" alt="" width="22" height="22" decoding="async"></button>
+      <button class="icon-button" id="ranking-open" aria-label="역대 명예의 전당"><img src="assets/ui/icon-trophy-48.webp?v=3" srcset="assets/ui/icon-trophy-48.webp?v=3 1x, assets/ui/icon-trophy-96.webp?v=3 2x" alt="" width="22" height="22" decoding="async"></button>
       <button class="icon-button" id="guide-open" aria-label="안내 및 기록"><img src="assets/ui/icon-guide-48.webp?v=3" srcset="assets/ui/icon-guide-48.webp?v=3 1x, assets/ui/icon-guide-96.webp?v=3 2x" alt="" width="22" height="22" decoding="async"></button>
       <button class="icon-button" id="settings-open" aria-label="설정"><img src="assets/ui/icon-settings-48.webp?v=3" srcset="assets/ui/icon-settings-48.webp?v=3 1x, assets/ui/icon-settings-96.webp?v=3 2x" alt="" width="22" height="22" decoding="async"></button>
     </div>
@@ -84,19 +84,26 @@
         <h1 id="game-title">시맨틀</h1>
         <p class="hero-subtitle">글자가 아니라 ‘의미 거리’로 숨겨진 단어를 찾는 추리 게임</p>
         <p class="hero-intro">단어를 입력하면 숨겨진 정답과 뜻·문맥이 얼마나 비슷한지 -100부터 +100까지 점수로 알려줘요.</p>
-        <div class="rule-strip" aria-label="하루 횟수 제한 없이 계속 풀 수 있어요. 힌트 없이 추측하기와 포기하기로만 도전합니다.">
+        <div class="rule-strip" aria-label="6시간마다(00·06·12·18시 KST) 모든 플레이어에게 같은 문제가 출제되며 정각이 되면 기록이 초기화돼요.">
           <span class="rule-token">1,000위 안 순위 공개</span>
-          <span class="rule-token">실시간 타이머 · 최단 시간 랭킹</span>
-          <span class="rule-token">하루 제한 없음 · 힌트 없음</span>
+          <span class="rule-token">6시간마다 새 문제 · 카운트다운</span>
+          <span class="rule-token">포기 없이 도전 · 역대 랭킹</span>
         </div>
         <div class="hero-actions">
-          <button id="start" class="primary-btn"><span>게임 시작</span><span class="btn-arrow" aria-hidden="true">▶</span></button>
-          <button id="resume" class="secondary-btn" hidden><span>이어서 풀기</span><span id="resume-timer" class="resume-timer">00:00.0</span></button>
+          <button id="start" class="primary-btn"><span>도전 시작</span><span class="btn-arrow" aria-hidden="true">▶</span></button>
+          <button id="resume" class="secondary-btn" hidden><span>이어서 풀기</span><span id="resume-timer" class="resume-timer">06:00:00</span></button>
         </div>
         <div class="hero-records">
-          <div class="hero-stat accent"><span>내 최단 기록</span><strong id="hero-best-time">-</strong></div>
+          <div class="hero-stat accent"><span>다음 문제까지</span><strong id="hero-countdown">06:00:00</strong></div>
+          <div class="hero-stat"><span>현재 정답자</span><strong id="hero-solver">아직 없음</strong></div>
           <div class="hero-stat"><span>누적 정답</span><strong id="hero-wins">0</strong></div>
-          <div class="hero-stat"><span>연속 정답</span><strong id="hero-streak">0</strong></div>
+        </div>
+        <div id="hero-prev-round" class="prev-round-strip" hidden>
+          <div class="prev-round-meta">
+            <span id="hero-prev-label"></span>
+            <strong id="hero-prev-answer"></strong>
+          </div>
+          <button type="button" id="hero-prev-nearest" class="ghost-btn">상위 1,000개</button>
         </div>
       </div>
       <div class="hero-art">
@@ -124,16 +131,16 @@
       <div class="game-toolbar">
         <button id="home" class="ghost-btn">← 로비로</button>
         <span id="case-label" class="case-label"></span>
-        <button id="give-up" class="ghost-btn">포기하기</button>
+        <button type="button" id="prev-answer-btn" class="ghost-btn prev-answer-btn" hidden><span id="prev-answer-btn-text"></span></button>
       </div>
       <div class="chronometer-console crafted-frame">
         <div class="hud-primary">
           <div class="hud-card timer-card">
-            <span><img class="timer-emblem" src="assets/ui/compass-chronograph-160.webp?v=3" alt="" width="18" height="22" decoding="async">경과 시간</span>
-            <strong id="game-timer" aria-live="off">00:00.0</strong>
+            <span><img class="timer-emblem" src="assets/ui/compass-chronograph-160.webp?v=3" alt="" width="18" height="22" decoding="async">다음 문제까지</span>
+            <strong id="game-timer" aria-live="off">06:00:00</strong>
           </div>
           <div class="hud-card"><span>추측 횟수</span><strong id="guess-count-display">0</strong></div>
-          <div class="hud-card accent"><span>내 최단 기록</span><strong id="game-best-time">-</strong></div>
+          <button type="button" id="current-solver-btn" class="hud-card accent solver-card"><span>현재 정답자</span><strong id="current-solver-display">아직 없음</strong></button>
         </div>
         <div class="benchmark-strip">
           <span class="bench-prefix">이번 정답 기준:</span>
@@ -157,18 +164,26 @@
           <h2 id="result-title"></h2>
           <div class="result-answer-line"><span>정답 단어</span><strong id="result-answer"></strong></div>
           <div class="result-stats">
-            <div><span>걸린 시간</span><strong id="result-time">00:00.00</strong></div>
+            <div><span>라운드 클리어</span><strong id="result-time">00:00.00</strong></div>
             <div><span>추측</span><strong id="result-guesses">0</strong></div>
-            <div><span>내 최단 기록</span><strong id="result-best-time">-</strong></div>
+            <div><span>다음 문제까지</span><strong id="result-next-timer">06:00:00</strong></div>
             <div><span>현재 연승</span><strong id="result-streak">0</strong></div>
           </div>
+          <form id="result-name-form" class="result-name-form" hidden>
+            <p id="result-name-label" class="result-name-label">정답자·랭킹에 남길 이름을 입력해 주세요</p>
+            <div class="result-name-row">
+              <label class="sr-only" for="result-name-input">표시 이름</label>
+              <input id="result-name-input" type="text" maxlength="16" placeholder="2~16자 이름" aria-label="표시 이름">
+              <button id="result-name-save" class="secondary-btn" type="submit">이름 등록</button>
+            </div>
+            <p id="result-name-status" class="name-status" role="status"></p>
+          </form>
           <div class="result-actions">
-            <button id="next-game" class="primary-btn"><span>다음 문제 도전</span><span class="btn-arrow" aria-hidden="true">▶</span></button>
-            <button id="open-nearest" class="secondary-btn">유사도 상위 1,000개</button>
-            <button id="open-ranking-result" class="secondary-btn">명예의 전당</button>
+            <button id="open-nearest" class="primary-btn">유사도 상위 1,000개</button>
+            <button id="open-ranking-result" class="secondary-btn">역대 명예의 전당</button>
             <button id="share-result" class="ghost-btn">결과 공유</button>
           </div>
-          <p class="explore-banner-note">정답을 확인한 뒤에도 원하는 단어를 입력해 유사도를 실험해 볼 수 있어요.</p>
+          <p class="explore-banner-note">정답을 확인한 뒤에도 다음 문제가 열릴 때까지 원하는 단어로 유사도를 실험해 볼 수 있어요.</p>
         </div>
       </div>
       <div class="composer-wrap">
@@ -225,8 +240,8 @@
 
   <dialog id="ranking-dialog" class="game-dialog crafted-frame" aria-labelledby="ranking-title">
     <button class="dialog-close icon-button" data-close aria-label="닫기">✕</button>
-    <h2 id="ranking-title">명예의 전당</h2>
-    <p class="dialog-intro">가장 빠르게 정답을 맞힌 순서대로 순위가 정해져요 (시간이 같으면 추측 수가 적은 기록이 앞서요).</p>
+    <h2 id="ranking-title">역대 명예의 전당</h2>
+    <p class="dialog-intro">라운드 시작 시각(00·06·12·18시 KST) 기준으로 가장 빠르게 정답을 맞힌 순서대로 역대 순위가 정해져요 (시간이 같으면 추측 수가 적은 기록이 앞서요).</p>
     <form id="name-form" class="name-form">
       <label class="sr-only" for="name-input">표시 이름</label>
       <input id="name-input" type="text" maxlength="16" placeholder="2~16자 이름" aria-label="표시 이름">
@@ -258,19 +273,19 @@
     <h2 id="guide-title">안내 및 기록</h2>
     <p class="dialog-intro">나의 플레이 기록</p>
     <div class="stats-grid">
-      <div><span>도전</span><strong id="stat-played">0</strong></div>
+      <div><span>참여 라운드</span><strong id="stat-played">0</strong></div>
       <div><span>정답</span><strong id="stat-wins">0</strong></div>
-      <div><span>포기</span><strong id="stat-giveups">0</strong></div>
       <div><span>총 추측</span><strong id="stat-total-guesses">0</strong></div>
       <div><span>현재 연승</span><strong id="stat-streak">0</strong></div>
+      <div><span>최고 연승</span><strong id="stat-best-streak">0</strong></div>
       <div><span>내 최단 기록</span><strong id="stat-best-time">-</strong></div>
     </div>
     <p class="dialog-intro">자주 묻는 질문</p>
     <div class="faq-list">
       <div class="faq-item"><h3>시맨틀은 어떻게 푸나요?</h3><p>단어를 입력하면 정답과의 의미 유사도(-100 ~ +100점)를 알려줘요. 점수가 높고 상위 1,000위 안에 드는 단어를 따라 좁혀 가면 정답에 닿을 수 있어요.</p></div>
-      <div class="faq-item"><h3>시간과 명예의 전당 랭킹은 어떻게 기록되나요?</h3><p>새 문제를 여는 순간 서버 시계 기준으로 시간이 올라가기 시작하며, 다른 창으로 이동하거나 앱을 닫아도 시간은 멈추지 않고 계속 흐릅니다. 2회 이상의 정상 추리로 가장 빠르게 정답을 맞힌 기록이 명예의 전당에 자동 등록돼요.</p></div>
+      <div class="faq-item"><h3>문제는 언제 바뀌고 시간은 어떻게 계산되나요?</h3><p>한국시간 00시·06시·12시·18시 정각마다 모든 플레이어가 같은 새 단어로 시작하고 이전 추측 기록은 초기화됩니다. 역대 랭킹 기록은 라운드가 열린 정각부터 2회 이상 추리로 정답을 맞힐 때까지 걸린 시간으로 계산돼요.</p></div>
       <div class="faq-item"><h3>어떤 단어가 정답이 되나요? 왜 반대말도 점수가 높나요?</h3><p>정답은 한국어 빈도 어휘 중 2글자 이상 기본형(명사·동사·형용사·부사)에서 뽑힙니다. ‘사랑’과 ‘증오’처럼 반대되는 말이라도 같은 문맥에 자주 나오면 유사도가 높을 수 있고, ‘밤’처럼 뜻이 여러 개인 단어는 자주 쓰이는 문맥 쪽 점수가 높게 나와요.</p></div>
-      <div class="faq-item"><h3>하루에 한 번만 할 수 있나요?</h3><p>아니요. 하루 횟수 제한 없이 원할 때마다 새 문제를 계속 풀 수 있어요. 정답을 맞히거나 포기한 뒤 상위 1,000개 단어를 살펴보고 바로 다음 문제로 넘어가 보세요.</p></div>
+      <div class="faq-item"><h3>포기하기는 없나요? 이전 문제 정답은 어디서 보나요?</h3><p>진행 중인 라운드에서는 정답 유출을 막기 위해 포기하기를 제공하지 않습니다. 6시간 카운트다운이 끝나 새 라운드로 넘어가면 상단과 로비에서 직전 라운드 정답과 상위 1,000개 단어를 바로 확인할 수 있어요.</p></div>
     </div>
   </dialog>
 
@@ -284,15 +299,6 @@
     <label class="setting-row" for="share-guesses"><span>결과 공유에 추측 횟수 표시</span><input type="checkbox" id="share-guesses" checked></label>
     <label class="setting-row" for="share-time"><span>결과 공유에 걸린 시간 표시</span><input type="checkbox" id="share-time" checked></label>
     <label class="setting-row" for="share-max"><span>결과 공유에 최고 유사도 표시</span><input type="checkbox" id="share-max" checked></label>
-  </dialog>
-
-  <dialog id="give-up-dialog" class="game-dialog confirm-dialog crafted-frame" aria-labelledby="give-up-title">
-    <h2 id="give-up-title">정답을 공개하고 이번 문제를 마칠까요?</h2>
-    <p class="dialog-intro">포기하면 현재 연속 정답 기록이 0으로 초기화돼요.</p>
-    <div class="confirm-actions">
-      <button id="confirm-give-up" class="primary-btn">포기하기</button>
-      <button data-close class="secondary-btn">계속 풀기</button>
-    </div>
   </dialog>
 </body>
 </html>

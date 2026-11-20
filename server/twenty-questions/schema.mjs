@@ -1,5 +1,18 @@
 export const SCHEMA_TABLES = [
     `CREATE TABLE IF NOT EXISTS sm_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
+    `CREATE TABLE IF NOT EXISTS sm_rounds (
+        round_id TEXT PRIMARY KEY,
+        round_no INTEGER NOT NULL,
+        secret_id INTEGER NOT NULL,
+        answer_word TEXT NOT NULL,
+        sim_scale INTEGER NOT NULL DEFAULT 10000,
+        top1 INTEGER NOT NULL,
+        top10 INTEGER NOT NULL,
+        top1000 INTEGER NOT NULL,
+        started_at INTEGER NOT NULL,
+        ends_at INTEGER NOT NULL,
+        created_at INTEGER NOT NULL
+    )`,
     `CREATE TABLE IF NOT EXISTS sm_players (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -15,12 +28,20 @@ export const SCHEMA_TABLES = [
         best_time_ms INTEGER,
         best_time_guesses INTEGER,
         best_at INTEGER NOT NULL DEFAULT 0,
+        sync_wins INTEGER NOT NULL DEFAULT 0,
+        sync_streak INTEGER NOT NULL DEFAULT 0,
+        sync_best_streak INTEGER NOT NULL DEFAULT 0,
+        sync_best_time_ms INTEGER,
+        sync_best_time_guesses INTEGER,
+        sync_best_at INTEGER NOT NULL DEFAULT 0,
+        last_won_round_no INTEGER,
         active_game TEXT,
         last_seen INTEGER NOT NULL
     )`,
     `CREATE TABLE IF NOT EXISTS sm_games (
         id TEXT PRIMARY KEY,
         player_id TEXT NOT NULL,
+        round_id TEXT,
         case_no INTEGER NOT NULL,
         secret_id INTEGER NOT NULL,
         answer_word TEXT NOT NULL,
@@ -36,6 +57,7 @@ export const SCHEMA_TABLES = [
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL,
         solved_ms INTEGER,
+        solved_at INTEGER,
         ranked INTEGER NOT NULL DEFAULT 0,
         unranked_reason TEXT,
         record_improved INTEGER NOT NULL DEFAULT 0
@@ -91,8 +113,11 @@ export const SCHEMA_TABLES = [
 
 export const SCHEMA_INDEXES = [
     `CREATE UNIQUE INDEX IF NOT EXISTS sm_one_active ON sm_games(player_id) WHERE status = 'active'`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS sm_game_player_round ON sm_games(player_id, round_id) WHERE round_id IS NOT NULL`,
     `CREATE UNIQUE INDEX IF NOT EXISTS sm_player_name_unique ON sm_players(name_key) WHERE name_key IS NOT NULL`,
     `CREATE INDEX IF NOT EXISTS sm_leaderboard_time ON sm_players(best_time_ms ASC, best_time_guesses ASC, best_at ASC, id ASC)`,
+    `CREATE INDEX IF NOT EXISTS sm_leaderboard_sync_time ON sm_players(sync_best_time_ms ASC, sync_best_time_guesses ASC, sync_best_at ASC, id ASC)`,
+    `CREATE INDEX IF NOT EXISTS sm_games_round_won ON sm_games(round_id, status, ranked, solved_ms ASC, guess_count ASC, solved_at ASC)`,
     `CREATE INDEX IF NOT EXISTS sm_guesses_order ON sm_guesses(game_id, guess_no ASC)`,
     `CREATE INDEX IF NOT EXISTS sm_games_player ON sm_games(player_id, created_at DESC)`,
     `CREATE INDEX IF NOT EXISTS sm_logs_created_at ON sm_logs(created_at DESC)`,
