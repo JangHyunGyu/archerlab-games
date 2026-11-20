@@ -260,13 +260,29 @@ function showTurnFeedback(key, values = {}, kind = 'info') {
     el.hidden = false;
 }
 
+const SESSION_VIEW_KEY = 'archerlab_semantle_session_view';
+
+function getSessionView() {
+    try {
+        return sessionStorage.getItem(SESSION_VIEW_KEY) || 'title';
+    } catch (_err) {
+        return 'title';
+    }
+}
+
+function setSessionView(next) {
+    try {
+        sessionStorage.setItem(SESSION_VIEW_KEY, next);
+    } catch (_err) {}
+}
+
 function changeScreen(next) {
     const changed = next !== screen;
     screen = next;
     document.body.dataset.screen = next;
     $('title-screen').hidden = next !== 'title';
     $('game-screen').hidden = next !== 'game';
-    storage.set('view', next);
+    setSessionView(next);
     if (changed) window.scrollTo({ top: 0, behavior: 'instant' });
     syncKeyboard();
 }
@@ -1294,7 +1310,8 @@ window.addEventListener('focus', tickTimer);
 
 async function initialize() {
     document.body.dataset.screen = 'title';
-    const previousView = storage.get('view');
+    storage.remove('view');
+    const previousView = getSessionView();
     const epoch = mutationEpoch;
     try {
         const profile = await request('profile');
@@ -1302,9 +1319,9 @@ async function initialize() {
         render(profile, { navigate: false });
         if (previousView === 'game' && profile.game) {
             render(profile);
-        } else if (previousView === 'game' && storage.get('game') && !profile.game) {
-            const recovered = await request(`games/${storage.get('game')}`).catch(() => null);
-            if (recovered && epoch === mutationEpoch) render(recovered);
+        } else if (!profile.game) {
+            storage.remove('game');
+            setSessionView('title');
         }
     } catch (error) {
         reportException(error, 'initial_state');

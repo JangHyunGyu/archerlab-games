@@ -40,7 +40,7 @@ for (const locale of ['ko', 'en']) {
   <link rel="stylesheet" href="css/style.css?v=20261120-v5">
   <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
   <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
-  <script type="module" src="js/main.mjs?v=20261120-v5"></script>
+  <script type="module" src="js/main.mjs?v=20261120-v6"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 </head>
 <body data-no-fullscreen data-screen="title">

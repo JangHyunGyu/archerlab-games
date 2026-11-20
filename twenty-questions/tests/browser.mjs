@@ -72,11 +72,20 @@ try {
     assert.ok(skinLoaded, 'All UI skin images must load cleanly');
     await page.screenshot({ path: path.join(output, 'ko-title-desktop.png'), fullPage: true });
 
+    // Stale persistent view/game keys from earlier visits must not bypass the title screen
+    await page.evaluate(() => {
+        localStorage.setItem('archerlab_semantle_view', 'game');
+        localStorage.setItem('archerlab_semantle_game', 'stale-round-id-1234567890');
+    });
+    await page.reload({ waitUntil: 'networkidle' });
+    assert.equal(await page.locator('#title-screen').isVisible(), true);
+    assert.equal(await page.locator('#game-screen').isHidden(), true);
+
     // Start game -> countdown ticks DOWN in HH:MM:SS
     await page.locator('#start').click();
     await page.locator('#game-screen').waitFor({ state: 'visible' });
     const t0 = await page.locator('#game-timer').textContent();
-    await page.waitForTimeout(1200);
+    await page.waitForFunction(prev => document.querySelector('#game-timer')?.textContent !== prev, t0, { timeout: 3000 });
     const t1 = await page.locator('#game-timer').textContent();
     assert.ok(parseHmsSeconds(t1) < parseHmsSeconds(t0), `expected countdown to tick down (${t0} -> ${t1})`);
     assert.ok(Number(await page.locator('#top1-score').textContent()) > 30);
