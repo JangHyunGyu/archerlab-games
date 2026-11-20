@@ -66,16 +66,19 @@ function syntheticHangulWord(index) {
     return `가${a}${b}${c}`;
 }
 
-export function createSemantleStore({ secretWords = ['행복', '학교', '사과'] } = {}) {
-    const coreWords = [
-        '사람', '사랑', '학교', '시간', '사과', '과일', '도서관', '행복', '기쁨',
-        '물', '집', '바다', '하늘', '고양이', '강아지', '컴퓨터', '나무', '책', '친구', '밤',
-        '음식', '자연', '드라이기', '아메리카노', '에어프라이어',
-    ];
+function syntheticEnglishWord(index) {
+    const ch = offset => String.fromCharCode(97 + (offset % 26));
+    const a = ch(Math.floor(index / (26 * 26)));
+    const b = ch(Math.floor(index / 26));
+    const c = ch(index);
+    return `synth${a}${b}${c}`;
+}
+
+function buildPackFiles({ prefix, versionLabel, coreWords, secretWords, syntheticWord, groups, coldForce }) {
     const wordSet = new Set([...coreWords, ...secretWords]);
     let idx = 0;
     while (wordSet.size < 1030) {
-        wordSet.add(syntheticHangulWord(idx++));
+        wordSet.add(syntheticWord(idx++));
     }
     const words = [...wordSet].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
     const wordToIdx = new Map(words.map((w, i) => [w, i]));
@@ -84,25 +87,6 @@ export function createSemantleStore({ secretWords = ['행복', '학교', '사과
     const quantBytes = dims + 2;
     const rawQuants = new Uint8Array(words.length * quantBytes);
     const decodedVecs = new Array(words.length);
-
-    const groups = new Map([
-        ['행복', [1, 0, 0]],
-        ['기쁨', [0.92, 0.35, 0]],
-        ['사랑', [0.85, 0.50, 0]],
-        ['친구', [0.65, 0.65, 0.2]],
-        ['학교', [0, 1, 0]],
-        ['도서관', [0.1, 0.94, 0.3]],
-        ['책', [0.05, 0.80, 0.5]],
-        ['시간', [0.2, 0.45, 0.4]],
-        ['사과', [0, 0, 1]],
-        ['과일', [0.1, 0.1, 0.96]],
-        ['나무', [0.15, 0.2, 0.8]],
-        ['사람', [0.45, 0.4, 0.35]],
-        ['아메리카노', [0.1, 0.2, 0.65]],
-        ['드라이기', [-0.35, -0.35, -0.25]],
-        ['물', [-0.4, -0.4, -0.2]],
-        ['에어프라이어', [-0.45, -0.30, -0.15]],
-    ]);
 
     for (let i = 0; i < words.length; i++) {
         const w = words[i];
@@ -131,16 +115,6 @@ export function createSemantleStore({ secretWords = ['행복', '학교', '사과
             if (Math.abs(vec[d]) > maxAbs) maxAbs = Math.abs(vec[d]);
         }
         const half = encodeFloat16(Math.max(maxAbs / 127, 1e-6));
-        const viewF16 = new Uint16Array([half]);
-        const scale = (() => {
-            const tmp = new Uint8Array(dims + 2);
-            tmp[0] = viewF16[0] & 0xff;
-            tmp[1] = (viewF16[0] >> 8) & 0xff;
-            tmp.fill(1, 2);
-            return decodeInt8Vector(tmp, 0, dims);
-        })();
-        void scale;
-        // Use exact decoded float16 scale for quantization parity
         const sign = (half & 0x8000) ? -1 : 1;
         const exp = (half >> 10) & 0x1f;
         const mant = half & 0x03ff;
@@ -193,8 +167,6 @@ export function createSemantleStore({ secretWords = ['행복', '학교', '사과
         }
     }
 
-    // Partition words into hot-pack (~550 words including core words except '에어프라이어') & cold shard (remaining words + '에어프라이어')
-    const coldForce = new Set(['에어프라이어']);
     const hotSet = new Set([...coreWords.filter(w => !coldForce.has(w)), ...secretWords]);
     for (const w of words) {
         if (hotSet.size >= 550) break;
@@ -204,12 +176,11 @@ export function createSemantleStore({ secretWords = ['행복', '학교', '사과
     const hotWords = [...hotSet].sort(cmpUtf8);
     const coldWords = words.filter(w => !hotSet.has(w)).sort(cmpUtf8);
 
-    // Encode hot-pack.bin
     const hotWb = hotWords.map(w => ENCODER.encode(w));
     const hotRawLen = hotWb.reduce((sum, b) => sum + b.length, 0);
     const hotAlignedLen = (hotRawLen + 3) & ~3;
     const hotBuf = new Uint8Array(16 + (hotWords.length + 1) * 4 + hotAlignedLen + hotWords.length * quantBytes);
-    hotBuf.set([0x53, 0x4d, 0x48, 0x32], 0); // SMH2
+    hotBuf.set([0x53, 0x4d, 0x48, 0x32], 0);
     const hotView = new DataView(hotBuf.buffer);
     hotView.setUint32(4, hotWords.length, true);
     hotView.setUint32(8, hotAlignedLen, true);
@@ -225,7 +196,6 @@ export function createSemantleStore({ secretWords = ['행복', '학교', '사과
     }
     hotView.setUint32(16 + hotWords.length * 4, wCursor, true);
 
-    // Encode cold-0.bin and cold-index.bin (block size 32)
     const blockWords = 32;
     const blocks = [];
     const coldChunks = [];
@@ -258,7 +228,7 @@ export function createSemantleStore({ secretWords = ['행복', '학교', '사과
 
     const fwLen = blocks.reduce((s, blk) => s + blk.firstWb.length, 0);
     const coldIdxBuf = new Uint8Array(12 + blocks.length * 12 + fwLen);
-    coldIdxBuf.set([0x53, 0x4d, 0x43, 0x32], 0); // SMC2
+    coldIdxBuf.set([0x53, 0x4d, 0x43, 0x32], 0);
     const coldIdxView = new DataView(coldIdxBuf.buffer);
     coldIdxView.setUint32(4, blocks.length, true);
     coldIdxView.setUint32(8, fwLen, true);
@@ -277,7 +247,7 @@ export function createSemantleStore({ secretWords = ['행복', '학교', '사과
     }
 
     const metaJson = JSON.stringify({
-        version: 'semantle-ko-test-v2',
+        version: versionLabel,
         dims,
         totalVocab: words.length,
         rankedVocab: words.length,
@@ -287,13 +257,86 @@ export function createSemantleStore({ secretWords = ['행복', '학교', '사과
         secrets,
     });
     const files = {
-        'semantle-ko/v2/secrets-meta.json': ENCODER.encode(metaJson),
-        'semantle-ko/v2/hot-pack.bin': hotBuf,
-        'semantle-ko/v2/cold-index.bin': coldIdxBuf,
-        'semantle-ko/v2/cold-0.bin': cold0Buf,
-        'semantle-ko/v2/secrets-top1k.bin': top1kBytes,
+        [`${prefix}secrets-meta.json`]: ENCODER.encode(metaJson),
+        [`${prefix}hot-pack.bin`]: hotBuf,
+        [`${prefix}cold-index.bin`]: coldIdxBuf,
+        [`${prefix}cold-0.bin`]: cold0Buf,
+        [`${prefix}secrets-top1k.bin`]: top1kBytes,
     };
 
+    return { files, words, secrets, metaJson, decodedVecs };
+}
+
+export function createSemantleStore({
+    secretWords = ['행복', '학교', '사과'],
+    enSecretWords = ['happy', 'school', 'apple'],
+} = {}) {
+    const koPack = buildPackFiles({
+        prefix: 'semantle-ko/v2/',
+        versionLabel: 'semantle-ko-test-v2',
+        coreWords: [
+            '사람', '사랑', '학교', '시간', '사과', '과일', '도서관', '행복', '기쁨',
+            '물', '집', '바다', '하늘', '고양이', '강아지', '컴퓨터', '나무', '책', '친구', '밤',
+            '음식', '자연', '드라이기', '아메리카노', '에어프라이어',
+        ],
+        secretWords,
+        syntheticWord: syntheticHangulWord,
+        coldForce: new Set(['에어프라이어']),
+        groups: new Map([
+            ['행복', [1, 0, 0]],
+            ['기쁨', [0.92, 0.35, 0]],
+            ['사랑', [0.85, 0.50, 0]],
+            ['친구', [0.65, 0.65, 0.2]],
+            ['학교', [0, 1, 0]],
+            ['도서관', [0.1, 0.94, 0.3]],
+            ['책', [0.05, 0.80, 0.5]],
+            ['시간', [0.2, 0.45, 0.4]],
+            ['사과', [0, 0, 1]],
+            ['과일', [0.1, 0.1, 0.96]],
+            ['나무', [0.15, 0.2, 0.8]],
+            ['사람', [0.45, 0.4, 0.35]],
+            ['아메리카노', [0.1, 0.2, 0.65]],
+            ['드라이기', [-0.35, -0.35, -0.25]],
+            ['물', [-0.4, -0.4, -0.2]],
+            ['에어프라이어', [-0.45, -0.30, -0.15]],
+        ]),
+    });
+
+    const enPack = buildPackFiles({
+        prefix: 'semantle-en/v2/',
+        versionLabel: 'semantle-en-test-v2',
+        coreWords: [
+            'person', 'love', 'school', 'time', 'apple', 'fruit', 'library', 'happy', 'joy',
+            'water', 'home', 'ocean', 'sky', 'cat', 'dog', 'computer', 'tree', 'book', 'friend', 'night',
+            'food', 'nature', 'dryer', 'espresso', 'airfryer', 'coffee', 'cloud', 'milk',
+        ],
+        secretWords: enSecretWords,
+        syntheticWord: syntheticEnglishWord,
+        coldForce: new Set(['airfryer']),
+        groups: new Map([
+            ['happy', [1, 0, 0]],
+            ['joy', [0.92, 0.35, 0]],
+            ['love', [0.85, 0.50, 0]],
+            ['friend', [0.65, 0.65, 0.2]],
+            ['school', [0, 1, 0]],
+            ['library', [0.1, 0.94, 0.3]],
+            ['book', [0.05, 0.80, 0.5]],
+            ['time', [0.2, 0.45, 0.4]],
+            ['apple', [0, 0, 1]],
+            ['fruit', [0.1, 0.1, 0.96]],
+            ['tree', [0.15, 0.2, 0.8]],
+            ['person', [0.45, 0.4, 0.35]],
+            ['espresso', [0.1, 0.2, 0.65]],
+            ['coffee', [0.25, 0.3, 0.7]],
+            ['milk', [0.15, 0.2, 0.6]],
+            ['cloud', [-0.3, -0.2, 0.1]],
+            ['dryer', [-0.35, -0.35, -0.25]],
+            ['water', [-0.4, -0.4, -0.2]],
+            ['airfryer', [-0.45, -0.30, -0.15]],
+        ]),
+    });
+
+    const files = { ...koPack.files, ...enPack.files };
     const rangeCalls = [];
     const store = {
         rangeCalls,
@@ -315,7 +358,19 @@ export function createSemantleStore({ secretWords = ['행복', '학교', '사과
         },
     };
 
-    return { store, words, secrets, metaJson, decodedVecs };
+    return {
+        store,
+        words: koPack.words,
+        secrets: koPack.secrets,
+        metaJson: koPack.metaJson,
+        decodedVecs: koPack.decodedVecs,
+        en: {
+            words: enPack.words,
+            secrets: enPack.secrets,
+            metaJson: enPack.metaJson,
+            decodedVecs: enPack.decodedVecs,
+        },
+    };
 }
 
 export function harness(storeOptions = {}) {
@@ -327,15 +382,17 @@ export function harness(storeOptions = {}) {
     const queues = new Map();
 
     async function fetch(request) {
-        const key = request.headers.get('Authorization') || '';
+        const reqLang = new URL(request.url).searchParams.get('lang') || 'ko';
+        const key = `${request.headers.get('Authorization') || ''}:${reqLang}`;
         const next = (queues.get(key) || Promise.resolve()).then(() => handleRoomRequest(request, env));
         queues.set(key, next.catch(() => {}));
         return next;
     }
 
+    const withLang = (path, lang = 'ko') => (lang === 'en' ? `${path}${path.includes('?') ? '&' : '?'}lang=en` : path);
     const token = 'a'.repeat(64);
-    async function call(path, body, method = body ? 'POST' : 'GET', secret = token) {
-        const result = await fetch(new Request('https://api/twenty-questions/' + path, {
+    async function call(path, body, method = body ? 'POST' : 'GET', secret = token, lang = 'ko') {
+        const result = await fetch(new Request('https://api/twenty-questions/' + withLang(path, lang), {
             method,
             headers: { Authorization: 'Bearer ' + secret, 'Content-Type': 'application/json' },
             ...(body ? { body: JSON.stringify(body) } : {}),
@@ -343,8 +400,8 @@ export function harness(storeOptions = {}) {
         return { status: result.status, data: await result.json() };
     }
 
-    async function start(secret = token) {
-        return (await call('games', { locale: 'ko', requestId: crypto.randomUUID() }, 'POST', secret)).data;
+    async function start(secret = token, lang = 'ko') {
+        return (await call('games', { locale: lang, requestId: crypto.randomUUID() }, 'POST', secret, lang)).data;
     }
 
     function sqliteRow(query, ...values) {
@@ -355,8 +412,8 @@ export function harness(storeOptions = {}) {
         return sqliteRow('SELECT answer_word FROM sm_games WHERE id = ?', gameId).answer_word;
     }
 
-    async function guess(game, text, requestId = crypto.randomUUID(), secret = token) {
-        return call(`games/${game.id}/guesses`, { text, expectedVersion: game.version, requestId }, 'POST', secret);
+    async function guess(game, text, requestId = crypto.randomUUID(), secret = token, lang = 'ko') {
+        return call(`games/${game.id}/guesses`, { text, expectedVersion: game.version, requestId }, 'POST', secret, lang);
     }
 
     return {

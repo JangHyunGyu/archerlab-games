@@ -388,3 +388,108 @@ test('DO room cache + deferred batch flushes cleanly before solve', async () => 
     await runtime.flushBatch();
     h.db.sqlite.close();
 });
+
+test('dual ko/en sessions stay strictly isolated while sharing the 6h KST schedule', async () => {
+    const h = harness({
+        secretWords: ['행복', '학교', '사과', '도서관'],
+        enSecretWords: ['happy', 'school', 'apple', 'library'],
+    });
+    const tokenA = 'a'.repeat(64);
+    const tokenB = 'b'.repeat(64);
+
+    // Status endpoint checks both language packs independently while matching KST round timing
+    const stKo = await twentyQuestionsRoute(
+        new Request('https://api/twenty-questions/status', { headers: { Origin: 'https://game.archerlab.dev' } }),
+        h.env,
+    );
+    const stEn = await twentyQuestionsRoute(
+        new Request('https://api/twenty-questions/status?lang=en', { headers: { Origin: 'https://game.archerlab.dev' } }),
+        h.env,
+    );
+    const stBad = await twentyQuestionsRoute(
+        new Request('https://api/twenty-questions/status?lang=jp', { headers: { Origin: 'https://game.archerlab.dev' } }),
+        h.env,
+    );
+    assert.equal(stKo.status, 200);
+    assert.equal(stEn.status, 200);
+    assert.equal(stBad.status, 400);
+    const koStatus = await stKo.json();
+    const enStatus = await stEn.json();
+    assert.equal(koStatus.lang, 'ko');
+    assert.equal(enStatus.lang, 'en');
+    assert.equal(enStatus.ruleset, 'semantle-en-sync-v1');
+    assert.ok(enStatus.vocabCount >= 1030 && enStatus.secretCount === 4);
+    assert.deepEqual(enStatus.round, koStatus.round);
+
+    // Same token can play Korean and English simultaneously without colliding
+    const koStart = await h.start(tokenA, 'ko');
+    const enStart = await h.start(tokenA, 'en');
+    assert.notEqual(koStart.game.id, enStart.game.id);
+    assert.equal(enStart.lang, 'en');
+    assert.equal(enStart.ruleset, 'semantle-en-sync-v1');
+    assert.equal(enStart.round.id, koStart.round.id);
+    assert.equal(enStart.round.roundNo, koStart.round.roundNo);
+    assert.equal((await h.call('profile', null, 'GET', tokenA, 'ko')).data.game.id, koStart.game.id);
+    assert.equal((await h.call('profile', null, 'GET', tokenA, 'en')).data.game.id, enStart.game.id);
+
+    // Cross-language inputs are cleanly rejected without charging guessCount
+    let enGame = enStart.game;
+    const koWordInEn = await h.guess(enGame, '사람', crypto.randomUUID(), tokenA, 'en');
+    assert.equal(koWordInEn.data.event.code, 'unknown_word');
+    assert.equal(koWordInEn.data.game.guessCount, 0);
+
+    const enWordInKo = await h.guess(koStart.game, 'person', crypto.randomUUID(), tokenA, 'ko');
+    assert.equal(enWordInKo.data.event.code, 'unknown_word');
+    assert.equal(enWordInKo.data.game.guessCount, 0);
+
+    // English guesses normalize uppercase inputs and detect duplicates case-insensitively
+    const enG1 = await h.guess(enGame, 'Water', crypto.randomUUID(), tokenA, 'en');
+    assert.equal(enG1.data.event.code, 'guess');
+    assert.equal(enG1.data.event.word, 'water');
+    assert.equal(enG1.data.game.guessCount, 1);
+    enGame = enG1.data.game;
+
+    const enDup = await h.guess(enGame, 'WATER', crypto.randomUUID(), tokenA, 'en');
+    assert.equal(enDup.data.event.code, 'duplicate');
+    assert.equal(enDup.data.event.word, 'water');
+    assert.equal(enDup.data.game.guessCount, 1);
+
+    // Nickname uniqueness is per-language, and solvers + Hall of Fame stay isolated
+    assert.equal((await h.call('profile', { name: 'Polyglot' }, 'PATCH', tokenA, 'ko')).status, 200);
+    assert.equal((await h.call('profile', { name: 'Polyglot' }, 'PATCH', tokenA, 'en')).status, 200);
+    assert.equal((await h.call('profile', { name: 'polyglot' }, 'PATCH', tokenB, 'en')).status, 409);
+
+    const bEnStart = await h.start(tokenB, 'en');
+    const enAnswer = h.answer(bEnStart.game.id);
+    const bEnG1 = (await h.guess(bEnStart.game, 'person', crypto.randomUUID(), tokenB, 'en')).data;
+    h.advanceMs(5000);
+    const bEnWin = await h.guess(bEnG1.game, enAnswer, crypto.randomUUID(), tokenB, 'en');
+    assert.equal(bEnWin.data.game.status, 'won');
+    assert.equal(bEnWin.data.round.solverCount, 1);
+    assert.equal((await h.call('profile', null, 'GET', tokenA, 'ko')).data.round.solverCount, 0);
+
+    await h.call('profile', { name: 'EnChamp' }, 'PATCH', tokenB, 'en');
+    const enLb = (await h.call('leaderboard', null, 'GET', tokenB, 'en')).data;
+    const koLb = (await h.call('leaderboard', null, 'GET', tokenA, 'ko')).data;
+    assert.equal(enLb.entries.length, 1);
+    assert.equal(enLb.entries[0].name, 'EnChamp');
+    assert.equal(enLb.ruleset, 'semantle-en-sync-v1');
+    assert.equal(koLb.entries.length, 0);
+
+    // Rollover advances EN cleanly and exposes previous EN answer via rounds/previous/nearest?lang=en
+    h.advanceMs(6 * 60 * 60 * 1000);
+    const enReset = await h.call(`games/${enGame.id}`, null, 'GET', tokenA, 'en');
+    assert.equal(enReset.status, 200);
+    assert.equal(enReset.data.event.code, 'round_reset');
+    assert.equal(enReset.data.event.previousAnswer, enAnswer);
+    assert.equal(enReset.data.round.roundNo, 4);
+    assert.equal(enReset.data.game.guessCount, 0);
+    assert.equal(h.row('SELECT status FROM sm_games WHERE id = ?', enGame.id).status, 'expired');
+
+    const prevEnNearest = await h.call('rounds/previous/nearest', null, 'GET', tokenA, 'en');
+    assert.equal(prevEnNearest.status, 200);
+    assert.equal(prevEnNearest.data.answer, enAnswer);
+    assert.equal(prevEnNearest.data.words.length, 1000);
+
+    h.db.sqlite.close();
+});

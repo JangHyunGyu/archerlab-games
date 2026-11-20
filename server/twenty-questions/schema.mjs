@@ -2,6 +2,7 @@ export const SCHEMA_TABLES = [
     `CREATE TABLE IF NOT EXISTS sm_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
     `CREATE TABLE IF NOT EXISTS sm_rounds (
         round_id TEXT PRIMARY KEY,
+        lang TEXT NOT NULL DEFAULT 'ko',
         round_no INTEGER NOT NULL,
         secret_id INTEGER NOT NULL,
         answer_word TEXT NOT NULL,
@@ -15,6 +16,7 @@ export const SCHEMA_TABLES = [
     )`,
     `CREATE TABLE IF NOT EXISTS sm_players (
         id TEXT PRIMARY KEY,
+        lang TEXT NOT NULL DEFAULT 'ko',
         name TEXT NOT NULL,
         name_key TEXT,
         games_played INTEGER NOT NULL DEFAULT 0,
@@ -41,6 +43,7 @@ export const SCHEMA_TABLES = [
     `CREATE TABLE IF NOT EXISTS sm_games (
         id TEXT PRIMARY KEY,
         player_id TEXT NOT NULL,
+        lang TEXT NOT NULL DEFAULT 'ko',
         round_id TEXT,
         case_no INTEGER NOT NULL,
         secret_id INTEGER NOT NULL,
@@ -114,9 +117,10 @@ export const SCHEMA_TABLES = [
 export const SCHEMA_INDEXES = [
     `CREATE UNIQUE INDEX IF NOT EXISTS sm_one_active ON sm_games(player_id) WHERE status = 'active'`,
     `CREATE UNIQUE INDEX IF NOT EXISTS sm_game_player_round ON sm_games(player_id, round_id) WHERE round_id IS NOT NULL`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS sm_player_name_unique ON sm_players(name_key) WHERE name_key IS NOT NULL`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS sm_player_lang_name_unique ON sm_players(lang, name_key) WHERE name_key IS NOT NULL`,
     `CREATE INDEX IF NOT EXISTS sm_leaderboard_time ON sm_players(best_time_ms ASC, best_time_guesses ASC, best_at ASC, id ASC)`,
     `CREATE INDEX IF NOT EXISTS sm_leaderboard_sync_time ON sm_players(sync_best_time_ms ASC, sync_best_time_guesses ASC, sync_best_at ASC, id ASC)`,
+    `CREATE INDEX IF NOT EXISTS sm_leaderboard_lang_sync_time ON sm_players(lang, sync_best_time_ms ASC, sync_best_time_guesses ASC, sync_best_at ASC, id ASC)`,
     `CREATE INDEX IF NOT EXISTS sm_games_round_won ON sm_games(round_id, status, ranked, solved_ms ASC, guess_count ASC, solved_at ASC)`,
     `CREATE INDEX IF NOT EXISTS sm_guesses_order ON sm_guesses(game_id, guess_no ASC)`,
     `CREATE INDEX IF NOT EXISTS sm_games_player ON sm_games(player_id, created_at DESC)`,

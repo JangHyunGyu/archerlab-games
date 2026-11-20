@@ -1,7 +1,7 @@
 {
-  "id": "/twenty-questions/",
-  "name": "Korean Semantle",
-  "short_name": "Semantle KO",
+  "id": "/twenty-questions/index-en",
+  "name": "Semantle",
+  "short_name": "Semantle",
   "lang": "en",
   "start_url": "./index-en",
   "scope": "/twenty-questions/",

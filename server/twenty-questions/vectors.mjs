@@ -1,11 +1,16 @@
 import { fault } from './core.mjs';
 
-const DATA_PREFIX = 'semantle-ko/v2/';
+const DATA_PREFIXES = {
+    ko: 'semantle-ko/v2/',
+    en: 'semantle-en/v2/',
+};
+const prefixFor = (lang = 'ko') => (lang === 'en' ? DATA_PREFIXES.en : DATA_PREFIXES.ko);
+
 const DIMS = 300;
 const QUANT_BYTES = DIMS + 2; // 2B float16 scale + 300B int8
 const DEFAULT_SECRET_STRIDE = 24576;
-const MAX_TOP1K_CACHE = 64;
-const MAX_COLD_BLOCK_CACHE = 256;
+const MAX_TOP1K_CACHE = 16;
+const MAX_COLD_BLOCK_CACHE = 128;
 
 const ENCODER = new TextEncoder();
 const DECODER = new TextDecoder();
@@ -21,42 +26,40 @@ for (let h = 0; h < 65536; h++) {
     else FLOAT16_TABLE[h] = sign * Math.pow(2, exp - 15) * (1 + mant / 1024);
 }
 
-let prodCache = null;
+let prodCaches = { ko: null, en: null };
 const storeCaches = new WeakMap();
 
-function cacheFor(env) {
+function makeLangCache(store = null) {
+    return {
+        store,
+        vocabPromise: null,
+        hotPromise: null,
+        coldIndexPromise: null,
+        top1kCache: new Map(),
+        coldBlockCache: new Map(),
+    };
+}
+
+// 언어별(ko/en) 벡터 캐시를 분리해 두 언어 동시 서비스 시 캐시 충돌 방지
+function cacheFor(env, lang = 'ko') {
+    const key = lang === 'en' ? 'en' : 'ko';
     if (env?.SEMANTLE_STORE) {
-        let entry = storeCaches.get(env.SEMANTLE_STORE);
-        if (!entry) {
-            entry = {
-                store: env.SEMANTLE_STORE,
-                vocabPromise: null,
-                hotPromise: null,
-                coldIndexPromise: null,
-                top1kCache: new Map(),
-                coldBlockCache: new Map(),
-            };
-            storeCaches.set(env.SEMANTLE_STORE, entry);
+        let pair = storeCaches.get(env.SEMANTLE_STORE);
+        if (!pair) {
+            pair = { ko: null, en: null };
+            storeCaches.set(env.SEMANTLE_STORE, pair);
         }
-        return entry;
+        if (!pair[key]) pair[key] = makeLangCache(env.SEMANTLE_STORE);
+        return pair[key];
     }
     if (!env?.SEMANTLE_DATA) throw fault('service_unavailable', 503);
-    if (!prodCache) {
-        prodCache = {
-            store: null,
-            vocabPromise: null,
-            hotPromise: null,
-            coldIndexPromise: null,
-            top1kCache: new Map(),
-            coldBlockCache: new Map(),
-        };
-    }
-    prodCache.store = env.SEMANTLE_DATA;
-    return prodCache;
+    if (!prodCaches[key]) prodCaches[key] = makeLangCache(env.SEMANTLE_DATA);
+    prodCaches[key].store = env.SEMANTLE_DATA;
+    return prodCaches[key];
 }
 
 export function clearVectorCache() {
-    prodCache = null;
+    prodCaches = { ko: null, en: null };
 }
 
 export function dataReady(env) {
@@ -153,11 +156,12 @@ function lruSet(map, key, value, maxSize) {
     map.set(key, value);
 }
 
-export async function loadVocab(env) {
-    const cache = cacheFor(env);
+export async function loadVocab(env, lang = 'ko') {
+    const cache = cacheFor(env, lang);
+    const prefix = prefixFor(lang);
     if (!cache.vocabPromise) {
         cache.vocabPromise = (async () => {
-            const obj = await cache.store.get(DATA_PREFIX + 'secrets-meta.json');
+            const obj = await cache.store.get(prefix + 'secrets-meta.json');
             if (!obj) throw fault('service_unavailable', 503);
             const data = typeof obj.json === 'function'
                 ? await obj.json()
@@ -179,11 +183,12 @@ export async function loadVocab(env) {
     return cache.vocabPromise;
 }
 
-export async function loadHotPack(env) {
-    const cache = cacheFor(env);
+export async function loadHotPack(env, lang = 'ko') {
+    const cache = cacheFor(env, lang);
+    const prefix = prefixFor(lang);
     if (!cache.hotPromise) {
         cache.hotPromise = (async () => {
-            const obj = await cache.store.get(DATA_PREFIX + 'hot-pack.bin');
+            const obj = await cache.store.get(prefix + 'hot-pack.bin');
             if (!obj) throw fault('service_unavailable', 503);
             const bytes = new Uint8Array(await obj.arrayBuffer());
             if (bytes.byteLength < 16 || bytes[0] !== 0x53 || bytes[1] !== 0x4d || bytes[2] !== 0x48 || bytes[3] !== 0x32) {
@@ -204,11 +209,12 @@ export async function loadHotPack(env) {
     return cache.hotPromise;
 }
 
-export async function loadColdIndex(env) {
-    const cache = cacheFor(env);
+export async function loadColdIndex(env, lang = 'ko') {
+    const cache = cacheFor(env, lang);
+    const prefix = prefixFor(lang);
     if (!cache.coldIndexPromise) {
         cache.coldIndexPromise = (async () => {
-            const obj = await cache.store.get(DATA_PREFIX + 'cold-index.bin');
+            const obj = await cache.store.get(prefix + 'cold-index.bin');
             if (!obj) throw fault('service_unavailable', 503);
             const bytes = new Uint8Array(await obj.arrayBuffer());
             if (bytes.byteLength < 12 || bytes[0] !== 0x53 || bytes[1] !== 0x4d || bytes[2] !== 0x43 || bytes[3] !== 0x32) {
@@ -227,8 +233,9 @@ export async function loadColdIndex(env) {
     return cache.coldIndexPromise;
 }
 
-export async function loadSecretTop1k(env, secretId, vocab) {
-    const cache = cacheFor(env);
+export async function loadSecretTop1k(env, secretId, vocab, lang = 'ko') {
+    const cache = cacheFor(env, lang);
+    const prefix = prefixFor(lang);
     if (cache.top1kCache.has(secretId)) {
         const hit = cache.top1kCache.get(secretId);
         cache.top1kCache.delete(secretId);
@@ -237,7 +244,7 @@ export async function loadSecretTop1k(env, secretId, vocab) {
     }
     const stride = vocab?.secretStride || DEFAULT_SECRET_STRIDE;
     const dims = vocab?.dims || DIMS;
-    const obj = await cache.store.get(DATA_PREFIX + 'secrets-top1k.bin', {
+    const obj = await cache.store.get(prefix + 'secrets-top1k.bin', {
         range: { offset: secretId * stride, length: stride },
     });
     if (!obj) throw fault('service_unavailable', 503);
@@ -286,9 +293,10 @@ function lookupHotVector(hotPack, wordBytes, dims = DIMS) {
     return null;
 }
 
-async function lookupColdVector(env, cache, coldIdx, wordBytes, dims = DIMS) {
+async function lookupColdVector(env, cache, coldIdx, wordBytes, dims = DIMS, lang = 'ko') {
     const { bytes, view, blockCount, entriesBase, firstWordsBase } = coldIdx;
     if (!blockCount) return null;
+    const prefix = prefixFor(lang);
     let lo = 0;
     let hi = blockCount - 1;
     let cand = -1;
@@ -315,7 +323,7 @@ async function lookupColdVector(env, cache, coldIdx, wordBytes, dims = DIMS) {
 
     let blockBytes = cache.coldBlockCache.get(cacheKey);
     if (!blockBytes) {
-        const obj = await cache.store.get(`${DATA_PREFIX}cold-${shardId}.bin`, {
+        const obj = await cache.store.get(`${prefix}cold-${shardId}.bin`, {
             range: { offset: blockOffset, length: blockLength },
         });
         if (!obj) throw fault('service_unavailable', 503);
@@ -340,32 +348,32 @@ async function lookupColdVector(env, cache, coldIdx, wordBytes, dims = DIMS) {
     return null;
 }
 
-export async function lookupWordVector(env, word, dims = DIMS) {
-    const cache = cacheFor(env);
+export async function lookupWordVector(env, word, dims = DIMS, lang = 'ko') {
+    const cache = cacheFor(env, lang);
     const wordBytes = ENCODER.encode(word);
-    const hotPack = await loadHotPack(env);
+    const hotPack = await loadHotPack(env, lang);
     const hotVec = lookupHotVector(hotPack, wordBytes, dims);
     if (hotVec) return hotVec;
-    const coldIdx = await loadColdIndex(env);
-    return lookupColdVector(env, cache, coldIdx, wordBytes, dims);
+    const coldIdx = await loadColdIndex(env, lang);
+    return lookupColdVector(env, cache, coldIdx, wordBytes, dims, lang);
 }
 
 // 핫 팩·콜드 인덱스·활성 정답 Top-1k를 백그라운드 예열해 첫 추측 지연 제거
-export async function preloadVectors(env, secretId = null, answerWord = null) {
+export async function preloadVectors(env, secretId = null, answerWord = null, lang = 'ko') {
     try {
-        const vocab = await loadVocab(env);
-        const tasks = [loadHotPack(env), loadColdIndex(env)];
+        const vocab = await loadVocab(env, lang);
+        const tasks = [loadHotPack(env, lang), loadColdIndex(env, lang)];
         const resolvedId = (answerWord && vocab.secretWordToId?.has(answerWord))
             ? vocab.secretWordToId.get(answerWord)
             : secretId;
         if (resolvedId !== null && resolvedId !== undefined && resolvedId >= 0 && resolvedId < vocab.secrets.length) {
-            tasks.push(loadSecretTop1k(env, resolvedId, vocab));
+            tasks.push(loadSecretTop1k(env, resolvedId, vocab, lang));
         }
         await Promise.allSettled(tasks);
     } catch { /* 예열 실패는 실제 요청 시 정상 에러 처리 */ }
 }
 
-export async function scoreGuessWord(env, vocab, secretId, word, answerWord = null) {
+export async function scoreGuessWord(env, vocab, secretId, word, answerWord = null, lang = 'ko') {
     const effectiveSecretId = (answerWord && vocab.secretWordToId?.has(answerWord))
         ? vocab.secretWordToId.get(answerWord)
         : secretId;
@@ -375,13 +383,13 @@ export async function scoreGuessWord(env, vocab, secretId, word, answerWord = nu
     if (word === secretWord) {
         return { exact: true, simCenti: 10000, rank: 0 };
     }
-    const top1k = await loadSecretTop1k(env, effectiveSecretId, vocab);
+    const top1k = await loadSecretTop1k(env, effectiveSecretId, vocab, lang);
     const near = top1k.map.get(word);
     if (near) {
         return { exact: false, simCenti: near.simCenti, rank: near.rank };
     }
     const dims = vocab.dims || DIMS;
-    const guessVec = await lookupWordVector(env, word, dims);
+    const guessVec = await lookupWordVector(env, word, dims, lang);
     if (!guessVec) return null;
     const simCenti = toCentipoints(dotNormalized(top1k.secretVec, guessVec));
     return { exact: false, simCenti, rank: null };

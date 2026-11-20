@@ -1,9 +1,10 @@
-import { messages, translation } from './i18n.mjs';
-import { request, requestId, storage, reportException } from './api.mjs';
+import { messages, translation } from './i18n.mjs?v=20261120-v8';
+import { request, requestId, storage, reportException } from './api.mjs?v=20261120-v8';
 import { GameAudio } from './audio.mjs';
 
 const locale = document.documentElement.lang === 'en' ? 'en' : 'ko';
 const t = translation(locale);
+const langKey = key => (locale === 'en' ? `en_${key}` : key);
 const $ = id => document.getElementById(id);
 const audio = new GameAudio();
 
@@ -213,7 +214,7 @@ function triggerGameVfx(event, game) {
     }
 }
 
-try { pendingCommand = JSON.parse(storage.get('pending') || 'null'); } catch (_err) { pendingCommand = null; }
+try { pendingCommand = JSON.parse(storage.get(langKey('pending')) || 'null'); } catch (_err) { pendingCommand = null; }
 
 const settings = {
     darkMode: storage.get('darkMode') !== 'false',
@@ -260,7 +261,7 @@ function showTurnFeedback(key, values = {}, kind = 'info') {
     el.hidden = false;
 }
 
-const SESSION_VIEW_KEY = 'archerlab_semantle_session_view';
+const SESSION_VIEW_KEY = locale === 'en' ? 'archerlab_semantle_en_session_view' : 'archerlab_semantle_session_view';
 
 function getSessionView() {
     try {
@@ -366,11 +367,13 @@ function formatRecordTime(ms) {
 function clearLocalRoundProgress() {
     const nearestDlg = $('nearest-dialog');
     if (nearestDlg && nearestDlg.open) nearestDlg.close();
+    const burst = $('vfx-burst');
+    if (burst) burst.classList.remove('is-active');
     if ($('guess-input')) $('guess-input').value = '';
     if ($('result-name-status')) $('result-name-status').textContent = '';
-    storage.remove('draft');
+    storage.remove(langKey('draft'));
     pendingCommand = null;
-    storage.remove('pending');
+    storage.remove(langKey('pending'));
     latestHighlightWord = null;
     nearestWords = [];
     nearestKey = null;
@@ -384,7 +387,7 @@ async function handleRoundRollover(expiredRoundId) {
     rolloverRoundId = expiredRoundId;
     const epoch = mutationEpoch;
     try {
-        const gameId = (state.game && state.game.id) || storage.get('game');
+        const gameId = (state.game && state.game.id) || storage.get(langKey('game'));
         const data = (screen === 'game' && gameId)
             ? await request(`games/${gameId}`)
             : await request('profile');
@@ -539,7 +542,7 @@ function sortGuesses(guesses) {
     const list = [...guesses];
     const mul = sortState.dir === 'asc' ? 1 : -1;
     list.sort((a, b) => {
-        if (sortState.key === 'word') return a.word.localeCompare(b.word, 'ko') * mul;
+        if (sortState.key === 'word') return a.word.localeCompare(b.word, locale) * mul;
         if (sortState.key === 'guessNo') return (a.guessNo - b.guessNo) * mul;
         const diff = a.similarity - b.similarity;
         if (Math.abs(diff) > 0.0001) return diff * mul;
@@ -719,9 +722,9 @@ function render(data, { navigate = true, effects = false } = {}) {
     }
 
     const game = data.game;
-    storage.remove('start_request');
-    storage.remove('start_locale');
-    storage.set('game', game.id);
+    storage.remove(langKey('start_request'));
+    storage.remove(langKey('start_locale'));
+    storage.set(langKey('game'), game.id);
 
     if (game.id !== prevGameId) {
         latestHighlightWord = null;
@@ -802,7 +805,7 @@ function render(data, { navigate = true, effects = false } = {}) {
 async function recover() {
     var __oc10;
     const epoch = mutationEpoch;
-    const gameId = (((__oc10 = state.game) === null || __oc10 === void 0 ? void 0 : __oc10.id)) || storage.get('game');
+    const gameId = (((__oc10 = state.game) === null || __oc10 === void 0 ? void 0 : __oc10.id)) || storage.get(langKey('game'));
     const data = (screen === 'game' && gameId) ? await request(`games/${gameId}`) : await request('profile');
     if (epoch === mutationEpoch) render(data, { navigate: screen !== 'title' });
     return data;
@@ -826,10 +829,11 @@ async function action(callback) {
             try {
                 const recovered = await recover();
                 if (pendingCommand && (((__oc12 = (__oc11 = recovered.game) === null || __oc11 === void 0 ? void 0 : __oc11.guesses) === null || __oc12 === void 0 ? void 0 : __oc12.some(g => g.requestId === pendingCommand.body.requestId)))) {
-                    if ($('guess-input').value.trim() === pendingCommand.body.text) $('guess-input').value = '';
+                    const draftText = $('guess-input').value.trim();
+                    if ((locale === 'en' ? draftText.toLowerCase() : draftText) === pendingCommand.body.text) $('guess-input').value = '';
                     pendingCommand = null;
-                    storage.remove('pending');
-                    storage.remove('draft');
+                    storage.remove(langKey('pending'));
+                    storage.remove(langKey('draft'));
                 }
             } catch (_err) {
                 /* 서버 재연결 실패 시 대기 중인 요청 보존 */
@@ -838,7 +842,7 @@ async function action(callback) {
         }
         if (error.code === 'stale_state') {
             pendingCommand = null;
-            storage.remove('pending');
+            storage.remove(langKey('pending'));
         }
         if (error.code !== 'round_expired') notify(error.code || 'network_error');
     } finally {
@@ -858,19 +862,19 @@ async function start() {
             }
             return;
         }
-        let startId = storage.get('start_request');
+        let startId = storage.get(langKey('start_request'));
         if (!startId) {
             startId = requestId();
-            storage.set('start_request', startId);
-            storage.set('start_locale', locale);
+            storage.set(langKey('start_request'), startId);
+            storage.set(langKey('start_locale'), locale);
         }
-        const data = await request('games', { locale: storage.get('start_locale') || locale, requestId: startId });
-        storage.remove('start_request');
-        storage.remove('start_locale');
+        const data = await request('games', { locale: storage.get(langKey('start_locale')) || locale, requestId: startId });
+        storage.remove(langKey('start_request'));
+        storage.remove(langKey('start_locale'));
         pendingCommand = null;
-        storage.remove('pending');
+        storage.remove(langKey('pending'));
         $('guess-input').value = '';
-        storage.remove('draft');
+        storage.remove(langKey('draft'));
         showTurnFeedback(null);
         render(data);
         audio.play('start', { gain: 0.55 });
@@ -882,7 +886,8 @@ async function start() {
 
 async function submitGuess(wordText) {
     var __oc15;
-    const text = String(((wordText !== null && wordText !== void 0 ? wordText : $('guess-input').value))).normalize('NFC').trim();
+    const rawText = String(((wordText !== null && wordText !== void 0 ? wordText : $('guess-input').value))).normalize('NFC').trim();
+    const text = locale === 'en' ? rawText.toLowerCase() : rawText;
     if (!text) {
         $('guess-input').focus();
         return;
@@ -901,7 +906,7 @@ async function submitGuess(wordText) {
                 audio.play('send', { gain: 0.4, duration: 0.14 });
                 const res = await request(`games/${game.id}/explore`, { text, locale });
                 $('guess-input').value = '';
-                storage.remove('draft');
+                storage.remove(langKey('draft'));
                 if (res.code === 'unknown_word') {
                     audio.play('wrong', { gain: 0.45, duration: 0.2 });
                     showTurnFeedback('unknown_word', { word: res.word }, 'error');
@@ -927,12 +932,12 @@ async function submitGuess(wordText) {
             const body = samePending ? pendingCommand.body : { text, locale, requestId: requestId(), expectedVersion: game.version };
             if (!samePending) {
                 pendingCommand = { path, body };
-                storage.set('pending', JSON.stringify(pendingCommand));
+                storage.set(langKey('pending'), JSON.stringify(pendingCommand));
             }
             audio.play('send', { gain: 0.4, duration: 0.15 });
             const data = await request(path, body);
             pendingCommand = null;
-            storage.remove('pending');
+            storage.remove(langKey('pending'));
 
             if ((((__oc13 = data.event) === null || __oc13 === void 0 ? void 0 : __oc13.code)) === 'unknown_word') {
                 audio.result(data.event, data.game);
@@ -941,14 +946,15 @@ async function submitGuess(wordText) {
             }
             if ((((__oc14 = data.event) === null || __oc14 === void 0 ? void 0 : __oc14.code)) === 'duplicate') {
                 $('guess-input').value = '';
-                storage.remove('draft');
+                storage.remove(langKey('draft'));
                 latestHighlightWord = data.event.word;
                 render(data, { effects: true });
                 showTurnFeedback('duplicate_word', { word: data.event.word }, 'info');
                 return;
             }
-            if ($('guess-input').value.trim() === text) $('guess-input').value = '';
-            storage.remove('draft');
+            const currentInput = $('guess-input').value.normalize('NFC').trim();
+            if ((locale === 'en' ? currentInput.toLowerCase() : currentInput) === text) $('guess-input').value = '';
+            storage.remove(langKey('draft'));
             showTurnFeedback(null);
             render(data, { effects: true });
         });
@@ -964,7 +970,7 @@ function buildShareText() {
     if (!game) return '';
     const roundNo = (state.round && state.round.roundNo) || game.roundNo || game.caseNo;
     const header = locale === 'en'
-        ? `ArcherLab Korean Semantle Round #${roundNo} Solved!`
+        ? `ArcherLab Semantle Round #${roundNo} Solved!`
         : `아처랩 시맨틀 라운드 #${roundNo} 정답!`;
     const lines = [header];
     if (settings.shareTime && Number.isFinite(game.solvedMs)) {
@@ -976,7 +982,7 @@ function buildShareText() {
     if (settings.shareMax && game.bestSimilarity !== null) {
         lines.push(locale === 'en' ? `Max similarity: ${game.bestSimilarity.toFixed(2)}` : `최고 유사도: ${game.bestSimilarity.toFixed(2)}`);
     }
-    lines.push('https://game.archerlab.dev/twenty-questions/');
+    lines.push(locale === 'en' ? 'https://game.archerlab.dev/twenty-questions/index-en' : 'https://game.archerlab.dev/twenty-questions/');
     return lines.join('\n');
 }
 
@@ -995,8 +1001,8 @@ async function copyShare() {
 }
 
 function renderNearestRows(filter = '') {
-    const q = filter.trim();
-    const list = q ? nearestWords.filter(item => item.word.includes(q)) : nearestWords;
+    const q = filter.trim().toLowerCase();
+    const list = q ? nearestWords.filter(item => item.word.toLowerCase().includes(q)) : nearestWords;
     const body = $('nearest-body');
     $('nearest-empty').hidden = list.length > 0;
     const frag = document.createDocumentFragment();
@@ -1128,7 +1134,7 @@ function showGuide() {
     openDialog('guide-dialog');
 }
 
-$('guess-input').value = storage.get('draft') || '';
+$('guess-input').value = storage.get(langKey('draft')) || '';
 $('start').addEventListener('click', start);
 
 $('guess-form').addEventListener('submit', event => {
@@ -1141,7 +1147,7 @@ $('send').addEventListener('pointerdown', event => {
 });
 
 $('guess-input').addEventListener('input', () => {
-    storage.set('draft', $('guess-input').value);
+    storage.set(langKey('draft'), $('guess-input').value);
 });
 $('guess-input').addEventListener('compositionstart', () => { composing = true; });
 $('guess-input').addEventListener('compositionend', () => { composing = false; });
@@ -1248,7 +1254,7 @@ document.querySelectorAll('[data-close]').forEach(button => {
 document.querySelectorAll('.languages a').forEach(link => {
     link.addEventListener('click', event => {
         if (busy) { event.preventDefault(); return; }
-        storage.set('draft', $('guess-input').value);
+        storage.set(langKey('draft'), $('guess-input').value);
     });
 });
 document.querySelectorAll('dialog').forEach(dialog => {
@@ -1337,7 +1343,7 @@ async function initialize() {
         if (previousView === 'game' && profile.game) {
             render(profile);
         } else if (!profile.game) {
-            storage.remove('game');
+            storage.remove(langKey('game'));
             setSessionView('title');
         }
     } catch (error) {

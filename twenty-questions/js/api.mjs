@@ -33,16 +33,19 @@ if (!/^[a-f0-9]{64}$/.test(token || '')) {
     storage.set('player', token);
 }
 
+export const pageLang = document.documentElement.lang === 'en' ? 'en' : 'ko';
+
 const local = ['localhost', '127.0.0.1'].includes(location.hostname);
 const apiBase = local ? ((((__oc3 = document.querySelector('meta[name="local-api"]')) === null || __oc3 === void 0 ? void 0 : __oc3.content)) || 'http://127.0.0.1:8787') : 'https://game-api.yama5993.workers.dev';
 
 export async function request(path, body, method = body ? 'POST' : 'GET') {
     if (navigator.onLine === false) throw Object.assign(new Error('offline'), { code: 'offline' });
+    const targetPath = pageLang === 'en' ? `${path}${path.indexOf('?') >= 0 ? '&' : '?'}lang=en` : path;
     let result;
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
     const timeoutId = controller ? setTimeout(() => controller.abort(), 15000) : null;
     try {
-        result = await fetch(`${apiBase}/twenty-questions/${path}`, {
+        result = await fetch(`${apiBase}/twenty-questions/${targetPath}`, {
             method,
             headers: {
                 Authorization: `Bearer ${token}`,

@@ -106,9 +106,9 @@
       "updatedAt": "2026-11-20"
     },
     "twenty-questions/index-en.html": {
-      "title": "Korean Semantle | Word Similarity Puzzle - ArcherLab",
-      "description": "Enter any Korean word to see a semantic similarity score (-100 to +100) showing how close its meaning and context are to the secret word. Everyone shares the same secret word every 6 hours (00:00, 06:00, 12:00, 18:00 KST), resetting automatically at cutoff.",
-      "gameName": "Korean Semantle",
+      "title": "Semantle | English Word Similarity Puzzle - ArcherLab",
+      "description": "Enter any English word to see a semantic similarity score (-100 to +100) showing how close its meaning and context are to the secret word. Everyone shares the same secret word every 6 hours (00:00, 06:00, 12:00, 18:00 KST / 15:00, 21:00, 03:00, 09:00 UTC), resetting automatically at cutoff.",
+      "gameName": "Semantle",
       "image": "https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png",
       "imageWidth": 1200,
       "imageHeight": 1200,

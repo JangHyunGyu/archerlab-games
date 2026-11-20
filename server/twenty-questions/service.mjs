@@ -1,6 +1,7 @@
 import {
     RULESET, SESSION_MS, roundSlotAt, previousRoundSlot, selectRoundSecretIndex,
-    normalizeWord, isValidHangulWord, sanitizePlayerName,
+    parseLang, rulesetFor, dbRoundIdFor,
+    normalizeWord, isValidWord, sanitizePlayerName,
     deriveSimScale, calibrateSim, nextRecord, fault, fingerprint, publicProfile,
 } from './core.mjs';
 import { initialize, limit, cleanExpiredRecords } from './database.mjs';
@@ -17,10 +18,11 @@ const SECURITY_HEADERS = {
 
 const nowMs = env => (typeof env?.NOW_FN === 'function' ? env.NOW_FN() : Date.now());
 
-export async function identity(request) {
+export async function identity(request, lang = 'ko') {
     const token = request.headers.get('Authorization')?.replace(/^Bearer /, '') || '';
     if (!TOKEN.test(token)) throw fault('unauthorized', 401);
-    return fingerprint(`semantle-player-v1:${token}`);
+    const prefix = lang === 'en' ? 'semantle-player-v1:en:' : 'semantle-player-v1:';
+    return fingerprint(`${prefix}${token}`);
 }
 
 async function ipFingerprint(request) {
@@ -86,9 +88,9 @@ async function readBody(request) {
     return body;
 }
 
-async function hydratePlayer(db, env, id, ipHash, runtime) {
+async function hydratePlayer(db, env, id, lang, ipHash, runtime) {
     const cache = runtime?.roomCache;
-    if (cache?.player && cache.player.id === id) {
+    if (cache?.player && cache.player.id === id && (cache.player.lang || 'ko') === lang) {
         return cache.player;
     }
     await runtime?.flushBatch?.();
@@ -97,8 +99,8 @@ async function hydratePlayer(db, env, id, ipHash, runtime) {
     if (!player) {
         const day = new Date(now).toISOString().slice(0, 10);
         await limit(db, `register:${day}:${ipHash}`, 20, now + SESSION_MS, now);
-        await db.prepare('INSERT OR IGNORE INTO sm_players(id, name, name_key, last_seen) VALUES (?, ?, NULL, ?)')
-            .bind(id, `Explorer ${id.slice(0, 5).toUpperCase()}`, now).run();
+        await db.prepare('INSERT OR IGNORE INTO sm_players(id, lang, name, name_key, last_seen) VALUES (?, ?, ?, NULL, ?)')
+            .bind(id, lang, `Explorer ${id.slice(0, 5).toUpperCase()}`, now).run();
         player = await db.prepare('SELECT * FROM sm_players WHERE id = ?').bind(id).first();
     } else if (!runtime) {
         await db.prepare('UPDATE sm_players SET last_seen = ? WHERE id = ?').bind(now, id).run();
@@ -107,15 +109,15 @@ async function hydratePlayer(db, env, id, ipHash, runtime) {
     return cache ? cache.player : player;
 }
 
-async function hydrateGame(db, player, id, runtime) {
+async function hydrateGame(db, player, id, lang, runtime) {
     if (!ID.test(id)) throw fault('not_found', 404);
     const cache = runtime?.roomCache;
-    if (cache?.game && cache.game.id === id && cache.game.player_id === player.id) {
+    if (cache?.game && cache.game.id === id && cache.game.player_id === player.id && (cache.game.lang || 'ko') === lang) {
         return cache.game;
     }
     await runtime?.flushBatch?.();
     const game = await db.prepare('SELECT * FROM sm_games WHERE id = ? AND player_id = ?').bind(id, player.id).first();
-    if (!game) throw fault('not_found', 404);
+    if (!game || (game.lang || 'ko') !== lang) throw fault('not_found', 404);
     if (cache) {
         const gRows = await db.prepare('SELECT request_id, guess_no, word, similarity, rank, version FROM sm_guesses WHERE game_id = ? ORDER BY guess_no ASC')
             .bind(game.id).all();
@@ -158,33 +160,36 @@ async function hydrateGuesses(db, game, runtime) {
     return rows.results || [];
 }
 
-async function ensureRoundForSlot(db, env, slot, vocab) {
-    let round = await db.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(slot.roundId).first();
+async function ensureRoundForSlot(db, env, slot, vocab, lang = 'ko') {
+    const roundId = dbRoundIdFor(lang, slot.roundId);
+    let round = await db.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(roundId).first();
     if (round) return round;
 
-    const secretId = await selectRoundSecretIndex(slot.slotIndex, vocab.secrets.length, env?.SEMANTLE_ROUND_SALT);
+    const baseSalt = env?.SEMANTLE_ROUND_SALT || 'archerlab-semantle-sync-k9v1';
+    const salt = lang === 'en' ? `${baseSalt}:en` : baseSalt;
+    const secretId = await selectRoundSecretIndex(slot.slotIndex, vocab.secrets.length, salt);
     const [answerWord, rawTop1, rawTop10, rawTop1000] = vocab.secrets[secretId];
-    const simScale = await deriveSimScale(slot.roundId, secretId);
+    const simScale = await deriveSimScale(roundId, secretId);
     const top1 = calibrateSim(rawTop1, simScale, false);
     const top10 = calibrateSim(rawTop10, simScale, false);
     const top1000 = calibrateSim(rawTop1000, simScale, false);
     const now = nowMs(env);
 
     await db.prepare(`INSERT OR IGNORE INTO sm_rounds(
-        round_id, round_no, secret_id, answer_word, sim_scale, top1, top10, top1000, started_at, ends_at, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-        .bind(slot.roundId, slot.roundNo, secretId, answerWord, simScale, top1, top10, top1000, slot.startedAt, slot.endsAt, now)
+        round_id, lang, round_no, secret_id, answer_word, sim_scale, top1, top10, top1000, started_at, ends_at, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .bind(roundId, lang, slot.roundNo, secretId, answerWord, simScale, top1, top10, top1000, slot.startedAt, slot.endsAt, now)
         .run();
 
-    round = await db.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(slot.roundId).first();
+    round = await db.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(roundId).first();
     if (!round) throw fault('service_unavailable', 503);
     return round;
 }
 
-async function loadRoundSummary(db, env, currentRound, vocab, runtime, { forceFresh = false } = {}) {
+async function loadRoundSummary(db, env, currentRound, vocab, lang, runtime, { forceFresh = false } = {}) {
     const now = nowMs(env);
     const cached = runtime?.roomCache?.roundSummary;
-    if (!forceFresh && cached && cached.roundId === currentRound.round_id && now >= cached.fetchedAt && (now - cached.fetchedAt) < ROUND_SUMMARY_TTL_MS) {
+    if (!forceFresh && cached && cached.roundId === currentRound.round_id && cached.lang === lang && now >= cached.fetchedAt && (now - cached.fetchedAt) < ROUND_SUMMARY_TTL_MS) {
         return cached.summary;
     }
 
@@ -206,21 +211,23 @@ async function loadRoundSummary(db, env, currentRound, vocab, runtime, { forceFr
     }));
 
     const prevSlot = previousRoundSlot({ startedAt: currentRound.started_at });
-    let prevRound = await db.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(prevSlot.roundId).first();
+    const prevRoundId = dbRoundIdFor(lang, prevSlot.roundId);
+    let prevRound = await db.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(prevRoundId).first();
     if (!prevRound && currentRound.round_no > 1 && vocab.secrets.length > 1) {
-        prevRound = await ensureRoundForSlot(db, env, prevSlot, vocab);
+        prevRound = await ensureRoundForSlot(db, env, prevSlot, vocab, lang);
     }
 
     const previous = (prevRound && prevRound.ends_at <= now)
         ? {
-            id: prevRound.round_id,
+            id: prevRound.round_id.replace(/^en:/, ''),
             roundNo: prevRound.round_no,
             answer: prevRound.answer_word,
         }
         : null;
 
     const summary = {
-        id: currentRound.round_id,
+        id: currentRound.round_id.replace(/^en:/, ''),
+        lang,
         roundNo: currentRound.round_no,
         startedAt: currentRound.started_at,
         endsAt: currentRound.ends_at,
@@ -233,6 +240,7 @@ async function loadRoundSummary(db, env, currentRound, vocab, runtime, { forceFr
     if (runtime?.roomCache) {
         runtime.roomCache.roundSummary = {
             roundId: currentRound.round_id,
+            lang,
             fetchedAt: now,
             summary,
         };
@@ -251,18 +259,19 @@ function serializeGuess(row) {
     };
 }
 
-function formatStatePayload(player, game, guessRows, roundSummary, now, event = null) {
+function formatStatePayload(player, game, guessRows, roundSummary, now, event = null, lang = 'ko') {
     const profile = publicProfile(player);
     profile.activeGame = (game && game.status === 'active') ? game.id : null;
     return {
         profile,
-        ruleset: RULESET,
+        lang,
+        ruleset: rulesetFor(lang),
         serverNow: now,
         round: roundSummary,
         event,
         game: game ? {
             id: game.id,
-            roundId: game.round_id,
+            roundId: (game.round_id || '').replace(/^en:/, ''),
             roundNo: game.case_no,
             caseNo: game.case_no,
             status: game.status,
@@ -288,21 +297,21 @@ function formatStatePayload(player, game, guessRows, roundSummary, now, event = 
     };
 }
 
-async function stateFor(db, env, player, game, currentRound, vocab, runtime, event = null, { forceFresh = false } = {}) {
+async function stateFor(db, env, player, game, currentRound, vocab, lang, runtime, event = null, { forceFresh = false } = {}) {
     const now = nowMs(env);
-    const roundSummary = await loadRoundSummary(db, env, currentRound, vocab, runtime, { forceFresh });
+    const roundSummary = await loadRoundSummary(db, env, currentRound, vocab, lang, runtime, { forceFresh });
     if (runtime?.roomCache) {
         const p = runtime.roomCache.player || player;
         const guessRows = game ? await hydrateGuesses(db, game, runtime) : [];
-        return formatStatePayload(p, game, guessRows, roundSummary, now, event);
+        return formatStatePayload(p, game, guessRows, roundSummary, now, event, lang);
     }
     const freshPlayer = await db.prepare('SELECT * FROM sm_players WHERE id = ?').bind(player.id).first();
     const guesses = game ? await hydrateGuesses(db, game, null) : [];
-    return formatStatePayload(freshPlayer, game, guesses, roundSummary, now, event);
+    return formatStatePayload(freshPlayer, game, guesses, roundSummary, now, event, lang);
 }
 
 // 이전 라운드의 활성 게임을 만료 처리한 뒤 현재 동기화 라운드에 플레이어를 참여 또는 복원
-async function joinCurrentRound(db, env, player, currentRound, runtime, requestId = null, payloadHash = null) {
+async function joinCurrentRound(db, env, player, currentRound, lang, runtime, requestId = null, payloadHash = null) {
     await runtime?.flushBatch?.();
     const existing = await db.prepare('SELECT * FROM sm_games WHERE player_id = ? AND round_id = ?')
         .bind(player.id, currentRound.round_id).first();
@@ -321,7 +330,7 @@ async function joinCurrentRound(db, env, player, currentRound, runtime, requestI
                 active_game: existing.status === 'active' ? existing.id : null,
             };
         }
-        runtime?.waitUntil?.(preloadVectors(env, existing.secret_id, existing.answer_word));
+        runtime?.waitUntil?.(preloadVectors(env, existing.secret_id, existing.answer_word, lang));
         return existing;
     }
 
@@ -332,9 +341,9 @@ async function joinCurrentRound(db, env, player, currentRound, runtime, requestI
         db.prepare("UPDATE sm_games SET status = 'expired', updated_at = ? WHERE player_id = ? AND status = 'active' AND (round_id IS NULL OR round_id != ?)")
             .bind(now, player.id, currentRound.round_id),
         db.prepare(`INSERT INTO sm_games(
-            id, player_id, round_id, case_no, secret_id, answer_word, sim_scale, top1, top10, top1000, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-            .bind(id, player.id, currentRound.round_id, currentRound.round_no, currentRound.secret_id, currentRound.answer_word, currentRound.sim_scale, currentRound.top1, currentRound.top10, currentRound.top1000, now, now),
+            id, player_id, lang, round_id, case_no, secret_id, answer_word, sim_scale, top1, top10, top1000, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+            .bind(id, player.id, lang, currentRound.round_id, currentRound.round_no, currentRound.secret_id, currentRound.answer_word, currentRound.sim_scale, currentRound.top1, currentRound.top10, currentRound.top1000, now, now),
         db.prepare('UPDATE sm_players SET active_game = ?, games_played = games_played + 1, last_seen = ? WHERE id = ?')
             .bind(id, now, player.id),
     ];
@@ -351,6 +360,7 @@ async function joinCurrentRound(db, env, player, currentRound, runtime, requestI
         runtime.roomCache.game = {
             id,
             player_id: player.id,
+            lang,
             round_id: currentRound.round_id,
             case_no: currentRound.round_no,
             secret_id: currentRound.secret_id,
@@ -375,12 +385,12 @@ async function joinCurrentRound(db, env, player, currentRound, runtime, requestI
         runtime.roomCache.guesses = [];
     }
 
-    runtime?.waitUntil?.(preloadVectors(env, currentRound.secret_id, currentRound.answer_word));
+    runtime?.waitUntil?.(preloadVectors(env, currentRound.secret_id, currentRound.answer_word, lang));
     if (nextGamesPlayed % 15 === 0) {
         const prune = cleanExpiredRecords(db, now).catch(() => {});
         runtime?.waitUntil ? runtime.waitUntil(prune) : void prune;
     }
-    return runtime?.roomCache ? runtime.roomCache.game : await hydrateGame(db, player, id, null);
+    return runtime?.roomCache ? runtime.roomCache.game : await hydrateGame(db, player, id, lang, null);
 }
 
 async function expireStalePlayerGame(db, env, player, gameId, currentRoundId, runtime) {
@@ -402,22 +412,22 @@ async function expireStalePlayerGame(db, env, player, gameId, currentRoundId, ru
     }
 }
 
-async function startGame(db, env, player, ipHash, body, currentRound, vocab, runtime) {
+async function startGame(db, env, player, ipHash, body, currentRound, vocab, lang, runtime) {
     if (!ID.test(body.requestId || '')) throw fault('invalid_request');
     await runtime?.flushBatch?.();
-    const hash = await fingerprint(JSON.stringify({ locale: body.locale || 'ko' }));
+    const hash = await fingerprint(JSON.stringify({ locale: body.locale || lang }));
     const old = await db.prepare('SELECT * FROM sm_requests WHERE player_id = ? AND request_id = ?')
         .bind(player.id, body.requestId).first();
     if (old) {
         if (old.payload_hash !== hash) throw fault('request_conflict', 409);
-        const existing = await hydrateGame(db, player, old.game_id, runtime);
+        const existing = await hydrateGame(db, player, old.game_id, lang, runtime);
         if (existing.round_id === currentRound.round_id) {
-            return stateFor(db, env, player, existing, currentRound, vocab, runtime, null, { forceFresh: true });
+            return stateFor(db, env, player, existing, currentRound, vocab, lang, runtime, null, { forceFresh: true });
         }
         await enforceDualLimit(db, env, 'start', player.id, ipHash, 60000, 12, 20);
-        const resetGame = await joinCurrentRound(db, env, player, currentRound, runtime);
-        const roundSummary = await loadRoundSummary(db, env, currentRound, vocab, runtime, { forceFresh: true });
-        return stateFor(db, env, player, resetGame, currentRound, vocab, runtime, {
+        const resetGame = await joinCurrentRound(db, env, player, currentRound, lang, runtime);
+        const roundSummary = await loadRoundSummary(db, env, currentRound, vocab, lang, runtime, { forceFresh: true });
+        return stateFor(db, env, player, resetGame, currentRound, vocab, lang, runtime, {
             code: 'round_reset',
             previousRoundNo: roundSummary.previous?.roundNo ?? null,
             previousAnswer: roundSummary.previous?.answer ?? null,
@@ -425,13 +435,13 @@ async function startGame(db, env, player, ipHash, body, currentRound, vocab, run
     }
 
     await enforceDualLimit(db, env, 'start', player.id, ipHash, 60000, 12, 20);
-    const createdGame = await joinCurrentRound(db, env, player, currentRound, runtime, body.requestId, hash);
-    return stateFor(db, env, player, createdGame, currentRound, vocab, runtime, { code: 'started' }, { forceFresh: true });
+    const createdGame = await joinCurrentRound(db, env, player, currentRound, lang, runtime, body.requestId, hash);
+    return stateFor(db, env, player, createdGame, currentRound, vocab, lang, runtime, { code: 'started' }, { forceFresh: true });
 }
 
-async function performGuess(db, env, player, ipHash, game, body, currentRound, vocab, runtime) {
+async function performGuess(db, env, player, ipHash, game, body, currentRound, vocab, lang, runtime) {
     if (!ID.test(body.requestId || '') || !Number.isInteger(body.expectedVersion)) throw fault('invalid_request');
-    const word = normalizeWord(body.text);
+    const word = normalizeWord(body.text, lang);
     if (!word || /[\u0000-\u001F]/u.test(word)) throw fault('invalid_request');
     if ([...word].length > 32) throw fault('input_too_long');
 
@@ -447,7 +457,7 @@ async function performGuess(db, env, player, ipHash, game, body, currentRound, v
             .bind(game.id, body.requestId).first();
     if (existingReq) {
         if (existingReq.word !== word) throw fault('request_conflict', 409);
-        return stateFor(db, env, player, game, currentRound, vocab, runtime, {
+        return stateFor(db, env, player, game, currentRound, vocab, lang, runtime, {
             code: existingReq.similarity === 10000 ? 'won' : 'guess',
             word: existingReq.word,
             guessNo: existingReq.guess_no,
@@ -464,13 +474,13 @@ async function performGuess(db, env, player, ipHash, game, body, currentRound, v
     await enforceDualLimit(db, env, 'guess10s', player.id, ipHash, 10000, 18, 25);
     await enforceDualLimit(db, env, 'guess1m', player.id, ipHash, 60000, 45, 65);
 
-    if (!isValidHangulWord(word)) {
-        return stateFor(db, env, player, game, currentRound, vocab, runtime, { code: 'unknown_word', word, requestId: body.requestId });
+    if (!isValidWord(word, lang)) {
+        return stateFor(db, env, player, game, currentRound, vocab, lang, runtime, { code: 'unknown_word', word, requestId: body.requestId });
     }
 
-    const scored = await scoreGuessWord(env, vocab, game.secret_id, word, game.answer_word);
+    const scored = await scoreGuessWord(env, vocab, game.secret_id, word, game.answer_word, lang);
     if (!scored) {
-        return stateFor(db, env, player, game, currentRound, vocab, runtime, { code: 'unknown_word', word, requestId: body.requestId });
+        return stateFor(db, env, player, game, currentRound, vocab, lang, runtime, { code: 'unknown_word', word, requestId: body.requestId });
     }
 
     const existingWord = runtime?.roomCache
@@ -478,7 +488,7 @@ async function performGuess(db, env, player, ipHash, game, body, currentRound, v
         : await db.prepare('SELECT * FROM sm_guesses WHERE game_id = ? AND word = ?')
             .bind(game.id, word).first();
     if (existingWord) {
-        return stateFor(db, env, player, game, currentRound, vocab, runtime, {
+        return stateFor(db, env, player, game, currentRound, vocab, lang, runtime, {
             code: 'duplicate',
             word: existingWord.word,
             guessNo: existingWord.guess_no,
@@ -579,7 +589,7 @@ async function performGuess(db, env, player, ipHash, game, body, currentRound, v
             total_guesses: (player.total_guesses || 0) + 1,
             last_seen: now,
         };
-        const roundSummary = await loadRoundSummary(db, env, currentRound, vocab, runtime);
+        const roundSummary = await loadRoundSummary(db, env, currentRound, vocab, lang, runtime);
         return formatStatePayload(runtime.roomCache.player, runtime.roomCache.game, runtime.roomCache.guesses, roundSummary, now, {
             code: 'guess',
             word,
@@ -590,7 +600,7 @@ async function performGuess(db, env, player, ipHash, game, body, currentRound, v
             ranked: false,
             unrankedReason: null,
             recordImproved: false,
-        });
+        }, lang);
     }
 
     await runtime?.flushBatch?.();
@@ -647,7 +657,7 @@ async function performGuess(db, env, player, ipHash, game, body, currentRound, v
     const updatedGame = runtime?.roomCache
         ? runtime.roomCache.game
         : await db.prepare('SELECT * FROM sm_games WHERE id = ?').bind(game.id).first();
-    return stateFor(db, env, player, updatedGame, currentRound, vocab, runtime, {
+    return stateFor(db, env, player, updatedGame, currentRound, vocab, lang, runtime, {
         code: scored.exact ? 'won' : 'guess',
         word,
         guessNo,
@@ -660,20 +670,20 @@ async function performGuess(db, env, player, ipHash, game, body, currentRound, v
     }, { forceFresh: scored.exact });
 }
 
-async function performExplore(db, env, player, ipHash, game, body, currentRound, runtime) {
+async function performExplore(db, env, player, ipHash, game, body, currentRound, lang, runtime) {
     if (game.status !== 'won') throw fault('forbidden', 403);
     if (game.round_id !== currentRound.round_id) {
         await expireStalePlayerGame(db, env, player, game.id, currentRound.round_id, runtime);
         throw fault('round_expired', 409);
     }
-    const word = normalizeWord(body.text);
+    const word = normalizeWord(body.text, lang);
     if (!word || /[\u0000-\u001F]/u.test(word)) throw fault('invalid_request');
     if ([...word].length > 32) throw fault('input_too_long');
     await enforceDualLimit(db, env, 'explore', player.id, ipHash, 60000, 120, 180);
 
-    if (!isValidHangulWord(word)) return { code: 'unknown_word', word };
-    const vocab = await loadVocab(env);
-    const scored = await scoreGuessWord(env, vocab, game.secret_id, word, game.answer_word);
+    if (!isValidWord(word, lang)) return { code: 'unknown_word', word };
+    const vocab = await loadVocab(env, lang);
+    const scored = await scoreGuessWord(env, vocab, game.secret_id, word, game.answer_word, lang);
     if (!scored) return { code: 'unknown_word', word };
     const simCenti = calibrateSim(scored.simCenti, game.sim_scale, scored.exact);
     return {
@@ -684,12 +694,12 @@ async function performExplore(db, env, player, ipHash, game, body, currentRound,
     };
 }
 
-export async function leaderboard(db, playerId) {
+export async function leaderboard(db, playerId, lang = 'ko') {
     const query = `SELECT id, name, name_key, sync_best_time_ms, sync_best_time_guesses, sync_wins, sync_best_streak, sync_best_at,
         ROW_NUMBER() OVER (ORDER BY sync_best_time_ms ASC, sync_best_time_guesses ASC, sync_best_at ASC, id ASC) AS rank
-        FROM sm_players WHERE sync_best_time_ms IS NOT NULL`;
-    const top = await db.prepare(`SELECT * FROM (${query}) LIMIT 50`).all();
-    const mine = playerId ? await db.prepare(`SELECT * FROM (${query}) WHERE id = ?`).bind(playerId).first() : null;
+        FROM sm_players WHERE lang = ? AND sync_best_time_ms IS NOT NULL`;
+    const top = await db.prepare(`SELECT * FROM (${query}) LIMIT 50`).bind(lang).all();
+    const mine = playerId ? await db.prepare(`SELECT * FROM (${query}) WHERE id = ?`).bind(lang, playerId).first() : null;
     const visible = row => row ? ({
         rank: row.rank,
         name: row.name,
@@ -701,44 +711,46 @@ export async function leaderboard(db, playerId) {
         turns: row.sync_best_time_guesses,
         own: row.id === playerId,
     }) : null;
-    return { entries: top.results.map(visible), mine: visible(mine), ruleset: RULESET };
+    return { entries: top.results.map(visible), mine: visible(mine), lang, ruleset: rulesetFor(lang) };
 }
 
 export async function handleRoomRequest(request, env, runtime = null) {
     try {
         await initialize(env.DB);
-        const id = await identity(request);
+        const url = new URL(request.url);
+        const lang = parseLang(url.searchParams.get('lang'));
+        const id = await identity(request, lang);
         const ipHash = await ipFingerprint(request);
-        const player = await hydratePlayer(env.DB, env, id, ipHash, runtime);
-        const pathname = new URL(request.url).pathname;
-        const path = pathname.replace(/^\/twenty-questions\/?/, '');
+        const player = await hydratePlayer(env.DB, env, id, lang, ipHash, runtime);
+        const path = url.pathname.replace(/^\/twenty-questions\/?/, '');
 
         if (request.method === 'GET' && path === 'leaderboard') {
             await runtime?.flushBatch?.();
-            return response(await leaderboard(env.DB, id));
+            return response(await leaderboard(env.DB, id, lang));
         }
 
         if (!dataReady(env)) throw fault('service_unavailable', 503);
-        const vocab = await loadVocab(env);
+        const vocab = await loadVocab(env, lang);
         const now = nowMs(env);
         const currentSlot = roundSlotAt(now);
-        const currentRound = await ensureRoundForSlot(env.DB, env, currentSlot, vocab);
+        const currentRound = await ensureRoundForSlot(env.DB, env, currentSlot, vocab, lang);
 
         if (request.method === 'GET' && path === 'rounds/previous/nearest') {
             const prevSlot = previousRoundSlot(currentSlot);
             if (prevSlot.endsAt > now) throw fault('forbidden', 403);
-            let prevRound = await env.DB.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(prevSlot.roundId).first();
+            const prevRoundId = dbRoundIdFor(lang, prevSlot.roundId);
+            let prevRound = await env.DB.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(prevRoundId).first();
             if (!prevRound) {
                 if (currentSlot.roundNo <= 1 || vocab.secrets.length <= 1) throw fault('not_found', 404);
-                prevRound = await ensureRoundForSlot(env.DB, env, prevSlot, vocab);
+                prevRound = await ensureRoundForSlot(env.DB, env, prevSlot, vocab, lang);
             }
             if (!prevRound || prevRound.ends_at > now) throw fault('forbidden', 403);
             const effectiveSecretId = (prevRound.answer_word && vocab.secretWordToId?.has(prevRound.answer_word))
                 ? vocab.secretWordToId.get(prevRound.answer_word)
                 : prevRound.secret_id;
-            const top1k = await loadSecretTop1k(env, effectiveSecretId, vocab);
+            const top1k = await loadSecretTop1k(env, effectiveSecretId, vocab, lang);
             return response({
-                roundId: prevRound.round_id,
+                roundId: prevRound.round_id.replace(/^en:/, ''),
                 roundNo: prevRound.round_no,
                 answer: prevRound.answer_word,
                 benchmarks: {
@@ -759,8 +771,8 @@ export async function handleRoomRequest(request, env, runtime = null) {
             if (!game && player.active_game) {
                 await expireStalePlayerGame(env.DB, env, player, player.active_game, currentRound.round_id, runtime);
             }
-            runtime?.waitUntil?.(preloadVectors(env, currentRound.secret_id, currentRound.answer_word));
-            return response(await stateFor(env.DB, env, player, game, currentRound, vocab, runtime, null, { forceFresh: true }));
+            runtime?.waitUntil?.(preloadVectors(env, currentRound.secret_id, currentRound.answer_word, lang));
+            return response(await stateFor(env.DB, env, player, game, currentRound, vocab, lang, runtime, null, { forceFresh: true }));
         }
 
         if (request.method === 'PATCH' && path === 'profile') {
@@ -770,7 +782,7 @@ export async function handleRoomRequest(request, env, runtime = null) {
             if (!name) throw fault('invalid_name');
             await runtime?.flushBatch?.();
             const nameKey = name.toLowerCase();
-            const dup = await env.DB.prepare('SELECT id FROM sm_players WHERE name_key = ? AND id != ?').bind(nameKey, id).first();
+            const dup = await env.DB.prepare('SELECT id FROM sm_players WHERE lang = ? AND name_key = ? AND id != ?').bind(lang, nameKey, id).first();
             if (dup) throw fault('name_taken', 409);
             try {
                 await env.DB.prepare('UPDATE sm_players SET name = ?, name_key = ? WHERE id = ?').bind(name, nameKey, id).run();
@@ -785,30 +797,30 @@ export async function handleRoomRequest(request, env, runtime = null) {
                 runtime.roomCache.roundSummary = null;
             }
             const game = await hydratePlayerRoundGame(env.DB, player, currentRound.round_id, runtime);
-            return response(await stateFor(env.DB, env, player, game, currentRound, vocab, runtime, null, { forceFresh: true }));
+            return response(await stateFor(env.DB, env, player, game, currentRound, vocab, lang, runtime, null, { forceFresh: true }));
         }
 
         if (request.method === 'POST' && path === 'games') {
-            return response(await startGame(env.DB, env, player, ipHash, await readBody(request), currentRound, vocab, runtime));
+            return response(await startGame(env.DB, env, player, ipHash, await readBody(request), currentRound, vocab, lang, runtime));
         }
 
         const match = /^games\/([a-zA-Z0-9_-]+)(?:\/(guesses|nearest|explore))?$/.exec(path);
         if (!match) throw fault('not_found', 404);
-        const game = await hydrateGame(env.DB, player, match[1], runtime);
+        const game = await hydrateGame(env.DB, player, match[1], lang, runtime);
 
         if (request.method === 'GET' && !match[2]) {
             if (game.round_id !== currentRound.round_id) {
                 await expireStalePlayerGame(env.DB, env, player, game.id, currentRound.round_id, runtime);
-                const freshGame = await joinCurrentRound(env.DB, env, player, currentRound, runtime);
-                const roundSummary = await loadRoundSummary(env.DB, env, currentRound, vocab, runtime, { forceFresh: true });
-                return response(await stateFor(env.DB, env, player, freshGame, currentRound, vocab, runtime, {
+                const freshGame = await joinCurrentRound(env.DB, env, player, currentRound, lang, runtime);
+                const roundSummary = await loadRoundSummary(env.DB, env, currentRound, vocab, lang, runtime, { forceFresh: true });
+                return response(await stateFor(env.DB, env, player, freshGame, currentRound, vocab, lang, runtime, {
                     code: 'round_reset',
                     previousRoundNo: roundSummary.previous?.roundNo ?? null,
                     previousAnswer: roundSummary.previous?.answer ?? null,
                 }, { forceFresh: true }));
             }
-            runtime?.waitUntil?.(preloadVectors(env, game.secret_id, game.answer_word));
-            return response(await stateFor(env.DB, env, player, game, currentRound, vocab, runtime, null, { forceFresh: true }));
+            runtime?.waitUntil?.(preloadVectors(env, game.secret_id, game.answer_word, lang));
+            return response(await stateFor(env.DB, env, player, game, currentRound, vocab, lang, runtime, null, { forceFresh: true }));
         }
 
         if (request.method === 'GET' && match[2] === 'nearest') {
@@ -816,7 +828,7 @@ export async function handleRoomRequest(request, env, runtime = null) {
             const effectiveSecretId = (game.answer_word && vocab.secretWordToId?.has(game.answer_word))
                 ? vocab.secretWordToId.get(game.answer_word)
                 : game.secret_id;
-            const top1k = await loadSecretTop1k(env, effectiveSecretId, vocab);
+            const top1k = await loadSecretTop1k(env, effectiveSecretId, vocab, lang);
             return response({
                 answer: game.answer_word,
                 benchmarks: {
@@ -833,11 +845,11 @@ export async function handleRoomRequest(request, env, runtime = null) {
         }
 
         if (request.method === 'POST' && match[2] === 'guesses') {
-            return response(await performGuess(env.DB, env, player, ipHash, game, await readBody(request), currentRound, vocab, runtime));
+            return response(await performGuess(env.DB, env, player, ipHash, game, await readBody(request), currentRound, vocab, lang, runtime));
         }
 
         if (request.method === 'POST' && match[2] === 'explore') {
-            return response(await performExplore(env.DB, env, player, ipHash, game, await readBody(request), currentRound, runtime));
+            return response(await performExplore(env.DB, env, player, ipHash, game, await readBody(request), currentRound, lang, runtime));
         }
 
         throw fault('not_found', 404);
@@ -859,26 +871,50 @@ export async function twentyQuestionsRoute(request, env, ctx = null) {
     try {
         if (request.method === 'OPTIONS') {
             result = new Response(null, { status: 204 });
-        } else if (new URL(request.url).pathname === '/twenty-questions/status' && request.method === 'GET') {
-            await initialize(env.DB);
-            ctx?.waitUntil?.(preloadVectors(env));
-            const now = nowMs(env);
-            const slot = roundSlotAt(now);
-            result = response({
-                ready: dataReady(env),
-                ruleset: RULESET,
-                serverNow: now,
-                round: {
-                    id: slot.roundId,
-                    roundNo: slot.roundNo,
-                    startedAt: slot.startedAt,
-                    endsAt: slot.endsAt,
-                },
-            });
         } else {
-            const playerId = await identity(request);
-            if (!env.TWENTY_GAMEPLAY) throw fault('service_unavailable', 503);
-            result = await env.TWENTY_GAMEPLAY.get(env.TWENTY_GAMEPLAY.idFromName(playerId)).fetch(request);
+            const url = new URL(request.url);
+            const lang = parseLang(url.searchParams.get('lang'));
+            if (url.pathname === '/twenty-questions/status' && request.method === 'GET') {
+                await initialize(env.DB);
+                const ready = dataReady(env);
+                const now = nowMs(env);
+                const slot = roundSlotAt(now);
+                if (!ready) {
+                    result = response({
+                        ready: false,
+                        lang,
+                        ruleset: rulesetFor(lang),
+                        serverNow: now,
+                        round: {
+                            id: slot.roundId,
+                            roundNo: slot.roundNo,
+                            startedAt: slot.startedAt,
+                            endsAt: slot.endsAt,
+                        },
+                    });
+                } else {
+                    const vocab = await loadVocab(env, lang);
+                    ctx?.waitUntil?.(preloadVectors(env, null, null, lang));
+                    result = response({
+                        ready: true,
+                        lang,
+                        ruleset: rulesetFor(lang),
+                        vocabCount: vocab.totalVocab,
+                        secretCount: vocab.secrets.length,
+                        serverNow: now,
+                        round: {
+                            id: slot.roundId,
+                            roundNo: slot.roundNo,
+                            startedAt: slot.startedAt,
+                            endsAt: slot.endsAt,
+                        },
+                    });
+                }
+            } else {
+                const playerId = await identity(request, lang);
+                if (!env.TWENTY_GAMEPLAY) throw fault('service_unavailable', 503);
+                result = await env.TWENTY_GAMEPLAY.get(env.TWENTY_GAMEPLAY.idFromName(playerId)).fetch(request);
+            }
         }
     } catch (error) {
         result = failure(error);

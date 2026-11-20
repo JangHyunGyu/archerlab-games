@@ -146,3 +146,84 @@ test('local built v2 FastText 1.50M-word pack resolves hot & cold probes accurat
     assert.equal(rank1Scored.rank, 1);
     assert.equal(formatSimilarity(rank1Scored.simCenti), top1k.list[0].similarity);
 });
+
+test('English hot-pack, cold-shard, scoreGuessWord, and ko/en cache separation work cleanly', async () => {
+    const { store } = createSemantleStore({ enSecretWords: ['happy'] });
+    const env = { SEMANTLE_STORE: store };
+    const koVocab = await loadVocab(env, 'ko');
+    const enVocab = await loadVocab(env, 'en');
+    assert.notEqual(koVocab.version, enVocab.version);
+    assert.ok(enVocab.totalVocab >= 1030);
+
+    const vHappy = await lookupWordVector(env, 'happy', 300, 'en');
+    const callsAfterHotLoad = store.rangeCalls.length;
+    const vJoy = await lookupWordVector(env, 'joy', 300, 'en');
+    assert.equal(store.rangeCalls.length, callsAfterHotLoad);
+    assert.ok(dotNormalized(vHappy, vJoy) > 0.7);
+
+    // Cold English word triggers 1 range read on semantle-en cold-0.bin, then LRU-cached
+    const callsBeforeCold = store.rangeCalls.length;
+    const vAir = await lookupWordVector(env, 'airfryer', 300, 'en');
+    assert.ok(vAir && vAir.length === 300);
+    assert.equal(store.rangeCalls.length, callsBeforeCold + 1);
+    await lookupWordVector(env, 'airfryer', 300, 'en');
+    assert.equal(store.rangeCalls.length, callsBeforeCold + 1);
+
+    const exact = await scoreGuessWord(env, enVocab, 0, 'happy', null, 'en');
+    assert.equal(exact.exact, true);
+    assert.equal(exact.rank, 0);
+
+    const ranked = await scoreGuessWord(env, enVocab, 0, 'joy', null, 'en');
+    assert.equal(ranked.rank, 1);
+
+    const coldOutside = await scoreGuessWord(env, enVocab, 0, 'airfryer', null, 'en');
+    assert.equal(coldOutside.rank, null);
+
+    // Cross-language probe misses cleanly without bleeding caches
+    assert.equal(await scoreGuessWord(env, enVocab, 0, '행복', null, 'en'), null);
+    assert.equal(await scoreGuessWord(env, koVocab, 0, 'happy', null, 'ko'), null);
+});
+
+const SCRATCH_EN_V2 = 'C:/Users/user/.gemini/antigravity/brain/8794a22b-c998-439a-8a5e-4fd209af8e96/scratch/semantle-en-build/out-en-v2';
+test('local built en-v2 FastText pack resolves hot & cold probes accurately (when present)', { skip: !fs.existsSync(`${SCRATCH_EN_V2}/secrets-meta.json`) }, async () => {
+    const meta = JSON.parse(fs.readFileSync(`${SCRATCH_EN_V2}/secrets-meta.json`, 'utf8'));
+    const cache = new Map();
+    const env = {
+        SEMANTLE_STORE: {
+            async get(key, opts) {
+                const name = key.split('/').pop();
+                const filePath = `${SCRATCH_EN_V2}/${name}`;
+                if (!fs.existsSync(filePath)) return null;
+                if (name.endsWith('.json')) {
+                    const text = fs.readFileSync(filePath, 'utf8');
+                    return { async json() { return JSON.parse(text); } };
+                }
+                if (!opts?.range) {
+                    if (!cache.has(filePath)) cache.set(filePath, fs.readFileSync(filePath));
+                    const b = cache.get(filePath);
+                    return { async arrayBuffer() { return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); } };
+                }
+                const fd = fs.openSync(filePath, 'r');
+                const buf = Buffer.alloc(opts.range.length);
+                fs.readSync(fd, buf, 0, opts.range.length, opts.range.offset);
+                fs.closeSync(fd);
+                return { async arrayBuffer() { return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength); } };
+            },
+        },
+    };
+    const vocab = await loadVocab(env, 'en');
+    assert.ok(vocab.totalVocab >= 300000);
+    assert.ok(meta.secrets.length >= 4500);
+
+    for (const probe of ['person', 'food', 'school', 'nature', 'happy', 'coffee', 'espresso', 'youtube']) {
+        const res = await scoreGuessWord(env, vocab, 0, probe, null, 'en');
+        assert.ok(res !== null, `Missing expected English word in en-v2 pack: ${probe}`);
+    }
+
+    const top1k = await loadSecretTop1k(env, 0, vocab, 'en');
+    assert.equal(top1k.list.length, 1000);
+    const rank1Word = top1k.list[0].word;
+    const rank1Scored = await scoreGuessWord(env, vocab, 0, rank1Word, null, 'en');
+    assert.equal(rank1Scored.rank, 1);
+    assert.equal(formatSimilarity(rank1Scored.simCenti), top1k.list[0].similarity);
+});

@@ -1,21 +1,44 @@
 export const RULESET = 'semantle-ko-sync-v1';
+export const LANGS = ['ko', 'en'];
+export const DEFAULT_LANG = 'ko';
 export const SESSION_MS = 24 * 60 * 60 * 1000;
 export const ROUND_MS = 6 * 60 * 60 * 1000;
 export const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 export const ROUND_EPOCH_MS = Date.parse('2026-11-20T00:00:00+09:00');
 export const HANGUL_WORD_RE = /^[가-힣]{1,15}$/u;
+export const EN_WORD_RE = /^[a-z]{1,24}$/;
 export const MIN_RANKED_GUESSES = 2;
 export const MIN_RANKED_SOLVE_MS = 1500;
 const NAME_PATTERN = /^[\p{L}\p{N} ._-]{2,16}$/u;
 const INVISIBLE_CHARS = /[\u0000-\u001F\u007F-\u009F\u00AD\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/gu;
 const roundPermutationCache = new Map();
 
-export function normalizeWord(value) {
-    return String(value ?? '').normalize('NFC').trim();
+export function parseLang(raw) {
+    if (raw === null || raw === undefined || raw === '' || raw === 'ko') return 'ko';
+    if (raw === 'en') return 'en';
+    throw fault('invalid_request', 400);
+}
+
+export function rulesetFor(lang) {
+    return lang === 'en' ? 'semantle-en-sync-v1' : RULESET;
+}
+
+export function dbRoundIdFor(lang, slotRoundId) {
+    return lang === 'en' ? `en:${slotRoundId}` : slotRoundId;
+}
+
+export function normalizeWord(value, lang = 'ko') {
+    const normalized = String(value ?? '').normalize('NFC').trim();
+    return lang === 'en' ? normalized.toLowerCase() : normalized;
+}
+
+export function isValidWord(value, lang = 'ko') {
+    const word = normalizeWord(value, lang);
+    return lang === 'en' ? EN_WORD_RE.test(word) : HANGUL_WORD_RE.test(word);
 }
 
 export function isValidHangulWord(value) {
-    return HANGUL_WORD_RE.test(normalizeWord(value));
+    return isValidWord(value, 'ko');
 }
 
 // 제어문자·보이지 않는 공백·방향 전환 문자를 제거하고 표시 이름을 검증

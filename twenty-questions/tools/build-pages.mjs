@@ -2,6 +2,11 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { messages } from '../js/i18n.mjs';
 
+const STARTER_CHIPS = {
+    ko: ['사람', '음식', '학교', '자연', '기쁘다'],
+    en: ['person', 'food', 'school', 'nature', 'happy'],
+};
+
 const directory = fileURLToPath(new URL('../', import.meta.url));
 const escape = text => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
 const skinIcon = (name, size = 22) =>
@@ -12,6 +17,9 @@ for (const locale of ['ko', 'en']) {
     const en = locale === 'en';
     const url = `https://game.archerlab.dev/twenty-questions/${en ? 'index-en' : ''}`;
     const text = key => escape(t[key]);
+    const starterChipsHtml = STARTER_CHIPS[locale]
+        .map(word => `<button type="button" class="starter-chip" data-word="${word}">${word}</button>`)
+        .join('\n              ');
     const html = `<!DOCTYPE html>
 <html lang="${locale}" data-theme="dark">
 <head>
@@ -37,10 +45,10 @@ for (const locale of ['ko', 'en']) {
   <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': ['VideoGame', 'WebApplication'], name: t.title, description: `${t.intro} ${t.rules}`, url, image: 'https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png', inLanguage: locale, applicationCategory: 'GameApplication', operatingSystem: 'Any', gamePlatform: ['Web Browser', 'Mobile Browser'], playMode: 'SinglePlayer', isAccessibleForFree: true, dateModified: '2026-11-20', author: { '@type': 'Organization', name: 'ArcherLab', url: 'https://archerlab.dev' } })}</script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261120-v7">
+  <link rel="stylesheet" href="css/style.css?v=20261120-v8">
   <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
   <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
-  <script type="module" src="js/main.mjs?v=20261120-v7"></script>
+  <script type="module" src="js/main.mjs?v=20261120-v8"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 </head>
 <body data-no-fullscreen data-screen="title">
@@ -204,11 +212,7 @@ for (const locale of ['ko', 'en']) {
             <h2>${text('empty_title')}</h2>
             <p>${text('empty_body')}</p>
             <div id="starter-chips" class="starter-chips" aria-label="${text('starter_label')}">
-              <button type="button" class="starter-chip" data-word="사람">사람</button>
-              <button type="button" class="starter-chip" data-word="음식">음식</button>
-              <button type="button" class="starter-chip" data-word="학교">학교</button>
-              <button type="button" class="starter-chip" data-word="자연">자연</button>
-              <button type="button" class="starter-chip" data-word="기쁘다">기쁘다</button>
+              ${starterChipsHtml}
             </div>
           </div>
         </div>

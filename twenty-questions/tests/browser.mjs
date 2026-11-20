@@ -21,7 +21,10 @@ const parseHmsSeconds = text => {
 
 try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 2 });
-    const h = harness({ secretWords: ['행복', '학교', '사과', '도서관'] });
+    const h = harness({
+        secretWords: ['행복', '학교', '사과', '도서관'],
+        enSecretWords: ['happy', 'school', 'apple', 'library'],
+    });
     await context.route('http://127.0.0.1:8787/twenty-questions/**', async route => {
         const original = route.request();
         const headers = {
@@ -158,16 +161,106 @@ try {
     await page.waitForFunction(() => document.querySelector('#guesses-body tr.latest-guess .word-text')?.textContent === '사람');
     assert.equal(await page.locator('#guess-count-display').textContent(), '2');
 
-    // Language switch preserves active game & draft
+    // Switch to English -> independent English wordpack & isolated 6h session on index-en
     await page.locator('#guess-input').fill('기쁨');
-    await page.locator('.languages a[lang="en"]').click();
-    await page.locator('#game-screen').waitFor({ state: 'visible' });
+    await Promise.all([
+        page.waitForURL(/index-en/),
+        page.locator('.languages a[lang="en"]').click(),
+    ]);
+    await page.waitForLoadState('networkidle');
+    await page.locator('#title-screen').waitFor({ state: 'visible' });
+    await page.waitForFunction(() => /^05:/.test(document.querySelector('#hero-countdown')?.textContent || ''));
     assert.equal(await page.locator('html').getAttribute('lang'), 'en');
-    assert.equal(await page.locator('#guess-count-display').textContent(), '2');
-    assert.equal(await page.locator('#guess-input').inputValue(), '기쁨');
+    assert.equal(await page.locator('#game-title').textContent(), 'Semantle');
+    assert.doesNotMatch(await page.locator('body').textContent(), /Korean Semantle/);
+    assert.equal(await page.locator('.example-target').textContent(), 'If the secret is "coffee"');
+    assert.equal(await page.locator('#hero-solver').textContent(), 'None yet');
+    assert.equal(await page.locator('#start span:first-child').textContent(), 'Play Now');
+    await page.screenshot({ path: path.join(output, 'en-title-desktop.png'), fullPage: true });
+
+    await page.locator('#start').click();
+    await page.locator('#game-screen').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#guess-count-display').textContent(), '0');
+    assert.ok(await page.locator('.starter-chip[data-word="person"]').isVisible());
+
+    // Hangul word is rejected in English session without charging guessCount
+    await page.locator('#guess-input').fill('사람');
+    await page.locator('#send').click();
+    await page.locator('#turn-feedback[data-kind="error"]').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#guess-count-display').textContent(), '0');
+
+    // English starter chip & mixed-case guess normalization
+    await page.locator('.starter-chip[data-word="person"]').click();
+    await page.waitForFunction(() => document.querySelector('#guess-count-display')?.textContent === '1');
+    await page.locator('#guess-input').fill('Water');
+    await page.locator('#send').click();
+    await page.waitForFunction(() => document.querySelector('#guess-count-display')?.textContent === '2');
+    assert.equal(await page.locator('#guesses-body tr.latest-guess .word-text').textContent(), 'water');
     await page.screenshot({ path: path.join(output, 'en-game-desktop.png'), fullPage: true });
 
-    // Solve current round -> verify Option A clear time, multi-solver count, Top-1,000, post-win explore, All-Time Hall of Fame
+    // English lobby resume button transitions to 'Resume Round'
+    await page.locator('#home').click();
+    await page.locator('#title-screen').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#start span:first-child').textContent(), 'Resume Round');
+    await page.locator('#start').click();
+    await page.locator('#game-screen').waitFor({ state: 'visible' });
+
+    // Solve English round independently -> Top-1,000 filter, explore, post-win name & isolated English Hall of Fame
+    h.advanceMs(3000);
+    const enAnswer = h.row("SELECT answer_word FROM sm_games WHERE lang = 'en' ORDER BY created_at DESC LIMIT 1").answer_word;
+    await page.locator('#guess-input').fill(enAnswer);
+    await page.locator('#send').click();
+    await page.locator('#result-banner').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#result-answer').textContent(), enAnswer);
+    assert.equal(await page.locator('#current-solver-display').textContent(), 'Anonymous');
+    await page.screenshot({ path: path.join(output, 'en-won-desktop.png'), fullPage: true });
+
+    await page.locator('#open-nearest').click();
+    await page.locator('#nearest-dialog').waitFor({ state: 'visible' });
+    await page.waitForFunction(() => document.querySelectorAll('#nearest-body tr').length === 1000);
+    await page.locator('#nearest-filter').fill('Person');
+    assert.equal(await page.locator('#nearest-body tr').count(), 1);
+    await page.locator('#nearest-dialog [data-close]').click();
+
+    await page.locator('#guess-input').fill('tree');
+    await page.locator('#send').click();
+    await page.locator('#turn-feedback').waitFor({ state: 'visible' });
+
+    await page.locator('#result-name-form').waitFor({ state: 'visible' });
+    await page.locator('#result-name-input').fill('EnChamp');
+    await page.locator('#result-name-save').click();
+    await page.waitForFunction(() => Boolean(document.querySelector('#result-name-status')?.textContent.trim()));
+    await page.locator('#open-ranking-result').click();
+    await page.locator('.leaderboard tbody tr').first().waitFor();
+    assert.equal((await page.locator('#leaderboard tbody tr').count()), 1);
+    assert.ok((await page.locator('#leaderboard tbody tr:first-child').textContent()).includes('EnChamp'));
+    await page.locator('#ranking-dialog [data-close]').click();
+
+    await page.locator('#home').click();
+    await page.locator('#title-screen').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#start span:first-child').textContent(), 'View Result');
+
+    // Switch back to Korean -> restores same-tab Korean #game-screen with solver, guesses, and draft intact; lobby also reflects '이어서 풀기'
+    await Promise.all([
+        page.waitForURL(url => url.pathname.endsWith('/twenty-questions/') || url.pathname.endsWith('/twenty-questions')),
+        page.locator('.languages a[lang="ko"]').click(),
+    ]);
+    await page.waitForLoadState('networkidle');
+    await page.locator('#game-screen').waitFor({ state: 'visible' });
+    await page.waitForFunction(() => document.querySelector('#current-solver-display')?.textContent === 'AlphaSolver');
+    assert.equal(await page.locator('html').getAttribute('lang'), 'ko');
+    assert.equal(await page.locator('#guess-count-display').textContent(), '2');
+    assert.equal(await page.locator('#guess-input').inputValue(), '기쁨');
+    await page.locator('#home').click();
+    await page.locator('#title-screen').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#hero-solver').textContent(), 'AlphaSolver');
+    assert.equal(await page.locator('#start span:first-child').textContent(), '이어서 풀기');
+    await page.locator('#start').click();
+    await page.locator('#game-screen').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#guess-count-display').textContent(), '2');
+    assert.equal(await page.locator('#guess-input').inputValue(), '기쁨');
+
+    // Solve Korean round -> verify Option A clear time, multi-solver count, Top-1,000, post-win explore, All-Time Hall of Fame
     h.advanceMs(4000);
     await page.locator('#guess-input').fill(roundAnswer);
     await page.locator('#send').click();
@@ -175,8 +268,7 @@ try {
     assert.equal(await page.locator('#result-answer').textContent(), roundAnswer);
     assert.match(await page.locator('#result-time').textContent(), /^00:\d{2}\.\d{2}$/);
     assert.match(await page.locator('#result-next-timer').textContent(), /^05:\d{2}:\d{2}$/);
-    assert.equal(await page.locator('#current-solver-display').textContent(), 'AlphaSolver +1');
-    await page.screenshot({ path: path.join(output, 'en-won-desktop.png'), fullPage: true });
+    assert.equal(await page.locator('#current-solver-display').textContent(), 'AlphaSolver 외 1명');
 
     await page.locator('#open-nearest').click();
     await page.locator('#nearest-dialog').waitFor({ state: 'visible' });
@@ -190,7 +282,7 @@ try {
     await page.locator('#turn-feedback').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#result-guesses').textContent(), '3');
 
-    // Post-win inline name registration inside result banner -> persists directly to Hall of Fame
+    // Post-win inline name registration inside result banner -> persists directly to Korean Hall of Fame
     await page.locator('#result-name-form').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#result-name-input').inputValue(), '');
     await page.locator('#result-name-input').fill('StarGazer');
@@ -220,9 +312,7 @@ try {
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
     await page.locator('#settings-dialog [data-close]').click();
 
-    // Switch back to Korean, verify lobby button says '결과 보기' when round is already won, then test live mid-game forced rollover at the 6-hour boundary
-    await page.locator('.languages a[lang="ko"]').click();
-    await page.locator('#result-banner').waitFor({ state: 'visible' });
+    // Verify lobby button says '결과 보기' when Korean round is already won, then test live mid-game forced rollover at the 6-hour boundary
     await page.locator('#home').click();
     await page.locator('#title-screen').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#start span:first-child').textContent(), '결과 보기');

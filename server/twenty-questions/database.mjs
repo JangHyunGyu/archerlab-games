@@ -1,7 +1,7 @@
 import { SCHEMA_TABLES, SCHEMA_INDEXES } from './schema.mjs';
 import { fault } from './core.mjs';
 
-export const SCHEMA_VERSION = 'semantle-20261120-v3';
+export const SCHEMA_VERSION = 'semantle-20261120-v4';
 
 const ready = new WeakMap();
 const rateBucketsByDb = new WeakMap();
@@ -37,7 +37,11 @@ export async function initialize(db) {
             const meta = await db.prepare("SELECT value FROM sm_meta WHERE key = 'schema_version'").first().catch(() => null);
             if (meta?.value === SCHEMA_VERSION) return;
             await db.batch(SCHEMA_TABLES.map(sql => db.prepare(sql)));
+            await ensureColumns(db, 'sm_rounds', [
+                ['lang', "TEXT NOT NULL DEFAULT 'ko'"],
+            ]);
             await ensureColumns(db, 'sm_players', [
+                ['lang', "TEXT NOT NULL DEFAULT 'ko'"],
                 ['name_key', 'TEXT'],
                 ['best_time_ms', 'INTEGER'],
                 ['best_time_guesses', 'INTEGER'],
@@ -50,6 +54,7 @@ export async function initialize(db) {
                 ['last_won_round_no', 'INTEGER'],
             ]);
             await ensureColumns(db, 'sm_games', [
+                ['lang', "TEXT NOT NULL DEFAULT 'ko'"],
                 ['round_id', 'TEXT'],
                 ['sim_scale', 'INTEGER NOT NULL DEFAULT 10000'],
                 ['solved_at', 'INTEGER'],
@@ -57,6 +62,7 @@ export async function initialize(db) {
                 ['unranked_reason', 'TEXT'],
             ]);
             await db.batch([
+                db.prepare('DROP INDEX IF EXISTS sm_player_name_unique'),
                 ...SCHEMA_INDEXES.map(sql => db.prepare(sql)),
                 db.prepare("INSERT INTO sm_meta(key, value) VALUES ('schema_version', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
                     .bind(SCHEMA_VERSION),
