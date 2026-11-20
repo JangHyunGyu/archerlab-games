@@ -1,5 +1,13 @@
 import { COLORS } from '../utils/Constants.js';
 
+const COMBAT_VFX_ATLAS_BY_PREFIX = {
+    effect_monster_hit: 'atlas_vfx_combat_hit',
+    effect_monster_crit: 'atlas_vfx_combat_hit',
+    effect_monster_death: 'atlas_vfx_combat_death',
+    effect_flame_burn: 'atlas_vfx_flame_burn',
+    effect_sanctuary_hit: 'atlas_vfx_sanctuary_hit',
+};
+
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
     // Shared particle emitter pool for death effects (class-level)
     
@@ -230,7 +238,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     static _playFrameVfx(scene, prefix, x, y, opts = {}) { var __oc33;
-        if (!(((__oc33 = scene === null || scene === void 0 ? void 0 : scene.textures) === null || __oc33 === void 0 ? void 0 : __oc33.exists(`${prefix}_0`)))) return false;
+        const textures = ((__oc33 = scene === null || scene === void 0 ? void 0 : scene.textures) ? __oc33 : null);
+        if (!textures) return false;
+        const atlasKey = COMBAT_VFX_ATLAS_BY_PREFIX[prefix];
+        const atlasTex = atlasKey && textures.exists(atlasKey) ? textures.get(atlasKey) : null;
+        const useAtlas = !!(atlasTex && atlasTex.has(`${prefix}_0`));
+        if (!useAtlas && !textures.exists(`${prefix}_0`)) return false;
 
         const {
             scale = 1,
@@ -244,7 +257,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const lastFrame = Math.max(0, frameCount - 1);
 
         try {
-            const sprite = scene.add.sprite(x, y, `${prefix}_0`)
+            const sprite = (useAtlas
+                ? scene.add.sprite(x, y, atlasKey, `${prefix}_0`)
+                : scene.add.sprite(x, y, `${prefix}_0`))
                 .setOrigin(0.5)
                 .setDepth(depth)
                 .setAlpha(alpha)
@@ -262,7 +277,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                         if (sprite.scene) sprite.destroy();
                         return;
                     }
-                    sprite.setTexture(`${prefix}_${frame}`);
+                    const nextKey = `${prefix}_${frame}`;
+                    if (useAtlas) {
+                        if (atlasTex.has(nextKey)) sprite.setFrame(nextKey);
+                    } else if (textures.exists(nextKey)) {
+                        sprite.setTexture(nextKey);
+                    }
                     if (frame >= lastFrame) {
                         scene.tweens.add({
                             targets: sprite,

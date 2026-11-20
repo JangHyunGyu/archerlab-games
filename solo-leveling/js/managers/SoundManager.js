@@ -155,9 +155,11 @@ export class SoundManager {
             shadowSoldierSlash: 1, shadowSoldierSlam: 2, shadowSoldierSpit: 1,
             mana: 2, essence: 2, critHit: 2, eliteKill: 3,
         };
-        // WAV Audio pools
+        // WAV Audio pools (with lightweight MP3 primary delivery + WAV fallback)
         this._pools = {};
         this._sfxSources = {};
+        this._sfxFallbacks = {};
+        this._supportsMp3 = null;
         this._sfxBuffers = new Map();
         this._sfxLoadingKeys = new Set();
         this._activeCharacterId = null;
@@ -190,12 +192,37 @@ export class SoundManager {
         }
     }
 
+    _canPlayMp3() {
+        if (this._supportsMp3 !== null) return this._supportsMp3;
+        if (typeof Audio === 'undefined') {
+            this._supportsMp3 = false;
+            return false;
+        }
+        try {
+            const probe = new Audio();
+            this._supportsMp3 = !!(probe && probe.canPlayType && probe.canPlayType('audio/mpeg'));
+        } catch (e) {
+            this._supportsMp3 = false;
+        }
+        return this._supportsMp3;
+    }
+
+    _preferredAudioSrc(wavSrc) {
+        if (this._canPlayMp3() && typeof wavSrc === 'string'
+            && wavSrc.startsWith('sounds/') && wavSrc.endsWith('.wav')) {
+            return 'sounds/sfx_mp3/' + wavSrc.slice('sounds/'.length, -4) + '.mp3';
+        }
+        return wavSrc;
+    }
+
     // WAV 오디오 풀 생성 (동시 재생 지원, 라운드로빈)
     _createPool(name, src, poolSize = 4) {
-        this._sfxSources[name] = src;
+        this._sfxFallbacks[name] = src;
+        const preferred = this._preferredAudioSrc(src);
+        this._sfxSources[name] = preferred;
         this._pools[name] = [];
         for (let i = 0; i < poolSize; i++) {
-            const audio = new Audio(src);
+            const audio = new Audio(preferred);
             audio.preload = 'none';
             audio._inUse = false;
             audio._onEnded = () => { audio._inUse = false; };
@@ -374,11 +401,26 @@ export class SoundManager {
                 if (this._sfxBuffers.has(name) || this._sfxLoadingKeys.has(name)) return;
                 this._sfxLoadingKeys.add(name);
                 try {
-                    const response = await fetch(src);
+                    let response = await fetch(src);
+                    if (!response.ok && this._sfxFallbacks[name] && this._sfxFallbacks[name] !== src) {
+                        response = await fetch(this._sfxFallbacks[name]);
+                    }
                     if (!response.ok) return;
                     const data = await response.arrayBuffer();
-                    const buffer = await loadContext.decodeAudioData(data.slice(0));
-                    if (this._destroyed || !this._initialized || this._sfxContext !== loadContext) return;
+                    let buffer = null;
+                    try {
+                        buffer = await loadContext.decodeAudioData(data.slice(0));
+                    } catch (decodeErr) {
+                        const fallback = this._sfxFallbacks[name];
+                        if (fallback && fallback !== src) {
+                            const fbRes = await fetch(fallback);
+                            if (fbRes.ok) {
+                                const fbData = await fbRes.arrayBuffer();
+                                buffer = await loadContext.decodeAudioData(fbData.slice(0));
+                            }
+                        }
+                    }
+                    if (!buffer || this._destroyed || !this._initialized || this._sfxContext !== loadContext) return;
                     this._sfxBuffers.set(name, buffer);
                 } catch (e) { /* pool playback handles fallback */ }
                 finally {

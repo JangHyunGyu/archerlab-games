@@ -1,5 +1,5 @@
 import { COLORS, BOSS_TYPES } from '../utils/Constants.js';
-import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v1';
+import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v2';
 
 const DEFAULT_BOSS_SPECIAL_COOLDOWN = { phase1: 6400, phase2: 5000 };
 const BOSS_SPECIAL_RETRY_DELAY = 700;

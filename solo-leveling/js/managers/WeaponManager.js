@@ -1,4 +1,4 @@
-import { BasicDagger } from '../weapons/BasicDagger.js';
+import { BasicDagger } from '../weapons/BasicDagger.js?v=20261120-fastload-v2';
 import { ShadowDagger } from '../weapons/ShadowDagger.js';
 import { ShadowSlash } from '../weapons/ShadowSlash.js';
 import { RulersAuthority } from '../weapons/RulersAuthority.js';

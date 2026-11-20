@@ -15,6 +15,12 @@ export class BasicDagger extends WeaponBase {
         this._currentMotionDuration = BASIC_ATTACK_MOTION_DURATION;
     }
 
+    _hasHitVfxTexture() {
+        const textures = this.scene && this.scene.textures;
+        if (!textures) return false;
+        return textures.exists('atlas_vfx_combat_hit') || textures.exists('effect_monster_hit_0');
+    }
+
     _getBlade(textureKey = 'proj_dagger_stab') {
         const isImageEffect = textureKey.startsWith('effect_basic_stab') ||
             textureKey.startsWith('char_skill_') ||
@@ -200,7 +206,7 @@ export class BasicDagger extends WeaponBase {
 
             this.applyDamage(enemy, this.getDamage(), hitX, hitY);
             this.playHitSound();
-            if (!this.scene.textures.exists('effect_monster_hit_0')) {
+            if (!this._hasHitVfxTexture()) {
                 this._spawnBloodBurst(enemy.x, enemy.y, baseAngle);
             }
         }
@@ -214,7 +220,7 @@ export class BasicDagger extends WeaponBase {
 
             this.applyDamage(enemy, this.getDamage(), x, y);
             this.playHitSound();
-            if (!this.scene.textures.exists('effect_monster_hit_0')) {
+            if (!this._hasHitVfxTexture()) {
                 this._spawnBloodBurst(enemy.x, enemy.y, impactAngle);
             }
         }
@@ -277,7 +283,7 @@ export class BasicDagger extends WeaponBase {
 
         const usesImageEffect = useEffectStab || useCharacterEffect;
         const fx = usesImageEffect ? null : this.scene.add.graphics().setDepth(11);
-        const impactFx = usesImageEffect || this.scene.textures.exists('effect_monster_hit_0')
+        const impactFx = usesImageEffect || this._hasHitVfxTexture()
             ? null
             : this.scene.add.graphics().setDepth(15);
         const history = [];
@@ -487,7 +493,7 @@ export class BasicDagger extends WeaponBase {
             const hitOriginY = this.player.y - 16;
             const hitPose = getPose(1, 0);
 
-            if (impactFx && !this.scene.textures.exists('effect_monster_hit_0')) {
+            if (impactFx && !this._hasHitVfxTexture()) {
                 impactFx.clear();
                 impactFx.lineStyle(2, 0xffffff, 0.95);
                 impactFx.lineBetween(
@@ -527,7 +533,7 @@ export class BasicDagger extends WeaponBase {
                 this.applyDamage(enemy, this.getDamage(), hitPose.tipX, hitPose.tipY);
                 this.playHitSound();
 
-                if (!this.scene.textures.exists('effect_monster_hit_0')) {
+                if (!this._hasHitVfxTexture()) {
                     this._spawnBloodBurst(enemy.x, enemy.y, baseAngle);
                 }
             }

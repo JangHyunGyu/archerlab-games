@@ -4,15 +4,21 @@ import { getCharacter } from '../utils/Characters.js';
 export class Player extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, characterId) { var __oc0, __oc1;
         const character = getCharacter(characterId);
+        const motionAtlasKey = `atlas_motion_${character.assetKey}`;
+        const hasMotionAtlas = !!(scene && scene.textures && scene.textures.exists(motionAtlasKey)
+            && scene.textures.get(motionAtlasKey).has('idle_0'));
         const characterTexture = `${character.texturePrefix}_idle_0`;
-        const initialTexture = scene.textures.exists(characterTexture) ? characterTexture : 'player_idle_0';
-        super(scene, x, y, initialTexture);
+        const initialTexture = hasMotionAtlas
+            ? motionAtlasKey
+            : (scene.textures.exists(characterTexture) ? characterTexture : 'player_idle_0');
+        super(scene, x, y, initialTexture, hasMotionAtlas ? 'idle_0' : undefined);
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
         this.character = character;
         this.characterId = character.id;
-        this.texturePrefix = scene.textures.exists(characterTexture) ? character.texturePrefix : 'player';
+        this._motionAtlasKey = hasMotionAtlas ? motionAtlasKey : null;
+        this.texturePrefix = (hasMotionAtlas || scene.textures.exists(characterTexture)) ? character.texturePrefix : 'player';
         this.baseStats = { ...PLAYER_BASE_STATS, ...(character.stats || {}) };
         this.visualBaseScale = character.visualScale || 0.92;
         this.setDepth(10);
@@ -100,6 +106,51 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     _createAnimations(scene) {
+        const atlasKey = this._motionAtlasKey;
+        const atlasTex = atlasKey && scene.textures.exists(atlasKey) ? scene.textures.get(atlasKey) : null;
+        if (atlasTex) {
+            const createAtlasAnim = (name, prefix, max, frameRate, repeat = -1) => {
+                const key = this._animKey(name);
+                if (scene.anims.exists(key)) return;
+                const animFrames = [];
+                for (let i = 0; i < max; i++) {
+                    const frameName = `${prefix}${i}`;
+                    if (atlasTex.has(frameName)) {
+                        animFrames.push({ key: atlasKey, frame: frameName });
+                    }
+                }
+                if (animFrames.length === 0) return;
+                scene.anims.create({
+                    key,
+                    frames: animFrames,
+                    frameRate,
+                    repeat,
+                });
+            };
+            createAtlasAnim('idle', 'idle_', 4, 5);
+            createAtlasAnim('idle_down', 'idle_down_', 4, 5);
+            createAtlasAnim('idle_right', 'idle_right_', 4, 5);
+            createAtlasAnim('idle_up', 'idle_up_', 4, 5);
+            createAtlasAnim('idle_left', 'idle_left_', 4, 5);
+            createAtlasAnim('walk', 'walk_', 8, 10);
+            createAtlasAnim('walk_down', 'walk_down_', 8, 14);
+            createAtlasAnim('walk_right', 'walk_right_', 8, 14);
+            createAtlasAnim('walk_up', 'walk_up_', 8, 14);
+            createAtlasAnim('walk_left', 'walk_left_', 8, 14);
+            createAtlasAnim('attack', 'attack_', 6, 18, 0);
+            createAtlasAnim('attack_down', 'attack_down_', 6, 20, 0);
+            createAtlasAnim('attack_right', 'attack_right_', 6, 20, 0);
+            createAtlasAnim('attack_up', 'attack_up_', 6, 20, 0);
+            createAtlasAnim('attack_left', 'attack_left_', 6, 20, 0);
+            for (const variant of this.character.basicAttackVariants || []) {
+                for (const direction of ['down', 'right', 'up', 'left']) {
+                    createAtlasAnim(`attack_${variant}_${direction}`, `attack_${variant}_${direction}_`, 6, 20, 0);
+                }
+            }
+            createAtlasAnim('hit', 'hit_', 2, 12, 0);
+            return;
+        }
+
         const textureKey = (name) => {
             const preferred = `${this.texturePrefix}_${name}`;
             if (scene.textures.exists(preferred)) return preferred;
@@ -386,10 +437,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this._lastAfterimageAt = time;
 
         try {
+            const frameName = this._motionAtlasKey && this.frame ? this.frame.name : undefined;
             const ghost = this.scene.add.sprite(
                 this.x - this.body.velocity.x * 0.035,
                 this.y - this.body.velocity.y * 0.035,
-                this.texture.key
+                this.texture.key,
+                frameName
             )
                 .setDepth(this.depth - 1)
                 .setAlpha(0.18)
@@ -415,10 +468,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         if (this._reducedMotion || !(((__oc15 = (__oc14 = this.scene) === null || __oc14 === void 0 ? void 0 : __oc14.add) === null || __oc15 === void 0 ? void 0 : __oc15.sprite)) || !(((__oc16 = this.texture) === null || __oc16 === void 0 ? void 0 : __oc16.key))) return;
         const angle = this._attackPose.angle || 0;
         try {
+            const frameName = this._motionAtlasKey && this.frame ? this.frame.name : undefined;
             const echo = this.scene.add.sprite(
                 this.x - Math.cos(angle) * 6,
                 this.y - Math.sin(angle) * 6,
-                this.texture.key
+                this.texture.key,
+                frameName
             )
                 .setDepth(this.depth - 1)
                 .setAlpha(0.24)

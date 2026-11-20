@@ -1,6 +1,6 @@
 import { ENEMY_TYPES, WAVE_CONFIG, GAME_WIDTH, GAME_HEIGHT, WORLD_SIZE } from '../utils/Constants.js';
-import { Enemy } from '../entities/Enemy.js';
-import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v1';
+import { Enemy } from '../entities/Enemy.js?v=20261120-fastload-v2';
+import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v2';
 
 const MAX_RESTORED_ENEMIES = 500;
 

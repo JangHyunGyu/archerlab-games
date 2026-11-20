@@ -1,6 +1,6 @@
 import { COLORS, BOSS_TYPES } from '../utils/Constants.js';
 import { ShadowSoldier } from '../entities/ShadowSoldier.js';
-import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v1';
+import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v2';
 
 export class ShadowArmyManager {
     constructor(scene) { var __oc0;

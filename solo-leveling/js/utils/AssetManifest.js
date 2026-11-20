@@ -133,9 +133,11 @@ const PLAYER_MOTION_NAMES = [
 
 // Character image URLs are otherwise stable across releases and can remain in
 // a browser/CDN cache after portraits or motion frames are rebuilt in place.
-export const CHARACTER_VISUAL_ASSET_VERSION = '20260714-integrated-character-motion-v2';
+export const CHARACTER_VISUAL_ASSET_VERSION = '20261120-opt-v2';
 export const CHARACTER_MOTION_ASSET_VERSION = '20261119-native-rgba-motion-v7';
-export const CHARACTER_COMBAT_VFX_ASSET_VERSION = '20261119-combat-vfx-polish-v18';
+export const CHARACTER_COMBAT_VFX_ASSET_VERSION = '20261120-opt-v2';
+export const ASSET_ATLAS_VERSION = '20261120-atlas-v1';
+export const RUNTIME_WEBP_VERSION = '20261120-opt-v2';
 export const CHARACTER_COMBAT_VFX_FRAME_COUNT = 6;
 
 const uiAsset = (key) => ({
@@ -221,14 +223,14 @@ const MENU_CORE_UI_ASSETS = [
     { key: 'preload_core', path: 'assets/ui/menu/preload_core.png' },
     { key: 'preload_bar_frame', path: 'assets/ui/menu/preload_bar_frame.png' },
     { key: 'preload_bar_fill', path: 'assets/ui/menu/preload_bar_fill.png' },
-    { key: 'shadow_gate_backdrop', path: 'assets/ui/menu/shadow_gate_backdrop.png' },
-    { key: 'env_shadow_portal', path: 'assets/environment/shadow_portal.png' },
-    { key: 'ui_skin_button', path: 'assets/ui/skin-button-v1.png' },
-    { key: 'ui_skin_panel', path: 'assets/ui/skin-panel-v1.png' },
-    { key: 'ui_crafted_button', path: 'assets/ui/crafted-button-v1.webp' },
-    { key: 'ui_crafted_frame', path: 'assets/ui/crafted-frame-v1.webp' },
-    { key: 'icon_loading_core', path: 'assets/ui/menu/icon_loading_core.png' },
-    { key: 'icon_error', path: 'assets/ui/menu/icon_error.png' },
+    { key: 'shadow_gate_backdrop', path: 'assets/ui/menu/shadow_gate_backdrop.png', cacheVersion: RUNTIME_WEBP_VERSION },
+    { key: 'env_shadow_portal', path: 'assets/environment/shadow_portal.png', cacheVersion: RUNTIME_WEBP_VERSION },
+    { key: 'ui_skin_button', path: 'assets/ui/skin-button-v1.png', cacheVersion: RUNTIME_WEBP_VERSION },
+    { key: 'ui_skin_panel', path: 'assets/ui/skin-panel-v1.png', cacheVersion: RUNTIME_WEBP_VERSION },
+    { key: 'ui_crafted_button', path: 'assets/ui/crafted-button-v1.webp', cacheVersion: RUNTIME_WEBP_VERSION },
+    { key: 'ui_crafted_frame', path: 'assets/ui/crafted-frame-v1.webp', cacheVersion: RUNTIME_WEBP_VERSION },
+    { key: 'icon_loading_core', path: 'assets/ui/menu/icon_loading_core.png', cacheVersion: RUNTIME_WEBP_VERSION },
+    { key: 'icon_error', path: 'assets/ui/menu/icon_error.png', cacheVersion: RUNTIME_WEBP_VERSION },
 ];
 
 function dedupeAssets(list) {
@@ -254,6 +256,7 @@ function buildCombatEffectAssets(keys) {
                 key: `effect_${key}_${i}`,
                 path: `assets/effects/combat/${filePrefix}_${i}.png`,
                 preferPng: key === 'monster_death',
+                cacheVersion: RUNTIME_WEBP_VERSION,
             });
         }
     }
@@ -268,10 +271,64 @@ function buildEnemyBossEffectAssets(keys) {
             out.push({
                 key: `effect_${key}_${i}`,
                 path: `assets/effects/enemy_boss/${key}_${i}.png`,
+                cacheVersion: RUNTIME_WEBP_VERSION,
             });
         }
     }
     return out;
+}
+
+export function getCharacterMotionAtlasAsset(characterId = getStoredCharacterId()) {
+    const character = getCharacter(characterId);
+    return {
+        type: 'atlas',
+        key: `atlas_motion_${character.assetKey}`,
+        path: `assets/atlases/motion_${character.assetKey}.webp`,
+        atlasURL: `assets/atlases/motion_${character.assetKey}.json`,
+        cacheVersion: ASSET_ATLAS_VERSION,
+    };
+}
+
+export function getSharedCombatVfxAtlasAssets() {
+    return [
+        {
+            type: 'atlas',
+            key: 'atlas_vfx_combat_hit',
+            path: 'assets/atlases/vfx_combat_hit.webp',
+            atlasURL: 'assets/atlases/vfx_combat_hit.json',
+            cacheVersion: ASSET_ATLAS_VERSION,
+        },
+        {
+            type: 'atlas',
+            key: 'atlas_vfx_combat_death',
+            path: 'assets/atlases/vfx_combat_death.webp',
+            atlasURL: 'assets/atlases/vfx_combat_death.json',
+            cacheVersion: ASSET_ATLAS_VERSION,
+        },
+    ];
+}
+
+export function getCharacterHitVfxAtlasAsset(characterId = getStoredCharacterId()) {
+    const id = getCharacter(characterId).id;
+    if (id === 'flameMage') {
+        return {
+            type: 'atlas',
+            key: 'atlas_vfx_flame_burn',
+            path: 'assets/atlases/vfx_flame_burn.webp',
+            atlasURL: 'assets/atlases/vfx_flame_burn.json',
+            cacheVersion: ASSET_ATLAS_VERSION,
+        };
+    }
+    if (id === 'sanctuaryHealer') {
+        return {
+            type: 'atlas',
+            key: 'atlas_vfx_sanctuary_hit',
+            path: 'assets/atlases/vfx_sanctuary_hit.webp',
+            atlasURL: 'assets/atlases/vfx_sanctuary_hit.json',
+            cacheVersion: ASSET_ATLAS_VERSION,
+        };
+    }
+    return null;
 }
 
 export function getCharacterMenuPortraitAsset(characterId = getStoredCharacterId()) {
@@ -335,35 +392,37 @@ export function getCharacterSkillAssetsForWeapon(weaponKey) {
 // 모든 캐릭터가 공통으로 쓰는 초기 인게임 필수 리소스
 export function getSharedGameplayCoreAssetList(options = {}) {
     const includeFloor = options.includeFloor !== false;
+    const useAtlases = options.useAtlases !== false;
     const list = [
-        ...Object.keys(PASSIVES).map(key => ({ key: `asset_icon_${key}`, path: `assets/ui/icons/${key}.png` })),
-        ...ITEM_KEYS.map(key => ({ key: `item_${key}`, path: `assets/items/${key}.png` })),
-        ...ENV_KEYS.map(key => ({ key: `env_${key}`, path: `assets/environment/${key}.png` })),
-        ...['goblin', 'antSoldier'].map(key => ({ key: `ai_enemy_${key}`, path: `assets/enemies/source/${key}.png` })),
-        ...buildCombatEffectAssets(['monster_hit', 'monster_crit', 'monster_death']),
+        ...Object.keys(PASSIVES).map(key => ({ key: `asset_icon_${key}`, path: `assets/ui/icons/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
+        ...ITEM_KEYS.map(key => ({ key: `item_${key}`, path: `assets/items/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
+        ...ENV_KEYS.map(key => ({ key: `env_${key}`, path: `assets/environment/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
+        ...['goblin', 'antSoldier'].map(key => ({ key: `ai_enemy_${key}`, path: `assets/enemies/source/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
+        ...(useAtlases ? getSharedCombatVfxAtlasAssets() : buildCombatEffectAssets(['monster_hit', 'monster_crit', 'monster_death'])),
     ];
     if (includeFloor) {
-        list.push({ key: 'ai_dungeon_floor', path: 'assets/background/bg_dungeon_floor.png' });
+        list.push({ key: 'ai_dungeon_floor', path: 'assets/background/bg_dungeon_floor.png', cacheVersion: RUNTIME_WEBP_VERSION });
     }
     return dedupeAssets(list);
 }
 
 // 선택 캐릭터 1명의 모션, 무기 아이콘, 1레벨 기본공격 이펙트
-export function getCharacterStarterAssetList(characterId = getStoredCharacterId()) {
+export function getCharacterStarterAssetList(characterId = getStoredCharacterId(), options = {}) {
     const character = getCharacter(characterId);
     const starterKey = getStarterWeaponKey(character.id);
     const weaponKeys = getCharacterWeaponKeys(character.id);
+    const useAtlases = options.useAtlases !== false;
     const list = [
         ...weaponKeys.map(key => ({
             key: `asset_icon_${key}`,
             path: `assets/ui/icons/${key}.png`,
             cacheVersion: CHARACTER_COMBAT_VFX_ASSET_VERSION,
         })),
-        ...getCharacterMotionAssets(character.id),
+        ...(useAtlases ? [getCharacterMotionAtlasAsset(character.id)] : getCharacterMotionAssets(character.id)),
         ...getCharacterSkillAssetsForWeapon(starterKey),
     ];
 
-    if (character.usesExistingPlayerMotion) {
+    if (!useAtlases && character.usesExistingPlayerMotion) {
         for (let i = 0; i < PLAYER_MOTION_NAMES.length; i++) {
             const name = PLAYER_MOTION_NAMES[i];
             list.push({
@@ -388,9 +447,17 @@ export function getCharacterStarterAssetList(characterId = getStoredCharacterId(
             });
         }
     } else if (character.id === 'flameMage') {
-        list.push(...buildCombatEffectAssets(['flame_burn']));
+        if (useAtlases) {
+            list.push(getCharacterHitVfxAtlasAsset(character.id));
+        } else {
+            list.push(...buildCombatEffectAssets(['flame_burn']));
+        }
     } else if (character.id === 'sanctuaryHealer') {
-        list.push(...buildCombatEffectAssets(['sanctuary_hit']));
+        if (useAtlases) {
+            list.push(getCharacterHitVfxAtlasAsset(character.id));
+        } else {
+            list.push(...buildCombatEffectAssets(['sanctuary_hit']));
+        }
     }
 
     return dedupeAssets(list);
@@ -433,7 +500,7 @@ function getResumeExtraAssetList(characterId, savedData) {
     if (savedTimeMin >= 8) enemySet.add('ironKnight');
     if (savedTimeMin >= 10) enemySet.add('demonWarrior');
     for (const enemyKey of enemySet) {
-        list.push({ key: `ai_enemy_${enemyKey}`, path: `assets/enemies/source/${enemyKey}.png` });
+        list.push({ key: `ai_enemy_${enemyKey}`, path: `assets/enemies/source/${enemyKey}.png`, cacheVersion: RUNTIME_WEBP_VERSION });
     }
     if (enemySet.has('darkMage')) {
         list.push(...buildEnemyBossEffectAssets(['dark_mage_orb']));
@@ -452,8 +519,8 @@ function getResumeExtraAssetList(characterId, savedData) {
 
     if (bossSet.size > 0) {
         list.push(
-            ...TELEGRAPH_KEYS.map(key => ({ key: `telegraph_${key}`, path: `assets/effects/telegraphs/${key}.png` })),
-            ...BOSS_SUPPORT_KEYS.map(key => ({ key: `boss_vfx_${key}`, path: `assets/effects/boss_support/${key}.png` })),
+            ...TELEGRAPH_KEYS.map(key => ({ key: `telegraph_${key}`, path: `assets/effects/telegraphs/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
+            ...BOSS_SUPPORT_KEYS.map(key => ({ key: `boss_vfx_${key}`, path: `assets/effects/boss_support/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
             ...buildEnemyBossEffectAssets(['boss_death_burst'])
         );
         const bossAttackMap = {
@@ -462,7 +529,7 @@ function getResumeExtraAssetList(characterId, savedData) {
             beru: ['boss_beru_acid', 'boss_death_beru'],
         };
         for (const bossKey of bossSet) {
-            list.push({ key: `ai_boss_${bossKey}`, path: `assets/bosses/source/${bossKey}.png` });
+            list.push({ key: `ai_boss_${bossKey}`, path: `assets/bosses/source/${bossKey}.png`, cacheVersion: RUNTIME_WEBP_VERSION });
             if (bossAttackMap[bossKey]) {
                 list.push(...buildEnemyBossEffectAssets(bossAttackMap[bossKey]));
             }
@@ -472,9 +539,9 @@ function getResumeExtraAssetList(characterId, savedData) {
     const shadows = Array.isArray(savedData.shadows) ? savedData.shadows : [];
     if (shadows.length > 0) {
         list.push(
-            ...SHADOW_KEYS.map(key => ({ key: `asset_shadow_${key}`, path: `assets/shadows/shadow_${key}.png` })),
-            ...ARISE_KEYS.map(key => ({ key: `asset_${key}`, path: `assets/effects/arise/${key}.png` })),
-            ...SHADOW_SOLDIER_VFX_KEYS.map(key => ({ key: `shadow_vfx_${key}`, path: `assets/effects/shadow_soldiers/${key}.png` }))
+            ...SHADOW_KEYS.map(key => ({ key: `asset_shadow_${key}`, path: `assets/shadows/shadow_${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
+            ...ARISE_KEYS.map(key => ({ key: `asset_${key}`, path: `assets/effects/arise/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
+            ...SHADOW_SOLDIER_VFX_KEYS.map(key => ({ key: `shadow_vfx_${key}`, path: `assets/effects/shadow_soldiers/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION }))
         );
     }
 
@@ -487,7 +554,7 @@ export function getGameplayCoreAssetList(characterId = getStoredCharacterId(), o
     const list = [
         ...getMenuCoreAssetList(character.id),
         ...getSharedGameplayCoreAssetList(options),
-        ...getCharacterStarterAssetList(character.id),
+        ...getCharacterStarterAssetList(character.id, options),
         ...getResumeExtraAssetList(character.id, options.savedData),
     ];
     return dedupeAssets(list);
@@ -511,9 +578,9 @@ export function getGameplayDeferredBatches(characterId = getStoredCharacterId(),
 
     const ariseAndShadows = character.id === 'shadowMonarch'
         ? [
-            ...ARISE_KEYS.map(key => ({ key: `asset_${key}`, path: `assets/effects/arise/${key}.png` })),
-            ...SHADOW_KEYS.map(key => ({ key: `asset_shadow_${key}`, path: `assets/shadows/shadow_${key}.png` })),
-            ...SHADOW_SOLDIER_VFX_KEYS.map(key => ({ key: `shadow_vfx_${key}`, path: `assets/effects/shadow_soldiers/${key}.png` })),
+            ...ARISE_KEYS.map(key => ({ key: `asset_${key}`, path: `assets/effects/arise/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
+            ...SHADOW_KEYS.map(key => ({ key: `asset_shadow_${key}`, path: `assets/shadows/shadow_${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
+            ...SHADOW_SOLDIER_VFX_KEYS.map(key => ({ key: `shadow_vfx_${key}`, path: `assets/effects/shadow_soldiers/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
         ]
         : [];
 
@@ -525,38 +592,38 @@ export function getGameplayDeferredBatches(characterId = getStoredCharacterId(),
         {
             id: 'enemies_mid_and_skills_late',
             assets: [
-                { key: 'ai_enemy_orc', path: 'assets/enemies/source/orc.png' },
-                { key: 'ai_enemy_iceBear', path: 'assets/enemies/source/iceBear.png' },
+                { key: 'ai_enemy_orc', path: 'assets/enemies/source/orc.png', cacheVersion: RUNTIME_WEBP_VERSION },
+                { key: 'ai_enemy_iceBear', path: 'assets/enemies/source/iceBear.png', cacheVersion: RUNTIME_WEBP_VERSION },
                 ...lateSkills,
             ],
         },
         {
             id: 'boss_igris_and_system',
             assets: [
-                { key: 'ai_boss_igris', path: 'assets/bosses/source/igris.png' },
-                ...TELEGRAPH_KEYS.map(key => ({ key: `telegraph_${key}`, path: `assets/effects/telegraphs/${key}.png` })),
-                ...BOSS_SUPPORT_KEYS.map(key => ({ key: `boss_vfx_${key}`, path: `assets/effects/boss_support/${key}.png` })),
+                { key: 'ai_boss_igris', path: 'assets/bosses/source/igris.png', cacheVersion: RUNTIME_WEBP_VERSION },
+                ...TELEGRAPH_KEYS.map(key => ({ key: `telegraph_${key}`, path: `assets/effects/telegraphs/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
+                ...BOSS_SUPPORT_KEYS.map(key => ({ key: `boss_vfx_${key}`, path: `assets/effects/boss_support/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
                 ...buildEnemyBossEffectAssets(['boss_igris_slash', 'boss_death_igris', 'boss_death_burst']),
                 ...ariseAndShadows,
-                { key: 'ui_modal_master', path: 'assets/ui/ui_modal_master.png' },
+                { key: 'ui_modal_master', path: 'assets/ui/ui_modal_master.png', cacheVersion: RUNTIME_WEBP_VERSION },
             ],
         },
         {
             id: 'enemies_late_and_boss_tusk',
             assets: [
-                { key: 'ai_enemy_stoneGolem', path: 'assets/enemies/source/stoneGolem.png' },
-                { key: 'ai_enemy_darkMage', path: 'assets/enemies/source/darkMage.png' },
+                { key: 'ai_enemy_stoneGolem', path: 'assets/enemies/source/stoneGolem.png', cacheVersion: RUNTIME_WEBP_VERSION },
+                { key: 'ai_enemy_darkMage', path: 'assets/enemies/source/darkMage.png', cacheVersion: RUNTIME_WEBP_VERSION },
                 ...buildEnemyBossEffectAssets(['dark_mage_orb']),
-                { key: 'ai_boss_tusk', path: 'assets/bosses/source/tusk.png' },
+                { key: 'ai_boss_tusk', path: 'assets/bosses/source/tusk.png', cacheVersion: RUNTIME_WEBP_VERSION },
                 ...buildEnemyBossEffectAssets(['boss_tusk_slam', 'boss_death_tusk']),
             ],
         },
         {
             id: 'enemies_endgame_and_boss_beru',
             assets: [
-                { key: 'ai_enemy_ironKnight', path: 'assets/enemies/source/ironKnight.png' },
-                { key: 'ai_enemy_demonWarrior', path: 'assets/enemies/source/demonWarrior.png' },
-                { key: 'ai_boss_beru', path: 'assets/bosses/source/beru.png' },
+                { key: 'ai_enemy_ironKnight', path: 'assets/enemies/source/ironKnight.png', cacheVersion: RUNTIME_WEBP_VERSION },
+                { key: 'ai_enemy_demonWarrior', path: 'assets/enemies/source/demonWarrior.png', cacheVersion: RUNTIME_WEBP_VERSION },
+                { key: 'ai_boss_beru', path: 'assets/bosses/source/beru.png', cacheVersion: RUNTIME_WEBP_VERSION },
                 ...buildEnemyBossEffectAssets(['boss_beru_acid', 'boss_death_beru']),
             ],
         },

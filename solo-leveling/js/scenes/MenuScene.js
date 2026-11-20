@@ -6,10 +6,10 @@ import {
     SYSTEM, UI_FONT_MONO, UI_FONT_KR,
     fs, uv, drawSystemPanel, padText,
 } from '../utils/Constants.js';
-import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v1';
-import { SoundManager } from '../managers/SoundManager.js?v=20261120-fastload-v1';
+import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v2';
+import { SoundManager } from '../managers/SoundManager.js?v=20261120-fastload-v2';
 import { t, LANG, LANGUAGES, setLang, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
-import { GameScene } from './GameScene.js?v=20260928-locale-exports-v1&ranking=20261006-client-exception-v1&levelup=20261009-audio-v3&orient=20261009-orient-v1&audit=20261009-v1&arise=20261010-v1&audiofix=20261018-cleanup-v1&fastload=20261120-v1';
+import { GameScene } from './GameScene.js?v=20260928-locale-exports-v1&ranking=20261006-client-exception-v1&levelup=20261009-audio-v3&orient=20261009-orient-v1&audit=20261009-v1&arise=20261010-v1&audiofix=20261018-cleanup-v1&fastload=20261120-v2';
 import { CHARACTER_DEFS, getCharacter, getStoredCharacterId, setStoredCharacterId, getCharacterRankingGameId } from '../utils/Characters.js';
 import {
     getCharacterMenuPortraitAsset,
@@ -17,7 +17,7 @@ import {
     getSharedGameplayCoreAssetList,
     getCharacterStarterAssetList,
     getGameplayCoreAssetList,
-} from '../utils/AssetManifest.js?v=20261120-fastload-v1';
+} from '../utils/AssetManifest.js?v=20261120-fastload-v2';
 import { getCharacterMenuLabels, getCharacterText } from '../utils/CharacterLocalization.js';
 
 export class MenuScene extends Phaser.Scene {
@@ -774,10 +774,11 @@ export class MenuScene extends Phaser.Scene {
         this._idleWarmupTimer = this.time.delayedCall(delayMs, () => {
             this._idleWarmupTimer = null;
             if (this._idleWarmupStopped || this._startingGame || !this.sys || !this.sys.isActive()) return;
+            const useAtlases = this._supportsWebP();
             this._enqueueIdleAssets([
                 ...getMenuDeferredAssetList(this.selectedCharacterId),
-                ...getSharedGameplayCoreAssetList({ includeFloor: !this._isMobileDevice() }),
-                ...getCharacterStarterAssetList(this.selectedCharacterId),
+                ...getSharedGameplayCoreAssetList({ includeFloor: !this._isMobileDevice(), useAtlases }),
+                ...getCharacterStarterAssetList(this.selectedCharacterId, { useAtlases }),
             ]);
             this._pumpIdleWarmupBatch();
         });
@@ -848,7 +849,7 @@ export class MenuScene extends Phaser.Scene {
         while (batch.length < 6 && this._idleWarmupQueue.length > 0) {
             const asset = this._idleWarmupQueue.shift();
             if (!asset || this.textures.exists(asset.key)) continue;
-            if (this._queueRuntimeImage(asset.key, asset.path, this._idleWarmupFallbacks, asset)) {
+            if (this._queueRuntimeAsset(asset, this._idleWarmupFallbacks)) {
                 batch.push(asset);
             }
         }
@@ -889,6 +890,19 @@ export class MenuScene extends Phaser.Scene {
         this.load.start();
     }
 
+    _queueRuntimeAsset(asset, fallbackMap = null) {
+        if (!asset || !asset.key || this.textures.exists(asset.key)) return false;
+        if (asset.type === 'atlas' && asset.atlasURL) {
+            const sepImg = asset.path.includes('?') ? '&' : '?';
+            const sepJson = asset.atlasURL.includes('?') ? '&' : '?';
+            const imgPath = asset.cacheVersion ? `${asset.path}${sepImg}v=${encodeURIComponent(asset.cacheVersion)}` : asset.path;
+            const jsonPath = asset.cacheVersion ? `${asset.atlasURL}${sepJson}v=${encodeURIComponent(asset.cacheVersion)}` : asset.atlasURL;
+            this.load.atlas(asset.key, imgPath, jsonPath);
+            return true;
+        }
+        return this._queueRuntimeImage(asset.key, asset.path, fallbackMap, asset);
+    }
+
     _queueRuntimeImage(key, pngPath, fallbackMap = null, options = {}) {
         if (this.textures.exists(key)) return false;
         const useWebP = !options.preferPng && this._supportsWebP() && pngPath.endsWith('.png');
@@ -912,14 +926,15 @@ export class MenuScene extends Phaser.Scene {
         if (!this.sys || !this.sys.isActive()) return false;
 
         const isMobile = this._isMobileDevice();
+        const useAtlases = this._supportsWebP();
         const savedData = options && options.savedData ? options.savedData : null;
         const fallbackMap = new Map();
         const pendingKeys = new Set();
-        const queued = getGameplayCoreAssetList(characterId, { includeFloor: !isMobile, savedData })
+        const queued = getGameplayCoreAssetList(characterId, { includeFloor: !isMobile, useAtlases, savedData })
             .filter((asset) => {
                 if (this.textures.exists(asset.key) || pendingKeys.has(asset.key)) return false;
                 pendingKeys.add(asset.key);
-                return this._queueRuntimeImage(asset.key, asset.path, fallbackMap, asset);
+                return this._queueRuntimeAsset(asset, fallbackMap);
             });
 
         if (queued.length === 0) {

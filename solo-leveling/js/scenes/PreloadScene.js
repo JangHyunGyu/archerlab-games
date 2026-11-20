@@ -1,6 +1,6 @@
-import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v1';
+import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v2';
 import { SYSTEM, UI_FONT_MONO, fs, uv, drawSystemPanel, fitText, padText } from '../utils/Constants.js';
-import { getMenuCoreAssetList } from '../utils/AssetManifest.js?v=20261120-fastload-v1';
+import { getMenuCoreAssetList } from '../utils/AssetManifest.js?v=20261120-fastload-v2';
 import { getStoredCharacterId } from '../utils/Characters.js';
 
 export class PreloadScene extends Phaser.Scene {

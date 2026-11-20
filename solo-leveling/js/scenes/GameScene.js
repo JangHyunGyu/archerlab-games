@@ -4,23 +4,23 @@ import {
     SYSTEM, UI_FONT_MONO, UI_FONT_KR, fs, uv, drawSystemPanel,
 } from '../utils/Constants.js';
 import { t, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
-import { Player } from '../entities/Player.js';
+import { Player } from '../entities/Player.js?v=20261120-fastload-v2';
 import { ShadowSoldier } from '../entities/ShadowSoldier.js';
-import { EnemyManager } from '../managers/EnemyManager.js?v=20261009-orient-v1&fastload=20261120-v1';
-import { WeaponManager } from '../managers/WeaponManager.js';
-import { ShadowArmyManager } from '../managers/ShadowArmyManager.js?v=20261010-arise-v1&fastload=20261120-v1';
-import { SoundManager } from '../managers/SoundManager.js?v=20261120-fastload-v1';
+import { EnemyManager } from '../managers/EnemyManager.js?v=20261009-orient-v1&fastload=20261120-v2';
+import { WeaponManager } from '../managers/WeaponManager.js?v=20261120-fastload-v2';
+import { ShadowArmyManager } from '../managers/ShadowArmyManager.js?v=20261010-arise-v1&fastload=20261120-v2';
+import { SoundManager } from '../managers/SoundManager.js?v=20261120-fastload-v2';
 import { XPOrbPool } from '../entities/XPOrb.js?v=20261009-levelup-v1';
 import { ItemDropManager } from '../entities/ItemDrop.js?v=20260928-locale-exports-v1';
-import { Boss } from '../entities/Boss.js?v=20261120-fastload-v1';
-import { Enemy } from '../entities/Enemy.js';
+import { Boss } from '../entities/Boss.js?v=20261120-fastload-v2';
+import { Enemy } from '../entities/Enemy.js?v=20261120-fastload-v2';
 import { HUD } from '../ui/HUD.js?v=20261009-orient-v1&audit=20261009-v1';
 import { SystemMessage } from '../ui/SystemMessage.js?v=20261009-orient-v1';
 import { StatusWindow } from '../ui/StatusWindow.js?v=20261009-orient-v1&audit=20261009-v1';
 import { MobileControls } from '../ui/MobileControls.js?v=20261009-orient-v1';
 import { DEFAULT_CHARACTER_ID, getCharacter, getCharacterRankingGameId, getCharacterWeaponKeys, getStarterWeaponKey } from '../utils/Characters.js';
-import { getGameplayDeferredBatches } from '../utils/AssetManifest.js?v=20261120-fastload-v1';
-import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v1';
+import { getGameplayDeferredBatches } from '../utils/AssetManifest.js?v=20261120-fastload-v2';
+import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v2';
 
 const SAVE_KEY = 'shadow_survival_save_v1';
 const SAVE_VERSION = 1;
@@ -233,6 +233,14 @@ export class GameScene extends Phaser.Scene {
 
     _queueDeferredImage(key, pngPath, options = {}) {
         if (!this.textures || this.textures.exists(key) || !this.load) return false;
+        if (options && options.type === 'atlas' && options.atlasURL) {
+            const sepImg = pngPath.includes('?') ? '&' : '?';
+            const sepJson = options.atlasURL.includes('?') ? '&' : '?';
+            const imgPath = options.cacheVersion ? `${pngPath}${sepImg}v=${encodeURIComponent(options.cacheVersion)}` : pngPath;
+            const jsonPath = options.cacheVersion ? `${options.atlasURL}${sepJson}v=${encodeURIComponent(options.cacheVersion)}` : options.atlasURL;
+            this.load.atlas(key, imgPath, jsonPath);
+            return true;
+        }
         const useWebP = !options.preferPng && this._supportsWebP() && pngPath.endsWith('.png');
         const rawPath = useWebP ? pngPath.replace(/\.png$/i, '.webp') : pngPath;
         const versionSuffix = options.cacheVersion
@@ -263,7 +271,7 @@ export class GameScene extends Phaser.Scene {
 
     _startDeferredAssetStreaming() {
         if (this._deferredStopped || this.isGameOver || !this.sys || !this.sys.isActive()) return;
-        const batches = getGameplayDeferredBatches(this._selectedCharacterId);
+        const batches = getGameplayDeferredBatches(this._selectedCharacterId, { useAtlases: this._supportsWebP() });
         const queue = [];
         for (let i = 0; i < batches.length; i++) {
             const assets = batches[i].assets || [];

@@ -63,6 +63,7 @@ function walkJs(dir, out = []) {
         const core = getGameplayCoreAssetList(id);
         const coreKeys = new Set(core.map(a => a.key));
         const ownWeaponKeys = new Set(getCharacterWeaponKeys(id));
+        const charDef = CHARACTER_DEFS[id];
 
         // Own icons & passive icons present
         for (const wk of ownWeaponKeys) {
@@ -79,12 +80,35 @@ function walkJs(dir, out = []) {
             assert.ok(coreKeys.has(`basic_attack_${starter.basicAttackEffectKey}_${f}`), `${id} core includes starter frame ${f}`);
         }
 
-        // Motion isolation
+        // Motion & combat VFX atlases active by default
+        assert.ok(coreKeys.has(`atlas_motion_${charDef.assetKey}`), `${id} core uses motion atlas`);
+        assert.ok(coreKeys.has('atlas_vfx_combat_hit'), `${id} core includes shared combat hit/crit atlas`);
+        assert.ok(coreKeys.has('atlas_vfx_combat_death'), `${id} core includes shared combat death atlas`);
+        if (id === 'flameMage') {
+            assert.ok(coreKeys.has('atlas_vfx_flame_burn'), 'flameMage core uses burn atlas');
+        }
+        if (id === 'sanctuaryHealer') {
+            assert.ok(coreKeys.has('atlas_vfx_sanctuary_hit'), 'sanctuaryHealer core uses sanctuary hit atlas');
+        }
+        assert.ok(![...coreKeys].some(k => k.startsWith('motion_player_')), `${id} atlas core excludes individual motion_player_*`);
+        assert.ok(!coreKeys.has(`${charDef.texturePrefix}_idle_0`), `${id} atlas core excludes individual idle_0`);
+        assert.ok(!coreKeys.has('effect_monster_hit_0'), `${id} atlas core excludes individual effect_monster_hit_0`);
+        assert.ok(!coreKeys.has('effect_monster_death_0'), `${id} atlas core excludes individual effect_monster_death_0`);
+
+        // Fallback mode (useAtlases: false) keeps individual frames isolated per character
+        const fallbackKeys = new Set(getGameplayCoreAssetList(id, { useAtlases: false }).map(a => a.key));
         if (id === 'shadowMonarch') {
-            assert.ok(coreKeys.has('motion_player_idle_0'), 'shadowMonarch core keeps motion_player_idle_0');
+            assert.ok(fallbackKeys.has('motion_player_idle_0'), 'shadowMonarch fallback core keeps motion_player_idle_0');
         } else {
-            assert.ok(![...coreKeys].some(k => k.startsWith('motion_player_')), `${id} core excludes motion_player_*`);
-            assert.ok(coreKeys.has(`${CHARACTER_DEFS[id].texturePrefix}_idle_0`), `${id} core keeps own idle_0`);
+            assert.ok(![...fallbackKeys].some(k => k.startsWith('motion_player_')), `${id} fallback core excludes motion_player_*`);
+            assert.ok(fallbackKeys.has(`${charDef.texturePrefix}_idle_0`), `${id} fallback core keeps own idle_0`);
+        }
+        assert.ok(fallbackKeys.has('effect_monster_hit_0'), `${id} fallback core keeps effect_monster_hit_0`);
+
+        // Verify no other character's atlas leaks into core
+        for (const otherId of Object.keys(CHARACTER_DEFS)) {
+            if (otherId === id) continue;
+            assert.ok(!coreKeys.has(`atlas_motion_${CHARACTER_DEFS[otherId].assetKey}`), `${id} core excludes ${otherId} motion atlas`);
         }
 
         // No other character weapon VFX in core OR deferred batches
@@ -144,6 +168,66 @@ function walkJs(dir, out = []) {
         assert.ok(resumeCoreKeys.has('asset_shadow_melee'), `${id} resume core includes saved shadow sprite`);
     }
 
+    // 3b. Validate all 9 generated atlas files (<= 2048x2048, required frames present)
+    const requiredAtlases = [
+        ...Object.values(CHARACTER_DEFS).map(c => ({
+            name: `motion_${c.assetKey}`,
+            mustHave: [
+                'idle_0', 'idle_down_0', 'idle_right_0', 'idle_up_0', 'idle_left_0',
+                'walk_0', 'walk_7', 'walk_down_0', 'walk_right_0', 'walk_up_0', 'walk_left_0',
+                'attack_0', 'attack_down_0', 'hit_0', 'hit_1',
+                ...(c.basicAttackVariants || []).flatMap(v => ['down', 'right', 'up', 'left'].map(d => `attack_${v}_${d}_0`)),
+            ],
+        })),
+        {
+            name: 'vfx_combat_hit',
+            mustHave: [
+                ...Array.from({ length: 12 }, (_, i) => `effect_monster_hit_${i}`),
+                ...Array.from({ length: 16 }, (_, i) => `effect_monster_crit_${i}`),
+            ],
+        },
+        {
+            name: 'vfx_combat_death',
+            mustHave: Array.from({ length: 16 }, (_, i) => `effect_monster_death_${i}`),
+        },
+        {
+            name: 'vfx_flame_burn',
+            mustHave: Array.from({ length: 12 }, (_, i) => `effect_flame_burn_${i}`),
+        },
+        {
+            name: 'vfx_sanctuary_hit',
+            mustHave: Array.from({ length: 16 }, (_, i) => `effect_sanctuary_hit_${i}`),
+        },
+    ];
+    for (const spec of requiredAtlases) {
+        const webpPath = path.join(root, 'assets', 'atlases', `${spec.name}.webp`);
+        const jsonPath = path.join(root, 'assets', 'atlases', `${spec.name}.json`);
+        assert.ok(fs.existsSync(webpPath), `missing atlas image ${spec.name}.webp`);
+        assert.ok(fs.existsSync(jsonPath), `missing atlas json ${spec.name}.json`);
+        const parsed = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+        assert.ok(parsed.meta && parsed.meta.size, `${spec.name} meta.size present`);
+        assert.ok(parsed.meta.size.w <= 2048 && parsed.meta.size.h <= 2048, `${spec.name} within 2048x2048 GPU budget`);
+        for (const frameName of spec.mustHave) {
+            const entry = parsed.frames && parsed.frames[frameName];
+            assert.ok(entry && entry.frame, `${spec.name} contains frame ${frameName}`);
+            const f = entry.frame;
+            assert.ok(f.x >= 0 && f.y >= 0 && f.x + f.w <= parsed.meta.size.w && f.y + f.h <= parsed.meta.size.h,
+                `${spec.name} frame ${frameName} within sheet bounds`);
+        }
+    }
+
+    // 3c. Validate all 60 SoundManager SFX have smaller MP3 copies under sounds/sfx_mp3/
+    const smSrc = fs.readFileSync(path.join(root, 'js', 'managers', 'SoundManager.js'), 'utf8');
+    const wavRefs = [...new Set([...smSrc.matchAll(/['"]([^'"]+\.wav)['"]/g)].map(m => m[1]))];
+    assert.equal(wavRefs.length, 60, 'expected 60 WAV refs in SoundManager.js');
+    for (const rel of wavRefs) {
+        const wavFile = path.join(root, 'sounds', rel);
+        const mp3File = path.join(root, 'sounds', 'sfx_mp3', rel.replace(/\.wav$/i, '.mp3'));
+        assert.ok(fs.existsSync(mp3File), `missing compressed MP3 ${mp3File}`);
+        assert.ok(fs.statSync(mp3File).size > 0 && fs.statSync(mp3File).size < fs.statSync(wavFile).size,
+            `sfx_mp3/${rel} must be strictly smaller than ${rel}`);
+    }
+
     // 4. Unified module query-strings across touched modules
     const byTarget = new Map();
     for (const file of walkJs(path.join(root, 'js'))) {
@@ -162,6 +246,10 @@ function walkJs(dir, out = []) {
         path.join('utils', 'AssetManifest.js'),
         path.join('utils', 'SpriteFactory.js'),
         path.join('managers', 'SoundManager.js'),
+        path.join('entities', 'Player.js'),
+        path.join('entities', 'Enemy.js'),
+        path.join('weapons', 'BasicDagger.js'),
+        path.join('managers', 'WeaponManager.js'),
     ]) {
         const versions = byTarget.get(checked);
         assert.ok(versions && versions.size === 1, `${checked} must not have duplicate module query-strings: ${JSON.stringify([...(versions || [])])}`);
@@ -178,7 +266,11 @@ function walkJs(dir, out = []) {
         'js/managers/EnemyManager.js',
         'js/managers/ShadowArmyManager.js',
         'js/managers/SoundManager.js',
+        'js/managers/WeaponManager.js',
         'js/entities/Boss.js',
+        'js/entities/Player.js',
+        'js/entities/Enemy.js',
+        'js/weapons/BasicDagger.js',
     ]) {
         const src = fs.readFileSync(path.join(root, rel), 'utf8')
             .replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')

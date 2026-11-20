@@ -181,8 +181,11 @@ export class SpriteFactory {
     static createGameplayCoreTextures(scene, options = {}) {
         const built = this._getBuiltSet(scene);
         const character = getCharacter(options.characterId || getStoredCharacterId());
-        const hasCustomCharSprite = !character.usesExistingPlayerMotion &&
-            scene.textures.exists(`${character.texturePrefix}_idle_0`);
+        const motionAtlasKey = `atlas_motion_${character.assetKey}`;
+        const hasMotionAtlas = !!(scene && scene.textures && scene.textures.exists(motionAtlasKey)
+            && scene.textures.get(motionAtlasKey).has('idle_0'));
+        const hasCustomCharSprite = hasMotionAtlas || (!character.usesExistingPlayerMotion
+            && scene.textures.exists(`${character.texturePrefix}_idle_0`));
 
         if (!hasCustomCharSprite) {
             if (!built.has('motion_player')) {
