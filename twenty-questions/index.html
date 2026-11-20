@@ -50,10 +50,10 @@
 }
     </script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261120-v8">
+  <link rel="stylesheet" href="css/style.css?v=20261120-v9">
   <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
   <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
-  <script type="module" src="js/main.mjs?v=20261120-v8"></script>
+  <script type="module" src="js/main.mjs?v=20261120-v9"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 
     <meta name="twitter:title" content="시맨틀 | 한국어 단어 유사도 추측 게임 - ArcherLab">
@@ -241,13 +241,6 @@
     <button class="dialog-close icon-button" data-close aria-label="닫기">✕</button>
     <h2 id="ranking-title">역대 명예의 전당</h2>
     <p class="dialog-intro">라운드 시작 시각(00·06·12·18시 KST) 기준으로 가장 빠르게 정답을 맞힌 순서대로 역대 순위가 정해져요 (시간이 같으면 추측 수가 적은 기록이 앞서요).</p>
-    <form id="name-form" class="name-form">
-      <label class="sr-only" for="name-input">표시 이름</label>
-      <input id="name-input" type="text" maxlength="16" placeholder="2~16자 이름" aria-label="표시 이름">
-      <button id="name-save" class="secondary-btn" type="submit">저장</button>
-      <p class="name-help">한글·영문·숫자 2~16자 (중복 이름 불가)</p>
-      <p id="name-status" class="name-status" role="status"></p>
-    </form>
     <div id="leaderboard" class="leaderboard"></div>
     <p id="own-rank" class="own-rank"></p>
   </dialog>

@@ -45,10 +45,10 @@ for (const locale of ['ko', 'en']) {
   <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': ['VideoGame', 'WebApplication'], name: t.title, description: `${t.intro} ${t.rules}`, url, image: 'https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png', inLanguage: locale, applicationCategory: 'GameApplication', operatingSystem: 'Any', gamePlatform: ['Web Browser', 'Mobile Browser'], playMode: 'SinglePlayer', isAccessibleForFree: true, dateModified: '2026-11-20', author: { '@type': 'Organization', name: 'ArcherLab', url: 'https://archerlab.dev' } })}</script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261120-v8">
+  <link rel="stylesheet" href="css/style.css?v=20261120-v9">
   <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
   <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
-  <script type="module" src="js/main.mjs?v=20261120-v8"></script>
+  <script type="module" src="js/main.mjs?v=20261120-v9"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 </head>
 <body data-no-fullscreen data-screen="title">
@@ -226,13 +226,6 @@ for (const locale of ['ko', 'en']) {
     <button class="dialog-close icon-button" data-close aria-label="${text('close')}">✕</button>
     <h2 id="ranking-title">${text('ranking')}</h2>
     <p class="dialog-intro">${text('ranking_rule')}</p>
-    <form id="name-form" class="name-form">
-      <label class="sr-only" for="name-input">${text('name_label')}</label>
-      <input id="name-input" type="text" maxlength="16" placeholder="${text('name_placeholder')}" aria-label="${text('name_label')}">
-      <button id="name-save" class="secondary-btn" type="submit">${text('save')}</button>
-      <p class="name-help">${text('name_help')}</p>
-      <p id="name-status" class="name-status" role="status"></p>
-    </form>
     <div id="leaderboard" class="leaderboard"></div>
     <p id="own-rank" class="own-rank"></p>
   </dialog>

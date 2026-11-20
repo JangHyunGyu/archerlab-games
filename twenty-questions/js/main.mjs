@@ -1,5 +1,5 @@
-import { messages, translation } from './i18n.mjs?v=20261120-v8';
-import { request, requestId, storage, reportException } from './api.mjs?v=20261120-v8';
+import { messages, translation } from './i18n.mjs?v=20261120-v9';
+import { request, requestId, storage, reportException } from './api.mjs?v=20261120-v9';
 import { GameAudio } from './audio.mjs';
 
 const locale = document.documentElement.lang === 'en' ? 'en' : 'ko';
@@ -1075,13 +1075,11 @@ function openDialog(id) {
     $(id).showModal();
 }
 
-async function showRanking(preserveStatus = false) {
+async function showRanking() {
     var __oc18, __oc19;
     if (!$('ranking-dialog').open) openDialog('ranking-dialog');
     $('leaderboard').textContent = t('loading');
     $('own-rank').textContent = '';
-    $('name-input').value = (state.profile && state.profile.hasCustomName) ? state.profile.name : '';
-    if (!preserveStatus) $('name-status').textContent = '';
     try {
         const data = await request('leaderboard');
         const table = document.createElement('table');
@@ -1191,7 +1189,7 @@ $('ranking-open').addEventListener('click', () => showRanking());
 $('guide-open').addEventListener('click', showGuide);
 $('settings-open').addEventListener('click', () => openDialog('settings-dialog'));
 
-async function saveDisplayName(inputEl, statusEl, refreshRanking = false) {
+async function saveDisplayName(inputEl, statusEl) {
     const cleaned = inputEl.value.normalize('NFKC').replace(/\s+/g, ' ').trim();
     const alnumCount = (cleaned.match(/[\p{L}\p{N}]/gu) || []).length;
     if (!/^[\p{L}\p{N} ._-]{2,16}$/u.test(cleaned) || alnumCount < 2) {
@@ -1202,21 +1200,15 @@ async function saveDisplayName(inputEl, statusEl, refreshRanking = false) {
         const data = await request('profile', { name: cleaned }, 'PATCH');
         render(data, { navigate: false });
         statusEl.textContent = t('saved_name');
-        if (refreshRanking) await showRanking(true);
     } catch (error) {
         statusEl.textContent = t(Object.prototype.hasOwnProperty.call(messages[locale], error.code) ? error.code : 'network_error');
     }
 }
 
-$('name-form').addEventListener('submit', async event => {
-    event.preventDefault();
-    await saveDisplayName($('name-input'), $('name-status'), true);
-});
-
 if ($('result-name-form')) {
     $('result-name-form').addEventListener('submit', async event => {
         event.preventDefault();
-        await saveDisplayName($('result-name-input'), $('result-name-status'), false);
+        await saveDisplayName($('result-name-input'), $('result-name-status'));
     });
 }
 

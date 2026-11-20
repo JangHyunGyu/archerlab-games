@@ -150,7 +150,8 @@
             outline-offset: 4px;
         }
         .game-thumb {
-            height: 180px;
+            width: 100%;
+            aspect-ratio: 1 / 1;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -158,7 +159,6 @@
             position: relative;
             overflow: hidden;
         }
-        .water-sort .game-thumb { height: auto; aspect-ratio: 1 / 1; }
         .game-thumb::before {
             content: '';
             position: absolute;
@@ -623,7 +623,7 @@
             </div>
         </a>
         <a href="twenty-questions/" class="game-card twenty-questions">
-            <div class="game-thumb"><picture><source srcset="twenty-questions/assets/ui/semantle-wide-480.webp?v=3 480w, twenty-questions/assets/ui/semantle-wide-960.webp?v=3 960w, twenty-questions/assets/ui/semantle-wide-1440.webp?v=3 1440w" sizes="(max-width: 640px) calc(100vw - 32px), (max-width: 1024px) calc(50vw - 40px), 380px" type="image/webp"><img src="twenty-questions/assets/ui/semantle-wide.png?v=3" alt="시맨틀 - 황금 의미 나침반과 크로노미터로 단어를 추적하는 추리 게임" loading="lazy" decoding="async" width="1440" height="810"></picture></div>
+            <div class="game-thumb"><picture><source srcset="twenty-questions/assets/ui/semantle-card-400.webp?v=3 400w, twenty-questions/assets/ui/semantle-card-800.webp?v=3 800w, twenty-questions/assets/ui/semantle-card-1200.webp?v=3 1200w" sizes="(max-width: 640px) calc(100vw - 32px), (max-width: 1024px) calc(50vw - 40px), 380px" type="image/webp"><img src="twenty-questions/assets/ui/semantle-card.png?v=3" alt="시맨틀 - 황금 의미 나침반과 크로노미터로 단어를 추적하는 추리 게임" loading="lazy" decoding="async" width="1200" height="1200"></picture></div>
             <div class="game-info"><h2>시맨틀</h2><p>글자가 아니라 의미 거리 점수와 순위로 숨겨진 한국어 단어를 가장 빠르게 맞히는 추리 게임.</p><span class="game-tag">추리 · 단어 유사도</span></div>
         </a>
     </main>

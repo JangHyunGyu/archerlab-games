@@ -41,12 +41,27 @@ try {
         }));
         await route.fulfill({ status: response.status, headers, body: await response.text() });
     });
+    await context.route(/^https:\/\/(?:www\.googletagmanager\.com|analytics\.google\.com|www\.google\.com\/g\/collect)\b/, route => route.abort());
 
     const page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
 
-    // Verify portal card responsive srcset & loaded artwork on game.archerlab.dev index.html
+    // Verify portal card responsive srcset, unified 1:1 card sizing matching water-sort, and loaded artwork
     await page.goto(origin + '/', { waitUntil: 'domcontentloaded' });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: path.join(output, 'portal-grid-desktop.png') });
+    const thumbRects = await page.locator('.game-card .game-thumb').evaluateAll(
+        nodes => nodes.map(n => {
+            const r = n.getBoundingClientRect();
+            return { width: r.width, height: r.height };
+        })
+    );
+    assert.equal(thumbRects.length, 11);
+    const baseHeight = thumbRects[0].height;
+    for (const rect of thumbRects) {
+        assert.ok(Math.abs(rect.width - rect.height) <= 2, `Expected 1:1 card thumbnail, got ${rect.width}x${rect.height}`);
+        assert.ok(Math.abs(rect.height - baseHeight) <= 2, `Expected uniform thumbnail height ~${baseHeight}, got ${rect.height}`);
+    }
     const cardImg = page.locator('.game-card.twenty-questions img');
     await cardImg.scrollIntoViewIfNeeded();
     await page.waitForFunction(() => {
@@ -59,12 +74,16 @@ try {
         currentSrc: img.currentSrc,
     }));
     assert.ok(cardState.complete && cardState.naturalWidth > 0, JSON.stringify(cardState));
-    assert.match(cardState.currentSrc, /semantle-wide-(?:480|960|1440)\.webp/);
+    assert.match(cardState.currentSrc, /semantle-card-(?:400|800|1200)\.webp/);
 
-    // Verify Semantle title screen, zero SVG usage, no give-up/ranking-tabs, countdown & previous answer display
+    // Verify Semantle title screen, zero SVG usage, no give-up/ranking-tabs/name-form, countdown & previous answer display
     await page.goto(origin + '/twenty-questions/', { waitUntil: 'networkidle' });
     assert.equal(await page.locator('svg').count(), 0, 'Zero SVG elements expected');
-    assert.equal(await page.locator('#give-up, #give-up-dialog, #next-game, #resume, .ranking-tab').count(), 0);
+    assert.equal(await page.locator('#give-up, #give-up-dialog, #next-game, #resume, #name-form, .ranking-tab').count(), 0);
+    await page.locator('#ranking-open').click();
+    await page.locator('#ranking-dialog').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#name-form').count(), 0);
+    await page.locator('#ranking-dialog [data-close]').click();
     assert.doesNotMatch(await page.locator('body').textContent(), /FastText|Wiktionary|서버 시간 검증/);
     assert.ok(await page.locator('.example-card').isVisible());
     assert.ok(await page.locator('#hero-prev-round').isVisible());
@@ -282,20 +301,26 @@ try {
     await page.locator('#turn-feedback').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#result-guesses').textContent(), '3');
 
-    // Post-win inline name registration inside result banner -> persists directly to Korean Hall of Fame
+    // Post-win inline name registration & editing inside result banner -> persists directly to Korean Hall of Fame
     await page.locator('#result-name-form').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#result-name-input').inputValue(), '');
     await page.locator('#result-name-input').fill('StarGazer');
     await page.locator('#result-name-save').click();
     await page.waitForFunction(() => Boolean(document.querySelector('#result-name-status')?.textContent.trim()));
+    await page.locator('#result-name-input').fill('StarGazerPro');
+    await Promise.all([
+        page.waitForResponse(res => res.url().includes('/twenty-questions/profile') && res.request().method() === 'PATCH' && res.status() === 200),
+        page.locator('#result-name-save').click(),
+    ]);
+    await page.waitForFunction(() => Boolean(document.querySelector('#result-name-status')?.textContent.trim()));
 
-    // Open Hall of Fame (All-Time only) -> verify StarGazer appears immediately, and modal rename works too
+    // Open Hall of Fame (All-Time only, read-only without #name-form) -> verify StarGazerPro appears
     await page.locator('#open-ranking-result').click();
+    await page.locator('#ranking-dialog').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#name-form').count(), 0);
     await page.locator('.leaderboard tbody tr').first().waitFor();
-    await page.waitForFunction(() => document.querySelector('#leaderboard tbody tr:nth-child(2)')?.textContent.includes('StarGazer'));
-    await page.locator('#name-input').fill('StarGazerPro');
-    await page.locator('#name-save').click();
     await page.waitForFunction(() => document.querySelector('#leaderboard tbody tr:nth-child(2)')?.textContent.includes('StarGazerPro'));
+    await page.screenshot({ path: path.join(output, 'ko-ranking-desktop.png') });
     await page.locator('#ranking-dialog [data-close]').click();
     assert.equal(await page.locator('#result-name-input').inputValue(), 'StarGazerPro');
 
