@@ -10,32 +10,30 @@ import {
 import { submitRanking } from '../../game-api-worker.js';
 
 test('6-hour KST round schedule aligns to 00:00, 06:00, 12:00, 18:00 and rotates secrets cleanly', async () => {
-    const s00 = roundSlotAt(Date.parse('2026-11-20T00:00:00+09:00'));
-    const s0559 = roundSlotAt(Date.parse('2026-11-20T05:59:59+09:00'));
-    const s06 = roundSlotAt(Date.parse('2026-11-20T06:00:00+09:00'));
     const s12 = roundSlotAt(Date.parse('2026-11-20T12:00:00+09:00'));
+    const s1759 = roundSlotAt(Date.parse('2026-11-20T17:59:59+09:00'));
     const s18 = roundSlotAt(Date.parse('2026-11-20T18:00:00+09:00'));
-    const s2359 = roundSlotAt(Date.parse('2026-11-20T23:59:59+09:00'));
     const sNext00 = roundSlotAt(Date.parse('2026-11-21T00:00:00+09:00'));
+    const sNext06 = roundSlotAt(Date.parse('2026-11-21T06:00:00+09:00'));
+    const sNext12 = roundSlotAt(Date.parse('2026-11-21T12:00:00+09:00'));
 
-    assert.equal(s00.roundId, '2026-11-20T00');
-    assert.equal(s00.roundNo, 1);
-    assert.equal(s0559.roundId, s00.roundId);
-    assert.equal(s06.roundId, '2026-11-20T06');
-    assert.equal(s06.roundNo, 2);
     assert.equal(s12.roundId, '2026-11-20T12');
-    assert.equal(s12.roundNo, 3);
+    assert.equal(s12.roundNo, 1);
+    assert.equal(s1759.roundId, s12.roundId);
     assert.equal(s18.roundId, '2026-11-20T18');
-    assert.equal(s18.roundNo, 4);
-    assert.equal(s2359.roundId, s18.roundId);
+    assert.equal(s18.roundNo, 2);
     assert.equal(sNext00.roundId, '2026-11-21T00');
-    assert.equal(sNext00.roundNo, 5);
+    assert.equal(sNext00.roundNo, 3);
+    assert.equal(sNext06.roundId, '2026-11-21T06');
+    assert.equal(sNext06.roundNo, 4);
+    assert.equal(sNext12.roundId, '2026-11-21T12');
+    assert.equal(sNext12.roundNo, 5);
     assert.equal(s12.endsAt - s12.startedAt, 6 * 3600 * 1000);
-    assert.equal(previousRoundSlot(s12).roundId, '2026-11-20T06');
+    assert.equal(previousRoundSlot(sNext00).roundId, '2026-11-20T18');
 
     const picked = new Set();
     for (let i = 0; i < 4; i++) {
-        picked.add(await selectRoundSecretIndex(s00.slotIndex + i, 4));
+        picked.add(await selectRoundSecretIndex(s12.slotIndex + i, 4));
     }
     assert.equal(picked.size, 4);
 });
@@ -123,8 +121,8 @@ test('guesses charge count cleanly while OOV and duplicates do not alter version
 });
 
 test('Option A round-open ranking, anti-cheat filters, current solver display, and name updates work end to end', async () => {
-    // 500ms after 12:00 KST round open: too fast (<1.5s) to block round-start bot sniping.
-    const roundStart = Date.parse('2026-11-20T12:00:00+09:00');
+    // 500ms after 00:00 KST round open (Round #3): too fast (<1.5s) to block round-start bot sniping.
+    const roundStart = Date.parse('2026-11-21T00:00:00+09:00');
     const h = harness({ secretWords: ['행복', '학교', '사과'], initialNow: roundStart + 500 });
     const tokenFastBot = '1'.repeat(64);
     const tokenSingle = '2'.repeat(64);
@@ -307,6 +305,28 @@ test('6-hour rollover expires old rounds, resets guess history, reveals previous
     h.db.sqlite.close();
 });
 
+test('Round #1 epoch boundary hides pre-epoch previous answer and disables round navigation arrows', async () => {
+    const h = harness({
+        secretWords: ['행복', '학교'],
+        initialNow: Date.parse('2026-11-20T12:00:15+09:00'),
+    });
+    const prof = await h.call('profile', null, 'GET');
+    assert.equal(prof.status, 200);
+    assert.equal(prof.data.round.id, '2026-11-20T12');
+    assert.equal(prof.data.round.roundNo, 1);
+    assert.equal(prof.data.round.previous, null);
+
+    const prevNearest = await h.call('rounds/previous/nearest', null, 'GET');
+    assert.equal(prevNearest.status, 404);
+
+    const lb = await h.call('leaderboard', null, 'GET');
+    assert.equal(lb.status, 200);
+    assert.equal(lb.data.roundNo, 1);
+    assert.equal(lb.data.hasPrev, false);
+    assert.equal(lb.data.hasNext, false);
+    h.db.sqlite.close();
+});
+
 test('1-secret test fixture does not leak answer through rounds/previous/nearest', async () => {
     const h = harness({ secretWords: ['행복'] });
     const prev = await h.call('rounds/previous/nearest', null, 'GET');
@@ -352,7 +372,7 @@ test('anti-cheat blocks duplicate nicknames, CSRF, prototype pollution, score-ev
     const statusJson = await okStatus.json();
     assert.equal(statusJson.ready, true);
     assert.equal(statusJson.ruleset, RULESET);
-    assert.equal(statusJson.round.roundId || statusJson.round.id, '2026-11-20T12');
+    assert.equal(statusJson.round.roundId || statusJson.round.id, '2026-11-21T00');
 
     const protoPollute = await h.fetch(new Request('https://api/twenty-questions/profile', {
         method: 'PATCH',

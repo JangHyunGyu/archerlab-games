@@ -210,20 +210,22 @@ async function loadRoundSummary(db, env, currentRound, vocab, lang, runtime, { f
         guesses: row.guess_count,
     }));
 
-    const prevSlot = previousRoundSlot({ startedAt: currentRound.started_at });
-    const prevRoundId = dbRoundIdFor(lang, prevSlot.roundId);
-    let prevRound = await db.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(prevRoundId).first();
-    if (!prevRound && currentRound.round_no > 1 && vocab.secrets.length > 1) {
-        prevRound = await ensureRoundForSlot(db, env, prevSlot, vocab, lang);
-    }
-
-    const previous = (prevRound && prevRound.ends_at <= now)
-        ? {
-            id: prevRound.round_id.replace(/^en:/, ''),
-            roundNo: prevRound.round_no,
-            answer: prevRound.answer_word,
+    let previous = null;
+    if (currentRound.round_no > 1) {
+        const prevSlot = previousRoundSlot({ startedAt: currentRound.started_at });
+        const prevRoundId = dbRoundIdFor(lang, prevSlot.roundId);
+        let prevRound = await db.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(prevRoundId).first();
+        if (!prevRound && vocab.secrets.length > 1) {
+            prevRound = await ensureRoundForSlot(db, env, prevSlot, vocab, lang);
         }
-        : null;
+        if (prevRound && prevRound.ends_at <= now) {
+            previous = {
+                id: prevRound.round_id.replace(/^en:/, ''),
+                roundNo: prevRound.round_no,
+                answer: prevRound.answer_word,
+            };
+        }
+    }
 
     const summary = {
         id: currentRound.round_id.replace(/^en:/, ''),
@@ -766,6 +768,7 @@ export async function handleRoomRequest(request, env, runtime = null) {
         const currentRound = await ensureRoundForSlot(env.DB, env, currentSlot, vocab, lang);
 
         if (request.method === 'GET' && path === 'rounds/previous/nearest') {
+            if (currentSlot.roundNo <= 1) throw fault('not_found', 404);
             const prevSlot = previousRoundSlot(currentSlot);
             if (prevSlot.endsAt > now) throw fault('forbidden', 403);
             const prevRoundId = dbRoundIdFor(lang, prevSlot.roundId);

@@ -377,7 +377,7 @@ export function harness(storeOptions = {}) {
     clearVectorCache();
     const db = database();
     const semantleStore = createSemantleStore(storeOptions);
-    let now = storeOptions.initialNow ?? Date.parse('2026-11-20T12:00:15+09:00');
+    let now = storeOptions.initialNow ?? Date.parse('2026-11-21T00:00:15+09:00');
     const env = { DB: db, SEMANTLE_STORE: semantleStore.store, NOW_FN: () => now };
     const queues = new Map();
 
