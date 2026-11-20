@@ -72,10 +72,10 @@
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
   const ZOMBIE_ASSET_VERSION = "20261004-proportions-v2";
-  const CHARACTER_ASSET_VERSION = "20261118-defenders-8f-v1";
-  const CHARACTER_CONTINUITY_ASSET_VERSION = "20261118-defender-continuity-8f-v1";
-  const FIREBOMB_RECOVERY_ASSET_VERSION = "20261118-firebomb-recovery-8f-v1";
-  const CROSSBOW_ASSET_VERSION = "20261118-crossbow-8f-v1";
+  const CHARACTER_ASSET_VERSION = "20261120-defenders-8f-v2";
+  const CHARACTER_CONTINUITY_ASSET_VERSION = "20261120-defender-continuity-8f-v2";
+  const FIREBOMB_RECOVERY_ASSET_VERSION = "20261120-firebomb-recovery-8f-v2";
+  const CROSSBOW_ASSET_VERSION = "20261120-crossbow-8f-v2";
   const CROSSBOW_AUDIO_VERSION = "20260719-freesound-crossbow-firing-v1";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const COMBAT_EFFECT_ASSET_VERSION = "20260712-combat-fx-v2";
@@ -164,7 +164,7 @@
   const FIRE_ZONE_VISUAL_SIZE_MULTIPLIER = 1.5;
   const FIRE_ZONE_MIN_BURN_DURATION = 0.65;
   const ZOMBIE_WALL_VISUAL_PADDING = 56;
-  const AIM_FORWARD_SNAP_ANGLE = Math.PI / 18;
+  const AIM_FORWARD_SNAP_ANGLE = Math.PI / 24;
   const AIM_POSES = [
     { key: "aim-10", angle: -Math.PI * 5 / 6 },
     { key: "aim-1030", angle: -Math.PI * 3 / 4 },
@@ -183,53 +183,53 @@
   // The commercial character sheets do not share one circular muzzle arc, so
   // a single pivot/reach pair cannot keep effects attached in every pose.
   const CHARACTER_MUZZLE_OFFSETS = {
-    a: [[-54, -181], [-50, -188], [-49, -192], [-41, -197], [20, -204], [41, -197], [49, -192], [50, -188], [54, -181]],
-    b: [[-51, -202], [-45, -202], [-41, -205], [-45, -212], [16, -213], [45, -212], [41, -205], [45, -202], [51, -202]],
-    c: [[-42, -196], [-36, -195], [-31, -198], [-30, -203], [19, -204], [30, -203], [31, -198], [36, -195], [42, -196]],
-    d: [[-30, -179], [-33, -182], [-22, -191], [-22, -192], [12, -190], [22, -192], [22, -191], [33, -182], [30, -179]],
-    e: [[-50, -207], [-40, -219], [-46, -218], [-43, -216], [16, -218], [43, -216], [46, -218], [40, -219], [50, -207]],
-    f: [[-72, -202], [-66, -202], [-88, -204], [-72, -207], [43, -208], [72, -207], [88, -204], [66, -202], [72, -202]],
-    g: [[-48, -219], [-46, -216], [-51, -217], [-40, -219], [15, -231], [40, -219], [51, -217], [46, -216], [48, -219]],
-    h: [[-49, -216], [-37, -221], [-35, -220], [-30, -219], [12, -222], [30, -219], [35, -220], [37, -221], [49, -216]]
+    a: [[-51, -177], [-50, -204], [-32, -205], [-28, -213], [4, -206], [28, -213], [32, -205], [50, -204], [51, -177]],
+    b: [[-44, -220], [-43, -229], [-38, -233], [-41, -233], [-2, -233], [41, -233], [38, -233], [43, -229], [44, -220]],
+    c: [[-48, -215], [-36, -225], [-31, -230], [-24, -229], [-2, -234], [24, -229], [31, -230], [36, -225], [48, -215]],
+    d: [[-49, -174], [-42, -189], [-32, -200], [-23, -209], [3, -214], [23, -209], [32, -200], [42, -189], [49, -174]],
+    e: [[-57, -218], [-54, -221], [-45, -225], [-30, -234], [-3, -233], [30, -234], [45, -225], [54, -221], [57, -218]],
+    f: [[-59, -180], [-49, -184], [-63, -191], [-35, -194], [23, -208], [35, -194], [63, -191], [49, -184], [59, -180]],
+    g: [[-9, -197], [-19, -234], [-28, -225], [-6, -237], [-14, -213], [6, -237], [28, -225], [19, -234], [9, -197]],
+    h: [[-29, -204], [-33, -217], [-21, -224], [-21, -219], [1, -241], [21, -219], [21, -224], [33, -217], [29, -204]]
   };
   // Per-frame barrel anchors keep muzzle flashes locked onto moving weapons
   // throughout recoil and cycling frames.
   const CHARACTER_FRAME_MUZZLE_OFFSETS = {
     b: {
-      1: [[-51, -202], [-45, -202], [-41, -205], [-45, -212], [16, -213], [45, -212], [41, -205], [45, -202], [51, -202]],
-      2: [[-38, -211], [-37, -216], [-31, -219], [-26, -220], [14, -220], [26, -220], [31, -219], [37, -216], [38, -211]],
-      3: [[-35, -204], [-42, -205], [-35, -209], [-26, -212], [16, -217], [26, -212], [35, -209], [42, -205], [35, -204]],
-      4: [[-42, -200], [-48, -194], [-41, -202], [-49, -200], [16, -213], [49, -200], [41, -202], [48, -194], [42, -200]]
+      1: [[-44, -220], [-43, -229], [-38, -233], [-41, -233], [-2, -233], [41, -233], [38, -233], [43, -229], [44, -220]],
+      2: [[-49, -223], [-41, -233], [-39, -234], [-40, -234], [-2, -235], [40, -234], [39, -234], [41, -233], [49, -223]],
+      3: [[-48, -223], [-41, -227], [-39, -234], [-40, -232], [-2, -236], [40, -232], [39, -234], [41, -227], [48, -223]],
+      4: [[-45, -223], [-43, -225], [-38, -234], [-38, -232], [-3, -235], [38, -232], [38, -234], [43, -225], [45, -223]]
     },
     c: {
-      1: [[-42, -196], [-36, -195], [-31, -198], [-30, -203], [19, -204], [30, -203], [31, -198], [36, -195], [42, -196]],
-      2: [[-37, -204], [-35, -205], [-37, -206], [-27, -206], [21, -206], [27, -206], [37, -206], [35, -205], [37, -204]],
-      3: [[-40, -195], [-37, -203], [-37, -199], [-32, -206], [20, -205], [32, -206], [37, -199], [37, -203], [40, -195]],
-      4: [[-40, -188], [-37, -194], [-36, -196], [-32, -202], [13, -206], [32, -202], [36, -196], [37, -194], [40, -188]]
+      1: [[-48, -215], [-36, -225], [-31, -230], [-24, -229], [-2, -234], [24, -229], [31, -230], [36, -225], [48, -215]],
+      2: [[-47, -223], [-35, -226], [-34, -237], [-25, -234], [-2, -243], [25, -234], [34, -237], [35, -226], [47, -223]],
+      3: [[-47, -216], [-36, -221], [-30, -229], [-23, -231], [-2, -233], [23, -231], [30, -229], [36, -221], [47, -216]],
+      4: [[-48, -215], [-36, -220], [-31, -228], [-23, -229], [-2, -229], [23, -229], [31, -228], [36, -220], [48, -215]]
     },
     d: {
-      1: [[-30, -179], [-33, -182], [-22, -191], [-22, -192], [12, -190], [22, -192], [22, -191], [33, -182], [30, -179]],
-      2: [[-15, -180], [-19, -194], [-12, -197], [-18, -194], [11, -198], [18, -194], [12, -197], [19, -194], [15, -180]],
-      3: [[-16, -176], [-24, -183], [-17, -191], [-14, -194], [12, -193], [14, -194], [17, -191], [24, -183], [16, -176]],
-      4: [[-28, -173], [-29, -186], [-32, -192], [-27, -192], [21, -191], [27, -192], [32, -192], [29, -186], [28, -173]]
+      1: [[-49, -174], [-42, -189], [-32, -200], [-23, -209], [3, -214], [23, -209], [32, -200], [42, -189], [49, -174]],
+      2: [[-45, -171], [-41, -184], [-28, -195], [-23, -203], [2, -213], [23, -203], [28, -195], [41, -184], [45, -171]],
+      3: [[-47, -172], [-41, -188], [-28, -195], [-25, -204], [2, -213], [25, -204], [28, -195], [41, -188], [47, -172]],
+      4: [[-49, -172], [-41, -187], [-30, -198], [-22, -204], [3, -215], [22, -204], [30, -198], [41, -187], [49, -172]]
     },
     e: {
-      1: [[-50, -207], [-40, -219], [-46, -218], [-43, -216], [16, -218], [43, -216], [46, -218], [40, -219], [50, -207]],
-      2: [[-48, -216], [-46, -220], [-41, -222], [-40, -223], [20, -223], [40, -223], [41, -222], [46, -220], [48, -216]],
-      3: [[-48, -208], [-50, -213], [-46, -207], [-46, -207], [15, -221], [46, -207], [46, -207], [50, -213], [48, -208]],
-      4: [[-52, -200], [-54, -208], [-46, -203], [-46, -206], [16, -217], [46, -206], [46, -203], [54, -208], [52, -200]]
+      1: [[-57, -218], [-54, -221], [-45, -225], [-30, -234], [-3, -233], [30, -234], [45, -225], [54, -221], [57, -218]],
+      2: [[-58, -220], [-54, -221], [-44, -225], [-31, -234], [-3, -233], [31, -234], [44, -225], [54, -221], [58, -220]],
+      3: [[-55, -220], [-54, -221], [-44, -225], [-30, -234], [-2, -234], [30, -234], [44, -225], [54, -221], [55, -220]],
+      4: [[-55, -217], [-54, -220], [-45, -225], [-31, -233], [-4, -231], [31, -233], [45, -225], [54, -220], [55, -217]]
     },
     g: {
-      1: [[-48, -219], [-46, -216], [-51, -217], [-40, -219], [15, -231], [40, -219], [51, -217], [46, -216], [48, -219]],
-      2: [[-51, -228], [-41, -228], [-44, -233], [-33, -223], [12, -201], [33, -223], [44, -233], [41, -228], [51, -228]],
-      3: [[-51, -216], [-43, -214], [-47, -220], [-34, -216], [13, -181], [34, -216], [47, -220], [43, -214], [51, -216]],
-      4: [[-62, -207], [-53, -209], [-53, -211], [-45, -215], [15, -231], [45, -215], [53, -211], [53, -209], [62, -207]]
+      1: [[-9, -197], [-19, -234], [-28, -225], [-6, -237], [-14, -213], [6, -237], [28, -225], [19, -234], [9, -197]],
+      2: [[-17, -214], [-18, -240], [-29, -241], [-5, -240], [-21, -221], [5, -240], [29, -241], [18, -240], [17, -214]],
+      3: [[-29, -210], [-22, -237], [-29, -243], [-4, -244], [-28, -220], [4, -244], [29, -243], [22, -237], [29, -210]],
+      4: [[-34, -215], [-26, -237], [-25, -239], [-8, -247], [-25, -221], [8, -247], [25, -239], [26, -237], [34, -215]]
     },
     h: {
-      1: [[-49, -216], [-37, -221], [-35, -220], [-30, -219], [12, -222], [30, -219], [35, -220], [37, -221], [49, -216]],
-      2: [[-46, -231], [-32, -232], [-41, -231], [-26, -232], [11, -232], [26, -232], [41, -231], [32, -232], [46, -231]],
-      3: [[-47, -214], [-35, -214], [-38, -212], [-27, -217], [14, -224], [27, -217], [38, -212], [35, -214], [47, -214]],
-      4: [[-48, -207], [-42, -204], [-36, -211], [-25, -209], [12, -216], [25, -209], [36, -211], [42, -204], [48, -207]]
+      1: [[-29, -204], [-33, -217], [-21, -224], [-21, -219], [1, -241], [21, -219], [21, -224], [33, -217], [29, -204]],
+      2: [[-34, -209], [-34, -226], [-24, -224], [-24, -222], [-1, -241], [24, -222], [24, -224], [34, -226], [34, -209]],
+      3: [[-33, -212], [-33, -217], [-23, -227], [-24, -220], [1, -241], [24, -220], [23, -227], [33, -217], [33, -212]],
+      4: [[-37, -212], [-36, -222], [-28, -224], [-25, -220], [0, -241], [25, -220], [28, -224], [36, -222], [37, -212]]
     }
   };
   // Some bullet art keeps transparent padding below its visible tail. Anchor
@@ -1013,7 +1013,7 @@
       id: "a",
       x: 52,
       y: 926,
-      height: 224,
+      height: 268,
       damageScale: 1.08,
       role: "rally",
       projectile: "projectile-arrow",
@@ -1037,7 +1037,7 @@
       id: "b",
       x: 158,
       y: 924,
-      height: 226,
+      height: 258,
       damageScale: 0.46,
       role: "barrage",
       projectile: "projectile-rifle",
@@ -1047,7 +1047,7 @@
       critMultiplier: 1.45,
       burstCount: 3,
       burstDelay: 70,
-      aim: { pivot: [2, -148], reach: 52 },
+      aim: { pivot: [2, -146], reach: 52 },
       recruit: {
         icon: "avatar-rifle",
         portrait: "avatar-rifle",
@@ -1061,7 +1061,7 @@
       id: "c",
       x: 270,
       y: 925,
-      height: 232,
+      height: 268,
       damageScale: 0.58,
       role: "player",
       projectile: "projectile-pistol",
@@ -1069,13 +1069,13 @@
       rate: 0.4,
       critChance: 0.12,
       critMultiplier: 1.6,
-      aim: { pivot: [0, -154], reach: 48 }
+      aim: { pivot: [0, -152], reach: 48 }
     },
     {
       id: "d",
       x: 382,
       y: 925,
-      height: 224,
+      height: 256,
       damageScale: 1.35,
       role: "frost",
       projectile: "projectile-rocket",
@@ -1085,7 +1085,7 @@
       critMultiplier: 1.35,
       splashRadius: 88,
       splashDamageScale: 0.55,
-      aim: { pivot: [2, -148], reach: 56 },
+      aim: { pivot: [2, -144], reach: 56 },
       recruit: {
         icon: "avatar-rocket",
         portrait: "avatar-rocket",
@@ -1099,7 +1099,7 @@
       id: "e",
       x: 488,
       y: 924,
-      height: 230,
+      height: 256,
       damageScale: 2.25,
       role: "repair",
       projectile: "projectile-sniper",
@@ -1122,7 +1122,7 @@
       id: "f",
       x: 270,
       y: 925,
-      height: 312,
+      height: 304,
       damageScale: 0.42,
       role: "fire",
       projectile: "projectile-firebomb",
@@ -1133,7 +1133,7 @@
       fireZoneRadius: 64,
       fireZoneDuration: FIREBOMB_FIRE_ZONE_DURATION_SECONDS / FIRE_ZONE_VISUAL_DURATION_MULTIPLIER,
       fireZoneDamageScale: 0.2,
-      aim: { pivot: [0, -142], reach: 39 },
+      aim: { pivot: [0, -140], reach: 39 },
       recruit: {
         icon: "avatar-fire",
         portrait: "avatar-fire",
@@ -1147,7 +1147,7 @@
       id: "g",
       x: 270,
       y: 925,
-      height: 244,
+      height: 278,
       damageScale: 0.74,
       role: "shock",
       projectile: "projectile-shock",
@@ -1161,7 +1161,7 @@
       chainJumps: 1,
       chainRadius: 118,
       chainDamageScale: 0.36,
-      aim: { pivot: [1, -148], reach: 48 },
+      aim: { pivot: [1, -150], reach: 48 },
       recruit: {
         icon: "avatar-shock",
         portrait: "avatar-shock",
@@ -1175,7 +1175,7 @@
       id: "h",
       x: 270,
       y: 925,
-      height: 238,
+      height: 270,
       damageScale: 0.34,
       role: "engineer",
       projectile: "projectile-nail",
@@ -1183,7 +1183,7 @@
       rate: 0.96,
       critChance: 0.07,
       critMultiplier: 1.45,
-      aim: { pivot: [0, -152], reach: 44 },
+      aim: { pivot: [0, -148], reach: 44 },
       recruit: {
         icon: "avatar-engineer",
         portrait: "avatar-engineer",
@@ -3382,10 +3382,34 @@
       }
     }
 
-    getAttackPose(defender, target) { var __oc21;
-      const pivot = (((__oc21 = defender.aim) === null || __oc21 === void 0 ? void 0 : __oc21.pivot)) || [0, -160];
-      const dx = target.x - (defender.x + pivot[0]);
-      const dy = target.y - (defender.y + pivot[1]);
+    getAttackPose(defender, target, aimPoint = null) {
+      const targetX = aimPoint ? aimPoint.x : target.x;
+      const targetY = aimPoint ? aimPoint.y : target.y;
+      const offsets = defender && CHARACTER_MUZZLE_OFFSETS[defender.id];
+      if (offsets) {
+        const shotOffset = defender.shotOffset || 0;
+        const angleOffset = defender.angleOffset || 0;
+        let bestKey = "aim-12";
+        let bestScore = Infinity;
+        for (let i = 0; i < AIM_POSES.length; i += 1) {
+          const offset = offsets[i];
+          const poseInfo = AIM_POSES[i];
+          const mx = defender.x + offset[0] + shotOffset;
+          const my = defender.y + offset[1];
+          const shotAngle = Math.atan2(targetY - my, targetX - mx) + angleOffset;
+          const oppositeHemi = (i < 4 && shotAngle > -Math.PI / 2 + AIM_FORWARD_SNAP_ANGLE)
+            || (i > 4 && shotAngle < -Math.PI / 2 - AIM_FORWARD_SNAP_ANGLE);
+          const score = angleDistance(shotAngle, poseInfo.angle) + (oppositeHemi ? Math.PI : 0);
+          if (score < bestScore) {
+            bestScore = score;
+            bestKey = poseInfo.key;
+          }
+        }
+        return bestKey;
+      }
+      const pivot = (defender && defender.aim && defender.aim.pivot) || [0, -160];
+      const dx = targetX - (defender.x + pivot[0]);
+      const dy = targetY - (defender.y + pivot[1]);
       return getShotAimPoseKey(Math.atan2(dy, dx));
     }
 
@@ -3397,11 +3421,7 @@
         || (((__oc24 = CHARACTER_MUZZLE_OFFSETS[defender.id]) === null || __oc24 === void 0 ? void 0 : __oc24[poseIndex]));
       if (measuredOffset) {
         const effectAngleOverride = (((__oc25 = CHARACTER_MUZZLE_EFFECT_ANGLE_OVERRIDES[defender.id]) === null || __oc25 === void 0 ? void 0 : __oc25[poseIndex]));
-        const effectAngle = Number.isFinite(effectAngleOverride)
-          ? effectAngleOverride
-          : DIRECTIONAL_MUZZLE_EFFECT_DEFENDERS.has(defender.id)
-            ? Math.atan2(measuredOffset[1] - aim.pivot[1], measuredOffset[0] - aim.pivot[0])
-            : null;
+        const effectAngle = Number.isFinite(effectAngleOverride) ? effectAngleOverride : null;
         return {
           x: defender.x + measuredOffset[0],
           y: defender.y + measuredOffset[1],
@@ -7574,7 +7594,9 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       const isFirebomb = defender.projectile === "projectile-firebomb";
       const projectileKey = isFirebomb ? "projectile-firebomb" : "projectile-grenade";
       const initialAimPoint = this.getZombieHitPoint(target, isFirebomb ? "projectile-firebomb" : "projectile-rocket");
-      const initialPose = this.getAttackPose(defender, target);
+      const lockedAimOffsetX = initialAimPoint.x - target.x;
+      const lockedAimOffsetY = initialAimPoint.y - target.y;
+      const initialPose = this.getAttackPose(defender, target, initialAimPoint);
       const initialMuzzle = this.getDefenderMuzzle(defender, initialPose);
       const initialDistance = Phaser.Math.Distance.Between(initialMuzzle.x, initialMuzzle.y, initialAimPoint.x, initialAimPoint.y);
       const initialArcHeight = this.getGrenadeArcHeight(initialDistance);
@@ -7593,9 +7615,9 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
         if (this.disposed || this.mode !== "playing" || !defender.recruited || !target.active || target.hp <= 0) {
           return;
         }
-        const aimPoint = this.getZombieHitPoint(target, isFirebomb ? "projectile-firebomb" : "projectile-rocket");
-        const aimOffsetX = aimPoint.x - target.x;
-        const aimOffsetY = aimPoint.y - target.y;
+        const aimPoint = { x: target.x + lockedAimOffsetX, y: target.y + lockedAimOffsetY };
+        const aimOffsetX = lockedAimOffsetX;
+        const aimOffsetY = lockedAimOffsetY;
         let impactX = aimPoint.x;
         let impactY = aimPoint.y;
         const muzzle = this.getDefenderMuzzle(defender, pose);
@@ -7688,11 +7710,13 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
         return;
       }
       const aimPoint = this.getZombieHitPoint(target, defender.projectile);
+      const lockedAimOffsetX = aimPoint.x - target.x;
+      const lockedAimOffsetY = aimPoint.y - target.y;
       const tx = aimPoint.x;
       const ty = aimPoint.y;
       const shotOffset = defender.shotOffset || 0;
       const angleOffset = defender.angleOffset || 0;
-      const initialPose = this.getAttackPose(defender, target);
+      const initialPose = this.getAttackPose(defender, target, aimPoint);
       const initialMuzzle = this.getDefenderMuzzle(defender, initialPose);
       const initialX = initialMuzzle.x + shotOffset;
       const initialAngle = Math.atan2(ty - initialMuzzle.y, tx - initialX) + angleOffset;
@@ -7703,7 +7727,7 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
         if (this.disposed || this.mode !== "playing" || !defender.recruited || !target.active || target.hp <= 0) {
           return;
         }
-        const releaseAimPoint = this.getZombieHitPoint(target, defender.projectile);
+        const releaseAimPoint = { x: target.x + lockedAimOffsetX, y: target.y + lockedAimOffsetY };
         const releaseTx = releaseAimPoint.x;
         const releaseTy = releaseAimPoint.y;
         // Recoil is already drawn into the attack frames. Moving the entire

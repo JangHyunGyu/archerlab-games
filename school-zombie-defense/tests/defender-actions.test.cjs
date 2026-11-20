@@ -281,7 +281,7 @@ const characterAssetVersion = gameSource.match(
 assert.ok(characterAssetVersion, "CHARACTER_ASSET_VERSION must be declared");
 assert.equal(
   characterAssetVersion,
-  "20261118-defenders-8f-v1",
+  "20261120-defenders-8f-v2",
   "the shared character cache contract must remain independent from crossbow-only changes"
 );
 const crossbowAssetVersion = gameSource.match(
@@ -290,7 +290,7 @@ const crossbowAssetVersion = gameSource.match(
 assert.ok(crossbowAssetVersion, "CROSSBOW_ASSET_VERSION must be declared");
 assert.equal(
   crossbowAssetVersion,
-  "20261118-crossbow-8f-v1",
+  "20261120-crossbow-8f-v2",
   "crossbow asset cache version must track the reviewed direction sheets"
 );
 const directlyVersionedCrossbowAssets = [...gameSource.matchAll(
@@ -683,14 +683,14 @@ function nearestAlphaDistanceFromMuzzle(image, cellIndex, displayHeight, offset,
 
 function assertMeasuredMuzzlesTouchReleaseArt() {
   const releaseSheets = {
-    a: { name: "character-a-attack-1", height: 224 },
-    b: { name: "character-b-attack-1", height: 226 },
-    c: { name: "character-c-attack-1", height: 232 },
-    d: { name: "character-d-attack-1", height: 224 },
-    e: { name: "character-e-attack-1", height: 230 },
-    f: { name: "character-f-throw-3", height: 312 },
-    g: { name: "character-g-attack-1", height: 244 },
-    h: { name: "character-h-attack-1", height: 238 }
+    a: { name: "character-a-attack-1", height: 268 },
+    b: { name: "character-b-attack-1", height: 258 },
+    c: { name: "character-c-attack-1", height: 268 },
+    d: { name: "character-d-attack-1", height: 256 },
+    e: { name: "character-e-attack-1", height: 256 },
+    f: { name: "character-f-throw-3", height: 304 },
+    g: { name: "character-g-attack-1", height: 278 },
+    h: { name: "character-h-attack-1", height: 270 }
   };
   for (const [defenderId, spec] of Object.entries(releaseSheets)) {
     const image = decodePngAlpha(path.join(imageRoot, `${spec.name}.png`));
@@ -738,6 +738,9 @@ function largestHairComponentTop(image, cellIndex, hair) {
   const active = new Uint8Array(cellWidth * image.height);
   for (let y = 0; y < image.height; y += 1) {
     for (let x = 0; x < cellWidth; x += 1) {
+      if (hair === "pink" && y < 165 && ((cellIndex >= 5 && x > 195) || (cellIndex <= 3 && x < cellWidth - 195))) {
+        continue;
+      }
       const sourcePixel = (y * image.width + cellIndex * cellWidth + x) * 4;
       if (isHairPixel(
         image.rgba[sourcePixel],
@@ -896,35 +899,40 @@ function assertCrossbowAimDirections() {
     );
   }
   const baseImage = decodePngAlpha(path.join(imageRoot, "character-a.png"));
-  directionKeys.forEach((direction, cellIndex) => {
+  const crownTops = directionKeys.map((direction, cellIndex) => {
     const top = largestHairComponentTop(baseImage, cellIndex, "pink");
-    assert.ok(top >= 8 && top <= 80, `A direction ${direction} must preserve consistent pink twin-tail crown; got y=${top}`);
+    assert.ok(top >= 8 && top <= 170, `A direction ${direction} must preserve consistent pink twin-tail crown; got y=${top}`);
+    return top;
   });
+  assert.ok(
+    Math.max(...crownTops) - Math.min(...crownTops) <= 16,
+    `A pink twin-tail crown height must stay level across directions; got ${crownTops.join(", ")}`
+  );
 }
 
 assertCrossbowAimDirections();
 
 function cannonAxisAngle(image, cellIndex) {
   const bounds = cellVisibleBounds(image, cellIndex);
-  const scanBottom = bounds.top + Math.round((bounds.bottom - bounds.top) * 0.52);
+  const scanBottom = bounds.top + Math.round((bounds.bottom - bounds.top) * 0.18);
   const points = [];
   for (let y = bounds.top; y < scanBottom; y += 1) {
     for (let x = 0; x < bounds.cellWidth; x += 1) {
-      if ((cellIndex >= 4 && x < 168) || (cellIndex <= 3 && x > bounds.cellWidth - 168)) continue;
+      if ((cellIndex >= 5 && x < 140) || (cellIndex <= 3 && x > bounds.cellWidth - 140)) continue;
       const sourcePixel = (y * image.width + cellIndex * bounds.cellWidth + x) * 4;
       const red = image.rgba[sourcePixel];
       const green = image.rgba[sourcePixel + 1];
       const blue = image.rgba[sourcePixel + 2];
       const alpha = image.rgba[sourcePixel + 3];
       const cannonAccent = alpha > 40
-        && blue > 90
+        && blue > 125
         && blue > green * 1.05
-        && blue > red * 1.15;
+        && blue > red * 1.45;
       if (cannonAccent) points.push([x, y]);
     }
   }
   assert.ok(
-    points.length >= 200,
+    points.length >= 160,
     `G direction ${directionKeys[cellIndex]} must retain enough forward blue cannon pixels for axis validation; got ${points.length}`
   );
   const meanX = points.reduce((sum, [x]) => sum + x, 0) / points.length;
@@ -1034,7 +1042,7 @@ assertMeasuredMuzzlesTouchReleaseArt();
   )?.[1];
   assert.ok(frameOffsetsSource, "CHARACTER_FRAME_MUZZLE_OFFSETS must remain discoverable");
   const frameOffsets = Function(`"use strict"; return (${frameOffsetsSource});`)();
-  const frameSheetHeights = { b: 226, c: 232, d: 224, e: 230, g: 244, h: 238 };
+  const frameSheetHeights = { b: 258, c: 268, d: 256, e: 256, g: 278, h: 270 };
   for (const [defenderId, frames] of Object.entries(frameOffsets)) {
     for (const [frame, offsets] of Object.entries(frames)) {
       assert.equal(offsets.length, directionKeys.length, `${defenderId.toUpperCase()} frame ${frame} must cover all nine directions`);
@@ -1152,6 +1160,72 @@ assert.equal(
 const build8fSource = fs.readFileSync(path.join(root, "tools", "build-defender-actions-8f.py"), "utf8");
 assert.match(build8fSource, /MIRROR_PAIRS\s*=\s*\(\(8,\s*0\),\s*\(7,\s*1\),\s*\(6,\s*2\),\s*\(5,\s*3\)\)/);
 assert.match(build8fSource, /"f":\s*3/);
+
+// Regression: centered 12:00 muzzles, straight horizontal projectile-arrow, and muzzle->aimPoint parity across all 8 defenders.
+for (const defenderId of Object.keys(muzzleOffsets)) {
+  const lim = defenderId === "f" ? 24 : defenderId === "d" ? 18 : 14;
+  assert.ok(
+    Math.abs(muzzleOffsets[defenderId][4][0]) <= lim,
+    `${defenderId.toUpperCase()} 12:00 muzzle offset x=${muzzleOffsets[defenderId][4][0]} must stay within +/-${lim}`
+  );
+}
+{
+  const arrow = decodePngAlpha(path.join(imageRoot, "projectile-arrow.png"));
+  const pts = [];
+  for (let y = 0; y < arrow.height; y += 1) {
+    for (let x = 0; x < arrow.width; x += 1) {
+      if (arrow.alpha[y * arrow.width + x] >= 80) pts.push([x, y]);
+    }
+  }
+  const mx = pts.reduce((s, [x]) => s + x, 0) / pts.length;
+  const my = pts.reduce((s, [, y]) => s + y, 0) / pts.length;
+  let cxx = 0, cyy = 0, cxy = 0;
+  for (const [x, y] of pts) { cxx += (x - mx) ** 2; cyy += (y - my) ** 2; cxy += (x - mx) * (y - my); }
+  const axisDeg = 0.5 * Math.atan2(2 * cxy, cxx - cyy) * 180 / Math.PI;
+  assert.ok(Math.abs(axisDeg) <= 2.0, `projectile-arrow.png axis must be horizontal within +/-2 deg; got ${axisDeg.toFixed(2)}`);
+}
+{
+  const formationSlots = Function(`"use strict"; return (${
+    gameSource.match(/const\s+DEFENDER_FORMATION_SLOTS\s*=\s*(\[[\s\S]*?\]);/)?.[1]
+  });`)();
+  const snapRad = Function("Math", `"use strict"; return (${
+    gameSource.match(/const\s+AIM_FORWARD_SNAP_ANGLE\s*=\s*([^;]+);/)?.[1]
+  });`)(Math);
+  const angleDist = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+  for (const defenderId of "abcdefgh") {
+    const offsets = muzzleOffsets[defenderId];
+    for (const slot of formationSlots) {
+      for (let tx = 40; tx <= 500; tx += 46) {
+        for (let ty = 140; ty <= 720; ty += 58) {
+          let bestIdx = 4;
+          let bestScore = Infinity;
+          for (let i = 0; i < expectedAimPoses.length; i += 1) {
+            const rad = expectedAimPoses[i].degrees * Math.PI / 180;
+            const shotRad = Math.atan2(ty - (slot.y + offsets[i][1]), tx - (slot.x + offsets[i][0]));
+            const opp = (i < 4 && shotRad > -Math.PI / 2 + snapRad) || (i > 4 && shotRad < -Math.PI / 2 - snapRad);
+            const score = angleDist(shotRad, rad) + (opp ? Math.PI : 0);
+            if (score < bestScore) { bestScore = score; bestIdx = i; }
+          }
+          const finalShotRad = Math.atan2(ty - (slot.y + offsets[bestIdx][1]), tx - (slot.x + offsets[bestIdx][0]));
+          const finalDeg = finalShotRad * 180 / Math.PI;
+          const poseDeg = expectedAimPoses[bestIdx].degrees;
+          assert.ok(
+            !((bestIdx < 4 && finalDeg > -82.5) || (bestIdx > 4 && finalDeg < -97.5)),
+            `${defenderId.toUpperCase()} slot (${slot.x},${slot.y}) -> (${tx},${ty}) crossed hemisphere: pose=${expectedAimPoses[bestIdx].key} shot=${finalDeg.toFixed(1)}`
+          );
+          const muzzleDy = (slot.y + offsets[bestIdx][1]) - ty;
+          if (muzzleDy >= 160 && finalDeg >= -150 && finalDeg <= -30) {
+            const maxDelta = defenderId === "f" ? 16.5 : 13.5;
+            assert.ok(
+              Math.abs(finalDeg - poseDeg) <= maxDelta,
+              `${defenderId.toUpperCase()} sector delta too high: pose=${poseDeg} shot=${finalDeg.toFixed(1)}`
+            );
+          }
+        }
+      }
+    }
+  }
+}
 
 const currentHashes = Object.fromEntries(
   assetPaths

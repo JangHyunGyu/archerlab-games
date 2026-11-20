@@ -219,10 +219,10 @@ for (const id of "abcdefgh") {
   syncMuzzleFlash.call(scene, defender, 5);
   assert.equal(moves.length, 0, "frames without their own barrel position must not move the flash");
   const ready = getMuzzle.call(scene, defender, "aim-12");
-  syncMuzzleFlash.call(scene, defender, 2);
-  assert.deepEqual(moves[0], [488 + 20, 878 - 223], "recoil frame 2 moves the flash onto the swung barrel");
+  syncMuzzleFlash.call(scene, defender, 4);
+  assert.deepEqual(moves[0], [488 - 4, 878 - 231], "recoil frame 4 moves the flash onto the swung barrel");
   assert.notEqual(moves[0][0], ready.x);
-  assert.deepEqual(moves[1], ["core", 488 + 20, 878 - 223]);
+  assert.deepEqual(moves[1], ["core", 488 - 4, 878 - 231]);
   flash.destroyed = true;
   syncMuzzleFlash.call(scene, defender, 3);
   assert.equal(defender.muzzleFlash, null, "a destroyed flash must be released");
