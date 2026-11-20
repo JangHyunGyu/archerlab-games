@@ -28,6 +28,7 @@
 | `example_r4` | 정답! | Solved! |
 | `start` | 도전 시작 | Play Now |
 | `resume` | 이어서 풀기 | Resume Round |
+| `view_result` | 결과 보기 | View Result |
 | `portal` | 게임 모음 | All Games |
 | `language` | 언어 | Language |
 | `home` | 로비로 | Lobby |

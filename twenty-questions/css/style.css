@@ -372,17 +372,6 @@ h1 {
 .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .hero-actions #start { min-height: 62px; padding: 12px 34px; font-size: 18px; }
 .btn-arrow { font-size: 12px; opacity: 0.85; }
-.resume-timer {
-  font-family: var(--display);
-  font-variant-numeric: tabular-nums;
-  font-size: 13px;
-  font-weight: 800;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(87, 224, 255, 0.14);
-  border: 1px solid rgba(87, 224, 255, 0.42);
-  color: var(--cyan);
-}
 
 /* 주얼리아 스타일 오픈 디바이더 스탯 스트립 */
 .hero-records {

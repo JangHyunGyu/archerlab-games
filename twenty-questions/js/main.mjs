@@ -325,7 +325,7 @@ function finishGuessLoading(immediate = false) {
 
 function setBusy(value) {
     busy = value;
-    for (const id of ['start', 'resume', 'send', 'home', 'open-nearest', 'open-ranking-result', 'share-result', 'prev-answer-btn', 'hero-prev-nearest', 'current-solver-btn', 'result-name-save']) {
+    for (const id of ['start', 'send', 'home', 'open-nearest', 'open-ranking-result', 'share-result', 'prev-answer-btn', 'hero-prev-nearest', 'current-solver-btn', 'result-name-save']) {
         const el = $(id);
         if (el) el.disabled = value;
     }
@@ -414,12 +414,10 @@ function tickTimer() {
     const round = state.round;
     const gameTimerEl = $('game-timer');
     const heroTimerEl = $('hero-countdown');
-    const resumeTimerEl = $('resume-timer');
     const resultNextEl = $('result-next-timer');
     if (!round) {
         if (gameTimerEl) gameTimerEl.textContent = '06:00:00';
         if (heroTimerEl) heroTimerEl.textContent = '06:00:00';
-        if (resumeTimerEl) resumeTimerEl.textContent = '06:00:00';
         if (resultNextEl) resultNextEl.textContent = '06:00:00';
         return;
     }
@@ -427,7 +425,6 @@ function tickTimer() {
     const text = formatCountdown(remMs);
     if (gameTimerEl) gameTimerEl.textContent = text;
     if (heroTimerEl) heroTimerEl.textContent = text;
-    if (resumeTimerEl) resumeTimerEl.textContent = text;
     if (resultNextEl) resultNextEl.textContent = text;
 
     if (remMs <= 0 && !busy && !rolloverInFlight && Date.now() >= rolloverRetryAt) {
@@ -674,6 +671,19 @@ function renderRoundInfo(round) {
     }
 }
 
+// 현재 라운드 진행 상태에 따라 로비 시작 버튼 문구 전환
+function updateStartButton(game) {
+    const startBtn = $('start');
+    if (!startBtn || !startBtn.firstElementChild) return;
+    if (game && game.status === 'active' && game.guessCount > 0) {
+        startBtn.firstElementChild.textContent = t('resume');
+    } else if (game && game.status === 'won') {
+        startBtn.firstElementChild.textContent = t('view_result');
+    } else {
+        startBtn.firstElementChild.textContent = t('start');
+    }
+}
+
 function render(data, { navigate = true, effects = false } = {}) {
     var __oc5, __oc6, __oc7, __oc8, __oc9, __ocPrev;
     if (data.game && (((__oc5 = state.game) === null || __oc5 === void 0 ? void 0 : __oc5.id)) === data.game.id && data.game.version < state.game.version) return;
@@ -687,7 +697,7 @@ function render(data, { navigate = true, effects = false } = {}) {
     const profile = data.profile || blankProfile;
 
     if ($('hero-wins')) $('hero-wins').textContent = String(profile.wins || 0);
-    $('resume').hidden = !profile.activeGame;
+    updateStartButton(data.game);
     renderRoundInfo(data.round);
 
     if (prevRoundId && data.round && data.round.id !== prevRoundId) {
@@ -839,6 +849,15 @@ async function action(callback) {
 async function start() {
     await action(async () => {
         audio.play('click');
+        const existingGameId = state.game && state.game.id ? state.game.id : null;
+        if (existingGameId) {
+            const data = await request(`games/${existingGameId}`);
+            render(data);
+            if (data.game && data.game.status === 'active') {
+                $('guess-input').focus({ preventScroll: true });
+            }
+            return;
+        }
         let startId = storage.get('start_request');
         if (!startId) {
             startId = requestId();
@@ -855,7 +874,9 @@ async function start() {
         showTurnFeedback(null);
         render(data);
         audio.play('start', { gain: 0.55 });
-        $('guess-input').focus({ preventScroll: true });
+        if (data.game && data.game.status === 'active') {
+            $('guess-input').focus({ preventScroll: true });
+        }
     });
 }
 
@@ -1109,10 +1130,6 @@ function showGuide() {
 
 $('guess-input').value = storage.get('draft') || '';
 $('start').addEventListener('click', start);
-$('resume').addEventListener('click', () => action(async () => {
-    const data = await request(`games/${state.profile.activeGame}`);
-    render(data);
-}));
 
 $('guess-form').addEventListener('submit', event => {
     event.preventDefault();

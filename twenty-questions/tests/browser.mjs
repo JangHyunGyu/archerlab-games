@@ -61,7 +61,7 @@ try {
     // Verify Semantle title screen, zero SVG usage, no give-up/ranking-tabs, countdown & previous answer display
     await page.goto(origin + '/twenty-questions/', { waitUntil: 'networkidle' });
     assert.equal(await page.locator('svg').count(), 0, 'Zero SVG elements expected');
-    assert.equal(await page.locator('#give-up, #give-up-dialog, #next-game, .ranking-tab').count(), 0);
+    assert.equal(await page.locator('#give-up, #give-up-dialog, #next-game, #resume, .ranking-tab').count(), 0);
     assert.doesNotMatch(await page.locator('body').textContent(), /FastText|Wiktionary|서버 시간 검증/);
     assert.ok(await page.locator('.example-card').isVisible());
     assert.ok(await page.locator('#hero-prev-round').isVisible());
@@ -81,7 +81,12 @@ try {
     assert.equal(await page.locator('#title-screen').isVisible(), true);
     assert.equal(await page.locator('#game-screen').isHidden(), true);
 
-    // Start game -> countdown ticks DOWN in HH:MM:SS
+    // Start game with 0 guesses -> returning to lobby still shows '도전 시작', then re-entering works cleanly
+    await page.locator('#start').click();
+    await page.locator('#game-screen').waitFor({ state: 'visible' });
+    await page.locator('#home').click();
+    await page.locator('#title-screen').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#start span:first-child').textContent(), '도전 시작');
     await page.locator('#start').click();
     await page.locator('#game-screen').waitFor({ state: 'visible' });
     const t0 = await page.locator('#game-timer').textContent();
@@ -129,7 +134,8 @@ try {
 
     await page.locator('#home').click();
     await page.locator('#title-screen').waitFor({ state: 'visible' });
-    await page.locator('#resume').click();
+    assert.equal(await page.locator('#start span:first-child').textContent(), '이어서 풀기');
+    await page.locator('#start').click();
     await page.locator('#game-screen').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#current-solver-display').textContent(), '익명');
 
@@ -214,8 +220,13 @@ try {
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
     await page.locator('#settings-dialog [data-close]').click();
 
-    // Switch back to Korean, then test live mid-game forced rollover at the 6-hour boundary
+    // Switch back to Korean, verify lobby button says '결과 보기' when round is already won, then test live mid-game forced rollover at the 6-hour boundary
     await page.locator('.languages a[lang="ko"]').click();
+    await page.locator('#result-banner').waitFor({ state: 'visible' });
+    await page.locator('#home').click();
+    await page.locator('#title-screen').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#start span:first-child').textContent(), '결과 보기');
+    await page.locator('#start').click();
     await page.locator('#result-banner').waitFor({ state: 'visible' });
 
     const currentRoundRow = h.row('SELECT ends_at FROM sm_rounds ORDER BY round_no DESC LIMIT 1');
@@ -247,7 +258,7 @@ try {
             await page.screenshot({ path: path.join(output, 'ko-title-mobile-390.png'), fullPage: true });
         }
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width}x${height}: title overflow`);
-        await page.locator('#resume').click();
+        await page.locator('#start').click();
         await page.locator('#game-screen').waitFor({ state: 'visible' });
         if (width === 390 && height === 844) {
             await page.locator('.starter-chip[data-word="사람"]').click();

@@ -37,10 +37,10 @@ for (const locale of ['ko', 'en']) {
   <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': ['VideoGame', 'WebApplication'], name: t.title, description: `${t.intro} ${t.rules}`, url, image: 'https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png', inLanguage: locale, applicationCategory: 'GameApplication', operatingSystem: 'Any', gamePlatform: ['Web Browser', 'Mobile Browser'], playMode: 'SinglePlayer', isAccessibleForFree: true, dateModified: '2026-11-20', author: { '@type': 'Organization', name: 'ArcherLab', url: 'https://archerlab.dev' } })}</script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261120-v5">
+  <link rel="stylesheet" href="css/style.css?v=20261120-v7">
   <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
   <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
-  <script type="module" src="js/main.mjs?v=20261120-v6"></script>
+  <script type="module" src="js/main.mjs?v=20261120-v7"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 </head>
 <body data-no-fullscreen data-screen="title">
@@ -72,7 +72,6 @@ for (const locale of ['ko', 'en']) {
         </div>
         <div class="hero-actions">
           <button id="start" class="primary-btn"><span>${text('start')}</span><span class="btn-arrow" aria-hidden="true">▶</span></button>
-          <button id="resume" class="secondary-btn" hidden><span>${text('resume')}</span><span id="resume-timer" class="resume-timer">06:00:00</span></button>
         </div>
         <div class="hero-records">
           <div class="hero-stat accent"><span>${text('timer_label')}</span><strong id="hero-countdown">06:00:00</strong></div>
