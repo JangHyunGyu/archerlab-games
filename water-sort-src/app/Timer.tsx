@@ -40,7 +40,7 @@ export function Timer({ deadline, limit, clock, frozenAt, active, running, audio
   const target = frozenAt === null ? left - 1000 : left;
   return <div className={'timer-strip ' + (low ? 'low' : '')} role="timer" aria-label={`${remaining}${c.seconds}`}>
     <div className="timer-track"><div className={'timer-fill' + (live ? ' smooth' : '')} style={{ transform: `scaleX(${Math.max(0, Math.min(1, target / (limit * 1000)))})` }}/></div>
-    <span className="timer-number">{remaining}<small>{c.seconds}</small></span>
+    <span className="timer-number"><span>{remaining}</span><small>{c.seconds}</small></span>
     <span className="sr-only" role="status" aria-live="polite">{low && remaining > 0 ? c.lowTime : ''}</span>
   </div>;
 }

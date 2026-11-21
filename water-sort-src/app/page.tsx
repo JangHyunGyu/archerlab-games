@@ -45,12 +45,22 @@ const nextWake = (run: RunView | null, now: number) => {
 };
 function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => { ref.current?.showModal(); }, []);
+  useEffect(() => {
+    const dialog = ref.current;
+    if (dialog && !dialog.open) {
+      try { dialog.showModal(); } catch { /* Already open or detached externally. */ }
+    }
+  }, []);
   return <dialog ref={ref} onCancel={onClose} onClick={e => { if (e.target === e.currentTarget) onClose(); }} aria-labelledby="modal-title"><div className="modal-inner"><button className="icon-button modal-close" onClick={onClose} aria-label={c.close}>×</button><h2 id="modal-title">{title}</h2>{children}</div></dialog>;
 }
 function Results({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => { ref.current?.showModal(); }, []);
+  useEffect(() => {
+    const dialog = ref.current;
+    if (dialog && !dialog.open) {
+      try { dialog.showModal(); } catch { /* Already open or detached externally. */ }
+    }
+  }, []);
   return <dialog ref={ref} className="result-dialog" onCancel={e => e.preventDefault()} aria-labelledby="result-title"><section className="result-card">{children}</section></dialog>;
 }
 export default function Home() {
@@ -376,15 +386,15 @@ export default function Home() {
         <p className="start-caption">{c.readyBody}</p>
         <div className="start-footer">
           <div className="lang-switch" role="group" aria-label={c.language}><button type="button" aria-pressed={uiLang === 'ko'} onClick={() => chooseLang('ko')}>KO</button><button type="button" aria-pressed={uiLang === 'en'} onClick={() => chooseLang('en')}>EN</button></div>
-          <button className="sound-toggle" aria-pressed={soundOn} onClick={toggleSound}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/>{soundOn ? <path d="M16 8q5 4 0 8M19 5q8 7 0 14"/> : <path d="m17 9 5 6m0-6-5 6"/>}</svg>{soundOn ? c.soundOn : c.soundOff}</button>
-          {vibrationSupported && <button type="button" className="sound-toggle vibration-toggle" aria-pressed={vibrationOn} title={c.vibrationHint} onClick={toggleVibration}><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="18" rx="2"/><path d="M5 7q-3 5 0 10m14-10q3 5 0 10M11 17h2"/></svg>{vibrationOn ? c.vibrationOn : c.vibrationOff}</button>}
+          <button className="sound-toggle" aria-pressed={soundOn} onClick={toggleSound}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/>{soundOn ? <path d="M16 8q5 4 0 8M19 5q8 7 0 14"/> : <path d="m17 9 5 6m0-6-5 6"/>}</svg><span>{soundOn ? c.soundOn : c.soundOff}</span></button>
+          {vibrationSupported && <button type="button" className="sound-toggle vibration-toggle" aria-pressed={vibrationOn} title={c.vibrationHint} onClick={toggleVibration}><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="18" rx="2"/><path d="M5 7q-3 5 0 10m14-10q3 5 0 10M11 17h2"/></svg><span>{vibrationOn ? c.vibrationOn : c.vibrationOff}</span></button>}
           <a className="archerlab-link" href="https://archerlab.dev/"><span aria-hidden="true">↗</span>{c.archerlab}</a>
         </div>
       </section> : <section className="play-screen" aria-label={c.title}>
         <div className="game-hud"><div className="hud-stat stage-stat"><span>{c.stage}</span><strong>{level.toString().padStart(2, '0')}</strong></div><button type="button" className="hud-home" onClick={() => setModal('exit')} aria-label={c.home} title={c.home}><span aria-hidden="true">🏠</span></button><div className="hud-stat score-stat"><span>{c.score}</span><strong data-testid="score">{run.score.toLocaleString()}</strong></div></div>
         <Timer key={`${run.id}:${run.level}:${run.deadline}`} deadline={run.deadline} limit={timeLimit(level)} clock={clock} frozenAt={timerFrozenAt} active={active} running={clockRunning} audio={audio} clockKey={clockKey}/>
         <div className="experiment-tray">
-          {!!pours.queued.length && <div className="queue-count" role="status">{c.queueBadge} {pours.queued.length}/{MAX_QUEUED_POURS}</div>}
+          {!!pours.queued.length && <div className="queue-count" role="status">{`${c.queueBadge} ${pours.queued.length}/${MAX_QUEUED_POURS}`}</div>}
           <div className="tray-spark tray-spark-one" aria-hidden="true">✦</div><div className="tray-spark tray-spark-two" aria-hidden="true">✧</div>
           <div className={'board ' + (board.length > 7 ? 'many-tubes' : '')} role="group" aria-label={c.play}>
             {board.map((tube, i) => {
@@ -408,7 +418,7 @@ export default function Home() {
               </button>;
             })}
           </div>
-          {run.status === 'cleared' && !animating && <div className="clear-burst" role="status"><span className="clear-emblem" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M24 9h16m-12 0v18L14 48q-4 8 6 8h24q10 0 6-8L36 27V9"/><path d="M21 39h22l6 11q2 4-5 4H20q-6 0-4-4z"/><path d="m28 40 4 4 8-9"/></svg></span><strong>✦ {c.success} ✦</strong></div>}
+          {run.status === 'cleared' && !animating && <div className="clear-burst" role="status"><span className="clear-emblem" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M24 9h16m-12 0v18L14 48q-4 8 6 8h24q10 0 6-8L36 27V9"/><path d="M21 39h22l6 11q2 4-5 4H20q-6 0-4-4z"/><path d="m28 40 4 4 8-9"/></svg></span><strong>{`✦ ${c.success} ✦`}</strong></div>}
         </div>
         <p className={'board-notice ' + ([c.invalid, c.empty, c.blocked, c.queueFull].includes(notice as typeof c.invalid) ? 'visible' : 'sr-only')} role="status">{notice}</p>
       </section>}
@@ -416,11 +426,11 @@ export default function Home() {
     </main>
     {!!motions.length && <PourAnimation motions={motions} onFinish={finishMotion} onImpact={impactMotion}/>}
     <RewardEffects ref={rewardEffects} audio={audio} haptics={haptics} active={!atHome && !modal && !error && !ended} scope={run ? `${run.id}:${run.level}` : ''}/>
-    {!atHome && ended && run && !modal && <Results><span className="result-sticker" aria-hidden="true">{run.cleared === 100 ? '★' : blockedEnd ? '⛔' : '⌛'}</span><p className="result-eyebrow">{run.cleared === 100 ? c.eyebrowAllClear : blockedEnd ? c.eyebrowBlocked : c.eyebrowTimeout}</p><h2 id="result-title">{run.cleared === 100 ? c.allClear : blockedEnd ? c.blockedTitle : c.ended}</h2>{blockedEnd && <p className="blocked-explanation" role="alert">{c.blockedBody}</p>}{lateClear && <p className="late-explanation" role="status">{c.lateClearBody}</p>}<div className="result-score">{run.score.toLocaleString()}<small>{c.point}</small></div><p className="result-stage">{c.stage} {run.level} · {c.cleared} {run.cleared}</p>{run.registered && <p role="status">{c.registered}</p>}<button className="primary-button" disabled={busy || run.status !== 'ended'} onClick={() => run.registered ? openRanks() : setModal('register')}>{run.registered ? c.ranking : c.register}</button><button className="secondary-button" disabled={busy} onClick={home}>{c.home}</button></Results>}
+    {!atHome && ended && run && !modal && <Results><span className="result-sticker" aria-hidden="true">{run.cleared === 100 ? '★' : blockedEnd ? '⛔' : '⌛'}</span><p className="result-eyebrow">{run.cleared === 100 ? c.eyebrowAllClear : blockedEnd ? c.eyebrowBlocked : c.eyebrowTimeout}</p><h2 id="result-title">{run.cleared === 100 ? c.allClear : blockedEnd ? c.blockedTitle : c.ended}</h2>{blockedEnd && <p className="blocked-explanation" role="alert">{c.blockedBody}</p>}{lateClear && <p className="late-explanation" role="status">{c.lateClearBody}</p>}<div className="result-score">{run.score.toLocaleString()}<small>{c.point}</small></div><p className="result-stage">{`${c.stage} ${run.level} · ${c.cleared} ${run.cleared}`}</p>{run.registered && <p role="status">{c.registered}</p>}<button className="primary-button" disabled={busy || run.status !== 'ended'} onClick={() => run.registered ? openRanks() : setModal('register')}>{run.registered ? c.ranking : c.register}</button><button className="secondary-button" disabled={busy} onClick={home}>{c.home}</button></Results>}
     {modal === 'exit' && <Modal title={c.homeTitle} onClose={() => setModal(null)}><p>{c.homeBody}</p><div className="confirmation-actions"><button className="secondary-button" onClick={() => setModal(null)}>{c.keepPlaying}</button><button className="primary-button" onClick={home}>{c.leaveGame}</button></div></Modal>}
     {modal === 'restart' && <Modal title={c.restartTitle} onClose={() => setModal(null)}><p>{c.restartBody}</p><div className="confirmation-actions"><button className="secondary-button" onClick={() => setModal(null)}>{c.cancel}</button><button className="primary-button" disabled={busy} onClick={() => { void perform('start'); }}>{c.newGame}</button></div></Modal>}
     {modal === 'help' && <Modal title={c.rulesTitle} onClose={() => setModal(null)}><ol className="rules">{c.rules.map(rule => <li key={rule}>{rule}</li>)}</ol><p className="modal-note">{c.recordRule}</p><p className="keyboard-note">{c.keyboard}</p></Modal>}
-    {modal === 'register' && run && <Modal title={c.register} onClose={() => setModal(null)}>{run.registered ? <div className="registration-done"><span aria-hidden="true">★</span><p role="status">{c.registered}</p><button className="primary-button" onClick={openRanks}>{c.ranking}</button><button className="secondary-button" onClick={home}>{c.home}</button></div> : <form className="ranking-form" onSubmit={e => { e.preventDefault(); void perform('register', { nickname }); }}><p>{run.score.toLocaleString()}{c.point} · {c.cleared} {run.cleared}</p><label htmlFor="nickname">{c.nickname}</label><input id="nickname" value={nickname} onChange={e => setNickname(e.target.value)} maxLength={16} required autoComplete="nickname" aria-describedby="nickname-help"/><small id="nickname-help">{c.nicknameHelp}</small><button className="primary-button" disabled={busy}>{busy ? c.submitting : c.register}</button>{error && <p className="form-error" role="alert">{error}</p>}</form>}</Modal>}
-    {modal === 'ranking' && <Modal title={c.ranking} onClose={() => setModal(null)}><p>{c.rankRule}</p>{rankState ? <p role="status">{rankState}</p> : rows.length ? <ol className="rank-list">{rows.map((row, i) => <li key={row.id} className={row.id === run?.id ? 'my-rank' : ''}><span className="rank-number">{i + 1}</span><strong>{row.nickname}</strong><span>{uiLang === 'en' ? `${row.cleared} ${c.level}` : `${row.cleared}${c.level}`}<small>{row.score.toLocaleString()}{c.point}</small></span></li>)}</ol> : <p>{c.rankEmpty}</p>}{rankState === c.rankError && <button className="secondary-button" onClick={() => { void loadRanks(); }}>{c.retry}</button>}</Modal>}
+    {modal === 'register' && run && <Modal title={c.register} onClose={() => setModal(null)}>{run.registered ? <div className="registration-done"><span aria-hidden="true">★</span><p role="status">{c.registered}</p><button className="primary-button" onClick={openRanks}>{c.ranking}</button><button className="secondary-button" onClick={home}>{c.home}</button></div> : <form className="ranking-form" onSubmit={e => { e.preventDefault(); void perform('register', { nickname }); }}><p>{`${run.score.toLocaleString()}${c.point} · ${c.cleared} ${run.cleared}`}</p><label htmlFor="nickname">{c.nickname}</label><input id="nickname" value={nickname} onChange={e => setNickname(e.target.value)} maxLength={16} required autoComplete="nickname" aria-describedby="nickname-help"/><small id="nickname-help">{c.nicknameHelp}</small><button className="primary-button" disabled={busy}>{busy ? c.submitting : c.register}</button>{error && <p className="form-error" role="alert">{error}</p>}</form>}</Modal>}
+    {modal === 'ranking' && <Modal title={c.ranking} onClose={() => setModal(null)}><p>{c.rankRule}</p>{rankState ? <p role="status">{rankState}</p> : rows.length ? <ol className="rank-list">{rows.map((row, i) => <li key={row.id} className={row.id === run?.id ? 'my-rank' : ''}><span className="rank-number">{i + 1}</span><strong>{row.nickname}</strong><span><span>{uiLang === 'en' ? `${row.cleared} ${c.level}` : `${row.cleared}${c.level}`}</span><small>{`${row.score.toLocaleString()}${c.point}`}</small></span></li>)}</ol> : <p>{c.rankEmpty}</p>}{rankState === c.rankError && <button className="secondary-button" onClick={() => { void loadRanks(); }}>{c.retry}</button>}</Modal>}
   </div>;
 }

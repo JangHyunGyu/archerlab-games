@@ -23,6 +23,6 @@ export function BottleCompletion({ ready, color, hideLabel, onCelebrate }: { rea
   return <span ref={node} className={'bottle-completion' + (burst ? ' completion-burst' : '')} style={{ '--liquid-color': WATER_COLORS[color] } as CSSProperties} aria-hidden="true">
     <span className="completion-aura"/><span className="completion-ring"/>
     {burst && <span className="completion-sheen"/>}
-    {!hideLabel && <span className="completion-seal"><svg viewBox="0 0 16 16"><path d="m3 8 3 3 7-7"/></svg>{c.filled}</span>}
+    {!hideLabel && <span className="completion-seal"><svg viewBox="0 0 16 16"><path d="m3 8 3 3 7-7"/></svg><span>{c.filled}</span></span>}
   </span>;
 }

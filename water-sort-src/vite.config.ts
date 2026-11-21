@@ -5,7 +5,7 @@ import { sharedAssets } from './scripts/shared-assets.mjs';
 export default defineConfig({
   base: '/water-sort/',
   plugins: [react(), sharedAssets()],
-  build: { outDir: 'dist', emptyOutDir: true, assetsDir: 'assets' },
+  build: { target: 'safari12', outDir: 'dist', emptyOutDir: true, assetsDir: 'assets' },
   server: {
     proxy: {
       '/water-sort/api/challenge': {
