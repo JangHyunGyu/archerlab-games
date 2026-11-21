@@ -59,6 +59,7 @@ try {
         await page.evaluate(() => document.fonts.ready);
         await page.locator('#start').click();
         await page.locator('#game-screen').waitFor({ state: 'visible' });
+        assert.notEqual(await page.evaluate(() => document.activeElement?.id), 'guess-input', `${width}: should not auto-focus input on start`);
 
         const initial = await page.locator('.ledger-panel').evaluate(n => n.getBoundingClientRect().height);
         const pageHeight = await page.evaluate(() => document.documentElement.scrollHeight);
@@ -73,13 +74,18 @@ try {
             assert.equal(await page.evaluate(() => document.documentElement.scrollHeight), pageHeight, `${width}: document height grew`);
         }
 
-        // Verify IME composition ignores Enter during Korean composition
-        await page.locator('#guess-input').fill('아');
+        // Verify IME composition ignores Enter during Korean composition, while tapping #send submits immediately on first tap
+        let expectedCount = words.length;
+        await page.locator('#guess-input').focus();
+        await page.locator('#guess-input').fill('하늘');
         await page.locator('#guess-input').dispatchEvent('compositionstart');
         await page.locator('#guess-input').dispatchEvent('keydown', { key: 'Enter', isComposing: true });
         await page.waitForTimeout(100);
-        assert.equal(await page.locator('#guess-count-display').textContent(), String(words.length));
-        await page.locator('#guess-input').dispatchEvent('compositionend');
+        assert.equal(await page.locator('#guess-count-display').textContent(), String(expectedCount));
+        await page.locator('#send').click();
+        expectedCount += 1;
+        await page.waitForFunction(n => Number(document.querySelector('#guess-count-display').textContent) === n, expectedCount);
+        assert.notEqual(await page.evaluate(() => document.activeElement?.id), 'guess-input', `${width}: touch submit should dismiss keyboard focus`);
 
         await page.locator('#guess-input').focus();
         const reduced = Math.max(220, height - 330);
@@ -105,7 +111,7 @@ try {
 
         await page.locator('#guess-input').fill('물');
         await page.locator('#send').click();
-        await page.waitForFunction(n => Number(document.querySelector('#guess-count-display').textContent) === n, words.length + 1);
+        await page.waitForFunction(n => Number(document.querySelector('#guess-count-display').textContent) === n, expectedCount + 1);
         await visibleComposer(page, `${width}: guess lands while keyboard open`);
 
         await page.locator('#guess-input').blur();

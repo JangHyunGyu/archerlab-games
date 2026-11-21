@@ -40,8 +40,11 @@ let rolloverInFlight = false;
 let rolloverRoundId = null;
 let rolloverRetryAt = 0;
 let syncKeyboard = () => {};
+let sendPointer = null;
+let sendSubmittedByForm = false;
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const isTouchDevice = () => window.matchMedia('(hover: none), (pointer: coarse)').matches || navigator.maxTouchPoints > 0;
 const vfxParticles = [];
 const vfxRings = [];
 let vfxFrame = 0;
@@ -791,9 +794,6 @@ function render(data, { navigate = true, effects = false } = {}) {
             if (game.id !== prevGameId) {
                 $('result-name-status').textContent = '';
             }
-            if (effects && won && game.ranked && !profile.hasCustomName) {
-                $('result-name-input').focus({ preventScroll: true });
-            }
         }
     }
 
@@ -859,9 +859,6 @@ async function start() {
         if (existingGameId) {
             const data = await request(`games/${existingGameId}`);
             render(data);
-            if (data.game && data.game.status === 'active') {
-                $('guess-input').focus({ preventScroll: true });
-            }
             return;
         }
         let startId = storage.get(langKey('start_request'));
@@ -880,9 +877,6 @@ async function start() {
         showTurnFeedback(null);
         render(data);
         audio.play('start', { gain: 0.55 });
-        if (data.game && data.game.status === 'active') {
-            $('guess-input').focus({ preventScroll: true });
-        }
     });
 }
 
@@ -891,7 +885,6 @@ async function submitGuess(wordText) {
     const rawText = String(((wordText !== null && wordText !== void 0 ? wordText : $('guess-input').value))).normalize('NFC').trim();
     const text = locale === 'en' ? rawText.toLowerCase() : rawText;
     if (!text) {
-        $('guess-input').focus();
         return;
     }
     if ([...text].length > 32) {
@@ -900,6 +893,9 @@ async function submitGuess(wordText) {
     }
     const game = state.game;
     if (!game) return;
+    if (isTouchDevice() && document.activeElement === $('guess-input')) {
+        $('guess-input').blur();
+    }
 
     if (game.status !== 'active') {
         startGuessLoading();
@@ -921,7 +917,7 @@ async function submitGuess(wordText) {
         } finally {
             finishGuessLoading();
         }
-        $('guess-input').focus({ preventScroll: true });
+        if (!isTouchDevice() && wordText === undefined) $('guess-input').focus({ preventScroll: true });
         return;
     }
 
@@ -964,7 +960,7 @@ async function submitGuess(wordText) {
         finishGuessLoading();
     }
 
-    if ((((__oc15 = state.game) === null || __oc15 === void 0 ? void 0 : __oc15.status)) === 'active') $('guess-input').focus({ preventScroll: true });
+    if (!isTouchDevice() && wordText === undefined && (((__oc15 = state.game) === null || __oc15 === void 0 ? void 0 : __oc15.status)) === 'active') $('guess-input').focus({ preventScroll: true });
 }
 
 function buildShareText() {
@@ -1190,11 +1186,37 @@ $('start').addEventListener('click', start);
 
 $('guess-form').addEventListener('submit', event => {
     event.preventDefault();
-    if (!busy && !composing) submitGuess();
+    sendSubmittedByForm = true;
+    composing = false;
+    if (!busy) submitGuess();
 });
 
 $('send').addEventListener('pointerdown', event => {
-    if (event.pointerType === 'touch' && document.activeElement === $('guess-input')) event.preventDefault();
+    if (event.pointerType === 'touch' || event.pointerType === 'pen') {
+        sendPointer = { id: event.pointerId, x: event.clientX, y: event.clientY };
+        sendSubmittedByForm = false;
+    }
+});
+$('send').addEventListener('pointerup', event => {
+    if (!sendPointer || event.pointerId !== sendPointer.id) return;
+    const moved = Math.hypot(event.clientX - sendPointer.x, event.clientY - sendPointer.y);
+    sendPointer = null;
+    if (moved < 28 && !busy) {
+        if (document.activeElement === $('guess-input')) $('guess-input').blur();
+        setTimeout(() => {
+            if (!sendSubmittedByForm && !busy) {
+                composing = false;
+                submitGuess();
+            }
+            syncKeyboard();
+        }, 30);
+    } else {
+        syncKeyboard();
+    }
+});
+$('send').addEventListener('pointercancel', () => {
+    sendPointer = null;
+    syncKeyboard();
 });
 
 $('guess-input').addEventListener('input', () => {
@@ -1366,11 +1388,11 @@ window.addEventListener('focus', tickTimer);
         }
         if (!focused && !wasOpen) fullHeight = Math.max(fullHeight, window.innerHeight, height);
         const reduced = Math.max(fullHeight, window.innerHeight) - height > 100;
-        const open = screen === 'game' && unzoomed && reduced && (focused || wasOpen);
+        const open = sendPointer ? wasOpen : (screen === 'game' && unzoomed && reduced && (focused || wasOpen));
         document.body.classList.toggle('keyboard-open', open);
         const overlap = Math.max(0, window.innerHeight - height);
         document.body.style.setProperty('--keyboard-height', `${open ? overlap + 16 : 0}px`);
-        if (screen !== 'game' || !focused || !unzoomed || busy) return;
+        if (screen !== 'game' || !focused || !unzoomed || busy || sendPointer) return;
         const box = $('guess-form').getBoundingClientRect();
         const bottom = top + height - 12;
         const delta = box.bottom > bottom ? box.bottom - bottom : box.top < top + 12 ? box.top - top - 12 : 0;
