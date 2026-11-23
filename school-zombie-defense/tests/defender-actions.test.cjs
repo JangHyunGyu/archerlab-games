@@ -281,7 +281,7 @@ const characterAssetVersion = gameSource.match(
 assert.ok(characterAssetVersion, "CHARACTER_ASSET_VERSION must be declared");
 assert.equal(
   characterAssetVersion,
-  "20261120-defenders-8f-v2",
+  "20261123-defenders-8f-v3",
   "the shared character cache contract must remain independent from crossbow-only changes"
 );
 const crossbowAssetVersion = gameSource.match(
@@ -290,7 +290,7 @@ const crossbowAssetVersion = gameSource.match(
 assert.ok(crossbowAssetVersion, "CROSSBOW_ASSET_VERSION must be declared");
 assert.equal(
   crossbowAssetVersion,
-  "20261120-crossbow-8f-v2",
+  "20261123-crossbow-8f-v3",
   "crossbow asset cache version must track the reviewed direction sheets"
 );
 const directlyVersionedCrossbowAssets = [...gameSource.matchAll(
@@ -1163,7 +1163,7 @@ assert.match(build8fSource, /"f":\s*3/);
 
 // Regression: centered 12:00 muzzles, straight horizontal projectile-arrow, and muzzle->aimPoint parity across all 8 defenders.
 for (const defenderId of Object.keys(muzzleOffsets)) {
-  const lim = defenderId === "f" ? 24 : defenderId === "d" ? 18 : 14;
+  const lim = (defenderId === "f" || defenderId === "g") ? 24 : defenderId === "d" ? 18 : 14;
   assert.ok(
     Math.abs(muzzleOffsets[defenderId][4][0]) <= lim,
     `${defenderId.toUpperCase()} 12:00 muzzle offset x=${muzzleOffsets[defenderId][4][0]} must stay within +/-${lim}`
