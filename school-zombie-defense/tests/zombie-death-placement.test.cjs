@@ -211,7 +211,7 @@ const expectedDeathTextures = [
   ...[1, 2, 3].map((index) => `zombie-death-student-${index}-sheet`),
   ...[
     "runner", "brute", "volatile", "elite", "teacher", "nurse", "diva", "athlete",
-    "janitor", "guard", "crawler", "screamer", "spider", "bloom", "charger"
+    "janitor", "guard", "crawler", "screamer", "spider", "bloom", "charger", "kendo", "cheer"
   ].map((type) => `zombie-death-${type}-sheet`)
 ];
 const deathRenderScalesBlock = gameSource.match(
@@ -240,7 +240,7 @@ const deathTexturesByType = new Map([
   ["student", [1, 2, 3].map((index) => `zombie-death-student-${index}-sheet`)],
   ...[
     "runner", "brute", "volatile", "elite", "teacher", "nurse", "diva", "athlete",
-    "janitor", "guard", "crawler", "screamer", "spider", "bloom", "charger"
+    "janitor", "guard", "crawler", "screamer", "spider", "bloom", "charger", "kendo", "cheer"
   ].map((type) => [type, [`zombie-death-${type}-sheet`]])
 ]);
 for (const [type, deathTextures] of deathTexturesByType) {

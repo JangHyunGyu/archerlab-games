@@ -71,14 +71,14 @@
   const imageAsset = (path) => {
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
-  const ZOMBIE_ASSET_VERSION = "20261004-proportions-v2";
+  const ZOMBIE_ASSET_VERSION = "20261124-zombies-native-v1";
   const CHARACTER_ASSET_VERSION = "20261123-defenders-8f-v3";
   const CHARACTER_CONTINUITY_ASSET_VERSION = "20261123-defender-continuity-8f-v3";
   const FIREBOMB_RECOVERY_ASSET_VERSION = "20261123-firebomb-recovery-8f-v3";
   const CROSSBOW_ASSET_VERSION = "20261123-crossbow-8f-v3";
   const CROSSBOW_AUDIO_VERSION = "20260719-freesound-crossbow-firing-v1";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
-  const COMBAT_EFFECT_ASSET_VERSION = "20260712-combat-fx-v2";
+  const COMBAT_EFFECT_ASSET_VERSION = "20261124-combat-fx-v3";
   const COMBAT_PROP_ASSET_VERSION = "20260712-combat-props-v2";
   const ALLIED_WEAPON_ASSET_VERSION = "20260912-allied-weapons-v1";
   const versionedImageAsset = (path, version) => {
@@ -346,9 +346,9 @@
     // Anchor the bright ignition point to the barrel, leaving smoke behind it.
     // Sizes and alpha are tuned so the flash still reads on the dark field.
     "projectile-arrow": { texture: "muzzle-arrow", width: 52, duration: 160, alpha: 0.9, scalePeak: 1.18, originX: 0.18 },
-    "projectile-pistol": { texture: "muzzle-pistol", width: 52, duration: 150, alpha: 1, scalePeak: 1.28, originX: 0.34 },
+    "projectile-pistol": { texture: "muzzle-pistol", width: 52, duration: 150, alpha: 1, scalePeak: 1.28, originX: 0.28 },
     "projectile-rifle": { texture: "muzzle-rifle", width: 64, duration: 140, alpha: 1, scalePeak: 1.24, originX: 0.25 },
-    "projectile-sniper": { texture: "muzzle-sniper", width: 78, duration: 160, alpha: 1, scalePeak: 1.22, originX: 0.2 },
+    "projectile-sniper": { texture: "muzzle-sniper", width: 78, duration: 160, alpha: 1, scalePeak: 1.22, originX: 0.27 },
     "projectile-rocket": { texture: "muzzle-rocket", width: 88, duration: 210, alpha: 1, scalePeak: 1.14, originX: 0.35 }
   };
   // A short white-hot core at the hotspot keeps the flash visible even when
@@ -402,7 +402,7 @@
     "blood-stain-pool-2": { x: 0.5104, y: 0.4867 },
     "blood-stain-smear-1": { x: 0.3613, y: 0.5537 },
     "blood-stain-splatter-1": { x: 0.5033, y: 0.4964 },
-    "blood-burst-core": { x: 0.4996, y: 0.4497 }
+    "blood-burst-core": { x: 0.4904, y: 0.5042 }
   };
   const ZOMBIE_DEATH_ANIMATION_FRAMES = 4;
   const NORMAL_ZOMBIE_DEATH_ANIMATION_FRAMES = 12;
@@ -428,7 +428,9 @@
     "screamer",
     "spider",
     "bloom",
-    "charger"
+    "charger",
+    "kendo",
+    "cheer"
   ];
   const ZOMBIE_DEATH_TEXTURES = Object.fromEntries(
     ZOMBIE_DEATH_TYPES.map((type) => [
@@ -443,27 +445,29 @@
   // Alpha-weighted final-frame centers and opaque bounds, normalized to each 512px death frame.
   const ZOMBIE_DEATH_FINAL_FRAME_BOUNDS = {
     "zombie-death-athlete-sheet": { x: -0.0186, y: 0.332, width: 0.7051, height: 0.2383 },
-    "zombie-death-bloom-sheet": { x: -0.0135, y: 0.0588, width: 0.8594, height: 0.2656 },
-    "zombie-death-brute-sheet": { x: -0.0139, y: 0.0022, width: 0.5742, height: 0.3145 },
-    "zombie-death-charger-sheet": { x: -0.0425, y: 0.3623, width: 0.7324, height: 0.2324 },
+    "zombie-death-bloom-sheet": { x: -0.0336, y: 0.0624, width: 0.9062, height: 0.2656 },
+    "zombie-death-brute-sheet": { x: -0.0152, y: -0.0022, width: 0.5859, height: 0.3145 },
+    "zombie-death-charger-sheet": { x: -0.0609, y: 0.3567, width: 0.7734, height: 0.2324 },
+    "zombie-death-cheer-sheet": { x: -0.0488, y: 0.3436, width: 0.707, height: 0.2559 },
     "zombie-death-crawler-sheet": { x: -0.0205, y: 0.0669, width: 0.8184, height: 0.4668 },
-    "zombie-death-diva-sheet": { x: -0.0364, y: 0.3556, width: 0.5508, height: 0.1719 },
-    "zombie-death-elite-sheet": { x: -0.0221, y: 0.0018, width: 0.6172, height: 0.3438 },
-    "zombie-death-guard-sheet": { x: -0.0106, y: 0.0836, width: 0.7227, height: 0.1992 },
-    "zombie-death-janitor-sheet": { x: -0.0484, y: 0.0621, width: 0.7695, height: 0.2363 },
+    "zombie-death-diva-sheet": { x: -0.0365, y: 0.3571, width: 0.6055, height: 0.1719 },
+    "zombie-death-elite-sheet": { x: -0.0215, y: 0.0016, width: 0.7891, height: 0.3438 },
+    "zombie-death-guard-sheet": { x: -0.0163, y: 0.0768, width: 0.6914, height: 0.1992 },
+    "zombie-death-janitor-sheet": { x: -0.0444, y: 0.0609, width: 0.7402, height: 0.2363 },
+    "zombie-death-kendo-sheet": { x: -0.0205, y: 0.0756, width: 0.6777, height: 0.1992 },
     "zombie-death-normal-variant-1-sheet": { x: 0.0444, y: 0.2937, width: 0.7617, height: 0.2539 },
     "zombie-death-normal-variant-2-sheet": { x: 0.019, y: 0.2912, width: 0.7188, height: 0.2812 },
     "zombie-death-normal-variant-3-sheet": { x: 0.0435, y: 0.3308, width: 0.7129, height: 0.1914 },
     "zombie-death-normal-variant-4-sheet": { x: 0.0248, y: 0.2632, width: 0.7246, height: 0.2402 },
-    "zombie-death-nurse-sheet": { x: -0.0429, y: 0.333, width: 0.8301, height: 0.2559 },
+    "zombie-death-nurse-sheet": { x: -0.0564, y: 0.3367, width: 0.8574, height: 0.2559 },
     "zombie-death-runner-sheet": { x: -0.0488, y: 0.3196, width: 0.791, height: 0.2734 },
-    "zombie-death-screamer-sheet": { x: -0.0425, y: 0.0709, width: 0.7012, height: 0.2148 },
-    "zombie-death-spider-sheet": { x: 0.0139, y: 0.05, width: 0.8652, height: 0.459 },
-    "zombie-death-student-1-sheet": { x: -0.0486, y: 0.0409, width: 0.8496, height: 0.3535 },
-    "zombie-death-student-2-sheet": { x: 0.0645, y: 0.0463, width: 0.8652, height: 0.3594 },
-    "zombie-death-student-3-sheet": { x: -0.093, y: 0.0404, width: 0.8906, height: 0.3418 },
-    "zombie-death-teacher-sheet": { x: -0.0297, y: 0.0403, width: 0.8594, height: 0.3027 },
-    "zombie-death-volatile-sheet": { x: -0.0098, y: -0.0037, width: 0.5977, height: 0.3418 }
+    "zombie-death-screamer-sheet": { x: -0.0498, y: 0.0653, width: 0.7402, height: 0.2148 },
+    "zombie-death-spider-sheet": { x: 0.0025, y: 0.0582, width: 0.8574, height: 0.459 },
+    "zombie-death-student-1-sheet": { x: -0.0706, y: 0.0445, width: 0.9707, height: 0.3535 },
+    "zombie-death-student-2-sheet": { x: 0.0726, y: 0.0443, width: 0.9434, height: 0.3594 },
+    "zombie-death-student-3-sheet": { x: -0.0875, y: 0.0435, width: 0.959, height: 0.3418 },
+    "zombie-death-teacher-sheet": { x: -0.0386, y: 0.0342, width: 0.7578, height: 0.3027 },
+    "zombie-death-volatile-sheet": { x: -0.0087, y: -0.0064, width: 0.6543, height: 0.3418 }
   };
   const ZOMBIE_DEATH_RENDER_SCALES = {
     // Match the first visible death pose to the alpha-bounded size of the walk cycle.
@@ -472,20 +476,22 @@
     normal: { deathSize: 1.35 },
     student: { deathSize: 1.01 },
     runner: { deathSize: 1 },
-    brute: { deathSize: 1.16 },
+    brute: { deathSize: 1.18 },
     volatile: { deathSize: 0.99 },
     elite: { deathSize: 1.05 },
-    teacher: { deathSize: 1.35 },
-    nurse: { deathSize: 1 },
-    diva: { deathSize: 1.25 },
+    teacher: { deathSize: 1.3 },
+    nurse: { deathSize: 0.96 },
+    diva: { deathSize: 1.42 },
     athlete: { deathSize: 1.35 },
     janitor: { deathSize: 1.5 },
-    guard: { deathSize: 1.35 },
+    guard: { deathSize: 1.5 },
     crawler: { deathSize: 1 },
-    screamer: { deathSize: 1.23 },
+    screamer: { deathSize: 1.1 },
     spider: { deathSize: 1 },
     bloom: { deathSize: 1.13 },
-    charger: { deathSize: 1 }
+    charger: { deathSize: 1.18 },
+    kendo: { deathSize: 1.42 },
+    cheer: { deathSize: 1 }
   };
   const ZOMBIE_FOOT_OFFSET_RATIOS = {
     normal: 0.386,
@@ -504,7 +510,9 @@
     screamer: 0.392,
     spider: 0.225,
     bloom: 0.392,
-    charger: 0.408
+    charger: 0.408,
+    kendo: 0.402,
+    cheer: 0.394
   };
   const ZOMBIE_HP_MULTIPLIER = 3;
   const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
@@ -521,6 +529,11 @@
   const ZOMBIE_CORPSE_DEPTH_RANGE = 18;
   const ZOMBIE_HIT_GRID_SIZE = 96;
   const ZOMBIE_HIT_GRID_PADDING = 88;
+  const ZOMBIE_GRID_CELL = 96;
+  const ZOMBIE_GRID_COLS = 9;
+  const ZOMBIE_GRID_ROWS = 14;
+  const ZOMBIE_GRID_OFFSET_Y = 1;
+  const MAX_ACTIVE_FIRE_ZONES = 8;
   const ZOMBIE_SEPARATION_RADIUS_SCALE = 0.9;
   const ZOMBIE_SEPARATION_PUSH = 0.34;
   const ZOMBIE_SEPARATION_MAX_STEP = 16;
@@ -530,6 +543,12 @@
   const ZOMBIE_FRONT_TIE_EPSILON = 2;
   const ZOMBIE_SIDE_STEP_SPEED = 72;
   const DAMAGE_TEXT_POOL_LIMIT = 64;
+  const DAMAGE_TEXT_POOL_LIMIT_PER_KIND = 24;
+  const DAMAGE_TEXT_STYLES = {
+    normal: { fontFamily: "Arial, sans-serif", fontSize: 23, fontStyle: "900", color: "#ffffff", stroke: "#40191b", strokeThickness: 5 },
+    marked: { fontFamily: "Arial, sans-serif", fontSize: 26, fontStyle: "900", color: "#ffe29a", stroke: "#5a310e", strokeThickness: 5 },
+    crit: { fontFamily: "Arial, sans-serif", fontSize: 31, fontStyle: "900", color: "#fff0a5", stroke: "#811010", strokeThickness: 5 }
+  };
   const ACTIVE_DAMAGE_TEXT_LIMIT = 46;
   const DAMAGE_TEXT_FRAME_BUDGET = 12;
   const ACTIVE_HIT_EFFECT_LIMIT = 58;
@@ -848,6 +867,8 @@
       surgeCooldownMax: 5.2,
       surgeMinBarricadeDistance: 120
     },
+    kendo: { id: "kendo", hpScale: 1.55, speedScale: 1.06, sizeScale: 1.04, attackScale: 1.24, hitRadiusScale: 1.02, knockbackScale: 0.72, animRate: 6.6, reward: 2 },
+    cheer: { id: "cheer", hpScale: 0.84, speedScale: 1.48, sizeScale: 0.92, attackScale: 0.92, hitRadiusScale: 0.9, knockbackScale: 1.1, animRate: 8.8, reward: 1 },
     elite: { id: "elite", hpScale: 1.5, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 0.5, animRate: 5.2, reward: 4 }
   };
   const ZOMBIE_TEXTURE_TYPES = [
@@ -867,8 +888,11 @@
     "screamer",
     "spider",
     "bloom",
-    "charger"
+    "charger",
+    "kendo",
+    "cheer"
   ];
+  const ZOMBIE_MULTI_VARIANT_WALK_TYPES = new Set(["normal"]);
 
   const {
     createDefaultMetaSave,
@@ -937,10 +961,12 @@
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.nurse, weight: Math.min(28, 8 + level * 1.3) });
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.diva, weight: Math.min(24, 8 + level * 1.1) });
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.athlete, weight: Math.min(32, 9 + level * 1.4) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.cheer, weight: Math.min(26, 8 + level * 1.25) });
     }
     if (level >= 5) {
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.teacher, weight: Math.min(26, 7 + (level - 5) * 1.35) });
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.janitor, weight: Math.min(24, 6 + (level - 5) * 1.25) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.kendo, weight: Math.min(24, 6 + (level - 5) * 1.25) });
     }
     if (level >= 6) {
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.volatile, weight: Math.min(24, 6 + (level - 6) * 1.45) });
@@ -1420,11 +1446,11 @@
   }
 
   function createZombieSpriteTextures(scene) {
-    const sliceSheet = (sourceKey, keyPrefix) => {
+    const sliceSheet = (sourceKey, keyPrefix, variantCount = 4) => {
       const source = scene.textures.get(sourceKey).getSourceImage();
       const cellWidth = Math.floor(source.width / 4);
       const cellHeight = Math.floor(source.height / 4);
-      for (let variant = 0; variant < 4; variant += 1) {
+      for (let variant = 0; variant < variantCount; variant += 1) {
         for (let frame = 0; frame < 4; frame += 1) {
           makeImageSliceTexture(
             scene,
@@ -1441,7 +1467,8 @@
     };
 
     ZOMBIE_TEXTURE_TYPES.forEach((type) => {
-      sliceSheet(`zombie-walk-${type}`, `zombie-walk-${type}`);
+      const variantCount = ZOMBIE_MULTI_VARIANT_WALK_TYPES.has(type) ? 4 : 1;
+      sliceSheet(`zombie-walk-${type}`, `zombie-walk-${type}`, variantCount);
     });
   }
 
@@ -2307,10 +2334,10 @@
     this.load.image("projectile-shock", versionedImageAsset("assets/images/projectile-shock.png", ALLIED_WEAPON_ASSET_VERSION));
     this.load.image("projectile-nail", versionedImageAsset("assets/images/projectile-nail.png", COMBAT_PROP_ASSET_VERSION));
     this.load.image("muzzle-arrow", versionedImageAsset("assets/images/muzzle-arrow.png", CROSSBOW_ASSET_VERSION));
-    this.load.image("muzzle-pistol", imageAsset("assets/images/muzzle-pistol.png"));
-    this.load.image("muzzle-rifle", imageAsset("assets/images/muzzle-rifle.png"));
-    this.load.image("muzzle-rocket", imageAsset("assets/images/muzzle-rocket.png"));
-    this.load.image("muzzle-sniper", imageAsset("assets/images/muzzle-sniper.png"));
+    this.load.image("muzzle-pistol", versionedImageAsset("assets/images/muzzle-pistol.png", COMBAT_EFFECT_ASSET_VERSION));
+    this.load.image("muzzle-rifle", versionedImageAsset("assets/images/muzzle-rifle.png", COMBAT_EFFECT_ASSET_VERSION));
+    this.load.image("muzzle-rocket", versionedImageAsset("assets/images/muzzle-rocket.png", COMBAT_EFFECT_ASSET_VERSION));
+    this.load.image("muzzle-sniper", versionedImageAsset("assets/images/muzzle-sniper.png", COMBAT_EFFECT_ASSET_VERSION));
     this.load.image("skill-repair", imageAsset("assets/images/skill-repair.png"));
     this.load.spritesheet("zombie-hit-arrow-sheet", versionedImageAsset("assets/images/zombie-hit-arrow-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 96, frameHeight: 96 });
     this.load.spritesheet("zombie-hit-pistol-sheet", versionedImageAsset("assets/images/zombie-hit-pistol-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 112, frameHeight: 96 });
@@ -2619,8 +2646,13 @@
 
       this.zombies = [];
       this.bullets = [];
-      this.zombieHitBuckets = new Map();
+      this.zombieGridCells = Array.from({ length: ZOMBIE_GRID_COLS * ZOMBIE_GRID_ROWS }, () => []);
+      this.zombieGridActiveCells = [];
+      this.zombieGridStamp = 0;
       this.zombieHitCandidates = [];
+      this.zombieSeparationCandidates = [];
+      this.fireZoneTargets = [];
+      this.shockQueryCandidates = [];
       this.embeddedArrows = [];
       this.fireZones = [];
       this.turrets = [];
@@ -2628,11 +2660,14 @@
       this.defenders = [];
       this.overlayObjects = [];
       this.transientObjects = new Set();
-      this.damageTextPool = [];
+      this.followingHitEffects = new Set();
+      this.damageTextPools = { normal: [], marked: [], crit: [] };
       this.activeDamageTexts = new Set();
       this.activeHitEffects = new Set();
       this.activeBarricadeFragments = new Set();
       this.activeCorpses = [];
+      this.lastHitStopAt = 0;
+      this._hudCache = null;
       this.damageTextsThisFrame = 0;
       this.hitEffectsThisFrame = 0;
       this.fireTickEffectsThisFrame = 0;
@@ -3459,6 +3494,7 @@
 
     createHud() {
       this.ui = {};
+      this._hudCache = null;
       this.add.rectangle(270, 58, 538, 118, 0x11120f, 0.74).setDepth(299);
       this.addCommandPanel(270, 42, 532, 82, 300, COLORS.gold, { track: false, alpha: 0.96 });
       this.add.rectangle(270, 116, 516, 12, 0x030708, 0.84)
@@ -3971,6 +4007,9 @@
       if ((((__oc36 = object === null || object === void 0 ? void 0 : object.followZombie) === null || __oc36 === void 0 ? void 0 : __oc36.hitEffects))) {
         object.followZombie.hitEffects.delete(object);
       }
+      if (this.followingHitEffects) {
+        this.followingHitEffects.delete(object);
+      }
       if (((object === null || object === void 0 ? void 0 : object.hitEffectRoot))) {
         this.activeHitEffects.delete(object);
         object.hitEffectRoot = false;
@@ -3986,6 +4025,9 @@
     clearTransientObjects() {
       Array.from(this.transientObjects).forEach((object) => this.destroyTransientObject(object));
       this.transientObjects.clear();
+      if (this.followingHitEffects) {
+        this.followingHitEffects.clear();
+      }
       this.clearActiveDamageTexts();
       this.activeHitEffects.clear();
       this.activeBarricadeFragments.clear();
@@ -4026,12 +4068,23 @@
       this.bullets.forEach((bullet) => this.destroyBullet(bullet));
       this.zombies = [];
       this.bullets = [];
-      (((__oc38 = this.zombieHitBuckets) === null || __oc38 === void 0 ? void 0 : __oc38.clear()));
+      if (this.zombieGridActiveCells) {
+        while (this.zombieGridActiveCells.length > 0) {
+          this.zombieGridActiveCells.pop().length = 0;
+        }
+      }
+      this.zombieGridStamp = 0;
       if (this.zombieHitCandidates) {
         this.zombieHitCandidates.length = 0;
       }
       if (this.zombieSeparationCandidates) {
         this.zombieSeparationCandidates.length = 0;
+      }
+      if (this.fireZoneTargets) {
+        this.fireZoneTargets.length = 0;
+      }
+      if (this.shockQueryCandidates) {
+        this.shockQueryCandidates.length = 0;
       }
       this.fireZones = [];
       this.turrets = [];
@@ -4832,7 +4885,15 @@
       }
     }
 
-    requestHitStop(duration = 0.025) {
+    requestHitStop(duration = 0.025, options = {}) {
+      const now = typeof performance !== "undefined" && typeof performance.now === "function"
+        ? performance.now()
+        : Date.now();
+      const cooldownMs = options && options.priority ? 150 : 300;
+      if (this.lastHitStopAt && now - this.lastHitStopAt < cooldownMs) {
+        return;
+      }
+      this.lastHitStopAt = now;
       this.hitStopTimer = Math.max(this.hitStopTimer || 0, clamp(duration, 0, 0.055));
     }
 
@@ -6686,6 +6747,8 @@
       this.playerFireTimer = 0;
       this.focusPoint = null;
       this.hitStopTimer = 0;
+      this.lastHitStopAt = 0;
+      this._hudCache = null;
       this.setGameSpeed(DEFAULT_GAME_SPEED);
       this.skillRerollsThisRun = 0;
       this.skillRerollUsed = false;
@@ -7072,9 +7135,9 @@
         const eliteRoll = this.level >= 6 && Math.random() < Math.min(0.045 + this.level * 0.0055, 0.16);
         const x = rand(this.getZombieLaneMinX(), this.getZombieLaneMaxX());
         const y = rand(-65, 46);
-        const variant = Math.floor(rand(0, 4));
-        const frame = Math.floor(rand(0, 4));
         const typeConfig = pickZombieType(this.level, eliteRoll);
+        const variant = ZOMBIE_MULTI_VARIANT_WALK_TYPES.has(typeConfig.id) ? Math.floor(rand(0, 4)) : 0;
+        const frame = Math.floor(rand(0, 4));
         const baseDisplayHeight = eliteRoll ? ZOMBIE_ELITE_DISPLAY_HEIGHT : ZOMBIE_BASE_DISPLAY_HEIGHT;
         const displayHeight = Math.round(baseDisplayHeight * typeConfig.sizeScale);
         const displayWidth = displayHeight;
@@ -7123,6 +7186,9 @@
         zombie.baseTint = 0;
         zombie.animRate = typeConfig.animRate;
         zombie.knockbackScale = typeConfig.knockbackScale;
+        zombie.hitFlashTimer = 0;
+        zombie._lastDepth = 60;
+        zombie._gridQueryStamp = 0;
         zombie.crowdSeed = rand(-1, 1) || 0.5;
         zombie.crowdOrder = this.zombieSpawnSerial = (this.zombieSpawnSerial || 0) + 1;
         zombie.reward = typeConfig.reward;
@@ -7954,6 +8020,11 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
         onComplete: () => this.destroyTransientObject(flame, false)
       });
 
+      const crowded = (this.zombies && this.zombies.length >= 25) || (this.transientObjects && this.transientObjects.size >= 60);
+      if (crowded) {
+        return;
+      }
+
       const smoke = this.trackTransient(this.add.circle(
         tailX - backX * 8 + sideX * rand(-3, 3),
         tailY - backY * 8 + sideY * rand(-3, 3),
@@ -8227,6 +8298,12 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       if (!this.fireZones) {
         this.fireZones = [];
       }
+      while (this.fireZones.length >= MAX_ACTIVE_FIRE_ZONES) {
+        const oldest = this.fireZones.shift();
+        if (oldest && oldest.objects) {
+          oldest.objects.forEach((object) => this.destroyTransientObject(object, false));
+        }
+      }
       const damageDuration = Math.max(0.01, duration);
       const visualDuration = damageDuration * FIRE_ZONE_VISUAL_DURATION_MULTIPLIER;
       const visualRadius = radius * FIRE_ZONE_VISUAL_SIZE_MULTIPLIER;
@@ -8359,9 +8436,17 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
           const hitRadius = zone.radius || zone.visualRadius;
           const hitHalfWidth = hitRadius * 1.12;
           const hitHalfHeight = Math.max(18, hitRadius * 0.62);
-          this.zombies.slice().forEach((zombie) => {
+          const targets = this.getZombiesInBounds(
+            zone.x - hitHalfWidth - 64,
+            zone.x + hitHalfWidth + 64,
+            zone.y - hitHalfHeight - 104,
+            zone.y + hitHalfHeight + 48,
+            this.fireZoneTargets || (this.fireZoneTargets = [])
+          );
+          for (let j = 0; j < targets.length; j += 1) {
+            const zombie = targets[j];
             if (!zombie.active || zombie.hp <= 0 || this.mode !== "playing") {
-              return;
+              continue;
             }
             const foot = this.getZombieFootPoint(zombie);
             const dx = foot.x - zone.x;
@@ -8369,7 +8454,7 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
             const normalizedDistanceSq = (dx * dx) / (hitHalfWidth * hitHalfWidth)
               + (dy * dy) / (hitHalfHeight * hitHalfHeight);
             if (normalizedDistanceSq > 1) {
-              return;
+              continue;
             }
             const falloff = 1 - Math.sqrt(normalizedDistanceSq) * 0.28;
             this.applyFireZoneBurn(
@@ -8381,7 +8466,7 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
             if (zombie.active && zone.slowDuration > 0) {
               zombie.slowTimer = Math.max(zombie.slowTimer || 0, zone.slowDuration * 0.55);
             }
-          });
+          }
         }
 
         if (zone.life <= 0) {
@@ -8394,9 +8479,17 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
     findShockChainTarget(origin, ignoredTargets, radius) {
       let best = null;
       let bestDistanceSq = radius * radius;
-      this.zombies.forEach((zombie) => {
+      const candidates = this.getZombiesInBounds(
+        origin.x - radius,
+        origin.x + radius,
+        origin.y - radius,
+        origin.y + radius,
+        this.shockQueryCandidates || (this.shockQueryCandidates = [])
+      );
+      for (let i = 0; i < candidates.length; i += 1) {
+        const zombie = candidates[i];
         if (!zombie.active || zombie.hp <= 0 || ignoredTargets.has(zombie)) {
-          return;
+          continue;
         }
         const dx = zombie.x - origin.x;
         const dy = zombie.y - origin.y;
@@ -8405,7 +8498,7 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
           best = zombie;
           bestDistanceSq = distanceSq;
         }
-      });
+      }
       return best;
     }
 
@@ -8577,8 +8670,12 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
     }
 
     updateFollowingHitEffects() {
-      Array.from(this.transientObjects || []).forEach((object) => {
-        if (!((object === null || object === void 0 ? void 0 : object.followZombie))) {
+      if (!this.followingHitEffects || this.followingHitEffects.size === 0) {
+        return;
+      }
+      this.followingHitEffects.forEach((object) => {
+        if (!object || object.destroyed || !object.followZombie) {
+          this.followingHitEffects.delete(object);
           return;
         }
         this.updateFollowingHitEffect(object);
@@ -8606,83 +8703,97 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       object.setDepth(229 + zombie.y / 5);
     }
 
-    getZombieHitBucketKey(bucketX, bucketY) {
-      return `${bucketX}:${bucketY}`;
-    }
-
     rebuildZombieHitGrid() {
-      const buckets = this.zombieHitBuckets || (this.zombieHitBuckets = new Map());
-      buckets.clear();
+      let cells = this.zombieGridCells;
+      if (!cells) {
+        cells = Array.from({ length: ZOMBIE_GRID_COLS * ZOMBIE_GRID_ROWS }, () => []);
+        this.zombieGridCells = cells;
+      }
+      const activeCells = this.zombieGridActiveCells || (this.zombieGridActiveCells = []);
+      while (activeCells.length > 0) {
+        activeCells.pop().length = 0;
+      }
       for (let i = 0; i < this.zombies.length; i += 1) {
         const zombie = this.zombies[i];
         if (!((zombie === null || zombie === void 0 ? void 0 : zombie.active)) || zombie.hp <= 0) {
           continue;
         }
-        const bucketX = Math.floor(zombie.x / ZOMBIE_HIT_GRID_SIZE);
-        const bucketY = Math.floor(zombie.y / ZOMBIE_HIT_GRID_SIZE);
-        const key = this.getZombieHitBucketKey(bucketX, bucketY);
-        let bucket = buckets.get(key);
-        if (!bucket) {
-          bucket = [];
-          buckets.set(key, bucket);
+        const col = clamp(Math.floor(zombie.x / ZOMBIE_GRID_CELL), 0, ZOMBIE_GRID_COLS - 1);
+        const row = clamp(Math.floor(zombie.y / ZOMBIE_GRID_CELL) + ZOMBIE_GRID_OFFSET_Y, 0, ZOMBIE_GRID_ROWS - 1);
+        const cell = cells[row * ZOMBIE_GRID_COLS + col];
+        if (cell.length === 0) {
+          activeCells.push(cell);
         }
-        bucket.push(zombie);
+        cell.push(zombie);
       }
     }
 
-    getBulletHitCandidates(bullet, segmentStart, tip) {
-      const buckets = this.zombieHitBuckets;
-      const candidates = this.zombieHitCandidates || (this.zombieHitCandidates = []);
-      candidates.length = 0;
-      if (!((buckets === null || buckets === void 0 ? void 0 : buckets.size))) {
-        return candidates;
+    getZombiesInBounds(minX, maxX, minY, maxY, out) {
+      const result = out || [];
+      result.length = 0;
+      const cells = this.zombieGridCells;
+      const activeCells = this.zombieGridActiveCells;
+      if (!cells || !activeCells || activeCells.length === 0) {
+        return result;
       }
-
-      const minX = Math.min(segmentStart.x, tip.x) - ZOMBIE_HIT_GRID_PADDING;
-      const maxX = Math.max(segmentStart.x, tip.x) + ZOMBIE_HIT_GRID_PADDING;
-      const minY = Math.min(segmentStart.y, tip.y) - ZOMBIE_HIT_GRID_PADDING;
-      const maxY = Math.max(segmentStart.y, tip.y) + ZOMBIE_HIT_GRID_PADDING;
-      const startBucketX = Math.floor(minX / ZOMBIE_HIT_GRID_SIZE);
-      const endBucketX = Math.floor(maxX / ZOMBIE_HIT_GRID_SIZE);
-      const startBucketY = Math.floor(minY / ZOMBIE_HIT_GRID_SIZE);
-      const endBucketY = Math.floor(maxY / ZOMBIE_HIT_GRID_SIZE);
-      for (let bucketX = startBucketX; bucketX <= endBucketX; bucketX += 1) {
-        for (let bucketY = startBucketY; bucketY <= endBucketY; bucketY += 1) {
-          const bucket = buckets.get(this.getZombieHitBucketKey(bucketX, bucketY));
-          if (bucket) {
-            candidates.push(...bucket);
+      let stamp = ((this.zombieGridStamp || 0) + 1) | 0;
+      if (stamp <= 0) {
+        stamp = 1;
+      }
+      this.zombieGridStamp = stamp;
+      const c0 = clamp(Math.floor(minX / ZOMBIE_GRID_CELL), 0, ZOMBIE_GRID_COLS - 1);
+      const c1 = clamp(Math.floor(maxX / ZOMBIE_GRID_CELL), 0, ZOMBIE_GRID_COLS - 1);
+      const r0 = clamp(Math.floor(minY / ZOMBIE_GRID_CELL) + ZOMBIE_GRID_OFFSET_Y, 0, ZOMBIE_GRID_ROWS - 1);
+      const r1 = clamp(Math.floor(maxY / ZOMBIE_GRID_CELL) + ZOMBIE_GRID_OFFSET_Y, 0, ZOMBIE_GRID_ROWS - 1);
+      for (let r = r0; r <= r1; r += 1) {
+        const rowOffset = r * ZOMBIE_GRID_COLS;
+        for (let c = c0; c <= c1; c += 1) {
+          const cell = cells[rowOffset + c];
+          for (let k = 0; k < cell.length; k += 1) {
+            const zombie = cell[k];
+            if (zombie._gridQueryStamp !== stamp) {
+              zombie._gridQueryStamp = stamp;
+              result.push(zombie);
+            }
           }
         }
       }
+      return result;
+    }
 
+    getBulletHitCandidates(bullet, segmentStart, tip) {
+      const candidates = this.getZombiesInBounds(
+        Math.min(segmentStart.x, tip.x) - ZOMBIE_HIT_GRID_PADDING,
+        Math.max(segmentStart.x, tip.x) + ZOMBIE_HIT_GRID_PADDING,
+        Math.min(segmentStart.y, tip.y) - ZOMBIE_HIT_GRID_PADDING,
+        Math.max(segmentStart.y, tip.y) + ZOMBIE_HIT_GRID_PADDING,
+        this.zombieHitCandidates || (this.zombieHitCandidates = [])
+      );
       const aimTarget = ((bullet === null || bullet === void 0 ? void 0 : bullet.aimTarget));
-      if (((aimTarget === null || aimTarget === void 0 ? void 0 : aimTarget.active)) && aimTarget.hp > 0 && !candidates.includes(aimTarget)) {
-        candidates.push(aimTarget);
+      if (((aimTarget === null || aimTarget === void 0 ? void 0 : aimTarget.active)) && aimTarget.hp > 0) {
+        if (candidates.length === 0) {
+          candidates.push(aimTarget);
+        } else if (aimTarget._gridQueryStamp !== this.zombieGridStamp) {
+          aimTarget._gridQueryStamp = this.zombieGridStamp;
+          candidates.push(aimTarget);
+        }
       }
       return candidates;
     }
 
     getNearbyZombies(zombie, radius) {
-      const buckets = this.zombieHitBuckets;
       const candidates = this.zombieSeparationCandidates || (this.zombieSeparationCandidates = []);
-      candidates.length = 0;
-      if (!zombie || !((buckets === null || buckets === void 0 ? void 0 : buckets.size))) {
+      if (!zombie) {
+        candidates.length = 0;
         return candidates;
       }
-
-      const startBucketX = Math.floor((zombie.x - radius) / ZOMBIE_HIT_GRID_SIZE);
-      const endBucketX = Math.floor((zombie.x + radius) / ZOMBIE_HIT_GRID_SIZE);
-      const startBucketY = Math.floor((zombie.y - radius) / ZOMBIE_HIT_GRID_SIZE);
-      const endBucketY = Math.floor((zombie.y + radius) / ZOMBIE_HIT_GRID_SIZE);
-      for (let bucketX = startBucketX; bucketX <= endBucketX; bucketX += 1) {
-        for (let bucketY = startBucketY; bucketY <= endBucketY; bucketY += 1) {
-          const bucket = buckets.get(this.getZombieHitBucketKey(bucketX, bucketY));
-          if (bucket) {
-            candidates.push(...bucket);
-          }
-        }
-      }
-      return candidates;
+      return this.getZombiesInBounds(
+        zombie.x - radius,
+        zombie.x + radius,
+        zombie.y - radius,
+        zombie.y + radius,
+        candidates
+      );
     }
 
     getZombieCrowdRadius(zombie) {
@@ -9029,6 +9140,9 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
           zombie.hitEffects = new Set();
         }
         zombie.hitEffects.add(object);
+        if (this.followingHitEffects) {
+          this.followingHitEffects.add(object);
+        }
         return this.trackTransient(object);
       };
 
@@ -9064,7 +9178,8 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
         onComplete: () => this.destroyTransientObject(flame, false)
       });
 
-      const sparkCount = crit ? 10 : 7;
+      const crowded = (this.zombies && this.zombies.length >= 25) || (this.transientObjects && this.transientObjects.size >= 60);
+      const sparkCount = crowded ? (crit ? 4 : 2) : (crit ? 10 : 7);
       for (let i = 0; i < sparkCount; i += 1) {
         const angle = rand(-Math.PI * 0.92, -Math.PI * 0.08);
         const distance = rand(18, crit ? 58 : 44) * sizeScale;
@@ -9156,6 +9271,9 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
           zombie.hitEffects = new Set();
         }
         zombie.hitEffects.add(object);
+        if (this.followingHitEffects) {
+          this.followingHitEffects.add(object);
+        }
         return this.trackTransient(object);
       };
 
@@ -9212,7 +9330,8 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
         onComplete: () => this.destroyTransientObject(bolt, false)
       });
 
-      const sparkCount = crit ? 9 : 6;
+      const crowded = (this.zombies && this.zombies.length >= 25) || (this.transientObjects && this.transientObjects.size >= 60);
+      const sparkCount = crowded ? (crit ? 4 : 2) : (crit ? 9 : 6);
       for (let i = 0; i < sparkCount; i += 1) {
         const angle = rand(-Math.PI, Math.PI);
         const spark = this.trackTransient(this.add.circle(
@@ -9351,12 +9470,8 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       } else if (hitType === "projectile-rocket" || hitType === "explosion") {
         this.requestHitStop(0.045);
       }
+      zombie.hitFlashTimer = 0.07;
       zombie.setTint(crit ? 0xfff2a5 : 0xff7777);
-      this.scheduleSceneDelay(70, () => {
-        if (zombie.active) {
-          this.restoreZombieTint(zombie);
-        }
-      });
       this.showDamageText(zombie.x + rand(-8, 8), zombie.y - rand(8, 24), damage, crit, marked);
       if (zombie.hp <= 0) {
         this.killZombie(zombie, knockback);
@@ -9379,7 +9494,10 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
         this.shakeCamera(90, 0.0045);
       }
       const shouldExplode = zombie.deathExplosion;
-      this.zombies = this.zombies.filter((item) => item !== zombie);
+      const zombieIdx = this.zombies.indexOf(zombie);
+      if (zombieIdx !== -1) {
+        this.zombies.splice(zombieIdx, 1);
+      }
       this.createZombieCorpse(x, y, zombie, deathKnockback);
       this.kills += 1;
       this.killsInLevel += 1;
@@ -9396,25 +9514,23 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       }
     }
 
-    createDamageTextObject() {
-      return this.add.text(0, 0, "", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 23,
-        fontStyle: "900",
-        color: "#ffffff",
-        stroke: "#40191b",
-        strokeThickness: 5
-      })
+    createDamageTextObject(kind = "normal") {
+      const style = DAMAGE_TEXT_STYLES[kind] || DAMAGE_TEXT_STYLES.normal;
+      const text = this.add.text(0, 0, "", style)
         .setOrigin(0.5)
         .setVisible(false)
         .setActive(false)
         .setAlpha(0);
+      text._poolKind = kind;
+      return text;
     }
 
-    acquireDamageText() {
-      let text = this.damageTextPool.pop();
+    acquireDamageText(kind = "normal") {
+      const pools = this.damageTextPools || (this.damageTextPools = { normal: [], marked: [], crit: [] });
+      const pool = pools[kind] || pools.normal;
+      let text = pool.pop();
       if (!text || text.destroyed) {
-        text = this.createDamageTextObject();
+        text = this.createDamageTextObject(kind);
       }
       this.activeDamageTexts.add(text);
       return text.setVisible(true).setActive(true);
@@ -9434,8 +9550,11 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
         .setScale(1)
         .setRotation(0)
         .setText("");
-      if (this.damageTextPool.length < DAMAGE_TEXT_POOL_LIMIT) {
-        this.damageTextPool.push(text);
+      const kind = text._poolKind || "normal";
+      const pools = this.damageTextPools || (this.damageTextPools = { normal: [], marked: [], crit: [] });
+      const pool = pools[kind] || pools.normal;
+      if (pool.length < DAMAGE_TEXT_POOL_LIMIT_PER_KIND) {
+        pool.push(text);
       } else {
         this.destroyGameObject(text, false);
       }
@@ -9450,17 +9569,10 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       if (!this.canSpawnDamageText(priority)) {
         return;
       }
-      const text = this.acquireDamageText();
+      const kind = crit ? "crit" : marked ? "marked" : "normal";
+      const text = this.acquireDamageText(kind);
       text
         .setText(String(damage))
-        .setStyle({
-          fontFamily: "Arial, sans-serif",
-          fontSize: crit ? 31 : marked ? 26 : 23,
-          fontStyle: "900",
-          color: crit ? "#fff0a5" : marked ? "#ffe29a" : "#ffffff",
-          stroke: crit ? "#811010" : marked ? "#5a310e" : "#40191b",
-          strokeThickness: 5
-        })
         .setPosition(x, y)
         .setRotation(rand(-0.18, 0.18))
         .setScale(1)
@@ -9965,8 +10077,14 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
 
     updateZombies(dt) {
       for (let i = this.zombies.length - 1; i >= 0; i -= 1) {
+        if (i >= this.zombies.length) {
+          i = this.zombies.length - 1;
+          if (i < 0) {
+            break;
+          }
+        }
         const zombie = this.zombies[i];
-        if (!zombie.active) {
+        if (!zombie || !zombie.active) {
           this.clearWeakMark(zombie);
           this.zombies.splice(i, 1);
           continue;
@@ -9995,11 +10113,25 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
           const crowdShift = Math.sin(zombie.wobble) * 7 * dt;
           zombie.x = this.clampZombieLaneX(zombie.x + crowdShift);
         }
-        zombie.setDepth(ZOMBIE_BODY_DEPTH_BASE + zombie.y / 5);
+        const nextDepth = ZOMBIE_BODY_DEPTH_BASE + zombie.y / 5;
+        if (zombie._lastDepth !== nextDepth) {
+          zombie._lastDepth = nextDepth;
+          zombie.setDepth(nextDepth);
+        }
+
+        if (zombie.hitFlashTimer > 0) {
+          zombie.hitFlashTimer -= dt;
+          if (zombie.hitFlashTimer <= 0) {
+            zombie.hitFlashTimer = 0;
+            this.restoreZombieTint(zombie);
+          }
+        }
 
         if (zombie.slowTimer > 0) {
           zombie.slowTimer -= dt;
-          zombie.setTint(0x99f4ff);
+          if ((zombie.hitFlashTimer || 0) <= 0 && zombie.tintTopLeft !== 0x99f4ff) {
+            zombie.setTint(0x99f4ff);
+          }
         } else if (zombie.tintTopLeft === 0x99f4ff) {
           this.restoreZombieTint(zombie);
         }
@@ -10071,7 +10203,7 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
         if (amount > 0) this.playSfx("core", clamp(amount / Math.max(rawAmount, 1), 0.45, 1));
         const severity = clamp(rawAmount / 46, 1, 1.9);
         this.shakeCamera(260, 0.014 * severity);
-        this.requestHitStop(0.055);
+        this.requestHitStop(0.055, { priority: true });
         this.vibrateImpact(severity > 1.45 ? [90, 35, 125] : [62, 28, 86]);
       }
       if (this.coreHp <= 0) {
@@ -10220,9 +10352,17 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
         duration: 260,
         onComplete: () => this.destroyTransientObject(ring, false)
       });
-      this.zombies.slice().forEach((zombie) => {
+      const candidates = this.getZombiesInBounds(
+        x - radius - 48,
+        x + radius + 48,
+        y - radius - 48,
+        y + radius + 48,
+        []
+      );
+      for (let i = 0; i < candidates.length; i += 1) {
+        const zombie = candidates[i];
         if (!zombie.active) {
-          return;
+          continue;
         }
         const dx = zombie.x - x;
         const dy = zombie.y - y;
@@ -10240,7 +10380,7 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
             zombie.slowTimer = Math.max(zombie.slowTimer || 0, slowDuration);
           }
         }
-      });
+      }
     }
 
     createScreenPulse(color) {
@@ -11673,30 +11813,81 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
     }
 
     updateHud() {
-      this.ui.timer.setText(formatRunClock(this.elapsed));
+      const cache = this._hudCache || (this._hudCache = {});
+      const timerText = formatRunClock(this.elapsed);
+      if (cache.timer !== timerText) {
+        cache.timer = timerText;
+        this.ui.timer.setText(timerText);
+      }
       const stageName = [SchoolI18n.t("stage.gate"), SchoolI18n.t("stage.hall"), SchoolI18n.t("stage.class"), SchoolI18n.t("stage.roof")][Math.min(3, this.stage - 1)];
-      this.ui.stage.setText(SchoolI18n.t("stage.line", { stage: String(this.stage).padStart(2, "0"), name: stageName }));
-      this.ui.level.setText(`WAVE ${String(this.level).padStart(2, "0")} · ${this.killsInLevel} / ${this.levelNeed}`);
-      this.ui.core.setText(`${Math.round(this.coreHp)} / ${this.maxCoreHp}`);
-      this.ui.coins.setText(`$${this.getDisplayedCoins()}`);
+      const stageText = SchoolI18n.t("stage.line", { stage: String(this.stage).padStart(2, "0"), name: stageName });
+      if (cache.stage !== stageText) {
+        cache.stage = stageText;
+        this.ui.stage.setText(stageText);
+      }
+      const levelText = `WAVE ${String(this.level).padStart(2, "0")} · ${this.killsInLevel} / ${this.levelNeed}`;
+      if (cache.level !== levelText) {
+        cache.level = levelText;
+        this.ui.level.setText(levelText);
+      }
+      const coreText = `${Math.round(this.coreHp)} / ${this.maxCoreHp}`;
+      if (cache.core !== coreText) {
+        cache.core = coreText;
+        this.ui.core.setText(coreText);
+      }
+      const coinsText = `$${this.getDisplayedCoins()}`;
+      if (cache.coins !== coinsText) {
+        cache.coins = coinsText;
+        this.ui.coins.setText(coinsText);
+      }
       const progress = clamp(this.killsInLevel / this.levelNeed, 0, 1);
-      this.progressBar.setSize(506 * progress, 6);
-      this.progressBar.setFillStyle(UI_COLORS.amber, 1);
+      const progressWidth = 506 * progress;
+      if (cache.progressWidth !== progressWidth) {
+        cache.progressWidth = progressWidth;
+        this.progressBar.setSize(progressWidth, 6);
+      }
+      if (cache.progressColor !== UI_COLORS.amber) {
+        cache.progressColor = UI_COLORS.amber;
+        this.progressBar.setFillStyle(UI_COLORS.amber, 1);
+      }
       const hpRate = clamp(this.coreHp / this.maxCoreHp, 0, 1);
-      this.coreBar.setSize(380 * hpRate, 7);
-      this.coreBar.setFillStyle(hpRate < 0.35 ? UI_COLORS.danger : hpRate < 0.68 ? UI_COLORS.amber : UI_COLORS.success, 1);
+      const coreWidth = 380 * hpRate;
+      if (cache.coreWidth !== coreWidth) {
+        cache.coreWidth = coreWidth;
+        this.coreBar.setSize(coreWidth, 7);
+      }
+      const coreColor = hpRate < 0.35 ? UI_COLORS.danger : hpRate < 0.68 ? UI_COLORS.amber : UI_COLORS.success;
+      if (cache.coreColor !== coreColor) {
+        cache.coreColor = coreColor;
+        this.coreBar.setFillStyle(coreColor, 1);
+      }
       const shieldValue = Math.max(0, Math.round(this.shield));
       const shieldRate = clamp(this.shield / this.maxCoreHp, 0, 1);
       const hasShield = shieldValue > 0;
-      this.ui.shield.setText(`SHIELD +${shieldValue}`).setVisible(hasShield);
-      this.shieldBar.setSize(380 * shieldRate, 3).setVisible(hasShield);
+      if (cache.shieldValue !== shieldValue || cache.hasShield !== hasShield) {
+        cache.shieldValue = shieldValue;
+        cache.hasShield = hasShield;
+        this.ui.shield.setText(`SHIELD +${shieldValue}`).setVisible(hasShield);
+      }
+      if (cache.shieldRate !== shieldRate || cache.hasShieldBar !== hasShield) {
+        cache.shieldRate = shieldRate;
+        cache.hasShieldBar = hasShield;
+        this.shieldBar.setSize(380 * shieldRate, 3).setVisible(hasShield);
+      }
       const threatLabel = hpRate < 0.35
         ? SchoolI18n.t("hud.collapse")
         : hpRate < 0.68
           ? SchoolI18n.t("hud.pressure")
           : SchoolI18n.t("hud.stable");
-      this.ui.threat.setText(threatLabel);
-      this.ui.threat.setColor(hpRate < 0.35 ? "#ff7771" : hpRate < 0.68 ? "#d5b675" : "#b4c097");
+      if (cache.threatLabel !== threatLabel) {
+        cache.threatLabel = threatLabel;
+        this.ui.threat.setText(threatLabel);
+      }
+      const threatColor = hpRate < 0.35 ? "#ff7771" : hpRate < 0.68 ? "#d5b675" : "#b4c097";
+      if (cache.threatColor !== threatColor) {
+        cache.threatColor = threatColor;
+        this.ui.threat.setColor(threatColor);
+      }
     }
   }
 

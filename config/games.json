@@ -75,7 +75,8 @@
         "node school-zombie-defense/tests/ranking-sync.test.cjs",
         "node school-zombie-defense/tests/gamepad-permissions.test.cjs",
         "node school-zombie-defense/tests/combat-asset-jobs.test.cjs",
-        "node school-zombie-defense/tests/combat-asset-loading.test.cjs"
+        "node school-zombie-defense/tests/combat-asset-loading.test.cjs",
+        "node school-zombie-defense/tests/horde-performance.test.cjs"
       ]
     },
     {

@@ -24,11 +24,16 @@ for f_idx in range(8):
         box = rocket.crop((c * cw, 0, (c + 1) * cw, rocket.height)).getchannel('A').point(lambda a: 255 if a > 8 else 0).getbbox()
         assert box and min(box[0], box[1], cw - box[2], rocket.height - box[3]) >= 8, (sheet_name, c, box)
 volatile = Image.open(images/'zombie-walk-volatile.png').convert('RGBA')
-original = Image.open(source/'volatile-before.png').convert('RGBA')
+assert volatile.size == (2048, 2048), f'volatile walk size mismatch: {volatile.size}'
 for row in range(4):
     for col in range(4):
-        box = (col*313,row*313,(col+1)*313,(row+1)*313)
-        assert volatile.crop(box).tobytes() == original.crop(box).tobytes(), 'Every runtime volatile crop must stay pixel-identical'
+        box = volatile.crop((col*512,row*512,(col+1)*512,(row+1)*512)).getchannel('A').point(lambda a: 255 if a > 8 else 0).getbbox()
+        assert box and min(box[0], box[1], 512 - box[2], 512 - box[3]) >= 4, ('volatile walk frame clips cell', row, col, box)
+volatile_death = Image.open(images/'zombie-death-volatile-sheet.png').convert('RGBA')
+assert volatile_death.size == (2048, 512), f'volatile death size mismatch: {volatile_death.size}'
+for col in range(4):
+    box = volatile_death.crop((col*512,0,(col+1)*512,512)).getchannel('A').point(lambda a: 255 if a > 8 else 0).getbbox()
+    assert box and min(box[0], box[1], 512 - box[2], 512 - box[3]) >= 6, ('volatile death frame clips cell', col, box)
 for character in ['brute','screamer']:
     atlas = Image.open(images/('zombie-death-'+character+'-sheet.png')).convert('RGBA')
     original = Image.open(source/(character+'-before.png')).convert('RGBA')

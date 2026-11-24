@@ -6,13 +6,17 @@
   const frameScales = {
     // Male repaint atlases already contain the reviewed pose corrections.
     runner: [1, 1, 1, 1.02, 1.05, 1.10, 1.12, 1.12],
-    charger: [1, 1, 1, 1, 1.06, 1.07, 1.16, 1.16],
+    charger: [1, 1, 0.98, 0.98, 1.08, 1.04, 1.2, 1.14],
     student: [1, 0.88, 1.04, 1.03],
     brute: [0.95, 1, 1.06, 1.18],
     volatile: [1, 1, 1.03, 1.12],
     elite: [1, 1.05, 1.04, 1.16],
-    screamer: [0.75, 0.75, 0.88, 1.06],
-    bloom: [0.93, 0.95, 1, 1.13]
+    screamer: [1, 1, 1.16, 1.32],
+    bloom: [0.93, 0.95, 1, 1.13],
+    guard: [1, 1, 1.12, 1.08],
+    diva: [1, 1.02, 1.05, 1.04, 0.98, 1.08, 1.22, 1.08],
+    kendo: [1, 1.08, 1.2, 1.12],
+    cheer: [1, 1, 1, 1.02, 1, 1.06, 1.36, 1.22]
   };
 
   function frameScale(type, frame) {
