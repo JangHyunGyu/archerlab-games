@@ -1,6 +1,6 @@
-import { messages, translation } from './i18n.mjs?v=20261124-v14';
-import { request, requestId, storage, reportException } from './api.mjs?v=20261124-v14';
-import { GameAudio } from './audio.mjs?v=20261124-v14';
+import { messages, translation } from './i18n.mjs?v=20261124-v15';
+import { request, requestId, storage, reportException } from './api.mjs?v=20261124-v15';
+import { GameAudio } from './audio.mjs?v=20261124-v15';
 
 const locale = document.documentElement.lang === 'en' ? 'en' : 'ko';
 const t = translation(locale);
@@ -46,9 +46,100 @@ let sendSubmittedByForm = false;
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const isTouchDevice = () => window.matchMedia('(hover: none), (pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+const VFX_SPRITES = {
+    cool: 'assets/ui/vfx-pulse-cyan.webp?v=20261124-v15',
+    warm: 'assets/ui/vfx-sigil-violet.webp?v=20261124-v15',
+    hot: 'assets/ui/vfx-flare-hot.webp?v=20261124-v15',
+    molten: 'assets/ui/vfx-nova-molten.webp?v=20261124-v15',
+    exact: 'assets/ui/vfx-compass-burst-1024.webp?v=20261124-v15',
+};
+const HAPTIC_PATTERNS = {
+    unknown: [24, 30, 24],
+    duplicate: [12, 24, 12],
+    cold: [12],
+    cool: [16],
+    warm: [22, 32, 34],
+    hot: [30, 35, 50, 35, 70],
+    molten: [45, 30, 75, 30, 110, 40, 140],
+    exact: [60, 35, 80, 35, 110, 45, 180, 55, 260],
+};
 const vfxParticles = [];
 const vfxRings = [];
+const vfxBeams = [];
+const vfxTimers = [];
+const vfxPreloadCache = [];
+let vfxPreloaded = false;
 let vfxFrame = 0;
+let vfxLastTime = 0;
+
+// 게임 화면 진입 시 5종 네이티브 투명 VFX 스프라이트 백그라운드 프리로드
+function preloadVfxSprites() {
+    if (vfxPreloaded || reducedMotion.matches) return;
+    vfxPreloaded = true;
+    Object.keys(VFX_SPRITES).forEach(key => {
+        const img = new Image();
+        img.decoding = 'async';
+        img.src = VFX_SPRITES[key];
+        vfxPreloadCache.push(img);
+    });
+}
+
+function addVfxTimer(fn, delay) {
+    const id = setTimeout(() => {
+        const idx = vfxTimers.indexOf(id);
+        if (idx >= 0) vfxTimers.splice(idx, 1);
+        fn();
+    }, delay);
+    vfxTimers.push(id);
+    return id;
+}
+
+function clearClassPrefix(el, prefix) {
+    if (!el) return;
+    const toRemove = [];
+    for (let i = 0; i < el.classList.length; i++) {
+        if (el.classList[i].indexOf(prefix) === 0) toRemove.push(el.classList[i]);
+    }
+    for (let i = 0; i < toRemove.length; i++) el.classList.remove(toRemove[i]);
+}
+
+function restartAnimClass(el, prefix, cls, cleanupMs = 1800) {
+    if (!el || !cls) return;
+    clearClassPrefix(el, prefix);
+    if (el._animTimer) {
+        clearTimeout(el._animTimer);
+        el._animTimer = 0;
+    }
+    void el.offsetWidth;
+    el.classList.add(cls);
+    const onEnd = () => {
+        el.classList.remove(cls);
+        el.removeEventListener('animationend', onEnd);
+        if (el._animTimer) {
+            clearTimeout(el._animTimer);
+            el._animTimer = 0;
+        }
+    };
+    el.addEventListener('animationend', onEnd, { once: true });
+    el._animTimer = setTimeout(onEnd, cleanupMs);
+}
+
+function clearVfxTimers() {
+    while (vfxTimers.length) clearTimeout(vfxTimers.pop());
+    const stage = $('vfx-stage');
+    if (stage) delete stage.dataset.tier;
+    clearClassPrefix($('vfx-edge-glow'), 'is-glow-');
+    clearClassPrefix($('vfx-sprite-a'), 'is-tier-');
+    clearClassPrefix($('vfx-sprite-b'), 'is-tier-');
+    const resonance = $('resonance-strip');
+    if (resonance) {
+        resonance.classList.remove('is-surge');
+        delete resonance.dataset.tier;
+    }
+    ['.composer', '.chronometer-console', '.ledger-panel', '.ledger-scroll', '#result-banner'].forEach(sel => {
+        clearClassPrefix(document.querySelector(sel), 'is-shake-');
+    });
+}
 
 function ensureVfxCanvasSize() {
     const canvas = $('vfx-canvas');
@@ -63,19 +154,89 @@ function ensureVfxCanvasSize() {
     return { canvas, ctx: canvas.getContext('2d'), dpr };
 }
 
-function stepVfx() {
+function drawFourPointStar(ctx, x, y, radius, angle) {
+    const inner = radius * 0.28;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+        const r = i % 2 === 0 ? radius : inner;
+        const theta = (Math.PI / 4) * i;
+        const px = Math.cos(theta) * r;
+        const py = Math.sin(theta) * r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+}
+
+function stepVfx(now) {
     vfxFrame = 0;
     const setup = ensureVfxCanvasSize();
-    if (!setup || !setup.ctx) return;
+    if (!setup || !setup.ctx) {
+        vfxLastTime = 0;
+        return;
+    }
     const { canvas, ctx, dpr } = setup;
+    if (reducedMotion.matches || document.hidden) {
+        vfxParticles.length = 0;
+        vfxRings.length = 0;
+        vfxBeams.length = 0;
+        vfxLastTime = 0;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+    }
+    const ts = typeof now === 'number' && now > 0 ? now : performance.now();
+    const dt = vfxLastTime ? Math.min(0.05, Math.max(0.001, (ts - vfxLastTime) / 1000)) : 1 / 60;
+    const stepMul = dt * 60;
+    vfxLastTime = ts;
+
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.scale(dpr, dpr);
-    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalCompositeOperation = settings.darkMode ? 'lighter' : 'source-over';
 
+    // 1. 방사형 빛줄기 (hot / molten / exact)
+    for (let i = vfxBeams.length - 1; i >= 0; i--) {
+        const beam = vfxBeams[i];
+        beam.age += dt;
+        const p = beam.age / beam.life;
+        if (p >= 1) {
+            vfxBeams.splice(i, 1);
+            continue;
+        }
+        beam.angle += beam.spin * dt;
+        const ease = 1 - Math.pow(1 - p, 2);
+        const len = beam.length * (0.35 + 0.65 * ease);
+        const halfSpread = beam.spread * (1 - p * 0.45);
+        const fade = p < 0.2 ? p / 0.2 : 1 - (p - 0.2) / 0.8;
+        const tipX = beam.x + Math.cos(beam.angle) * len;
+        const tipY = beam.y + Math.sin(beam.angle) * len;
+        const leftX = beam.x + Math.cos(beam.angle - halfSpread) * len;
+        const leftY = beam.y + Math.sin(beam.angle - halfSpread) * len;
+        const rightX = beam.x + Math.cos(beam.angle + halfSpread) * len;
+        const rightY = beam.y + Math.sin(beam.angle + halfSpread) * len;
+        const grad = ctx.createLinearGradient(beam.x, beam.y, tipX, tipY);
+        grad.addColorStop(0, beam.color);
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.globalAlpha = Math.max(0, fade * beam.alpha);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(beam.x, beam.y);
+        ctx.lineTo(leftX, leftY);
+        ctx.lineTo(rightX, rightY);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // 2. 다층 충격파 링 (점선 아스트랄 링 및 소프트 글로우 포함)
     for (let i = vfxRings.length - 1; i >= 0; i--) {
         const ring = vfxRings[i];
-        ring.age += 1 / 60;
+        ring.age += dt;
         const p = ring.age / ring.life;
         if (p >= 1) {
             vfxRings.splice(i, 1);
@@ -83,75 +244,406 @@ function stepVfx() {
         }
         const ease = 1 - Math.pow(1 - p, 3);
         const radius = ring.r0 + (ring.r1 - ring.r0) * ease;
+        const alpha = (1 - p) * ring.alpha;
+        const lineWidth = Math.max(1, ring.width * (1 - p * 0.55));
+        ctx.setLineDash(ring.dashed ? [9, 6] : []);
+        if (ring.glow) {
+            ctx.strokeStyle = ring.color;
+            ctx.globalAlpha = alpha * 0.28;
+            ctx.lineWidth = lineWidth * 3.4;
+            ctx.beginPath();
+            ctx.arc(ring.x, ring.y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
         ctx.strokeStyle = ring.color;
-        ctx.globalAlpha = (1 - p) * ring.alpha;
-        ctx.lineWidth = Math.max(1, ring.width * (1 - p * 0.65));
+        ctx.globalAlpha = alpha;
+        ctx.lineWidth = lineWidth;
         ctx.beginPath();
         ctx.arc(ring.x, ring.y, radius, 0, Math.PI * 2);
         ctx.stroke();
     }
+    ctx.setLineDash([]);
 
+    // 3. 파티클 (코멧 스파크 · 4각 성운 별 · 상승 잔불 · 승리 콘페티)
     for (let i = vfxParticles.length - 1; i >= 0; i--) {
         const pt = vfxParticles[i];
-        pt.age += 1 / 60;
+        pt.age += dt;
         const p = pt.age / pt.life;
         if (p >= 1) {
             vfxParticles.splice(i, 1);
             continue;
         }
-        pt.vx *= pt.drag;
-        pt.vy = pt.vy * pt.drag + pt.gravity;
-        pt.x += pt.vx;
-        pt.y += pt.vy;
-        const alpha = (1 - p) * pt.alpha;
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = pt.color;
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, Math.max(0.8, pt.size * (1 - p * 0.5)), 0, Math.PI * 2);
-        ctx.fill();
+        pt.prevX = pt.x;
+        pt.prevY = pt.y;
+        const dragMul = Math.pow(pt.drag, stepMul);
+        pt.vx *= dragMul;
+        pt.vy = pt.vy * dragMul + pt.gravity * stepMul;
+        if (pt.sway) {
+            pt.x += Math.sin(pt.age * 7 + pt.phase) * pt.sway * stepMul;
+        }
+        pt.x += pt.vx * stepMul;
+        pt.y += pt.vy * stepMul;
+        const alpha = Math.max(0, (1 - p) * pt.alpha);
+        const size = Math.max(0.9, pt.size * (1 - p * 0.42));
+
+        if (pt.kind === 'star') {
+            pt.angle += pt.spin * dt;
+            const twinkle = 0.72 + 0.28 * Math.sin(pt.age * 16 + pt.phase);
+            ctx.globalAlpha = alpha * twinkle;
+            ctx.fillStyle = pt.color;
+            drawFourPointStar(ctx, pt.x, pt.y, size * 2.1, pt.angle);
+        } else if (pt.kind === 'confetti') {
+            pt.spin += pt.spinSpeed * dt;
+            ctx.save();
+            ctx.translate(pt.x, pt.y);
+            ctx.rotate(pt.angle + pt.spin * 0.35);
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = pt.color;
+            const rw = size * 2.2 * Math.max(0.24, Math.abs(Math.cos(pt.spin)));
+            const rh = size * 1.15;
+            ctx.fillRect(-rw * 0.5, -rh * 0.5, rw, rh);
+            ctx.restore();
+        } else if (pt.kind === 'ember') {
+            ctx.globalAlpha = alpha * 0.4;
+            ctx.fillStyle = pt.color;
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, size * 2.1, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = '#fff8de';
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, size * 0.75, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.strokeStyle = pt.color;
+            ctx.globalAlpha = alpha * 0.78;
+            ctx.lineWidth = Math.max(1.1, size * 0.85);
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(pt.prevX - pt.vx * 1.4, pt.prevY - pt.vy * 1.4);
+            ctx.lineTo(pt.x, pt.y);
+            ctx.stroke();
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = pt.coreColor || pt.color;
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, size * 0.72, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
-    if ((vfxParticles.length || vfxRings.length) && !document.hidden) {
+    if ((vfxParticles.length || vfxRings.length || vfxBeams.length) && !document.hidden) {
         vfxFrame = requestAnimationFrame(stepVfx);
     } else {
+        vfxLastTime = 0;
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 }
 
-function spawnBurst(x, y, { count, colors, speedMin, speedMax, ringMax, ringWidth = 2.2, gravity = 0.04, innerRadius = 0 }) {
+function spawnBurst(x, y, options) {
     if (reducedMotion.matches || document.hidden) return;
-    vfxRings.push({ x, y, r0: Math.max(14, innerRadius), r1: ringMax, age: 0, life: 0.65, width: ringWidth, alpha: 0.42, color: colors[0] });
+    const {
+        count = 24,
+        colors = ['#57e0ff', '#ffe6a8'],
+        speedMin = 1.5,
+        speedMax = 4.5,
+        ringMax = 120,
+        ringWidth = 2.2,
+        ringLife = 0.65,
+        ringAlpha = 0.52,
+        dashedRing = false,
+        extraRing = false,
+        gravity = 0.04,
+        innerRadius = 0,
+        sizeScale = 1,
+        stars = 0,
+        embers = 0,
+        confetti = 0,
+        beams = null,
+    } = options;
+
+    vfxRings.push({
+        x, y, r0: Math.max(12, innerRadius), r1: ringMax, age: 0, life: ringLife,
+        width: ringWidth, alpha: ringAlpha, color: colors[0], glow: ringWidth >= 2.2,
+    });
+    if (dashedRing) {
+        vfxRings.push({
+            x, y, r0: Math.max(16, innerRadius * 1.08), r1: ringMax * 0.84, age: 0, life: ringLife * 0.9,
+            width: Math.max(1.3, ringWidth * 0.72), alpha: ringAlpha * 0.72,
+            color: colors[1] || colors[0], dashed: true,
+        });
+    }
+    if (extraRing) {
+        vfxRings.push({
+            x, y, r0: Math.max(20, innerRadius * 1.15), r1: ringMax * 1.24, age: 0, life: ringLife * 1.25,
+            width: Math.max(1.4, ringWidth * 0.78), alpha: ringAlpha * 0.78,
+            color: colors[Math.min(2, colors.length - 1)], glow: true,
+        });
+    }
+
+    if (beams && beams.count > 0) {
+        const baseRot = Math.random() * Math.PI * 2;
+        for (let i = 0; i < beams.count; i++) {
+            vfxBeams.push({
+                x, y,
+                angle: baseRot + (Math.PI * 2 * i) / beams.count + (Math.random() - 0.5) * 0.14,
+                length: (beams.length || 220) * (0.85 + Math.random() * 0.35),
+                spread: beams.spread || 0.1,
+                spin: (beams.spin || 0.45) * (i % 2 === 0 ? 1 : -0.7),
+                alpha: beams.alpha || 0.32,
+                color: beams.color || colors[0],
+                age: 0,
+                life: beams.life || 0.7,
+            });
+        }
+    }
+
     for (let i = 0; i < count; i++) {
-        const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
+        const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.45;
         const speed = speedMin + Math.random() * (speedMax - speedMin);
-        const rStart = innerRadius > 0 ? innerRadius * (0.88 + Math.random() * 0.28) : 0;
+        const rStart = innerRadius > 0 ? innerRadius * (0.72 + Math.random() * 0.36) : 0;
+        const isStar = i < stars;
         vfxParticles.push({
+            kind: isStar ? 'star' : 'spark',
             x: x + Math.cos(angle) * rStart,
             y: y + Math.sin(angle) * rStart,
+            prevX: x + Math.cos(angle) * rStart,
+            prevY: y + Math.sin(angle) * rStart,
             vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed - 0.7,
-            drag: 0.94,
+            vy: Math.sin(angle) * speed - 0.65,
+            drag: 0.942,
             gravity,
             age: 0,
-            life: 0.55 + Math.random() * 0.55,
-            size: 1.8 + Math.random() * 2.8,
-            alpha: 0.75 + Math.random() * 0.25,
+            life: 0.52 + Math.random() * 0.55,
+            size: (1.9 + Math.random() * 2.8) * sizeScale,
+            alpha: 0.8 + Math.random() * 0.2,
+            angle: Math.random() * Math.PI * 2,
+            spin: (Math.random() - 0.5) * 5.2,
+            phase: Math.random() * Math.PI * 2,
+            color: colors[i % colors.length],
+            coreColor: '#fffdf2',
+        });
+    }
+
+    for (let i = 0; i < embers; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const rStart = Math.max(12, innerRadius * (0.3 + Math.random() * 0.9));
+        vfxParticles.push({
+            kind: 'ember',
+            x: x + Math.cos(angle) * rStart,
+            y: y + Math.sin(angle) * rStart,
+            prevX: x,
+            prevY: y,
+            vx: (Math.random() - 0.5) * 1.9,
+            vy: -0.9 - Math.random() * 2.5,
+            drag: 0.975,
+            gravity: -0.025,
+            sway: 0.4 + Math.random() * 0.65,
+            phase: Math.random() * Math.PI * 2,
+            age: 0,
+            life: 0.85 + Math.random() * 0.7,
+            size: (1.7 + Math.random() * 2.2) * sizeScale,
+            alpha: 0.82 + Math.random() * 0.18,
+            angle: 0,
+            spin: 0,
             color: colors[i % colors.length],
         });
     }
+
+    for (let i = 0; i < confetti; i++) {
+        const angle = (Math.PI * 2 * i) / Math.max(1, confetti) + (Math.random() - 0.5) * 0.5;
+        const speed = speedMin * 0.9 + Math.random() * (speedMax * 0.95);
+        vfxParticles.push({
+            kind: 'confetti',
+            x, y, prevX: x, prevY: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 2.2,
+            drag: 0.96,
+            gravity: 0.11,
+            age: 0,
+            life: 1.05 + Math.random() * 0.75,
+            size: 2.8 + Math.random() * 2.2,
+            alpha: 0.92,
+            angle: Math.random() * Math.PI * 2,
+            spin: Math.random() * Math.PI * 2,
+            spinSpeed: (Math.random() - 0.5) * 12,
+            color: colors[i % colors.length],
+        });
+    }
+
     if (!vfxFrame) vfxFrame = requestAnimationFrame(stepVfx);
 }
 
-// 추측 근접도와 정답 여부에 따라 스프라이트·캔버스·흔들림 복합 이펙트 실행
+// 정답과의 근접도·오답 상태에 맞춘 기기 햅틱 진동 패턴 실행
+function triggerHaptics(tier) {
+    if (reducedMotion.matches || document.hidden) return;
+    const pattern = HAPTIC_PATTERNS[tier];
+    if (!pattern) return;
+    try {
+        if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+            navigator.vibrate(pattern);
+        }
+    } catch (_err) { /* 진동 API 미지원 브라우저 예외 무시 */ }
+}
+
+// 등급별 UI 진동 트리거 (.ledger-panel은 translateX만 사용해 레이아웃 높이 유지)
+function triggerUiShake(tier) {
+    if (reducedMotion.matches) return;
+    const composer = document.querySelector('.composer');
+    const consoleEl = document.querySelector('.chronometer-console');
+    const panel = document.querySelector('.ledger-panel');
+    const scroll = document.querySelector('.ledger-scroll');
+    const banner = $('result-banner');
+
+    if (tier === 'unknown') {
+        restartAnimClass(composer, 'is-shake-', 'is-shake-error', 420);
+        return;
+    }
+    if (tier === 'cold') {
+        restartAnimClass(composer, 'is-shake-', 'is-shake-cold', 260);
+        return;
+    }
+    if (tier === 'cool') {
+        restartAnimClass(composer, 'is-shake-', 'is-shake-cool', 320);
+        restartAnimClass(panel, 'is-shake-', 'is-shake-cool', 320);
+        return;
+    }
+    if (tier === 'warm') {
+        restartAnimClass(consoleEl, 'is-shake-', 'is-shake-warm', 400);
+        restartAnimClass(panel, 'is-shake-', 'is-shake-warm', 400);
+        restartAnimClass(scroll, 'is-shake-', 'is-shake-warm', 400);
+        return;
+    }
+    if (tier === 'hot') {
+        restartAnimClass(consoleEl, 'is-shake-', 'is-shake-hot', 480);
+        restartAnimClass(composer, 'is-shake-', 'is-shake-hot', 480);
+        restartAnimClass(panel, 'is-shake-', 'is-shake-hot', 480);
+        restartAnimClass(scroll, 'is-shake-', 'is-shake-hot', 480);
+        return;
+    }
+    if (tier === 'molten') {
+        restartAnimClass(consoleEl, 'is-shake-', 'is-shake-molten', 580);
+        restartAnimClass(composer, 'is-shake-', 'is-shake-molten', 580);
+        restartAnimClass(panel, 'is-shake-', 'is-shake-molten', 580);
+        restartAnimClass(scroll, 'is-shake-', 'is-shake-molten', 580);
+        return;
+    }
+    if (tier === 'exact') {
+        restartAnimClass(consoleEl, 'is-shake-', 'is-shake-exact', 720);
+        restartAnimClass(composer, 'is-shake-', 'is-shake-exact', 720);
+        restartAnimClass(panel, 'is-shake-', 'is-shake-exact', 720);
+        restartAnimClass(scroll, 'is-shake-', 'is-shake-exact', 720);
+        restartAnimClass(banner, 'is-shake-', 'is-shake-exact', 720);
+    }
+}
+
+// 네이티브 투명 VFX 스프라이트·화면 테두리 펄스·최고 기록 갱신 공명 바 이펙트 실행
+function triggerStageEffects(tier, cx, cy, improvedBest) {
+    if (reducedMotion.matches) return;
+    const stage = $('vfx-stage');
+    if (stage) {
+        stage.dataset.tier = tier;
+        stage.style.setProperty('--vfx-x', `${Math.round(cx)}px`);
+        stage.style.setProperty('--vfx-y', `${Math.round(cy)}px`);
+    }
+
+    const glow = $('vfx-edge-glow');
+    const spriteA = $('vfx-sprite-a');
+    const spriteB = $('vfx-sprite-b');
+    if (['cool', 'warm', 'hot', 'molten', 'exact'].includes(tier)) {
+        if (glow) restartAnimClass(glow, 'is-glow-', `is-glow-${tier}`, 1400);
+        if (spriteA) {
+            const spriteKey = tier === 'exact' ? 'molten' : tier;
+            spriteA.style.backgroundImage = `url("${VFX_SPRITES[spriteKey]}")`;
+            restartAnimClass(spriteA, 'is-tier-', `is-tier-${tier}`, 1500);
+        }
+        if (spriteB) {
+            clearClassPrefix(spriteB, 'is-tier-');
+            if (tier === 'hot') {
+                addVfxTimer(() => {
+                    spriteB.style.backgroundImage = `url("${VFX_SPRITES.warm}")`;
+                    restartAnimClass(spriteB, 'is-tier-', 'is-tier-hot-echo', 1100);
+                }, 70);
+            } else if (tier === 'molten') {
+                addVfxTimer(() => {
+                    spriteB.style.backgroundImage = `url("${VFX_SPRITES.hot}")`;
+                    restartAnimClass(spriteB, 'is-tier-', 'is-tier-molten-echo', 1250);
+                }, 90);
+            } else if (tier === 'exact') {
+                addVfxTimer(() => {
+                    spriteB.style.backgroundImage = `url("${VFX_SPRITES.exact}")`;
+                    restartAnimClass(spriteB, 'is-tier-', 'is-tier-exact-super', 1650);
+                }, 80);
+            }
+        }
+    }
+
+    if (improvedBest) {
+        const resonance = $('resonance-strip');
+        if (resonance) {
+            resonance.dataset.tier = tier;
+            restartAnimClass(resonance, 'is-surge', 'is-surge', 1100);
+        }
+    }
+}
+
+function resolveGuessTier(event, game) {
+    if (!event) return 'cold';
+    if (((game === null || game === void 0 ? void 0 : game.status)) === 'won' && event.code === 'won') return 'exact';
+    if (event.code === 'unknown_word') return 'unknown';
+    if (event.code === 'duplicate') return 'duplicate';
+    if (event.code === 'guess') {
+        if (event.rank === 0) return 'exact';
+        if (event.rank !== null && event.rank <= 10) return 'molten';
+        if (event.rank !== null && event.rank <= 100) return 'hot';
+        if (event.rank !== null && event.rank <= 1000) return 'warm';
+        if (Number.isFinite(event.similarity) && event.similarity > 0) return 'cool';
+        return 'cold';
+    }
+    return 'cold';
+}
+
+function computeGuessImprovedBest(event, game) {
+    if (!event || event.code !== 'guess' || !Number.isFinite(event.similarity)) return false;
+    const guesses = (game && game.guesses) ? game.guesses : [];
+    if (!guesses.length) return false;
+    for (let i = 0; i < guesses.length; i++) {
+        const g = guesses[i];
+        if (!g || g.word === event.word) continue;
+        if (Number.isFinite(g.similarity) && g.similarity >= event.similarity) return false;
+    }
+    return true;
+}
+
+// 추측 근접도와 정답 여부에 따라 스프라이트·캔버스·진동 복합 이펙트 실행
 function triggerGameVfx(event, game) {
     if (reducedMotion.matches || !event || event.replayed) return;
-    const anchor = (((game === null || game === void 0 ? void 0 : game.status)) === 'won' ? $('result-banner') : $('resonance-strip')) || $('guess-form');
-    const rect = ((anchor === null || anchor === void 0 ? void 0 : anchor.getBoundingClientRect()));
-    const cx = rect && rect.width ? rect.left + rect.width / 2 : window.innerWidth / 2;
-    const cy = rect && rect.height ? rect.top + rect.height / 2 : window.innerHeight * 0.34;
+    const tier = resolveGuessTier(event, game);
+    const isWon = tier === 'exact' && ((game === null || game === void 0 ? void 0 : game.status)) === 'won';
+    const ledgerScroll = document.querySelector('.ledger-scroll');
+    if (ledgerScroll && ['guess', 'duplicate', 'won'].includes(event.code)) {
+        ledgerScroll.scrollTop = 0;
+    }
 
-    if (((game === null || game === void 0 ? void 0 : game.status)) === 'won' && event.code === 'won') {
+    const anchor = isWon
+        ? ($('result-banner') || $('guess-form'))
+        : tier === 'unknown'
+            ? $('guess-form')
+            : (document.querySelector('#guesses-body tr.latest-guess') || $('resonance-strip') || $('guess-form'));
+    const rect = ((anchor === null || anchor === void 0 ? void 0 : anchor.getBoundingClientRect()));
+    const W = window.innerWidth || 390;
+    const H = window.innerHeight || 700;
+    const rawCx = rect && rect.width ? rect.left + rect.width / 2 : W / 2;
+    const rawCy = rect && rect.height ? rect.top + rect.height / 2 : H * 0.36;
+    const cx = Math.max(Math.min(72, W * 0.2), Math.min(Math.max(W - 72, W * 0.8), rawCx));
+    const cy = Math.max(Math.min(96, H * 0.18), Math.min(Math.max(H - 96, H * 0.76), rawCy));
+
+    const improvedBest = computeGuessImprovedBest(event, game);
+    triggerHaptics(tier);
+    triggerUiShake(tier);
+    triggerStageEffects(tier, cx, cy, improvedBest);
+
+    if (tier === 'exact') {
         const burst = $('vfx-burst');
         if (burst) {
             burst.classList.remove('is-active');
@@ -159,63 +651,187 @@ function triggerGameVfx(event, game) {
             burst.classList.add('is-active');
         }
         spawnBurst(cx, cy, {
-            count: 96,
-            colors: ['#ffe6a8', '#f7c04a', '#57e0ff', '#fff8de'],
-            speedMin: 2.2,
-            speedMax: 7.4,
-            ringMax: 240,
-            ringWidth: 2.2,
-            gravity: 0.055,
-            innerRadius: 86,
+            count: 140,
+            stars: 28,
+            embers: 28,
+            confetti: 48,
+            colors: ['#ffe6a8', '#f7c04a', '#57e0ff', '#fff8de', '#ff8647'],
+            speedMin: 2.8,
+            speedMax: 9.8,
+            ringMax: 380,
+            ringWidth: 3.6,
+            ringLife: 0.95,
+            ringAlpha: 0.84,
+            dashedRing: true,
+            extraRing: true,
+            gravity: 0.052,
+            innerRadius: 68,
+            sizeScale: 1.28,
+            beams: { count: 18, length: 340, spread: 0.11, color: '#ffe6a8', spin: 0.42, alpha: 0.38, life: 1.05 },
         });
-        setTimeout(() => {
-            vfxRings.push({ x: cx, y: cy, r0: 82, r1: 280, age: 0, life: 0.85, width: 1.8, alpha: 0.35, color: '#ffe6a8' });
-            if (!vfxFrame) vfxFrame = requestAnimationFrame(stepVfx);
-        }, 120);
+        [
+            { dx: -0.18, dy: -0.11, delay: 220, colors: ['#57e0ff', '#ffe6a8', '#fff8de'] },
+            { dx: 0.19, dy: -0.09, delay: 440, colors: ['#ff8647', '#f7c04a', '#fff8de'] },
+            { dx: 0.02, dy: -0.15, delay: 680, colors: ['#ffe6a8', '#b68bff', '#57e0ff'] },
+        ].forEach(fw => {
+            addVfxTimer(() => {
+                spawnBurst(
+                    Math.max(48, Math.min(W - 48, cx + W * fw.dx)),
+                    Math.max(72, Math.min(H - 90, cy + H * fw.dy)),
+                    {
+                        count: 58,
+                        stars: 14,
+                        confetti: 18,
+                        colors: fw.colors,
+                        speedMin: 2.2,
+                        speedMax: 7.2,
+                        ringMax: 210,
+                        ringWidth: 2.6,
+                        ringLife: 0.78,
+                        ringAlpha: 0.68,
+                        extraRing: true,
+                        gravity: 0.06,
+                        innerRadius: 24,
+                        sizeScale: 1.12,
+                    }
+                );
+            }, fw.delay);
+        });
         return;
     }
 
-    if (event.code === 'guess' && event.rank !== null) {
-        if (event.rank <= 10) {
-            const panel = document.querySelector('.ledger-panel');
-            if (panel) {
-                panel.classList.remove('is-shake');
-                void panel.offsetWidth;
-                panel.classList.add('is-shake');
-            }
+    if (tier === 'molten') {
+        spawnBurst(cx, cy, {
+            count: 96,
+            stars: 16,
+            embers: 20,
+            colors: ['#ff8647', '#ff5a2a', '#ffe6a8', '#f7c04a', '#fff8de'],
+            speedMin: 2.5,
+            speedMax: 8.2,
+            ringMax: 300,
+            ringWidth: 3.4,
+            ringLife: 0.85,
+            ringAlpha: 0.78,
+            dashedRing: true,
+            extraRing: true,
+            gravity: 0.024,
+            innerRadius: 44,
+            sizeScale: 1.24,
+            beams: { count: 14, length: 260, spread: 0.1, color: '#ff8647', spin: 0.56, alpha: 0.34, life: 0.85 },
+        });
+        addVfxTimer(() => {
             spawnBurst(cx, cy, {
-                count: 58,
-                colors: ['#ff8647', '#ffe6a8', '#f7c04a'],
-                speedMin: 1.8,
-                speedMax: 5.8,
-                ringMax: 165,
-                ringWidth: 2,
-                gravity: 0.03,
-                innerRadius: 42,
+                count: 42,
+                stars: 10,
+                colors: ['#ffe6a8', '#ff8647', '#fff8de'],
+                speedMin: 2.0,
+                speedMax: 6.4,
+                ringMax: 220,
+                ringWidth: 2.4,
+                ringLife: 0.7,
+                ringAlpha: 0.58,
+                gravity: 0.015,
+                innerRadius: 28,
+                sizeScale: 1.1,
             });
-        } else if (event.rank <= 100) {
-            spawnBurst(cx, cy, {
-                count: 34,
-                colors: ['#f7c04a', '#ff8647', '#ffe6a8'],
-                speedMin: 1.4,
-                speedMax: 4.5,
-                ringMax: 120,
-                ringWidth: 1.6,
-                gravity: 0.02,
-                innerRadius: 42,
-            });
-        } else {
-            spawnBurst(cx, cy, {
-                count: 20,
-                colors: ['#b68bff', '#57e0ff', '#ffe6a8'],
-                speedMin: 1.1,
-                speedMax: 3.4,
-                ringMax: 92,
-                ringWidth: 1.4,
-                gravity: 0.01,
-                innerRadius: 42,
-            });
-        }
+        }, 110);
+        return;
+    }
+
+    if (tier === 'hot') {
+        spawnBurst(cx, cy, {
+            count: 66,
+            stars: 10,
+            embers: 10,
+            colors: ['#f7c04a', '#ff8647', '#ffe6a8', '#fff8de'],
+            speedMin: 2.0,
+            speedMax: 6.4,
+            ringMax: 235,
+            ringWidth: 2.8,
+            ringLife: 0.75,
+            ringAlpha: 0.68,
+            extraRing: true,
+            gravity: 0.02,
+            innerRadius: 38,
+            sizeScale: 1.12,
+            beams: { count: 8, length: 190, spread: 0.09, color: '#f7c04a', spin: 0.35, alpha: 0.25, life: 0.68 },
+        });
+        return;
+    }
+
+    if (tier === 'warm') {
+        spawnBurst(cx, cy, {
+            count: 38,
+            stars: 8,
+            colors: ['#b68bff', '#57e0ff', '#ffe6a8'],
+            speedMin: 1.6,
+            speedMax: 5.0,
+            ringMax: 170,
+            ringWidth: 2.3,
+            ringLife: 0.68,
+            ringAlpha: 0.62,
+            dashedRing: true,
+            gravity: 0.012,
+            innerRadius: 32,
+            sizeScale: 1.0,
+        });
+        return;
+    }
+
+    if (tier === 'cool') {
+        spawnBurst(cx, cy, {
+            count: 24,
+            colors: ['#57e0ff', '#a8f2ff', '#ffe6a8'],
+            speedMin: 1.2,
+            speedMax: 3.9,
+            ringMax: 118,
+            ringWidth: 1.8,
+            ringLife: 0.56,
+            ringAlpha: 0.5,
+            gravity: 0.008,
+            innerRadius: 24,
+            sizeScale: 0.9,
+        });
+        return;
+    }
+
+    if (tier === 'cold') {
+        spawnBurst(cx, cy, {
+            count: 12,
+            colors: ['#7eb5d6', '#9ab8c8'],
+            speedMin: 0.8,
+            speedMax: 2.5,
+            ringMax: 72,
+            ringWidth: 1.4,
+            ringLife: 0.44,
+            ringAlpha: 0.34,
+            gravity: 0.01,
+            innerRadius: 16,
+            sizeScale: 0.75,
+        });
+        return;
+    }
+
+    if (tier === 'duplicate') {
+        vfxRings.push({ x: cx, y: cy, r0: 14, r1: 78, age: 0, life: 0.42, width: 1.6, alpha: 0.45, color: '#57e0ff' });
+        if (!vfxFrame) vfxFrame = requestAnimationFrame(stepVfx);
+        return;
+    }
+
+    if (tier === 'unknown') {
+        spawnBurst(cx, cy, {
+            count: 10,
+            colors: ['#ff7a85', '#ffb8bf'],
+            speedMin: 1.0,
+            speedMax: 2.6,
+            ringMax: 66,
+            ringWidth: 1.5,
+            ringLife: 0.36,
+            ringAlpha: 0.4,
+            gravity: 0.02,
+            innerRadius: 12,
+            sizeScale: 0.78,
+        });
     }
 }
 
@@ -288,6 +904,8 @@ function changeScreen(next) {
     document.body.dataset.screen = next;
     $('title-screen').hidden = next !== 'title';
     $('game-screen').hidden = next !== 'game';
+    if (next === 'game') preloadVfxSprites();
+    else clearVfxTimers();
     setSessionView(next);
     if (changed) window.scrollTo({ top: 0, behavior: 'instant' });
     syncKeyboard();
@@ -370,6 +988,7 @@ function formatRecordTime(ms) {
 }
 
 function clearLocalRoundProgress() {
+    clearVfxTimers();
     const nearestDlg = $('nearest-dialog');
     if (nearestDlg && nearestDlg.open) nearestDlg.close();
     const burst = $('vfx-burst');
@@ -907,11 +1526,13 @@ async function submitGuess(wordText) {
                 storage.remove(langKey('draft'));
                 if (res.code === 'unknown_word') {
                     audio.play('wrong', { gain: 0.45, duration: 0.2 });
+                    triggerGameVfx({ code: 'unknown_word', word: res.word }, { status: 'active', guesses: [] });
                     showTurnFeedback('unknown_word', { word: res.word }, 'error');
                     return;
                 }
                 const rankStr = res.rank === 0 ? t('rank_exact') : res.rank !== null ? t('rank_badge', { rank: res.rank }) : t('rank_outside');
                 audio.play(res.rank !== null ? 'stamp' : 'tick', { rate: res.rank !== null ? 1.15 : 0.9, gain: 0.5 });
+                triggerGameVfx({ code: 'guess', rank: res.rank, similarity: res.similarity, word: res.word }, { status: 'active', guesses: [] });
                 showTurnFeedback('explore_notice', { word: res.word, sim: res.similarity.toFixed(2), rank: rankStr }, res.rank !== null ? 'warm' : 'info');
             });
         } finally {
@@ -939,6 +1560,7 @@ async function submitGuess(wordText) {
 
             if ((((__oc13 = data.event) === null || __oc13 === void 0 ? void 0 : __oc13.code)) === 'unknown_word') {
                 audio.result(data.event, data.game);
+                triggerGameVfx(data.event, data.game);
                 showTurnFeedback('unknown_word', { word: data.event.word }, 'error');
                 return;
             }

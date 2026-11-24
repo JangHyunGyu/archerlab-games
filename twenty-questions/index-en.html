@@ -50,11 +50,11 @@
 }
     </script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261124-v14">
+  <link rel="stylesheet" href="css/style.css?v=20261124-v15">
   <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
   <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
   <script src="../shared/browser-check.js?v=20261005-env-guard-v1"></script>
-  <script type="module" src="js/main.mjs?v=20261124-v14"></script>
+  <script type="module" src="js/main.mjs?v=20261124-v15"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 
     <meta name="twitter:title" content="Semantle | English Word Similarity Puzzle - ArcherLab">
@@ -66,6 +66,11 @@
 <body data-no-fullscreen data-screen="title">
   <div class="observatory-bg" aria-hidden="true"></div>
   <canvas id="vfx-canvas" class="vfx-canvas" aria-hidden="true"></canvas>
+  <div id="vfx-stage" class="vfx-stage" aria-hidden="true">
+    <div id="vfx-edge-glow" class="vfx-edge-glow"></div>
+    <div id="vfx-sprite-a" class="vfx-sprite"></div>
+    <div id="vfx-sprite-b" class="vfx-sprite"></div>
+  </div>
   <header class="site-header">
     <a class="brand" href="../" aria-label="All Games">
       <img src="assets/ui/compass-chronograph-160.webp?v=3" srcset="assets/ui/compass-chronograph-160.webp?v=3 1x, assets/ui/compass-chronograph-320.webp?v=3 2x" alt="" width="30" height="37" decoding="async">

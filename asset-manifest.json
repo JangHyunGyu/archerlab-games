@@ -18554,6 +18554,26 @@
       "sha256": "3c1fb5db1cbaffc378c013a6224f42587ae07edf138bb87acf22af878e7b1465"
     },
     {
+      "path": "twenty-questions/assets/ui/vfx-flare-hot.webp",
+      "bytes": 262844,
+      "sha256": "c6702daa3b840e7b94e42d918bbb8e4ea2659d51467e1393fa7a70388f6b3451"
+    },
+    {
+      "path": "twenty-questions/assets/ui/vfx-nova-molten.webp",
+      "bytes": 307188,
+      "sha256": "7798993fc7af378cb425772995f8c2d9f7efc71ea14a6e9823f31aba7dfa20d9"
+    },
+    {
+      "path": "twenty-questions/assets/ui/vfx-pulse-cyan.webp",
+      "bytes": 192930,
+      "sha256": "177e213d9f844d28f868ec748997f3b8dfb17f2d8c3feab14e5327e870c4ed9b"
+    },
+    {
+      "path": "twenty-questions/assets/ui/vfx-sigil-violet.webp",
+      "bytes": 284864,
+      "sha256": "4e18540bfe49f169accd98f3c75ce98c1aa1ddab32dbd679767d935f642ef24f"
+    },
+    {
       "path": "water-sort-src/freesound_community-bubbles-003-6397.mp3",
       "bytes": 241920,
       "sha256": "352d4f978f6858802a08a4490f6edceb0a2788b66abee8b694f538833056f7da"

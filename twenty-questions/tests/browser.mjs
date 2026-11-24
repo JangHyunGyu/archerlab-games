@@ -21,6 +21,23 @@ const parseHmsSeconds = text => {
 
 try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 2 });
+    await context.addInitScript(() => {
+        window.__vibrateLog = [];
+        try {
+            Object.defineProperty(navigator, 'vibrate', {
+                configurable: true,
+                value: pattern => {
+                    window.__vibrateLog.push(Array.isArray(pattern) ? pattern.slice() : [Number(pattern) || 0]);
+                    return true;
+                },
+            });
+        } catch (_err) {
+            navigator.vibrate = pattern => {
+                window.__vibrateLog.push(Array.isArray(pattern) ? pattern.slice() : [Number(pattern) || 0]);
+                return true;
+            };
+        }
+    });
     const h = harness({
         secretWords: ['행복', '학교', '사과', '도서관'],
         enSecretWords: ['happy', 'school', 'apple', 'library'],
@@ -46,8 +63,13 @@ try {
     const page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
     const apiMjsRequests = [];
+    const vfxAssetStatuses = new Map();
     page.on('request', req => {
         if (req.url().includes('/twenty-questions/js/api.mjs')) apiMjsRequests.push(req.url());
+    });
+    page.on('response', res => {
+        const match = res.url().match(/\/twenty-questions\/assets\/ui\/(vfx-[a-z-]+\.webp)/);
+        if (match) vfxAssetStatuses.set(match[1], res.status());
     });
 
     // Verify portal card responsive srcset, unified 1:1 card sizing matching water-sort, and loaded artwork
@@ -82,8 +104,9 @@ try {
 
     // Verify Semantle title screen, zero SVG usage, no give-up/ranking-tabs/name-form/per-round arrows, single api.mjs version, countdown & previous answer display
     await page.goto(origin + '/twenty-questions/', { waitUntil: 'networkidle' });
-    assert.ok(apiMjsRequests.length === 1 && apiMjsRequests[0].endsWith('/twenty-questions/js/api.mjs?v=20261124-v14'), `Expected single versioned api.mjs request, got ${JSON.stringify(apiMjsRequests)}`);
+    assert.ok(apiMjsRequests.length === 1 && apiMjsRequests[0].endsWith('/twenty-questions/js/api.mjs?v=20261124-v15'), `Expected single versioned api.mjs request, got ${JSON.stringify(apiMjsRequests)}`);
     assert.equal(await page.locator('svg').count(), 0, 'Zero SVG elements expected');
+    assert.equal(await page.locator('#vfx-stage, #vfx-edge-glow, #vfx-sprite-a, #vfx-sprite-b').count(), 4);
     assert.equal(await page.locator('#give-up, #give-up-dialog, #next-game, #resume, #name-form, .ranking-tab, #ranking-prev, #ranking-next').count(), 0);
     await page.locator('#ranking-open').click();
     await page.locator('#ranking-dialog').waitFor({ state: 'visible' });
@@ -149,6 +172,33 @@ try {
     await page.screenshot({ path: path.join(output, 'ko-guess-loading.png'), fullPage: true });
     await page.waitForFunction(() => document.querySelector('#guess-count-display').textContent === '2');
 
+    // Verify all 4 native-transparent VFX WebP sprites load 200 OK & decode at 1024x1024, plus light cold haptic feedback on '물'
+    await page.waitForFunction(() => [
+        'vfx-pulse-cyan.webp',
+        'vfx-sigil-violet.webp',
+        'vfx-flare-hot.webp',
+        'vfx-nova-molten.webp',
+    ].every(name => performance.getEntriesByType('resource').some(r => r.name.includes(name))));
+    for (const vfxName of ['vfx-pulse-cyan.webp', 'vfx-sigil-violet.webp', 'vfx-flare-hot.webp', 'vfx-nova-molten.webp']) {
+        assert.equal(vfxAssetStatuses.get(vfxName), 200, `Expected 200 OK for ${vfxName}`);
+    }
+    const vfxDims = await page.evaluate(async () => {
+        const names = ['vfx-pulse-cyan.webp', 'vfx-sigil-violet.webp', 'vfx-flare-hot.webp', 'vfx-nova-molten.webp'];
+        const results = {};
+        for (const n of names) {
+            const img = new Image();
+            img.src = `assets/ui/${n}?v=20261124-v15`;
+            await img.decode();
+            results[n] = { w: img.naturalWidth, h: img.naturalHeight };
+        }
+        return results;
+    });
+    for (const [name, dim] of Object.entries(vfxDims)) {
+        assert.deepEqual(dim, { w: 1024, h: 1024 }, `${name} natural dimensions mismatch`);
+    }
+    const coldVibration = await page.evaluate(() => window.__vibrateLog[window.__vibrateLog.length - 1] || []);
+    const coldDuration = coldVibration.reduce((a, b) => a + b, 0);
+    assert.ok(coldVibration.length === 1 && coldDuration > 0 && coldDuration <= 25, `Unexpected cold vibration: ${JSON.stringify(coldVibration)}`);
     assert.equal(await page.locator('#guesses-body tr.latest-guess .word-text').textContent(), '물');
     assert.ok(await page.locator('#guesses-body tr.latest-guess .latest-pill').isVisible());
     assert.equal(await page.locator('#guesses-body tr.delimiter').count(), 1);
@@ -298,11 +348,34 @@ try {
     assert.equal(await page.locator('#guess-count-display').textContent(), '2');
     assert.equal(await page.locator('#guess-input').inputValue(), '기쁨');
 
-    // Solve Korean round -> verify Option A clear time, multi-solver count, Top-1,000, post-win explore, All-Time Hall of Fame
+    // Trigger Top-10 Molten VFX ('기쁨' is rank 1 for '행복') -> multi-pulse vibration + vfx-nova-molten sprite
+    await page.evaluate(() => { window.__vibrateLog = []; });
+    await page.locator('#send').click();
+    await page.waitForFunction(() => document.querySelector('#guess-count-display')?.textContent === '3');
+    const moltenVfx = await page.evaluate(() => ({
+        tier: document.getElementById('vfx-stage')?.dataset.tier || '',
+        spriteA: getComputedStyle(document.getElementById('vfx-sprite-a')).backgroundImage,
+        vibe: window.__vibrateLog[window.__vibrateLog.length - 1] || [],
+    }));
+    const moltenDuration = moltenVfx.vibe.reduce((a, b) => a + b, 0);
+    assert.equal(moltenVfx.tier, 'molten');
+    assert.match(moltenVfx.spriteA, /vfx-nova-molten\.webp/);
+    assert.ok(moltenVfx.vibe.length >= 5 && moltenDuration > coldDuration, `Unexpected molten vibration: ${JSON.stringify(moltenVfx.vibe)}`);
+    await page.screenshot({ path: path.join(output, 'ko-vfx-molten.png') });
+
+    // Solve Korean round -> verify Exact victory supernova VFX, grand vibration, Option A clear time, multi-solver count
     h.advanceMs(4000);
     await page.locator('#guess-input').fill(roundAnswer);
     await page.locator('#send').click();
     await page.locator('#result-banner').waitFor({ state: 'visible' });
+    const exactVfx = await page.evaluate(() => ({
+        tier: document.getElementById('vfx-stage')?.dataset.tier || '',
+        vibe: window.__vibrateLog[window.__vibrateLog.length - 1] || [],
+    }));
+    const exactDuration = exactVfx.vibe.reduce((a, b) => a + b, 0);
+    assert.equal(exactVfx.tier, 'exact');
+    assert.ok(exactVfx.vibe.length >= 7 && exactDuration > moltenDuration, `Unexpected exact vibration: ${JSON.stringify(exactVfx.vibe)}`);
+    await page.screenshot({ path: path.join(output, 'ko-vfx-won.png') });
     assert.equal(await page.locator('#result-answer').textContent(), roundAnswer);
     assert.match(await page.locator('#result-time').textContent(), /^00:\d{2}\.\d{2}$/);
     assert.match(await page.locator('#result-next-timer').textContent(), /^05:\d{2}:\d{2}$/);
@@ -321,7 +394,7 @@ try {
     await page.locator('#guess-input').fill('나무');
     await page.locator('#send').click();
     await page.locator('#turn-feedback').waitFor({ state: 'visible' });
-    assert.equal(await page.locator('#result-guesses').textContent(), '3');
+    assert.equal(await page.locator('#result-guesses').textContent(), '4');
 
     // Second slower player registers the same name ('AlphaSolver') -> only faster AlphaSolver record stays in leaderboard
     const tokenC = 'c'.repeat(64);
