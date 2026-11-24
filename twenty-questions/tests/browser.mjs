@@ -45,6 +45,10 @@ try {
 
     const page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
+    const apiMjsRequests = [];
+    page.on('request', req => {
+        if (req.url().includes('/twenty-questions/js/api.mjs')) apiMjsRequests.push(req.url());
+    });
 
     // Verify portal card responsive srcset, unified 1:1 card sizing matching water-sort, and loaded artwork
     await page.goto(origin + '/', { waitUntil: 'domcontentloaded' });
@@ -76,30 +80,17 @@ try {
     assert.ok(cardState.complete && cardState.naturalWidth > 0, JSON.stringify(cardState));
     assert.match(cardState.currentSrc, /semantle-card-(?:400|800|1200)\.webp/);
 
-    // Verify Semantle title screen, zero SVG usage, no give-up/ranking-tabs/name-form, countdown & previous answer display
+    // Verify Semantle title screen, zero SVG usage, no give-up/ranking-tabs/name-form/per-round arrows, single api.mjs version, countdown & previous answer display
     await page.goto(origin + '/twenty-questions/', { waitUntil: 'networkidle' });
+    assert.ok(apiMjsRequests.length === 1 && apiMjsRequests[0].endsWith('/twenty-questions/js/api.mjs?v=20261124-v13'), `Expected single versioned api.mjs request, got ${JSON.stringify(apiMjsRequests)}`);
     assert.equal(await page.locator('svg').count(), 0, 'Zero SVG elements expected');
-    assert.equal(await page.locator('#give-up, #give-up-dialog, #next-game, #resume, #name-form, .ranking-tab').count(), 0);
+    assert.equal(await page.locator('#give-up, #give-up-dialog, #next-game, #resume, #name-form, .ranking-tab, #ranking-prev, #ranking-next').count(), 0);
     await page.locator('#ranking-open').click();
     await page.locator('#ranking-dialog').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#name-form').count(), 0);
-    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '3회차 랭킹' && Boolean(document.querySelector('.leaderboard-empty-title, .leaderboard table')));
-    assert.equal(await page.locator('#ranking-prev').isEnabled(), true);
-    assert.equal(await page.locator('#ranking-next').isDisabled(), true);
-    assert.equal(await page.locator('.leaderboard-empty-title').textContent(), '3회차에는 아직 랭커가 없어요');
-    await page.locator('#ranking-prev').click();
-    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '2회차 랭킹' && Boolean(document.querySelector('.leaderboard-empty-title, .leaderboard table')));
-    assert.equal(await page.locator('.leaderboard-empty-title').textContent(), '2회차에는 등록된 랭커가 없어요');
-    await page.screenshot({ path: path.join(output, 'ko-ranking-empty-past.png') });
-    await page.locator('#ranking-prev').click();
-    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '1회차 랭킹' && Boolean(document.querySelector('.leaderboard-empty-title, .leaderboard table')));
-    assert.equal(await page.locator('#ranking-prev').isDisabled(), true);
-    assert.equal(await page.locator('#ranking-next').isEnabled(), true);
-    await page.locator('#ranking-next').click();
-    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '2회차 랭킹' && Boolean(document.querySelector('.leaderboard-empty-title, .leaderboard table')));
-    await page.locator('#ranking-next').click();
-    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '3회차 랭킹' && Boolean(document.querySelector('.leaderboard-empty-title, .leaderboard table')));
-    assert.equal(await page.locator('#ranking-next').isDisabled(), true);
+    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '랭킹' && Boolean(document.querySelector('.leaderboard-empty-title, .leaderboard table')));
+    assert.equal(await page.locator('.leaderboard-empty-title').textContent(), '아직 등록된 랭커가 없어요.');
+    await page.screenshot({ path: path.join(output, 'ko-ranking-empty.png') });
     await page.locator('#ranking-dialog [data-close]').click();
     assert.doesNotMatch(await page.locator('body').textContent(), /FastText|Wiktionary|서버 시간 검증/);
     assert.ok(await page.locator('.example-card').isVisible());
@@ -253,6 +244,7 @@ try {
 
     await page.locator('#open-nearest').click();
     await page.locator('#nearest-dialog').waitFor({ state: 'visible' });
+    assert.deepEqual(await page.locator('#nearest-dialog thead th').allTextContents(), ['Rank', 'Word', 'Score', '']);
     await page.waitForFunction(() => document.querySelectorAll('#nearest-body tr').length === 1000);
     await page.locator('#nearest-filter').fill('Person');
     assert.equal(await page.locator('#nearest-body tr').count(), 1);
@@ -268,12 +260,11 @@ try {
     await page.waitForFunction(() => Boolean(document.querySelector('#result-name-status')?.textContent.trim()));
     await page.locator('#open-ranking-result').click();
     await page.locator('#ranking-dialog').waitFor({ state: 'visible' });
-    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === 'Round #3 Ranking' && Boolean(document.querySelector('.leaderboard tbody tr')));
+    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === 'Ranking' && Boolean(document.querySelector('.leaderboard tbody tr')));
+    assert.deepEqual(await page.locator('#leaderboard thead th').allTextContents(), ['Rank', 'Player', 'Clear Time']);
     assert.equal((await page.locator('#leaderboard tbody tr').count()), 1);
     assert.ok((await page.locator('#leaderboard tbody tr:first-child').textContent()).includes('EnChamp'));
-    await page.locator('#ranking-prev').click();
-    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === 'Round #2 Ranking' && Boolean(document.querySelector('.leaderboard-empty-title')));
-    assert.equal(await page.locator('.leaderboard-empty-title').textContent(), 'No ranked solvers in Round #2');
+    assert.match(await page.locator('#own-rank').textContent(), /^Your Rank · #1 · \d{2}:\d{2}\.\d{2}$/);
     await page.locator('#ranking-dialog [data-close]').click();
 
     await page.locator('#home').click();
@@ -310,8 +301,11 @@ try {
     assert.match(await page.locator('#result-next-timer').textContent(), /^05:\d{2}:\d{2}$/);
     assert.equal(await page.locator('#current-solver-display').textContent(), 'AlphaSolver 외 1명');
 
+    const expectedJosa = ((roundAnswer.charCodeAt(roundAnswer.length - 1) - 0xac00) % 28) !== 0 ? '과' : '와';
     await page.locator('#open-nearest').click();
     await page.locator('#nearest-dialog').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#nearest-title').textContent(), `‘${roundAnswer}’${expectedJosa} 의미가 가장 가까운 단어 1,000개`);
+    assert.deepEqual(await page.locator('#nearest-dialog thead th').allTextContents(), ['순위', '단어', '유사도', '']);
     await page.waitForFunction(() => document.querySelectorAll('#nearest-body tr').length === 1000);
     await page.locator('#nearest-filter').fill('사람');
     assert.equal(await page.locator('#nearest-body tr').count(), 1);
@@ -322,7 +316,15 @@ try {
     await page.locator('#turn-feedback').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#result-guesses').textContent(), '3');
 
-    // Post-win inline name registration & editing inside result banner -> persists directly to Korean Hall of Fame
+    // Second slower player registers the same name ('AlphaSolver') -> only faster AlphaSolver record stays in leaderboard
+    const tokenC = 'c'.repeat(64);
+    h.advanceMs(10000);
+    const p3Start = await h.start(tokenC);
+    const p3G1 = (await h.guess(p3Start.game, '사람', crypto.randomUUID(), tokenC)).data;
+    await h.guess(p3G1.game, roundAnswer, crypto.randomUUID(), tokenC);
+    await h.call('profile', { name: 'AlphaSolver' }, 'PATCH', tokenC);
+
+    // Post-win inline name registration & editing inside result banner -> persists directly to Korean single-page ranking
     await page.locator('#result-name-form').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#result-name-input').inputValue(), '');
     await page.locator('#result-name-input').fill('StarGazer');
@@ -335,14 +337,20 @@ try {
     ]);
     await page.waitForFunction(() => Boolean(document.querySelector('#result-name-status')?.textContent.trim()));
 
-    // Open round ranking (read-only without #name-form) -> verify Round #3 shows AlphaSolver & StarGazerPro
+    // Open single-page ranking (3 columns without guess count) -> AlphaSolver appears once + StarGazerPro
     await page.locator('#open-ranking-result').click();
     await page.locator('#ranking-dialog').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#name-form').count(), 0);
-    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '3회차 랭킹');
+    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '랭킹');
     await page.locator('.leaderboard tbody tr').first().waitFor();
     await page.waitForFunction(() => document.querySelector('#leaderboard tbody tr:nth-child(2)')?.textContent.includes('StarGazerPro'));
-    assert.ok((await page.locator('#own-rank').textContent()).includes('내 순위 · #2'));
+    assert.deepEqual(await page.locator('#leaderboard thead th').allTextContents(), ['순위', '이름', '클리어 시간']);
+    assert.equal(await page.locator('#leaderboard tbody tr').count(), 2);
+    const lbText = await page.locator('#leaderboard').textContent();
+    assert.doesNotMatch(lbText, /\d+회/);
+    const ownText = await page.locator('#own-rank').textContent();
+    assert.match(ownText, /^내 순위 · #2 · \d{2}:\d{2}\.\d{2}$/);
+    assert.doesNotMatch(ownText, /\d+회/);
     await page.screenshot({ path: path.join(output, 'ko-ranking-desktop.png') });
     await page.locator('#ranking-dialog [data-close]').click();
     assert.equal(await page.locator('#result-name-input').inputValue(), 'StarGazerPro');
@@ -380,24 +388,20 @@ try {
     assert.match(await page.locator('#game-timer').textContent(), /^(?:06:00:00|05:59:5\d)$/);
     assert.ok((await page.locator('#prev-answer-btn').textContent()).includes(roundAnswer));
 
-    // Clicking previous answer button opens Round #3's Top-1,000 list
+    // Clicking previous answer button opens Round #3's Top-1,000 list with proper Korean particle
     await page.locator('#prev-answer-btn').click();
     await page.locator('#nearest-dialog').waitFor({ state: 'visible' });
-    assert.ok((await page.locator('#nearest-title').textContent()).includes(roundAnswer));
+    assert.equal(await page.locator('#nearest-title').textContent(), `‘${roundAnswer}’${expectedJosa} 의미가 가장 가까운 단어 1,000개`);
     await page.waitForFunction(() => document.querySelectorAll('#nearest-body tr').length === 1000);
     await page.locator('#nearest-dialog [data-close]').click();
 
-    // Round #4 ranking resets cleanly on rollover while '<' arrow still browses Round #3 ranking
+    // Unified single-page ranking persists across 6-hour rollover
     await page.locator('#ranking-open').click();
     await page.locator('#ranking-dialog').waitFor({ state: 'visible' });
-    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '4회차 랭킹' && Boolean(document.querySelector('.leaderboard-empty-title')));
-    assert.equal(await page.locator('.leaderboard-empty-title').textContent(), '4회차에는 아직 랭커가 없어요');
-    assert.equal(await page.locator('#own-rank').textContent(), '');
-    await page.screenshot({ path: path.join(output, 'ko-ranking-rollover-reset.png') });
-    await page.locator('#ranking-prev').click();
-    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '3회차 랭킹' && Boolean(document.querySelector('#leaderboard tbody tr:nth-child(2)')?.textContent.includes('StarGazerPro')));
-    assert.ok((await page.locator('#own-rank').textContent()).includes('내 순위 · #2'));
-    await page.screenshot({ path: path.join(output, 'ko-ranking-prev-round.png') });
+    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '랭킹' && Boolean(document.querySelector('#leaderboard tbody tr:nth-child(2)')?.textContent.includes('StarGazerPro')));
+    assert.equal(await page.locator('#leaderboard tbody tr').count(), 2);
+    assert.match(await page.locator('#own-rank').textContent(), /^내 순위 · #2 · \d{2}:\d{2}\.\d{2}$/);
+    await page.screenshot({ path: path.join(output, 'ko-ranking-after-rollover.png') });
     await page.locator('#ranking-dialog [data-close]').click();
 
     // Responsive check across all mobile & tablet viewports

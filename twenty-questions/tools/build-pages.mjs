@@ -45,11 +45,11 @@ for (const locale of ['ko', 'en']) {
   <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': ['VideoGame', 'WebApplication'], name: t.title, description: `${t.intro} ${t.rules}`, url, image: 'https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png', inLanguage: locale, applicationCategory: 'GameApplication', operatingSystem: 'Any', gamePlatform: ['Web Browser', 'Mobile Browser'], playMode: 'SinglePlayer', isAccessibleForFree: true, dateModified: '2026-11-20', author: { '@type': 'Organization', name: 'ArcherLab', url: 'https://archerlab.dev' } })}</script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261122-v12">
+  <link rel="stylesheet" href="css/style.css?v=20261124-v13">
   <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
   <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
   <script src="../shared/browser-check.js?v=20261005-env-guard-v1"></script>
-  <script type="module" src="js/main.mjs?v=20261122-v11"></script>
+  <script type="module" src="js/main.mjs?v=20261124-v13"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 </head>
 <body data-no-fullscreen data-screen="title">
@@ -225,13 +225,7 @@ for (const locale of ['ko', 'en']) {
 
   <dialog id="ranking-dialog" class="game-dialog crafted-frame" aria-labelledby="ranking-title">
     <button class="dialog-close icon-button" data-close aria-label="${text('close')}">✕</button>
-    <div class="ranking-header">
-      <div class="ranking-round-nav" role="group" aria-label="${text('ranking_nav')}">
-        <button type="button" id="ranking-prev" class="ranking-nav-btn" aria-label="${text('ranking_prev')}" disabled>&lt;</button>
-        <h2 id="ranking-title">${text('ranking')}</h2>
-        <button type="button" id="ranking-next" class="ranking-nav-btn" aria-label="${text('ranking_next')}" disabled>&gt;</button>
-      </div>
-    </div>
+    <h2 id="ranking-title">${text('ranking')}</h2>
     <p class="dialog-intro">${text('ranking_rule')}</p>
     <div id="leaderboard" class="leaderboard"></div>
     <p id="own-rank" class="own-rank"></p>
@@ -245,7 +239,7 @@ for (const locale of ['ko', 'en']) {
     <p id="nearest-loading" class="dialog-intro" hidden>${text('loading')}</p>
     <div class="nearest-scroll">
       <table class="nearest-table">
-        <thead><tr><th>${text('rank_col')}</th><th>${text('col_word')}</th><th>${text('col_sim')}</th><th></th></tr></thead>
+        <thead><tr><th>${text('rank_col')}</th><th>${text('nearest_word_col')}</th><th>${text('col_sim')}</th><th></th></tr></thead>
         <tbody id="nearest-body"></tbody>
       </table>
       <p id="nearest-empty" class="dialog-intro" hidden>${text('nearest_empty')}</p>

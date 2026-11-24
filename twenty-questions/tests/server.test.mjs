@@ -5,8 +5,9 @@ import { harness } from './helpers.mjs';
 import { twentyQuestionsRoute, handleRoomRequest } from '../../server/twenty-questions/service.mjs';
 import {
     RULESET, roundSlotAt, previousRoundSlot, selectRoundSecretIndex,
-    calibrateSim, sanitizePlayerName,
+    calibrateSim, sanitizePlayerName, nextRecord,
 } from '../../server/twenty-questions/core.mjs';
+import { cleanExpiredRecords } from '../../server/twenty-questions/database.mjs';
 import { submitRanking } from '../../game-api-worker.js';
 
 test('6-hour KST round schedule aligns to 00:00, 06:00, 12:00, 18:00 and rotates secrets cleanly', async () => {
@@ -180,11 +181,6 @@ test('Option A round-open ranking, anti-cheat filters, current solver display, a
     await h.call('profile', { name: 'SecondSolver' }, 'PATCH', tokenP2);
 
     const lb = await h.call('leaderboard', null, 'GET', tokenP1);
-    assert.equal(lb.data.roundNo, 3);
-    assert.equal(lb.data.currentRoundNo, 3);
-    assert.equal(lb.data.isCurrentRound, true);
-    assert.equal(lb.data.hasPrev, true);
-    assert.equal(lb.data.hasNext, false);
     assert.equal(lb.data.entries.length, 2);
     assert.equal(lb.data.entries[0].name, 'FirstSolver');
     assert.equal(lb.data.entries[0].hasCustomName, true);
@@ -196,27 +192,20 @@ test('Option A round-open ranking, anti-cheat filters, current solver display, a
     assert.equal(lb.data.entries[1].bestTimeMs, 25000);
     assert.equal(lb.data.mine.rank, 1);
     assert.equal(lb.data.mine.hasCustomName, true);
-    assert.ok(lb.data.entries.every(row => !Object.hasOwn(row, 'id')));
+    assert.ok(lb.data.entries.every(row => !Object.hasOwn(row, 'id') && !Object.hasOwn(row, 'guesses') && !Object.hasOwn(row, 'turns')));
+    assert.ok(!Object.hasOwn(lb.data.mine, 'guesses') && !Object.hasOwn(lb.data.mine, 'turns'));
+    assert.ok(p2Win.data.round.solvers.every(row => !Object.hasOwn(row, 'guesses')));
 
-    // Past & boundary round browsing on leaderboard (?round=2, ?round=1, invalid rounds)
-    const lbR2 = await h.call('leaderboard?round=2', null, 'GET', tokenP1);
-    assert.equal(lbR2.status, 200);
-    assert.equal(lbR2.data.roundNo, 2);
-    assert.equal(lbR2.data.isCurrentRound, false);
-    assert.equal(lbR2.data.hasPrev, true);
-    assert.equal(lbR2.data.hasNext, true);
-    assert.deepEqual(lbR2.data.entries, []);
-    assert.equal(lbR2.data.mine, null);
-
-    const lbR1 = await h.call('leaderboard?round=1', null, 'GET', tokenP1);
-    assert.equal(lbR1.status, 200);
-    assert.equal(lbR1.data.roundNo, 1);
-    assert.equal(lbR1.data.hasPrev, false);
-    assert.equal(lbR1.data.hasNext, true);
-
-    for (const bad of ['4', '0', '-1', 'abc']) {
-        assert.equal((await h.call(`leaderboard?round=${bad}`, null, 'GET', tokenP1)).status, 400);
+    // Legacy ?round= query params remain gracefully accepted on single-page leaderboard
+    for (const q of ['1', '2', '999']) {
+        const legacyLb = await h.call(`leaderboard?round=${q}`, null, 'GET', tokenP1);
+        assert.equal(legacyLb.status, 200);
+        assert.equal(legacyLb.data.entries.length, 2);
     }
+
+    // Guess-count tie-breakers are ignored when elapsed times are equal
+    const tieCheck = nextRecord({ sync_best_time_ms: 15000, sync_best_time_guesses: 10, sync_best_at: roundStart + 15000 }, 15000, 2, 4, roundStart + 50000);
+    assert.equal(tieCheck.improved, false);
 
     // Nearest 1k & post-win explore match calibrated scores.
     const nearest = await h.call(`games/${p1Start.game.id}/nearest`, null, 'GET', tokenP1);
@@ -243,23 +232,17 @@ test('6-hour rollover expires old rounds, resets guess history, reveals previous
     const r3Win = await h.guess(r3G1.game, r3Answer, crypto.randomUUID(), token);
     assert.equal(r3Win.data.profile.streak, 1);
     const lbBeforeRollover = (await h.call('leaderboard', null, 'GET', token)).data;
-    assert.equal(lbBeforeRollover.roundNo, 3);
     assert.equal(lbBeforeRollover.entries.length, 1);
 
     // Second player leaves an unsolved active game in Round #3.
     const idleR3 = await h.start(tokenIdle);
     await h.guess(idleR3.game, '물', crypto.randomUUID(), tokenIdle);
 
-    // Rollover to Round #4 (18:00 KST).
+    // Rollover to Round #4 (18:00 KST) retains single-page leaderboard entries across rounds.
     h.advanceMs(6 * 60 * 60 * 1000);
     const lbAfterRollover = (await h.call('leaderboard', null, 'GET', token)).data;
-    assert.equal(lbAfterRollover.roundNo, 4);
-    assert.equal(lbAfterRollover.entries.length, 0);
-    assert.equal(lbAfterRollover.mine, null);
-    const lbPrevRound = (await h.call('leaderboard?round=3', null, 'GET', token)).data;
-    assert.equal(lbPrevRound.roundNo, 3);
-    assert.equal(lbPrevRound.entries.length, 1);
-    assert.equal(lbPrevRound.mine.rank, 1);
+    assert.equal(lbAfterRollover.entries.length, 1);
+    assert.equal(lbAfterRollover.mine.rank, 1);
 
     // Late guess & explore against Round #3 fail cleanly with 409 round_expired.
     const lateGuess = await h.guess(r3Win.data.game, '사랑', crypto.randomUUID(), token);
@@ -305,7 +288,7 @@ test('6-hour rollover expires old rounds, resets guess history, reveals previous
     h.db.sqlite.close();
 });
 
-test('Round #1 epoch boundary hides pre-epoch previous answer and disables round navigation arrows', async () => {
+test('Round #1 epoch boundary hides pre-epoch previous answer', async () => {
     const h = harness({
         secretWords: ['행복', '학교'],
         initialNow: Date.parse('2026-11-20T12:00:15+09:00'),
@@ -321,9 +304,73 @@ test('Round #1 epoch boundary hides pre-epoch previous answer and disables round
 
     const lb = await h.call('leaderboard', null, 'GET');
     assert.equal(lb.status, 200);
-    assert.equal(lb.data.roundNo, 1);
-    assert.equal(lb.data.hasPrev, false);
-    assert.equal(lb.data.hasNext, false);
+    assert.deepEqual(lb.data.entries, []);
+    assert.equal(lb.data.mine, null);
+    h.db.sqlite.close();
+});
+
+test('same-name registration keeps only highest-ranked record and protects ranked won games from cleanup', async () => {
+    const roundStart = Date.parse('2026-11-21T00:00:00+09:00');
+    const h = harness({ secretWords: ['행복', '학교', '사과', '도서관'], initialNow: roundStart + 15000 });
+    const tokenFast = '1'.repeat(64);
+    const tokenSlow = '2'.repeat(64);
+    const tokenFaster = '3'.repeat(64);
+    const tokenUnranked = '4'.repeat(64);
+
+    // Player Fast solves in 15s (more guesses), Player Slow solves in 30s (fewer guesses)
+    const fastStart = await h.start(tokenFast);
+    const ans = h.answer(fastStart.game.id);
+    let g = (await h.guess(fastStart.game, '사람', crypto.randomUUID(), tokenFast)).data.game;
+    g = (await h.guess(g, '사랑', crypto.randomUUID(), tokenFast)).data.game;
+    await h.guess(g, ans, crypto.randomUUID(), tokenFast);
+    await h.call('profile', { name: 'SharedHero' }, 'PATCH', tokenFast);
+
+    h.setNow(roundStart + 30000);
+    const slowStart = await h.start(tokenSlow);
+    const slowG1 = (await h.guess(slowStart.game, '사람', crypto.randomUUID(), tokenSlow)).data.game;
+    await h.guess(slowG1, ans, crypto.randomUUID(), tokenSlow);
+    const slowRename = await h.call('profile', { name: 'sharedhero' }, 'PATCH', tokenSlow);
+    assert.equal(slowRename.status, 200);
+
+    // Same name (case-insensitive) keeps only the 15s record
+    let lb = (await h.call('leaderboard', null, 'GET', tokenFast)).data;
+    assert.equal(lb.entries.length, 1);
+    assert.equal(lb.entries[0].solvedMs, 15000);
+    assert.equal(lb.entries[0].name, 'SharedHero');
+
+    // Unranked player using the same name gets mine === null and own === false
+    const unrankedStart = await h.start(tokenUnranked);
+    await h.guess(unrankedStart.game, ans, crypto.randomUUID(), tokenUnranked);
+    assert.equal((await h.call('profile', { name: 'SharedHero' }, 'PATCH', tokenUnranked)).status, 200);
+    const unrankedLb = (await h.call('leaderboard', null, 'GET', tokenUnranked)).data;
+    assert.equal(unrankedLb.entries.length, 1);
+    assert.equal(unrankedLb.entries[0].own, false);
+    assert.equal(unrankedLb.mine, null);
+
+    // Another device solves faster (10s in Round #4) with same name -> faster record replaces 15s
+    const r4Start = roundStart + 6 * 3600 * 1000;
+    h.setNow(r4Start + 10000);
+    const fasterStart = await h.start(tokenFaster);
+    const ans4 = h.answer(fasterStart.game.id);
+    const fasterG1 = (await h.guess(fasterStart.game, '사람', crypto.randomUUID(), tokenFaster)).data.game;
+    await h.guess(fasterG1, ans4, crypto.randomUUID(), tokenFaster);
+    assert.equal((await h.call('profile', { name: 'SharedHero' }, 'PATCH', tokenFaster)).status, 200);
+
+    lb = (await h.call('leaderboard', null, 'GET', tokenFaster)).data;
+    assert.equal(lb.entries.length, 1);
+    assert.equal(lb.entries[0].rank, 1);
+    assert.equal(lb.entries[0].solvedMs, 10000);
+    assert.equal(lb.mine.rank, 1);
+    assert.equal(lb.mine.solvedMs, 10000);
+
+    // Cleanup older than 30 days removes expired games but retains ranked won games
+    const expiredStart = await h.start('5'.repeat(64));
+    h.db.sqlite.prepare("UPDATE sm_games SET status = 'expired', updated_at = ? WHERE id = ?").run(r4Start - 40 * 86400000, expiredStart.game.id);
+    h.db.sqlite.prepare("UPDATE sm_games SET updated_at = ? WHERE id = ?").run(r4Start - 40 * 86400000, fasterStart.game.id);
+    await cleanExpiredRecords(h.db, r4Start + 10000);
+    assert.equal(h.row('SELECT COUNT(*) n FROM sm_games WHERE id = ?', expiredStart.game.id).n, 0);
+    assert.equal(h.row('SELECT COUNT(*) n FROM sm_games WHERE id = ?', fasterStart.game.id).n, 1);
+
     h.db.sqlite.close();
 });
 
@@ -334,7 +381,7 @@ test('1-secret test fixture does not leak answer through rounds/previous/nearest
     h.db.sqlite.close();
 });
 
-test('anti-cheat blocks duplicate nicknames, CSRF, prototype pollution, score-event leaks, and client JS modern syntax regressions', async () => {
+test('anti-cheat blocks CSRF, prototype pollution, score-event leaks, and client JS modern syntax regressions while allowing same-name registration', async () => {
     const h = harness({ secretWords: ['행복', '학교', '사과'] });
 
     assert.equal(sanitizePlayerName('\u202EStar\u200BGazer'), 'StarGazer');
@@ -343,9 +390,9 @@ test('anti-cheat blocks duplicate nicknames, CSRF, prototype pollution, score-ev
 
     const tokenB = 'b'.repeat(64);
     assert.equal((await h.call('profile', { name: 'AlphaUser' }, 'PATCH')).status, 200);
-    const taken = await h.call('profile', { name: 'alphauser' }, 'PATCH', tokenB);
-    assert.equal(taken.status, 409);
-    assert.equal(taken.data.error, 'name_taken');
+    const sameName = await h.call('profile', { name: 'alphauser' }, 'PATCH', tokenB);
+    assert.equal(sameName.status, 200);
+    assert.equal(sameName.data.profile.name, 'alphauser');
 
     assert.equal(calibrateSim(10000, 9812, true), 10000);
     assert.ok(calibrateSim(6000, 9812, false) > calibrateSim(5000, 9812, false));
@@ -369,6 +416,7 @@ test('anti-cheat blocks duplicate nicknames, CSRF, prototype pollution, score-ev
     assert.equal(okStatus.status, 200);
     assert.equal(okStatus.headers.get('X-Content-Type-Options'), 'nosniff');
     assert.equal(okStatus.headers.get('X-Frame-Options'), 'DENY');
+    assert.equal(okStatus.headers.get('Access-Control-Max-Age'), '86400');
     const statusJson = await okStatus.json();
     assert.equal(statusJson.ready, true);
     assert.equal(statusJson.ruleset, RULESET);
@@ -513,10 +561,10 @@ test('dual ko/en sessions stay strictly isolated while sharing the 6h KST schedu
     assert.equal(enDup.data.event.word, 'water');
     assert.equal(enDup.data.game.guessCount, 1);
 
-    // Nickname uniqueness is per-language, and solvers + Hall of Fame stay isolated
+    // Same-name registration is allowed across accounts in both ko and en without leaking between langs
     assert.equal((await h.call('profile', { name: 'Polyglot' }, 'PATCH', tokenA, 'ko')).status, 200);
     assert.equal((await h.call('profile', { name: 'Polyglot' }, 'PATCH', tokenA, 'en')).status, 200);
-    assert.equal((await h.call('profile', { name: 'polyglot' }, 'PATCH', tokenB, 'en')).status, 409);
+    assert.equal((await h.call('profile', { name: 'polyglot' }, 'PATCH', tokenB, 'en')).status, 200);
 
     const bEnStart = await h.start(tokenB, 'en');
     const enAnswer = h.answer(bEnStart.game.id);
@@ -535,16 +583,13 @@ test('dual ko/en sessions stay strictly isolated while sharing the 6h KST schedu
     assert.equal(enLb.ruleset, 'semantle-en-sync-v1');
     assert.equal(koLb.entries.length, 0);
 
-    // Rollover advances EN cleanly, resets current EN ranking while retaining Round #3 archive, and exposes previous EN answer via rounds/previous/nearest?lang=en
+    // Rollover advances EN cleanly while keeping unified EN ranking intact and exposing previous EN answer
     h.advanceMs(6 * 60 * 60 * 1000);
     const enLbReset = (await h.call('leaderboard', null, 'GET', tokenB, 'en')).data;
-    assert.equal(enLbReset.roundNo, 4);
-    assert.equal(enLbReset.entries.length, 0);
-    const enLbR3 = (await h.call('leaderboard?round=3', null, 'GET', tokenB, 'en')).data;
-    assert.equal(enLbR3.entries.length, 1);
-    assert.equal(enLbR3.entries[0].name, 'EnChamp');
-    const koLbR3 = (await h.call('leaderboard?round=3', null, 'GET', tokenA, 'ko')).data;
-    assert.equal(koLbR3.entries.length, 0);
+    assert.equal(enLbReset.entries.length, 1);
+    assert.equal(enLbReset.entries[0].name, 'EnChamp');
+    const koLbAfter = (await h.call('leaderboard', null, 'GET', tokenA, 'ko')).data;
+    assert.equal(koLbAfter.entries.length, 0);
     const enReset = await h.call(`games/${enGame.id}`, null, 'GET', tokenA, 'en');
     assert.equal(enReset.status, 200);
     assert.equal(enReset.data.event.code, 'round_reset');

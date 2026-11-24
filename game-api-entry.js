@@ -247,7 +247,7 @@ export class TwentyQuestionsRoom extends DurableObject {
         this.gameEnv = env;
         this.queue = Promise.resolve();
         this.flushPromise = null;
-        this.roomCache = { player: null, game: null, guesses: null };
+        this.roomCache = { player: null, game: null, guesses: null, roundSummary: null };
         ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS room_d1_outbox (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             statements TEXT NOT NULL,
@@ -259,6 +259,7 @@ export class TwentyQuestionsRoom extends DurableObject {
                 this.roomCache.player = null;
                 this.roomCache.game = null;
                 this.roomCache.guesses = null;
+                this.roomCache.roundSummary = null;
             },
             deferBatch: statements => {
                 this.ctx.storage.sql.exec(

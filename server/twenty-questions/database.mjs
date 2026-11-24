@@ -1,7 +1,7 @@
 import { SCHEMA_TABLES, SCHEMA_INDEXES } from './schema.mjs';
 import { fault } from './core.mjs';
 
-export const SCHEMA_VERSION = 'semantle-20261120-v4';
+export const SCHEMA_VERSION = 'semantle-20261124-v5';
 
 const ready = new WeakMap();
 const rateBucketsByDb = new WeakMap();
@@ -63,6 +63,7 @@ export async function initialize(db) {
             ]);
             await db.batch([
                 db.prepare('DROP INDEX IF EXISTS sm_player_name_unique'),
+                db.prepare('DROP INDEX IF EXISTS sm_player_lang_name_unique'),
                 ...SCHEMA_INDEXES.map(sql => db.prepare(sql)),
                 db.prepare("INSERT INTO sm_meta(key, value) VALUES ('schema_version', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
                     .bind(SCHEMA_VERSION),
@@ -100,9 +101,9 @@ export async function cleanExpiredRecords(db, now = Date.now()) {
     const logCutoff = now - 60 * 86400000;
     await db.batch([
         db.prepare('DELETE FROM sm_limits WHERE expires_at <= ?').bind(now),
-        db.prepare("DELETE FROM sm_guesses WHERE game_id IN (SELECT id FROM sm_games WHERE status != 'active' AND updated_at < ?)").bind(cutoff),
+        db.prepare("DELETE FROM sm_guesses WHERE game_id IN (SELECT id FROM sm_games WHERE status != 'active' AND NOT (status = 'won' AND ranked = 1) AND updated_at < ?)").bind(cutoff),
         db.prepare('DELETE FROM sm_requests WHERE created_at < ?').bind(cutoff),
-        db.prepare("DELETE FROM sm_games WHERE status != 'active' AND updated_at < ?").bind(cutoff),
+        db.prepare("DELETE FROM sm_games WHERE status != 'active' AND NOT (status = 'won' AND ranked = 1) AND updated_at < ?").bind(cutoff),
         db.prepare('DELETE FROM sm_logs WHERE created_at < ?').bind(logCutoff),
     ]);
 }

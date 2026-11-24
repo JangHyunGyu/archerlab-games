@@ -1,5 +1,5 @@
 import {
-    RULESET, SESSION_MS, ROUND_MS, roundSlotAt, previousRoundSlot, selectRoundSecretIndex,
+    RULESET, SESSION_MS, roundSlotAt, previousRoundSlot, selectRoundSecretIndex,
     parseLang, rulesetFor, dbRoundIdFor,
     normalizeWord, isValidWord, sanitizePlayerName,
     deriveSimScale, calibrateSim, nextRecord, fault, fingerprint, publicProfile,
@@ -10,11 +10,32 @@ import { dataReady, loadVocab, loadSecretTop1k, scoreGuessWord, preloadVectors, 
 const ID = /^[a-zA-Z0-9_-]{16,100}$/;
 const TOKEN = /^[a-f0-9]{64}$/;
 const ROUND_SUMMARY_TTL_MS = 5000;
+const roundCacheByDb = new WeakMap();
 const SECURITY_HEADERS = {
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
 };
+
+function getRoundCache(db) {
+    if (!db || typeof db !== 'object') return null;
+    let map = roundCacheByDb.get(db);
+    if (!map) {
+        map = new Map();
+        roundCacheByDb.set(db, map);
+    }
+    return map;
+}
+
+function cacheRound(db, roundId, round) {
+    const cache = getRoundCache(db);
+    if (!cache || !round) return;
+    if (cache.has(roundId)) cache.delete(roundId);
+    else if (cache.size >= 32) {
+        cache.delete(cache.keys().next().value);
+    }
+    cache.set(roundId, round);
+}
 
 const nowMs = env => (typeof env?.NOW_FN === 'function' ? env.NOW_FN() : Date.now());
 
@@ -162,8 +183,13 @@ async function hydrateGuesses(db, game, runtime) {
 
 async function ensureRoundForSlot(db, env, slot, vocab, lang = 'ko') {
     const roundId = dbRoundIdFor(lang, slot.roundId);
+    const cachedRound = getRoundCache(db)?.get(roundId);
+    if (cachedRound) return cachedRound;
     let round = await db.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(roundId).first();
-    if (round) return round;
+    if (round) {
+        cacheRound(db, roundId, round);
+        return round;
+    }
 
     const baseSalt = env?.SEMANTLE_ROUND_SALT || 'archerlab-semantle-sync-k9v1';
     const salt = lang === 'en' ? `${baseSalt}:en` : baseSalt;
@@ -183,6 +209,7 @@ async function ensureRoundForSlot(db, env, slot, vocab, lang = 'ko') {
 
     round = await db.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(roundId).first();
     if (!round) throw fault('service_unavailable', 503);
+    cacheRound(db, roundId, round);
     return round;
 }
 
@@ -193,28 +220,41 @@ async function loadRoundSummary(db, env, currentRound, vocab, lang, runtime, { f
         return cached.summary;
     }
 
-    const countRow = await db.prepare("SELECT COUNT(*) AS count FROM sm_games WHERE round_id = ? AND status = 'won' AND ranked = 1")
-        .bind(currentRound.round_id).first();
-    const solverRows = await db.prepare(`SELECT p.name, p.name_key, g.solved_ms, g.guess_count, g.solved_at
+    const solverCte = `WITH current_solvers AS (
+        SELECT g.player_id, p.name, p.name_key, g.solved_ms, g.solved_at,
+            CASE WHEN p.name_key IS NOT NULL THEN 'n:' || p.name_key ELSE 'p:' || g.player_id END AS dedup_key
         FROM sm_games g
         JOIN sm_players p ON p.id = g.player_id
         WHERE g.round_id = ? AND g.status = 'won' AND g.ranked = 1
-        ORDER BY g.solved_ms ASC, g.guess_count ASC, g.solved_at ASC, g.player_id ASC
-        LIMIT 10`)
-        .bind(currentRound.round_id).all();
-
-    const solvers = (solverRows.results || []).map(row => ({
+    ),
+    per_name AS (
+        SELECT player_id, name, name_key, solved_ms, solved_at,
+            ROW_NUMBER() OVER (
+                PARTITION BY dedup_key
+                ORDER BY solved_ms ASC, solved_at ASC, player_id ASC
+            ) AS name_rank
+        FROM current_solvers
+    )`;
+    const [countRes, solverRes] = await db.batch([
+        db.prepare(`${solverCte} SELECT COUNT(*) AS count FROM per_name WHERE name_rank = 1`).bind(currentRound.round_id),
+        db.prepare(`${solverCte} SELECT name, name_key, solved_ms, solved_at FROM per_name WHERE name_rank = 1 ORDER BY solved_ms ASC, solved_at ASC, player_id ASC LIMIT 10`).bind(currentRound.round_id),
+    ]);
+    const countRow = countRes?.results?.[0] || null;
+    const solvers = (solverRes?.results || []).map(row => ({
         name: row.name,
         hasCustomName: Boolean(row.name_key),
         solvedMs: row.solved_ms,
-        guesses: row.guess_count,
     }));
 
     let previous = null;
     if (currentRound.round_no > 1) {
         const prevSlot = previousRoundSlot({ startedAt: currentRound.started_at });
         const prevRoundId = dbRoundIdFor(lang, prevSlot.roundId);
-        let prevRound = await db.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(prevRoundId).first();
+        let prevRound = getRoundCache(db)?.get(prevRoundId) || null;
+        if (!prevRound) {
+            prevRound = await db.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(prevRoundId).first();
+            if (prevRound) cacheRound(db, prevRoundId, prevRound);
+        }
         if (!prevRound && vocab.secrets.length > 1) {
             prevRound = await ensureRoundForSlot(db, env, prevSlot, vocab, lang);
         }
@@ -696,52 +736,50 @@ async function performExplore(db, env, player, ipHash, game, body, currentRound,
     };
 }
 
-// 현재·이전 회차 랭킹 조회 (회차가 바뀌면 해당 회차 기준으로 초기화)
-export async function leaderboard(db, playerId, lang = 'ko', currentSlot = roundSlotAt(Date.now()), requestedRoundNo = null) {
-    const currentRoundNo = currentSlot.roundNo;
-    const minRoundNo = Math.min(1, currentRoundNo);
-    let targetRoundNo = currentRoundNo;
-    if (requestedRoundNo !== null && requestedRoundNo !== undefined && requestedRoundNo !== '') {
-        if (!/^\d+$/.test(String(requestedRoundNo))) throw fault('invalid_request', 400);
-        const parsed = Number(requestedRoundNo);
-        if (!Number.isSafeInteger(parsed) || parsed < minRoundNo || parsed > currentRoundNo) {
-            throw fault('invalid_request', 400);
-        }
-        targetRoundNo = parsed;
+// 단일 통합 랭킹 조회 (회차 시작 기준 최단 경과 시간 순, 동일 이름은 최고 순위만 유지)
+export async function leaderboard(db, playerId, lang = 'ko') {
+    const cte = `WITH ranked_players AS (
+        SELECT id, name, name_key, sync_best_time_ms, sync_best_at,
+            CASE WHEN name_key IS NOT NULL THEN 'n:' || name_key ELSE 'p:' || id END AS dedup_key
+        FROM sm_players
+        WHERE lang = ? AND sync_best_time_ms IS NOT NULL
+    ),
+    per_name AS (
+        SELECT id, name, name_key, sync_best_time_ms, sync_best_at, dedup_key,
+            ROW_NUMBER() OVER (
+                PARTITION BY dedup_key
+                ORDER BY sync_best_time_ms ASC, sync_best_at ASC, id ASC
+            ) AS name_rank,
+            MAX(CASE WHEN id = ? THEN 1 ELSE 0 END) OVER (PARTITION BY dedup_key) AS is_own
+        FROM ranked_players
+    ),
+    ordered AS (
+        SELECT id, name, name_key, sync_best_time_ms, sync_best_at, is_own,
+            ROW_NUMBER() OVER (ORDER BY sync_best_time_ms ASC, sync_best_at ASC, id ASC) AS rank
+        FROM per_name
+        WHERE name_rank = 1
+    )`;
+    const queries = [
+        db.prepare(`${cte} SELECT * FROM ordered LIMIT 50`).bind(lang, playerId || ''),
+    ];
+    if (playerId) {
+        queries.push(db.prepare(`${cte} SELECT * FROM ordered WHERE is_own = 1 LIMIT 1`).bind(lang, playerId));
     }
-    const targetSlot = targetRoundNo === currentRoundNo
-        ? currentSlot
-        : roundSlotAt(currentSlot.startedAt - (currentRoundNo - targetRoundNo) * ROUND_MS);
-    const dbRoundId = dbRoundIdFor(lang, targetSlot.roundId);
-    const query = `SELECT g.player_id AS id, p.name, p.name_key, g.solved_ms, g.guess_count, g.solved_at,
-        ROW_NUMBER() OVER (ORDER BY g.solved_ms ASC, g.guess_count ASC, g.solved_at ASC, g.player_id ASC) AS rank
-        FROM sm_games g
-        JOIN sm_players p ON p.id = g.player_id
-        WHERE g.round_id = ? AND g.status = 'won' AND g.ranked = 1`;
-    const top = await db.prepare(`SELECT * FROM (${query}) LIMIT 50`).bind(dbRoundId).all();
-    const mine = playerId ? await db.prepare(`SELECT * FROM (${query}) WHERE id = ?`).bind(dbRoundId, playerId).first() : null;
+    const [topRes, mineRes] = await db.batch(queries);
+    const mine = playerId ? (mineRes?.results?.[0] || null) : null;
     const visible = row => row ? ({
         rank: row.rank,
         name: row.name,
         hasCustomName: Boolean(row.name_key),
-        solvedMs: row.solved_ms,
-        bestTimeMs: row.solved_ms,
-        guesses: row.guess_count,
-        turns: row.guess_count,
-        own: row.id === playerId,
+        solvedMs: row.sync_best_time_ms,
+        bestTimeMs: row.sync_best_time_ms,
+        own: Boolean(row.is_own),
     }) : null;
     return {
-        entries: (top.results || []).map(visible),
+        entries: (topRes?.results || []).map(visible),
         mine: visible(mine),
         lang,
         ruleset: rulesetFor(lang),
-        roundNo: targetSlot.roundNo,
-        roundId: targetSlot.roundId,
-        currentRoundNo,
-        minRoundNo,
-        isCurrentRound: targetSlot.roundNo === currentRoundNo,
-        hasPrev: targetSlot.roundNo > minRoundNo,
-        hasNext: targetSlot.roundNo < currentRoundNo,
     };
 }
 
@@ -757,8 +795,7 @@ export async function handleRoomRequest(request, env, runtime = null) {
 
         if (request.method === 'GET' && path === 'leaderboard') {
             await runtime?.flushBatch?.();
-            const currentSlot = roundSlotAt(nowMs(env));
-            return response(await leaderboard(env.DB, id, lang, currentSlot, url.searchParams.get('round')));
+            return response(await leaderboard(env.DB, id, lang));
         }
 
         if (!dataReady(env)) throw fault('service_unavailable', 503);
@@ -772,7 +809,11 @@ export async function handleRoomRequest(request, env, runtime = null) {
             const prevSlot = previousRoundSlot(currentSlot);
             if (prevSlot.endsAt > now) throw fault('forbidden', 403);
             const prevRoundId = dbRoundIdFor(lang, prevSlot.roundId);
-            let prevRound = await env.DB.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(prevRoundId).first();
+            let prevRound = getRoundCache(env.DB)?.get(prevRoundId) || null;
+            if (!prevRound) {
+                prevRound = await env.DB.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(prevRoundId).first();
+                if (prevRound) cacheRound(env.DB, prevRoundId, prevRound);
+            }
             if (!prevRound) {
                 if (currentSlot.roundNo <= 1 || vocab.secrets.length <= 1) throw fault('not_found', 404);
                 prevRound = await ensureRoundForSlot(env.DB, env, prevSlot, vocab, lang);
@@ -815,14 +856,7 @@ export async function handleRoomRequest(request, env, runtime = null) {
             if (!name) throw fault('invalid_name');
             await runtime?.flushBatch?.();
             const nameKey = name.toLowerCase();
-            const dup = await env.DB.prepare('SELECT id FROM sm_players WHERE lang = ? AND name_key = ? AND id != ?').bind(lang, nameKey, id).first();
-            if (dup) throw fault('name_taken', 409);
-            try {
-                await env.DB.prepare('UPDATE sm_players SET name = ?, name_key = ? WHERE id = ?').bind(name, nameKey, id).run();
-            } catch (err) {
-                if (/UNIQUE/i.test(String(err?.message))) throw fault('name_taken', 409);
-                throw err;
-            }
+            await env.DB.prepare('UPDATE sm_players SET name = ?, name_key = ? WHERE id = ?').bind(name, nameKey, id).run();
             if (runtime?.roomCache) {
                 if (runtime.roomCache.player) {
                     runtime.roomCache.player = { ...runtime.roomCache.player, name, name_key: nameKey };
@@ -957,6 +991,7 @@ export async function twentyQuestionsRoute(request, env, ctx = null) {
     headers.set('Vary', 'Origin');
     headers.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
     headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    headers.set('Access-Control-Max-Age', '86400');
     headers.set('Cache-Control', 'no-store');
     for (const [k, v] of Object.entries(SECURITY_HEADERS)) headers.set(k, v);
     return new Response(result.body, { status: result.status, headers });

@@ -17,6 +17,7 @@ export function database() {
             function bound(values = []) {
                 const statement = () => sqlite.prepare(sql);
                 return {
+                    sql,
                     bind: (...args) => bound(args),
                     first: async () => statement().get(...values) || null,
                     all: async () => ({ results: statement().all(...values) }),
@@ -29,7 +30,13 @@ export function database() {
             sqlite.exec('BEGIN');
             try {
                 const results = [];
-                for (const statement of statements) results.push(await statement.run());
+                for (const statement of statements) {
+                    if (/^\s*(?:SELECT|WITH|PRAGMA)\b/i.test(statement.sql || '')) {
+                        results.push({ ...(await statement.all()), success: true });
+                    } else {
+                        results.push(await statement.run());
+                    }
+                }
                 sqlite.exec('COMMIT');
                 return results;
             } catch (error) {

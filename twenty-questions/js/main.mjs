@@ -1,6 +1,6 @@
-import { messages, translation } from './i18n.mjs?v=20261120-v10';
-import { request, requestId, storage, reportException } from './api.mjs?v=20261120-v10';
-import { GameAudio } from './audio.mjs';
+import { messages, translation } from './i18n.mjs?v=20261124-v13';
+import { request, requestId, storage, reportException } from './api.mjs?v=20261124-v13';
+import { GameAudio } from './audio.mjs?v=20261124-v13';
 
 const locale = document.documentElement.lang === 'en' ? 'en' : 'ko';
 const t = translation(locale);
@@ -35,7 +35,7 @@ let latestHighlightWord = null;
 let sortState = { key: 'similarity', dir: 'desc' };
 let nearestWords = [];
 let nearestKey = null;
-let rankingState = { roundNo: null, currentRoundNo: null, minRoundNo: 1, requestSeq: 0 };
+let rankingRequestSeq = 0;
 let rolloverInFlight = false;
 let rolloverRoundId = null;
 let rolloverRetryAt = 0;
@@ -643,7 +643,6 @@ function formatSolverSummary(round) {
     const title = t('solver_tooltip', {
         name: solverName,
         time: formatRecordTime(first.solvedMs),
-        count: first.guesses,
     });
     return { text, title, hasSolver: true };
 }
@@ -1028,6 +1027,16 @@ function renderNearestRows(filter = '') {
     body.replaceChildren(frag);
 }
 
+function comitativeParticle(word) {
+    const trimmed = String(word || '').trim();
+    if (!trimmed) return '와';
+    const code = trimmed.charCodeAt(trimmed.length - 1);
+    if (code >= 0xac00 && code <= 0xd7a3) {
+        return (code - 0xac00) % 28 !== 0 ? '과' : '와';
+    }
+    return '와';
+}
+
 async function openNearestModal(mode) {
     const usePrev = mode === 'previous';
     const game = state.game;
@@ -1047,7 +1056,7 @@ async function openNearestModal(mode) {
         endpoint = `games/${game.id}/nearest`;
     }
     openDialog('nearest-dialog');
-    $('nearest-title').textContent = t('nearest_title', { word: titleWord });
+    $('nearest-title').textContent = t('nearest_title', { word: titleWord, josa: comitativeParticle(titleWord) });
     $('nearest-filter').value = '';
     if (nearestKey !== key) {
         $('nearest-body').replaceChildren();
@@ -1073,44 +1082,20 @@ function openDialog(id) {
     $(id).showModal();
 }
 
-async function showRanking(requestedRoundNo) {
-    var __oc18, __oc19;
-    const prevBtn = $('ranking-prev');
-    const nextBtn = $('ranking-next');
-    const titleEl = $('ranking-title');
+async function showRanking() {
     if (!$('ranking-dialog').open) openDialog('ranking-dialog');
-    const initialRoundNo = requestedRoundNo || (state.round && state.round.roundNo) || null;
-    if (titleEl) {
-        titleEl.textContent = initialRoundNo ? t('ranking_round_title', { no: initialRoundNo }) : t('ranking');
-    }
-    if (prevBtn) prevBtn.disabled = true;
-    if (nextBtn) nextBtn.disabled = true;
-    const seq = ++rankingState.requestSeq;
+    if ($('ranking-title')) $('ranking-title').textContent = t('ranking');
+    const seq = ++rankingRequestSeq;
     $('leaderboard').textContent = t('loading');
     $('own-rank').textContent = '';
     try {
-        const endpoint = requestedRoundNo ? ('leaderboard?round=' + encodeURIComponent(String(requestedRoundNo))) : 'leaderboard';
-        const data = await request(endpoint);
-        if (seq !== rankingState.requestSeq) return;
-        const roundNo = data.roundNo || requestedRoundNo || (state.round && state.round.roundNo) || null;
-        const currentRoundNo = data.currentRoundNo || (state.round && state.round.roundNo) || roundNo;
-        const minRoundNo = data.minRoundNo || 1;
-        const isCurrentRound = typeof data.isCurrentRound === 'boolean' ? data.isCurrentRound : (!currentRoundNo || roundNo === currentRoundNo);
-        const hasPrev = typeof data.hasPrev === 'boolean' ? data.hasPrev : Boolean(roundNo && roundNo > minRoundNo);
-        const hasNext = typeof data.hasNext === 'boolean' ? data.hasNext : Boolean(roundNo && currentRoundNo && roundNo < currentRoundNo);
-        rankingState.roundNo = roundNo;
-        rankingState.currentRoundNo = currentRoundNo;
-        rankingState.minRoundNo = minRoundNo;
-        if (titleEl) {
-            titleEl.textContent = roundNo ? t('ranking_round_title', { no: roundNo }) : t('ranking');
-        }
-        if (prevBtn) prevBtn.disabled = !hasPrev;
-        if (nextBtn) nextBtn.disabled = !hasNext;
+        const data = await request('leaderboard');
+        if (seq !== rankingRequestSeq) return;
         if (data.entries && data.entries.length) {
             const table = document.createElement('table');
             const head = document.createElement('thead');
             const row = document.createElement('tr');
-            for (const key of ['rank_col', 'explorer_col', 'time_col', 'guesses_col']) {
+            for (const key of ['rank_col', 'explorer_col', 'time_col']) {
                 const th = document.createElement('th');
                 th.scope = 'col';
                 th.textContent = t(key);
@@ -1127,7 +1112,6 @@ async function showRanking(requestedRoundNo) {
                     String(entry.rank),
                     displaySolverName(entry),
                     formatRecordTime(solvedMs),
-                    t('guesses_unit', { count: (((__oc19 = (__oc18 = entry.guesses) !== null && __oc18 !== void 0 ? __oc18 : entry.turns) !== null && __oc19 !== void 0 ? __oc19 : 0)) }),
                 ];
                 for (const value of cells) {
                     const td = document.createElement('td');
@@ -1143,30 +1127,23 @@ async function showRanking(requestedRoundNo) {
             emptyBox.className = 'leaderboard-empty';
             const emptyTitle = document.createElement('p');
             emptyTitle.className = 'leaderboard-empty-title';
+            emptyTitle.textContent = t('no_records');
             const emptyDesc = document.createElement('p');
             emptyDesc.className = 'leaderboard-empty-desc';
-            if (roundNo) {
-                emptyTitle.textContent = t(isCurrentRound ? 'no_records_current_title' : 'no_records_past_title', { no: roundNo });
-                emptyDesc.textContent = t(isCurrentRound ? 'no_records_current_desc' : 'no_records_past_desc', { no: roundNo });
-                emptyBox.append(emptyTitle, emptyDesc);
-            } else {
-                emptyTitle.textContent = t('no_records');
-                emptyBox.append(emptyTitle);
-            }
+            emptyDesc.textContent = t('no_records_desc');
+            emptyBox.append(emptyTitle, emptyDesc);
             $('leaderboard').replaceChildren(emptyBox);
         }
         if (data.mine) {
             const mineMs = (data.mine.solvedMs !== undefined && data.mine.solvedMs !== null) ? data.mine.solvedMs : data.mine.bestTimeMs;
-            $('own-rank').textContent = `${t('your_record')} · #${data.mine.rank} · ${formatRecordTime(mineMs)} (${t('guesses_unit', { count: data.mine.guesses })})`;
+            $('own-rank').textContent = `${t('your_record')} · #${data.mine.rank} · ${formatRecordTime(mineMs)}`;
         } else {
             $('own-rank').textContent = '';
         }
     } catch (error) {
-        if (seq !== rankingState.requestSeq) return;
+        if (seq !== rankingRequestSeq) return;
         reportException(error, 'leaderboard');
         $('leaderboard').textContent = t(Object.prototype.hasOwnProperty.call(messages[locale], error.code) ? error.code : 'network_error');
-        if (prevBtn) prevBtn.disabled = !(rankingState.roundNo && rankingState.roundNo > rankingState.minRoundNo);
-        if (nextBtn) nextBtn.disabled = !(rankingState.roundNo && rankingState.currentRoundNo && rankingState.roundNo < rankingState.currentRoundNo);
     }
 }
 
@@ -1261,22 +1238,6 @@ $('open-ranking-result').addEventListener('click', () => showRanking());
 $('nearest-filter').addEventListener('input', event => renderNearestRows(event.target.value));
 $('share-result').addEventListener('click', copyShare);
 $('ranking-open').addEventListener('click', () => showRanking());
-if ($('ranking-prev')) {
-    $('ranking-prev').addEventListener('click', () => {
-        if (rankingState.roundNo && rankingState.roundNo > rankingState.minRoundNo) {
-            audio.play('click');
-            showRanking(rankingState.roundNo - 1);
-        }
-    });
-}
-if ($('ranking-next')) {
-    $('ranking-next').addEventListener('click', () => {
-        if (rankingState.roundNo && rankingState.currentRoundNo && rankingState.roundNo < rankingState.currentRoundNo) {
-            audio.play('click');
-            showRanking(rankingState.roundNo + 1);
-        }
-    });
-}
 $('guide-open').addEventListener('click', showGuide);
 $('settings-open').addEventListener('click', () => openDialog('settings-dialog'));
 
