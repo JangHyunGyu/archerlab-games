@@ -11,16 +11,20 @@ class GameRenderer {
         this.trailPoints = [];
         this.sparkSprites = [];
         this.scoreTexts = [null, null];
+        this._setText = null;
+        this._pingText = null;
         this.shakeAmount = 0;
         this.initialized = false;
         this.imageTextures = {};
         this.usingImageAssets = false;
+        this._assetVersion = '20261124-v1';
 
         // 오브젝트 풀: trail과 particle Graphics 재사용
         this._trailPool = [];
         this._particlePool = [];
         this._sparkPool = [];
-        this._msgStyle = null; // showMessage TextStyle 캐시
+        this._msgStyle = null;
+        this._noticeStyle = null;
     }
 
     supportsWebP() {
@@ -37,9 +41,14 @@ class GameRenderer {
     }
 
     preferredImageSrc(src) {
-        return this.supportsWebP() && /\.png$/i.test(src)
-            ? src.replace(/\.png$/i, '.webp')
+        return this.supportsWebP()
+            ? src.replace(/\.png(?=$|[?#])/i, '.webp')
             : src;
+    }
+
+    _withVersion(src) {
+        if (!src || src.includes('?')) return src;
+        return `${src}?v=${this._assetVersion}`;
     }
 
     async init() {
@@ -54,7 +63,6 @@ class GameRenderer {
             autoDensity: true,
         });
         this.container.appendChild(this.app.canvas);
-        // CSS가 max-width/max-height + object-fit: contain으로 반응형 처리
         this.app.canvas.style.width = '';
         this.app.canvas.style.height = '';
 
@@ -65,7 +73,7 @@ class GameRenderer {
         this.createBackground();
         this.createNet();
         this.createScoreDisplay();
-        this.createFpsDisplay();
+        this.createPingDisplay();
         this.particleContainer = new PIXI.Container();
         this.gameContainer.addChild(this.particleContainer);
         this.trailContainer = new PIXI.Container();
@@ -119,15 +127,16 @@ class GameRenderer {
     }
 
     loadImageTexture(src) {
-        const preferredSrc = this.preferredImageSrc(src);
+        const versionedSrc = this._withVersion(src);
+        const preferredSrc = this.preferredImageSrc(versionedSrc);
         return new Promise((resolve, reject) => {
             const img = document.createElement('img');
             img.decoding = 'async';
             img.onload = () => resolve(PIXI.Texture.from(img));
             img.onerror = () => {
-                if (preferredSrc !== src) {
+                if (preferredSrc !== versionedSrc) {
                     img.onerror = () => reject(new Error(`Failed to load image asset: ${src}`));
-                    img.src = src;
+                    img.src = versionedSrc;
                     return;
                 }
                 reject(new Error(`Failed to load image asset: ${src}`));
@@ -147,20 +156,18 @@ class GameRenderer {
             return;
         }
 
-        // Sky - fake vertical gradient using layered bands
         const bg = new PIXI.Graphics();
         bg.rect(0, 0, CONFIG.COURT_WIDTH, CONFIG.GROUND_Y);
-        bg.fill(0x0c1020);
+        bg.fill(0x101734);
         this.gameContainer.addChild(bg);
 
         const skyBands = new PIXI.Graphics();
         const bands = 20;
         for (let i = 0; i < bands; i++) {
             const t = i / bands;
-            // gradient: dusk blue -> warm horizon
-            const r = Math.round(12 + t * 30);
-            const g = Math.round(16 + t * 25);
-            const b = Math.round(32 + (1 - t) * 20);
+            const r = Math.round(14 + t * 44);
+            const g = Math.round(20 + t * 32);
+            const b = Math.round(48 + (1 - t) * 28);
             const color = (r << 16) | (g << 8) | b;
             skyBands.rect(
                 0,
@@ -168,69 +175,16 @@ class GameRenderer {
                 CONFIG.COURT_WIDTH,
                 CONFIG.GROUND_Y / bands + 1
             );
-            skyBands.fill({ color, alpha: 0.6 });
+            skyBands.fill({ color, alpha: 0.7 });
         }
         this.gameContainer.addChild(skyBands);
 
-        // Soft horizon glow
-        const glow = new PIXI.Graphics();
-        glow.ellipse(CONFIG.COURT_WIDTH / 2, CONFIG.GROUND_Y, CONFIG.COURT_WIDTH * 0.6, 80);
-        glow.fill({ color: 0x4a5a88, alpha: 0.18 });
-        this.gameContainer.addChild(glow);
-
-        // Stars — fewer, more tasteful, varied
-        const stars = new PIXI.Graphics();
-        for (let i = 0; i < 35; i++) {
-            const x = Math.random() * CONFIG.COURT_WIDTH;
-            const y = Math.random() * (CONFIG.GROUND_Y - 80);
-            const size = Math.random() * 1.3 + 0.35;
-            const alpha = Math.random() * 0.4 + 0.2;
-            stars.circle(x, y, size);
-            stars.fill({ color: 0xffffff, alpha });
-        }
-        // A few brighter "twinkles"
-        for (let i = 0; i < 6; i++) {
-            const x = Math.random() * CONFIG.COURT_WIDTH;
-            const y = Math.random() * (CONFIG.GROUND_Y - 120);
-            stars.circle(x, y, 0.6);
-            stars.fill({ color: 0xffffff, alpha: 0.9 });
-            stars.circle(x, y, 2.4);
-            stars.fill({ color: 0xffffff, alpha: 0.08 });
-        }
-        this.gameContainer.addChild(stars);
-
-        // Ground base (sandy court)
         const ground = new PIXI.Graphics();
         ground.rect(0, CONFIG.GROUND_Y, CONFIG.COURT_WIDTH, CONFIG.COURT_HEIGHT - CONFIG.GROUND_Y);
-        ground.fill(0x3d2a1a);
-        // top layer — warmer sand
-        ground.rect(0, CONFIG.GROUND_Y, CONFIG.COURT_WIDTH, (CONFIG.COURT_HEIGHT - CONFIG.GROUND_Y) * 0.6);
-        ground.fill({ color: 0x6b4a2e, alpha: 0.85 });
-        // Subtle grain (small dots)
-        for (let i = 0; i < 90; i++) {
-            const x = Math.random() * CONFIG.COURT_WIDTH;
-            const y = CONFIG.GROUND_Y + Math.random() * (CONFIG.COURT_HEIGHT - CONFIG.GROUND_Y);
-            ground.circle(x, y, Math.random() * 0.8 + 0.3);
-            ground.fill({ color: 0xffffff, alpha: Math.random() * 0.08 + 0.03 });
-        }
-        for (let i = 0; i < 60; i++) {
-            const x = Math.random() * CONFIG.COURT_WIDTH;
-            const y = CONFIG.GROUND_Y + Math.random() * (CONFIG.COURT_HEIGHT - CONFIG.GROUND_Y);
-            ground.circle(x, y, Math.random() * 0.8 + 0.3);
-            ground.fill({ color: 0x000000, alpha: Math.random() * 0.1 + 0.04 });
-        }
-        // Top highlight edge (sand ridge catching light)
+        ground.fill(0xd99b43);
         ground.rect(0, CONFIG.GROUND_Y, CONFIG.COURT_WIDTH, 2);
-        ground.fill({ color: 0xf3d4a2, alpha: 0.35 });
-        ground.rect(0, CONFIG.GROUND_Y + 2, CONFIG.COURT_WIDTH, 1);
-        ground.fill({ color: 0x000000, alpha: 0.25 });
+        ground.fill({ color: 0xf7d794, alpha: 0.5 });
         this.gameContainer.addChild(ground);
-
-        // Court center line (faint)
-        const centerLine = new PIXI.Graphics();
-        centerLine.rect(CONFIG.NET_X - 0.5, CONFIG.GROUND_Y, 1, CONFIG.COURT_HEIGHT - CONFIG.GROUND_Y);
-        centerLine.fill({ color: 0xffffff, alpha: 0.08 });
-        this.gameContainer.addChild(centerLine);
     }
 
     createNet() {
@@ -244,57 +198,44 @@ class GameRenderer {
         const meshLeft = netX - poleHalf - 3;
         const meshRight = netX + poleHalf + 3;
 
-        // Ground shadow under the net
         const groundShadow = new PIXI.Graphics();
-        groundShadow.ellipse(netX, CONFIG.GROUND_Y + 3, 22, 3);
-        groundShadow.fill({ color: 0x000000, alpha: 0.28 });
+        groundShadow.ellipse(netX, CONFIG.GROUND_Y + 3, 24, 3.5);
+        groundShadow.fill({ color: 0x0b101b, alpha: 0.34 });
         this.gameContainer.addChild(groundShadow);
 
-        // Net mesh — diamond weave (vertical + horizontal lines)
         const meshG = new PIXI.Graphics();
-        const meshColor = 0xf2f2ea;
-        const meshAlpha = 0.42;
-        const meshShadowAlpha = 0.18;
+        const meshColor = 0xeef2f7;
+        const meshAlpha = 0.48;
+        const meshShadowAlpha = 0.2;
 
-        // Horizontal mesh rows (taut twine)
         for (let y = meshTop + 4; y < meshBottom; y += 7) {
-            // subtle shadow line (below)
             meshG.moveTo(meshLeft, y + 1);
             meshG.lineTo(meshRight, y + 1);
-            meshG.stroke({ color: 0x000000, width: 1, alpha: meshShadowAlpha });
-            // main line
+            meshG.stroke({ color: 0x0b101b, width: 1, alpha: meshShadowAlpha });
             meshG.moveTo(meshLeft, y);
             meshG.lineTo(meshRight, y);
             meshG.stroke({ color: meshColor, width: 1, alpha: meshAlpha });
         }
 
-        // Vertical mesh columns
         for (let x = meshLeft + 3; x <= meshRight - 3; x += 4) {
             meshG.moveTo(x, meshTop + 4);
             meshG.lineTo(x, meshBottom);
-            meshG.stroke({ color: meshColor, width: 1, alpha: meshAlpha * 0.8 });
+            meshG.stroke({ color: meshColor, width: 1, alpha: meshAlpha * 0.85 });
         }
         this.gameContainer.addChild(meshG);
 
-        // Pole — shaded cylinder (dark side, mid, light rim)
         const pole = new PIXI.Graphics();
-        // outer darker edge
         pole.rect(netX - poleHalf, netTop, CONFIG.NET_WIDTH, CONFIG.NET_HEIGHT);
-        pole.fill(0x9c9c9c);
-        // mid shade
+        pole.fill(0x8e99ad);
         pole.rect(netX - poleHalf + 1, netTop, CONFIG.NET_WIDTH - 2, CONFIG.NET_HEIGHT);
-        pole.fill(0xbfbfbf);
-        // highlight stripe (specular on left side of the tube)
+        pole.fill(0xc6d0e0);
         pole.rect(netX - poleHalf + 2, netTop + 2, 1.5, CONFIG.NET_HEIGHT - 4);
-        pole.fill({ color: 0xffffff, alpha: 0.55 });
-        // subtle shadow stripe on right
+        pole.fill({ color: 0xffffff, alpha: 0.6 });
         pole.rect(netX + poleHalf - 2, netTop + 2, 1, CONFIG.NET_HEIGHT - 4);
-        pole.fill({ color: 0x000000, alpha: 0.3 });
+        pole.fill({ color: 0x101828, alpha: 0.32 });
         this.gameContainer.addChild(pole);
 
-        // Top tape band (white with subtle shading) — volleyball regulation look
         const tape = new PIXI.Graphics();
-        // drop shadow
         tape.roundRect(
             netX - CONFIG.NET_TOP_WIDTH / 2,
             tapeY + 2,
@@ -302,8 +243,7 @@ class GameRenderer {
             tapeHeight,
             3
         );
-        tape.fill({ color: 0x000000, alpha: 0.25 });
-        // tape body
+        tape.fill({ color: 0x0b101b, alpha: 0.28 });
         tape.roundRect(
             netX - CONFIG.NET_TOP_WIDTH / 2,
             tapeY,
@@ -311,8 +251,7 @@ class GameRenderer {
             tapeHeight,
             3
         );
-        tape.fill(0xf7f7f1);
-        // top highlight
+        tape.fill(0xf8fafc);
         tape.roundRect(
             netX - CONFIG.NET_TOP_WIDTH / 2 + 1,
             tapeY + 1,
@@ -320,96 +259,110 @@ class GameRenderer {
             2,
             1.5
         );
-        tape.fill({ color: 0xffffff, alpha: 0.9 });
-        // bottom stitch shadow
-        tape.rect(
-            netX - CONFIG.NET_TOP_WIDTH / 2 + 1,
-            tapeY + tapeHeight - 1.5,
-            CONFIG.NET_TOP_WIDTH - 2,
-            1
-        );
-        tape.fill({ color: 0x000000, alpha: 0.22 });
+        tape.fill({ color: 0xffffff, alpha: 0.95 });
         this.gameContainer.addChild(tape);
-
-        // Small ball-socket on top of the tape (metal finial)
-        const finial = new PIXI.Graphics();
-        finial.circle(netX, tapeY - 1, 3);
-        finial.fill(0xb8bcc4);
-        finial.circle(netX - 0.8, tapeY - 1.8, 1.2);
-        finial.fill({ color: 0xffffff, alpha: 0.85 });
-        this.gameContainer.addChild(finial);
     }
 
-    createFpsDisplay() {
+    createPingDisplay() {
         const style = new PIXI.TextStyle({
-            fontFamily: 'Space Grotesk, Pretendard, sans-serif',
+            fontFamily: 'JetBrains Mono, monospace',
             fontSize: 11,
-            fill: 0xffffff,
+            fontWeight: '500',
+            fill: 0xcbd5e1,
+            dropShadow: { color: 0x000000, blur: 3, distance: 1, alpha: 0.7 },
         });
-        this._fpsText = new PIXI.Text({ text: '', style });
-        this._fpsText.x = 6;
-        this._fpsText.y = 4;
-        this._fpsText.alpha = 0.3;
-        this._fpsFrameCount = 0;
-        this.gameContainer.addChild(this._fpsText);
+        this._pingText = new PIXI.Text({ text: '', style });
+        this._pingText.x = 12;
+        this._pingText.y = 10;
+        this._pingText.alpha = 0.72;
+        this._pingText.visible = false;
+        this.gameContainer.addChild(this._pingText);
+    }
+
+    setNetworkPing(ms) {
+        if (!this._pingText) return;
+        if (!Number.isFinite(ms) || ms <= 0) {
+            this._pingText.visible = false;
+            return;
+        }
+        this._pingText.visible = true;
+        this._pingText.text = `${Math.round(ms)}ms`;
     }
 
     createScoreDisplay() {
-        const styleA = new PIXI.TextStyle({
+        const makeScoreStyle = (tint) => new PIXI.TextStyle({
             fontFamily: 'Space Grotesk, Pretendard, sans-serif',
-            fontSize: 54,
-            fontWeight: '600',
-            letterSpacing: -2,
-            fill: 0xdfe6f4,
+            fontSize: 48,
+            fontWeight: '700',
+            letterSpacing: -1.5,
+            fill: tint,
             dropShadow: {
-                color: 0x000000,
-                blur: 6,
+                color: 0x050914,
+                blur: 8,
                 distance: 2,
-                alpha: 0.55,
-            },
-        });
-        const styleB = new PIXI.TextStyle({
-            fontFamily: 'Space Grotesk, Pretendard, sans-serif',
-            fontSize: 54,
-            fontWeight: '600',
-            letterSpacing: -2,
-            fill: 0xdfe6f4,
-            dropShadow: {
-                color: 0x000000,
-                blur: 6,
-                distance: 2,
-                alpha: 0.55,
+                alpha: 0.65,
             },
         });
 
-        this.scoreTexts[0] = new PIXI.Text({ text: '0', style: styleA });
+        this.scoreTexts[0] = new PIXI.Text({ text: '0', style: makeScoreStyle(0xe8f3ff) });
         this.scoreTexts[0].anchor.set(0.5);
         this.scoreTexts[0].x = CONFIG.COURT_WIDTH / 4;
-        this.scoreTexts[0].y = 42;
-        this.scoreTexts[0].alpha = 0.82;
+        this.scoreTexts[0].y = 40;
+        this.scoreTexts[0].alpha = 0.92;
         this.gameContainer.addChild(this.scoreTexts[0]);
 
-        this.scoreTexts[1] = new PIXI.Text({ text: '0', style: styleB });
+        this.scoreTexts[1] = new PIXI.Text({ text: '0', style: makeScoreStyle(0xffe9eb) });
         this.scoreTexts[1].anchor.set(0.5);
         this.scoreTexts[1].x = CONFIG.COURT_WIDTH * 3 / 4;
-        this.scoreTexts[1].y = 42;
-        this.scoreTexts[1].alpha = 0.82;
+        this.scoreTexts[1].y = 40;
+        this.scoreTexts[1].alpha = 0.92;
         this.gameContainer.addChild(this.scoreTexts[1]);
 
-        // Center separator
-        const vsStyle = new PIXI.TextStyle({
+        const sepStyle = new PIXI.TextStyle({
             fontFamily: 'Space Grotesk, Pretendard, sans-serif',
-            fontSize: 14,
-            fontWeight: '500',
-            letterSpacing: 4,
-            fill: 0x5f6878,
+            fontSize: 18,
+            fontWeight: '600',
+            fill: 0x94a3b8,
         });
-        const vs = new PIXI.Text({ text: 'VS', style: vsStyle });
-        vs.anchor.set(0.5);
-        vs.x = CONFIG.COURT_WIDTH / 2;
-        vs.y = 42;
-        vs.alpha = 0.65;
-        this.gameContainer.addChild(vs);
+        const sep = new PIXI.Text({ text: ':', style: sepStyle });
+        sep.anchor.set(0.5);
+        sep.x = CONFIG.COURT_WIDTH / 2;
+        sep.y = 38;
+        sep.alpha = 0.65;
+        this.gameContainer.addChild(sep);
+
+        const setStyle = new PIXI.TextStyle({
+            fontFamily: 'Space Grotesk, Pretendard, sans-serif',
+            fontSize: 12,
+            fontWeight: '600',
+            fill: 0xe2e8f0,
+            dropShadow: { color: 0x050914, blur: 4, distance: 1, alpha: 0.7 },
+        });
+        this._setText = new PIXI.Text({ text: '', style: setStyle });
+        this._setText.anchor.set(0.5);
+        this._setText.x = CONFIG.COURT_WIDTH / 2;
+        this._setText.y = 64;
+        this._setText.alpha = 0.85;
+        this._setText.visible = false;
+        this.gameContainer.addChild(this._setText);
+    }
+
+    updateSets(setsWon, totalSets, currentSet) {
+        if (!this._setText) return;
+        if (!totalSets || totalSets <= 1 || !setsWon) {
+            this._setText.visible = false;
+            return;
+        }
+        const i18n = window.SlimeVolleyI18n;
+        const tpl = (i18n && i18n.t('game.setBadge') !== 'game.setBadge')
+            ? i18n.t('game.setBadge')
+            : 'Set {n} ({a}-{b})';
+        const setNum = (currentSet || 0) + 1;
+        this._setText.text = tpl
+            .replace('{n}', String(setNum))
+            .replace('{a}', String(setsWon[0] || 0))
+            .replace('{b}', String(setsWon[1] || 0));
+        this._setText.visible = true;
     }
 
     createSlimeSpriteFromAssets(slime) {
@@ -424,58 +377,65 @@ class GameRenderer {
         const shadow = new PIXI.Sprite(this.imageTextures.slimeShadow);
         shadow.anchor.set(0.5);
         shadow.x = 0;
-        shadow.y = 7;
-        shadow.width = r * 2.32;
-        shadow.height = 26;
-        shadow.alpha = 0.8;
+        shadow.y = 4;
+        shadow.width = r * 2.4;
+        shadow.height = 18;
+        shadow.alpha = 0.44;
         container.addChild(shadow);
         container._shadow = shadow;
+
+        const visualWrap = new PIXI.Container();
+        container.addChild(visualWrap);
+        container._visualWrap = visualWrap;
 
         const body = new PIXI.Sprite(bodyTexture);
         body.anchor.set(0.5, 1);
         body.x = 0;
-        body.y = 0;
-        body.width = r * 2.7;
-        body.height = r * 2.35;
-        container.addChild(body);
+        body.y = 2;
+        body.width = r * 2.86;
+        body.height = r * 2.54;
+        visualWrap.addChild(body);
         container._bodySprite = body;
 
         if (!CONFIG.IMAGE_ASSETS.slimesIncludeEyes && this.imageTextures.slimeEye && this.imageTextures.slimePupil) {
             const eyeContainer = new PIXI.Container();
             const eye = new PIXI.Sprite(this.imageTextures.slimeEye);
             eye.anchor.set(0.5);
-            eye.width = Math.max(18, r * 0.58);
-            eye.height = eye.width;
+            eye.width = 18;
+            eye.height = 18;
             eyeContainer.addChild(eye);
 
             const pupil = new PIXI.Sprite(this.imageTextures.slimePupil);
             pupil.anchor.set(0.5);
-            pupil.width = Math.max(9, r * 0.28);
-            pupil.height = pupil.width;
+            pupil.width = 9;
+            pupil.height = 9;
             eyeContainer.addChild(pupil);
             container._pupil = pupil;
 
-            eyeContainer.x = slime.team === 0 ? 10 : -10;
-            eyeContainer.y = -r * 0.45;
-            container.addChild(eyeContainer);
+            eyeContainer.x = slime.team === 0 ? 18 : -18;
+            eyeContainer.y = -r * 0.98;
+            visualWrap.addChild(eyeContainer);
             container._eyeContainer = eyeContainer;
         }
 
         const nameStyle = new PIXI.TextStyle({
             fontFamily: 'Space Grotesk, Pretendard, sans-serif',
             fontSize: 11,
-            fontWeight: '500',
+            fontWeight: '600',
             letterSpacing: 0.2,
             fill: 0xffffff,
-            dropShadow: { color: 0x000000, blur: 3, distance: 1, alpha: 0.8 },
+            dropShadow: { color: 0x000000, blur: 4, distance: 1, alpha: 0.85 },
         });
         const nameText = new PIXI.Text({ text: slime.nickname || '', style: nameStyle });
         nameText.anchor.set(0.5);
-        nameText.y = -r * 1.3;
-        nameText.alpha = 0.85;
+        nameText.y = -r * 2.05;
+        nameText.alpha = 0.88;
         container.addChild(nameText);
         container._nameText = nameText;
 
+        container._squash = 0;
+        container._squashVel = 0;
+        container._wasOnGround = !!slime.onGround;
         container.x = slime.x;
         container.y = slime.y;
         this.gameContainer.addChild(container);
@@ -491,152 +451,66 @@ class GameRenderer {
         const baseColor = colors[slime.colorIdx || 0];
         const r = CONFIG.SLIME_RADIUS;
 
-        // --- helpers: color shading ---
-        const shade = (hex, amt) => {
-            const rC = ((hex >> 16) & 0xff);
-            const gC = ((hex >> 8) & 0xff);
-            const bC = (hex & 0xff);
-            const mix = (c) => amt >= 0
-                ? Math.round(c + (255 - c) * amt)
-                : Math.round(c * (1 + amt));
-            return (mix(rC) << 16) | (mix(gC) << 8) | mix(bC);
-        };
-        const topColor = shade(baseColor, 0.28);
-        const bottomColor = shade(baseColor, -0.35);
-        const rimColor = shade(baseColor, 0.55);
-
-        // Body silhouette path (reusable)
-        const drawBody = (g, insetY = 0, insetX = 0) => {
-            g.moveTo(-r + insetX, -insetY);
-            g.bezierCurveTo(
-                -r + insetX, -r * 0.52 - insetY,
-                -r * 0.85 + insetX * 0.5, -r * 0.96 - insetY,
-                -r * 0.5, -r * 1.06 - insetY
-            );
-            g.bezierCurveTo(
-                -r * 0.2, -r * 1.15 - insetY,
-                r * 0.2, -r * 1.15 - insetY,
-                r * 0.5, -r * 1.06 - insetY
-            );
-            g.bezierCurveTo(
-                r * 0.85 - insetX * 0.5, -r * 0.96 - insetY,
-                r - insetX, -r * 0.52 - insetY,
-                r - insetX, -insetY
-            );
-            g.lineTo(-r + insetX, -insetY);
-            g.closePath();
-        };
-
-        // Soft ground shadow (feathered: 3 layered ellipses)
         const shadow = new PIXI.Graphics();
-        shadow.ellipse(0, 7, r * 1.05, 8);
-        shadow.fill({ color: 0x000000, alpha: 0.14 });
-        shadow.ellipse(0, 6, r * 0.9, 6);
-        shadow.fill({ color: 0x000000, alpha: 0.22 });
-        shadow.ellipse(0, 5, r * 0.7, 4);
-        shadow.fill({ color: 0x000000, alpha: 0.32 });
+        shadow.ellipse(0, 4, r * 1.15, 7);
+        shadow.fill({ color: 0x0a0e18, alpha: 0.38 });
         container.addChild(shadow);
         container._shadow = shadow;
 
-        // Layer 1: dark base (gives bottom tone)
-        const base = new PIXI.Graphics();
-        drawBody(base);
-        base.fill(bottomColor);
-        container.addChild(base);
+        const visualWrap = new PIXI.Container();
+        container.addChild(visualWrap);
+        container._visualWrap = visualWrap;
 
-        // Layer 2: main body, slightly inset upward (mid tone)
         const body = new PIXI.Graphics();
-        drawBody(body, 1, 0);
+        body.moveTo(-r * 1.25, 0);
+        body.bezierCurveTo(-r * 1.25, -r * 0.9, -r * 0.6, -r * 1.65, 0, -r * 1.65);
+        body.bezierCurveTo(r * 0.6, -r * 1.65, r * 1.25, -r * 0.9, r * 1.25, 0);
+        body.closePath();
         body.fill(baseColor);
-        container.addChild(body);
+        visualWrap.addChild(body);
 
-        // Layer 3: top gradient wash (lighter dome)
-        const topWash = new PIXI.Graphics();
-        topWash.moveTo(-r * 0.95, -r * 0.15);
-        topWash.bezierCurveTo(-r * 0.95, -r * 0.6, -r * 0.75, -r * 0.95, -r * 0.4, -r * 1.02);
-        topWash.bezierCurveTo(-r * 0.15, -r * 1.1, r * 0.15, -r * 1.1, r * 0.4, -r * 1.02);
-        topWash.bezierCurveTo(r * 0.75, -r * 0.95, r * 0.95, -r * 0.6, r * 0.95, -r * 0.15);
-        topWash.lineTo(-r * 0.95, -r * 0.15);
-        topWash.closePath();
-        topWash.fill({ color: topColor, alpha: 0.55 });
-        container.addChild(topWash);
-
-        // Layer 4: inner dome (pushes light to the top center)
-        const dome = new PIXI.Graphics();
-        dome.ellipse(0, -r * 0.82, r * 0.55, r * 0.28);
-        dome.fill({ color: 0xffffff, alpha: 0.12 });
-        container.addChild(dome);
-
-        // Layer 5: rim light (thin arc on the top)
-        const rim = new PIXI.Graphics();
-        rim.moveTo(-r * 0.45, -r * 1.02);
-        rim.bezierCurveTo(-r * 0.18, -r * 1.12, r * 0.18, -r * 1.12, r * 0.45, -r * 1.02);
-        rim.stroke({ color: rimColor, width: 1.6, alpha: 0.7 });
-        container.addChild(rim);
-
-        // Layer 6: primary specular highlight (large soft)
-        const specSoft = new PIXI.Graphics();
-        specSoft.ellipse(-r * 0.32, -r * 0.78, r * 0.26, r * 0.18);
-        specSoft.fill({ color: 0xffffff, alpha: 0.28 });
-        container.addChild(specSoft);
-
-        // Layer 7: crisp white glint
-        const glint = new PIXI.Graphics();
-        glint.circle(-r * 0.28, -r * 0.82, r * 0.09);
-        glint.fill({ color: 0xffffff, alpha: 0.9 });
-        glint.circle(-r * 0.15, -r * 0.68, r * 0.045);
-        glint.fill({ color: 0xffffff, alpha: 0.75 });
-        container.addChild(glint);
-
-        // Layer 8: bottom contact darkening (subtle ambient occlusion)
-        const ao = new PIXI.Graphics();
-        ao.ellipse(0, -2, r * 0.85, 4);
-        ao.fill({ color: 0x000000, alpha: 0.18 });
-        container.addChild(ao);
-
-        // Eye
         const eyeContainer = new PIXI.Container();
-        const eyeR = Math.max(7, r * 0.2);
         const eyeWhite = new PIXI.Graphics();
-        eyeWhite.circle(0.5, 0.5, eyeR);
-        eyeWhite.fill({ color: 0x000000, alpha: 0.15 });
-        eyeWhite.circle(0, 0, eyeR);
+        eyeWhite.circle(0, 0, 9);
         eyeWhite.fill(CONFIG.SLIME_EYE_COLOR);
         eyeContainer.addChild(eyeWhite);
 
         const pupil = new PIXI.Graphics();
-        pupil.circle(0, 0, eyeR * 0.5);
+        pupil.circle(0, 0, 4.5);
         pupil.fill(CONFIG.SLIME_PUPIL_COLOR);
-        pupil.circle(-eyeR * 0.18, -eyeR * 0.22, eyeR * 0.18);
-        pupil.fill({ color: 0xffffff, alpha: 0.85 });
         eyeContainer.addChild(pupil);
         container._pupil = pupil;
 
-        eyeContainer.x = slime.team === 0 ? 10 : -10;
-        eyeContainer.y = -r * 0.45;
-        container.addChild(eyeContainer);
-        container._eyeContainer = eyeContainer;
+        eyeContainer.x = slime.team === 0 ? 18 : -18;
+        eyeContainer.y = -r * 0.98;
+        visualWrap.addChild(eyeContainer);
 
-        // Nickname label
         const nameStyle = new PIXI.TextStyle({
             fontFamily: 'Space Grotesk, Pretendard, sans-serif',
             fontSize: 11,
-            fontWeight: '500',
-            letterSpacing: 0.2,
+            fontWeight: '600',
             fill: 0xffffff,
-            dropShadow: { color: 0x000000, blur: 3, distance: 1, alpha: 0.8 },
+            dropShadow: { color: 0x000000, blur: 4, distance: 1, alpha: 0.85 },
         });
         const nameText = new PIXI.Text({ text: slime.nickname || '', style: nameStyle });
         nameText.anchor.set(0.5);
-        nameText.y = -r * 1.3;
-        nameText.alpha = 0.85;
+        nameText.y = -r * 2.05;
+        nameText.alpha = 0.88;
         container.addChild(nameText);
-        container._nameText = nameText;
 
+        container._squash = 0;
+        container._squashVel = 0;
+        container._wasOnGround = !!slime.onGround;
         container.x = slime.x;
         container.y = slime.y;
         this.gameContainer.addChild(container);
         this.slimeSprites[slime.id] = container;
+    }
+
+    triggerSlimeBounce(slimeId, impulse = -0.18) {
+        const sprite = this.slimeSprites[slimeId];
+        if (!sprite) return;
+        sprite._squashVel = impulse;
     }
 
     createBallSpriteFromAssets() {
@@ -647,16 +521,16 @@ class GameRenderer {
 
         const shadow = new PIXI.Sprite(this.imageTextures.slimeShadow);
         shadow.anchor.set(0.5);
-        shadow.width = r * 1.75;
+        shadow.width = r * 2.0;
         shadow.height = 12;
-        shadow.alpha = 0.52;
+        shadow.alpha = 0.38;
         container.addChild(shadow);
         container._shadow = shadow;
 
         const ball = new PIXI.Sprite(this.imageTextures.ball);
         ball.anchor.set(0.5);
-        ball.width = r * 2.35;
-        ball.height = r * 2.35;
+        ball.width = r * 2.17;
+        ball.height = r * 2.17;
         container.addChild(ball);
         container._spinSprite = ball;
 
@@ -671,65 +545,23 @@ class GameRenderer {
         const container = new PIXI.Container();
         const r = CONFIG.BALL_RADIUS;
 
-        // Shadow
         const shadow = new PIXI.Graphics();
-        shadow.ellipse(0, 0, r * 0.7, 4);
-        shadow.fill({ color: 0x000000, alpha: 0.3 });
+        shadow.ellipse(0, 0, r * 0.85, 5);
+        shadow.fill({ color: 0x0a0e18, alpha: 0.32 });
         container.addChild(shadow);
         container._shadow = shadow;
 
-        // Ball body (배구공 - 흰색 베이스)
         const ball = new PIXI.Graphics();
         ball.circle(0, 0, r);
-        ball.fill(0xF5F5F0);
+        ball.fill(0xf5f5f0);
         container.addChild(ball);
-        container._body = ball;
-
-        // 배구공 패널 라인 (3개의 곡선 스트라이프)
-        const lines = new PIXI.Graphics();
-        // 세로 중심선
-        lines.arc(0, 0, r - 1, -Math.PI * 0.5, Math.PI * 0.5, false);
-        lines.stroke({ color: 0x2266AA, width: 1.8, alpha: 0.7 });
-        // 왼쪽 곡선
-        lines.arc(-r * 0.15, 0, r * 0.85, -Math.PI * 0.4, Math.PI * 0.4, false);
-        lines.stroke({ color: 0x2266AA, width: 1.5, alpha: 0.5 });
-        // 오른쪽 곡선
-        lines.arc(r * 0.15, 0, r * 0.85, Math.PI * 0.6, Math.PI * 1.4, false);
-        lines.stroke({ color: 0x2266AA, width: 1.5, alpha: 0.5 });
-        // 가로선
-        lines.moveTo(-r + 3, 0);
-        lines.lineTo(r - 3, 0);
-        lines.stroke({ color: 0x2266AA, width: 1.2, alpha: 0.4 });
-        container.addChild(lines);
-        container._lines = lines;
-
-        // 배구공 컬러 패널 (파랑/노랑)
-        const panels = new PIXI.Graphics();
-        // 상단 파란 패널
-        panels.arc(0, 0, r - 2, -Math.PI * 0.8, -Math.PI * 0.2, false);
-        panels.lineTo(0, 0);
-        panels.closePath();
-        panels.fill({ color: 0x2266CC, alpha: 0.25 });
-        // 하단 노란 패널
-        panels.arc(0, 0, r - 2, Math.PI * 0.2, Math.PI * 0.8, false);
-        panels.lineTo(0, 0);
-        panels.closePath();
-        panels.fill({ color: 0xFFCC00, alpha: 0.25 });
-        container.addChild(panels);
-
-        // 하이라이트 (빛 반사)
-        const highlight = new PIXI.Graphics();
-        highlight.circle(-r * 0.25, -r * 0.25, r * 0.3);
-        highlight.fill({ color: 0xffffff, alpha: 0.45 });
-        highlight.circle(-r * 0.15, -r * 0.35, r * 0.12);
-        highlight.fill({ color: 0xffffff, alpha: 0.6 });
-        container.addChild(highlight);
+        container._spinSprite = ball;
 
         this.gameContainer.addChild(container);
         this.ballSprite = container;
     }
 
-    updateSlimes(slimes) {
+    updateSlimes(slimes, dtScale = 1) {
         for (const slime of slimes) {
             let sprite = this.slimeSprites[slime.id];
             if (!sprite) {
@@ -740,29 +572,50 @@ class GameRenderer {
             sprite.x = slime.x;
             sprite.y = slime.y;
 
-            // Squash/stretch
-            const jumpFactor = slime.onGround ? 1 : 0.9;
-            sprite.scale.x = slime.onGround ? 1 : 1.05;
-            sprite.scale.y = jumpFactor;
+            const onGround = !!slime.onGround;
+            if (sprite._wasOnGround && !onGround) {
+                // Jump launch stretch
+                sprite._squashVel = 0.08;
+            } else if (!sprite._wasOnGround && onGround) {
+                // Landing squash
+                sprite._squashVel = -0.11;
+            }
+            sprite._wasOnGround = onGround;
 
-            // Shadow follows on ground
-            if (sprite._shadow) {
-                sprite._shadow.y = CONFIG.GROUND_Y - slime.y + 5;
-                sprite._shadow.alpha = Math.max(0, 0.3 - (CONFIG.GROUND_Y - slime.y) * 0.002);
+            // Spring-damper squash & stretch
+            const k = 0.22 * dtScale;
+            const damp = Math.pow(0.76, dtScale);
+            sprite._squashVel = (sprite._squashVel - sprite._squash * k) * damp;
+            sprite._squash = Math.max(-0.24, Math.min(0.24, sprite._squash + sprite._squashVel * dtScale));
+
+            const scaleY = Math.max(0.78, 1 + sprite._squash);
+            const scaleX = 1 / Math.sqrt(scaleY);
+            if (sprite._visualWrap) {
+                sprite._visualWrap.scale.set(scaleX, scaleY);
             }
 
-            // Eye tracking (look at ball direction)
+            if (sprite._shadow) {
+                const height = Math.max(0, CONFIG.GROUND_Y - slime.y);
+                sprite._shadow.y = height + 4;
+                sprite._shadow.alpha = Math.max(0.08, 0.44 - height * 0.0022);
+                const shScale = Math.max(0.55, 1 - height * 0.0025);
+                sprite._shadow.scale.set(shScale, shScale);
+            }
+
             if (sprite._pupil && this.ballSprite) {
-                const dx = this.ballSprite.x - slime.x;
-                const dy = this.ballSprite.y - slime.y;
+                const eyeWorldX = slime.x + (sprite._eyeContainer ? sprite._eyeContainer.x : 0);
+                const eyeWorldY = slime.y + (sprite._eyeContainer ? sprite._eyeContainer.y : -CONFIG.SLIME_RADIUS);
+                const dx = this.ballSprite.x - eyeWorldX;
+                const dy = this.ballSprite.y - eyeWorldY;
                 const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                sprite._pupil.x = (dx / dist) * 3;
-                sprite._pupil.y = (dy / dist) * 2;
+                const maxOffset = 3.6;
+                sprite._pupil.x = (dx / dist) * maxOffset;
+                sprite._pupil.y = (dy / dist) * maxOffset * 0.85;
             }
         }
     }
 
-    updateBall(ball) {
+    updateBall(ball, dtScale = 1) {
         if (!this.ballSprite) {
             this.createBallSprite();
         }
@@ -770,24 +623,18 @@ class GameRenderer {
         this.ballSprite.x = ball.x;
         this.ballSprite.y = ball.y;
 
-        // Rotation based on velocity
         if (this.ballSprite._spinSprite) {
-            this.ballSprite._spinSprite.rotation += ball.vx * 0.03;
-        }
-        if (this.ballSprite._lines) {
-            this.ballSprite._lines.rotation += ball.vx * 0.03;
+            this.ballSprite._spinSprite.rotation += ball.vx * 0.03 * dtScale;
         }
 
-        // Shadow on ground
         if (this.ballSprite._shadow) {
-            this.ballSprite._shadow.y = CONFIG.GROUND_Y - ball.y;
-            const distToGround = CONFIG.GROUND_Y - ball.y;
-            this.ballSprite._shadow.alpha = Math.max(0, 0.3 - distToGround * 0.001);
-            const shadowScale = Math.max(0.3, 1 - distToGround * 0.002);
+            const distToGround = Math.max(0, CONFIG.GROUND_Y - ball.y);
+            this.ballSprite._shadow.y = distToGround + 2;
+            this.ballSprite._shadow.alpha = Math.max(0.06, 0.36 - distToGround * 0.001);
+            const shadowScale = Math.max(0.32, 1 - distToGround * 0.002);
             this.ballSprite._shadow.scale.set(shadowScale);
         }
 
-        // Ball trail
         this.addTrailPoint(ball.x, ball.y, ball.vx, ball.vy);
     }
 
@@ -796,8 +643,8 @@ class GameRenderer {
             return this._trailPool.pop();
         }
         const g = new PIXI.Graphics();
-        g.circle(0, 0, CONFIG.BALL_RADIUS * 0.6);
-        g.fill({ color: 0xCCCCCC, alpha: 0.2 });
+        g.circle(0, 0, CONFIG.BALL_RADIUS * 0.55);
+        g.fill({ color: 0xe2e8f0, alpha: 0.16 });
         return g;
     }
 
@@ -841,24 +688,24 @@ class GameRenderer {
         spark.x = x;
         spark.y = y;
         spark.rotation = Math.random() * Math.PI;
-        spark.scale.set(0.55);
-        spark.alpha = 0.9;
+        spark.scale.set(0.38);
+        spark.alpha = 0.85;
         spark.visible = true;
-        spark._life = 12;
-        spark._maxLife = 12;
-        spark._rotSpeed = (Math.random() - 0.5) * 0.16;
+        spark._life = 11;
+        spark._maxLife = 11;
+        spark._rotSpeed = (Math.random() - 0.5) * 0.14;
         this.particleContainer.addChild(spark);
         this.sparkSprites.push(spark);
     }
 
     addTrailPoint(x, y, vx, vy) {
         const speed = Math.sqrt(vx * vx + vy * vy);
-        if (speed < 3) return;
+        if (speed < 3.4) return;
 
         const trail = this._getTrail();
         trail.x = x;
         trail.y = y;
-        trail.alpha = 0.2;
+        trail.alpha = 0.16;
         trail.scale.set(1);
         trail.visible = true;
         trail._life = 8;
@@ -866,12 +713,13 @@ class GameRenderer {
         this.trailPoints.push(trail);
     }
 
-    updateTrails() {
+    updateTrails(dtScale = 1) {
         for (let i = this.trailPoints.length - 1; i >= 0; i--) {
             const t = this.trailPoints[i];
-            t._life--;
-            t.alpha = t._life / 8 * 0.3;
-            t.scale.set(t._life / 8);
+            t._life -= dtScale;
+            const ratio = Math.max(0, t._life / 8);
+            t.alpha = ratio * 0.22;
+            t.scale.set(ratio);
             if (t._life <= 0) {
                 this.trailContainer.removeChild(t);
                 this._releaseTrail(t);
@@ -890,7 +738,7 @@ class GameRenderer {
         p.clear();
         if (isRing) {
             p.circle(0, 0, 8);
-            p.stroke({ color: 0xFFFFFF, width: 2, alpha: 0.8 });
+            p.stroke({ color: 0xffffff, width: 2, alpha: 0.8 });
         } else {
             p.circle(0, 0, size);
             p.fill(color);
@@ -910,53 +758,49 @@ class GameRenderer {
     }
 
     spawnHitParticles(x, y, color) {
-        const baseColor = color || 0xFFEB3B;
+        const baseColor = color || 0xffeb3b;
         this._spawnSpark(x, y);
-
-        // 임팩트 링
         this._spawnParticle(x, y, 0, 0, 0, 0, 12, true);
 
-        // 스파크 파티클
         for (let i = 0; i < 6; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const speed = Math.random() * 6 + 4;
-            this._spawnParticle(x, y, 0xFFFFFF, Math.random() * 2 + 1,
-                Math.cos(angle) * speed, Math.sin(angle) * speed - 2,
+            const speed = Math.random() * 5 + 3;
+            this._spawnParticle(x, y, 0xffffff, Math.random() * 2 + 1,
+                Math.cos(angle) * speed, Math.sin(angle) * speed - 1.5,
                 8 + Math.random() * 6, false);
         }
 
-        // 컬러 파티클
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 8; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = Math.random() * 3 + 1.5;
-            this._spawnParticle(x, y, baseColor, Math.random() * 4 + 1.5,
-                Math.cos(angle) * speed, Math.sin(angle) * speed - 2.5,
-                18 + Math.random() * 12, false);
+            this._spawnParticle(x, y, baseColor, Math.random() * 3.5 + 1.5,
+                Math.cos(angle) * speed, Math.sin(angle) * speed - 2,
+                16 + Math.random() * 10, false);
         }
     }
 
     spawnScoreParticles(team) {
         const x = team === 0 ? CONFIG.COURT_WIDTH * 3 / 4 : CONFIG.COURT_WIDTH / 4;
         const colors = CONFIG.TEAM_COLORS[team];
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 18; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = Math.random() * 6 + 2;
             this._spawnParticle(x, CONFIG.COURT_HEIGHT / 2,
                 colors[Math.floor(Math.random() * colors.length)],
                 Math.random() * 4 + 2,
                 Math.cos(angle) * speed, Math.sin(angle) * speed - 3,
-                30 + Math.random() * 20, false);
+                28 + Math.random() * 18, false);
         }
     }
 
-    updateSparks() {
+    updateSparks(dtScale = 1) {
         for (let i = this.sparkSprites.length - 1; i >= 0; i--) {
             const spark = this.sparkSprites[i];
-            spark._life--;
-            const progress = 1 - spark._life / spark._maxLife;
+            spark._life -= dtScale;
+            const progress = 1 - Math.max(0, spark._life) / spark._maxLife;
             spark.alpha = Math.max(0, 1 - progress);
-            spark.rotation += spark._rotSpeed;
-            spark.scale.set(0.55 + progress * 1.25);
+            spark.rotation += spark._rotSpeed * dtScale;
+            spark.scale.set(0.38 + progress * 0.72);
             if (spark._life <= 0) {
                 this.particleContainer.removeChild(spark);
                 this._releaseSpark(spark);
@@ -965,23 +809,25 @@ class GameRenderer {
         }
     }
 
-    updateParticles() {
+    updateParticles(dtScale = 1) {
+        const drag = Math.pow(0.95, dtScale);
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
-            p._life--;
+            p._life -= dtScale;
 
             if (p._isRing) {
-                const progress = 1 - p._life / p._maxLife;
+                const progress = 1 - Math.max(0, p._life) / p._maxLife;
                 p.scale.set(1 + progress * 3);
                 p.alpha = (1 - progress) * 0.8;
             } else {
-                p._vx *= 0.95;
-                p._vy += 0.15;
-                p._vy *= 0.95;
-                p.x += p._vx;
-                p.y += p._vy;
-                p.alpha = p._life / p._maxLife;
-                p.scale.set(0.5 + 0.5 * (p._life / p._maxLife));
+                p._vx *= drag;
+                p._vy += 0.15 * dtScale;
+                p._vy *= drag;
+                p.x += p._vx * dtScale;
+                p.y += p._vy * dtScale;
+                const ratio = Math.max(0, p._life / p._maxLife);
+                p.alpha = ratio;
+                p.scale.set(0.5 + 0.5 * ratio);
             }
 
             if (p._life <= 0) {
@@ -996,11 +842,11 @@ class GameRenderer {
         this.shakeAmount = amount;
     }
 
-    updateShake() {
+    updateShake(dtScale = 1) {
         if (this.shakeAmount > 0.5) {
             this.gameContainer.x = (Math.random() - 0.5) * this.shakeAmount;
             this.gameContainer.y = (Math.random() - 0.5) * this.shakeAmount;
-            this.shakeAmount *= 0.85;
+            this.shakeAmount *= Math.pow(0.85, dtScale);
         } else {
             this.gameContainer.x = 0;
             this.gameContainer.y = 0;
@@ -1010,21 +856,16 @@ class GameRenderer {
 
     render(state) {
         if (!this.initialized || !state) return;
-        this.updateSlimes(state.slimes);
-        this.updateBall(state.ball);
+        const rawMs = this.app && this.app.ticker ? this.app.ticker.deltaMS : 16.667;
+        const dtScale = Math.min(2.5, Math.max(0.25, rawMs / 16.667));
+        this.updateSlimes(state.slimes, dtScale);
+        this.updateBall(state.ball, dtScale);
         this.updateScores(state.scores);
-        this.updateTrails();
-        this.updateParticles();
-        this.updateSparks();
-        this.updateShake();
-        this.updateFps();
-    }
-
-    updateFps() {
-        if (++this._fpsFrameCount >= 30) {
-            this._fpsFrameCount = 0;
-            this._fpsText.text = `${Math.round(this.app.ticker.FPS)} FPS`;
-        }
+        this.updateSets(state.setsWon, state.totalSets, state.currentSet);
+        this.updateTrails(dtScale);
+        this.updateParticles(dtScale);
+        this.updateSparks(dtScale);
+        this.updateShake(dtScale);
     }
 
     showMessage(text, duration) {
@@ -1032,14 +873,14 @@ class GameRenderer {
             this._msgStyle = new PIXI.TextStyle({
                 fontFamily: 'Space Grotesk, Pretendard, sans-serif',
                 fontSize: 38,
-                fontWeight: '600',
-                letterSpacing: -1,
+                fontWeight: '700',
+                letterSpacing: -0.5,
                 fill: 0xffffff,
                 dropShadow: {
-                    color: 0x000000,
+                    color: 0x050914,
                     blur: 10,
                     distance: 3,
-                    alpha: 0.7,
+                    alpha: 0.75,
                 },
             });
         }
@@ -1072,7 +913,6 @@ class GameRenderer {
         };
         this.app.ticker.add(ticker);
 
-        // 활성 메시지 ticker 추적 (게임 종료 시 일괄 정리용)
         if (!this._activeMessages) this._activeMessages = [];
         this._activeMessages.push({ ticker, msg });
     }
@@ -1081,15 +921,14 @@ class GameRenderer {
         if (!this._noticeStyle) {
             this._noticeStyle = new PIXI.TextStyle({
                 fontFamily: 'Space Grotesk, Pretendard, sans-serif',
-                fontSize: 15,
-                fontWeight: '500',
-                letterSpacing: 0.3,
-                fill: 0xf0c067,
+                fontSize: 14,
+                fontWeight: '600',
+                fill: 0xf5b942,
                 dropShadow: {
-                    color: 0x000000,
+                    color: 0x050914,
                     blur: 6,
                     distance: 2,
-                    alpha: 0.7,
+                    alpha: 0.75,
                 },
             });
         }
@@ -1160,28 +999,24 @@ class GameRenderer {
     }
 
     clearTrailsAndParticles() {
-        // 활성 trail 정리 → 풀로 반환
         for (const t of this.trailPoints) {
             this.trailContainer.removeChild(t);
             this._releaseTrail(t);
         }
         this.trailPoints.length = 0;
 
-        // 활성 particle 정리 → 풀로 반환
         for (const p of this.particles) {
             this.particleContainer.removeChild(p);
             this._releaseParticle(p);
         }
         this.particles.length = 0;
 
-        // 활성 spark 정리 → 풀로 반환
         for (const s of this.sparkSprites) {
             this.particleContainer.removeChild(s);
             this._releaseSpark(s);
         }
         this.sparkSprites.length = 0;
 
-        // 풀 크기 제한 (최대 50개씩)
         while (this._trailPool.length > 50) {
             this._trailPool.pop().destroy();
         }
@@ -1195,7 +1030,6 @@ class GameRenderer {
 
     destroy() {
         this.clearMessages();
-        // 풀 정리
         for (const g of this._trailPool) g.destroy();
         for (const g of this._particlePool) g.destroy();
         for (const s of this._sparkPool) s.destroy();

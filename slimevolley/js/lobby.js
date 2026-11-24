@@ -12,6 +12,7 @@ class LobbyManager {
         this.lastRooms = [];
         this.gameOverState = null;
         this.pendingJoinRoom = null; // 비밀방 입장 대기용
+        this._errorToastTimer = null;
         this.setupEventListeners();
     }
 
@@ -40,7 +41,7 @@ class LobbyManager {
             // 방 화면에서도 확인
             if (this.currentScreen === 'room-screen') {
                 this.showConfirm(this.t('confirm.leaveRoom', '방을 나가시겠습니까?'), () => {
-                    this.leaveRoom();
+                    this.game.backToLobby();
                     this.showScreen('main-menu');
                 });
                 return;
@@ -202,8 +203,8 @@ class LobbyManager {
         });
 
         (((__oc0 = document.getElementById('btn-info-ok')) === null || __oc0 === void 0 ? void 0 : __oc0.addEventListener('click', () => {
-        this.hideInfo();
-    })));
+            this.hideInfo();
+        })));
 
         window.addEventListener('slimevolley:languagechange', () => {
             this.refreshLocalizedContent();
@@ -224,9 +225,17 @@ class LobbyManager {
 
     showError(message) {
         const el = document.getElementById('error-toast');
+        if (!el) return;
+        if (this._errorToastTimer) {
+            clearTimeout(this._errorToastTimer);
+            this._errorToastTimer = null;
+        }
         el.textContent = message;
         el.classList.add('show');
-        setTimeout(() => el.classList.remove('show'), 3000);
+        this._errorToastTimer = setTimeout(() => {
+            el.classList.remove('show');
+            this._errorToastTimer = null;
+        }, 3000);
     }
 
     showConfirm(message, onConfirm) {
@@ -260,7 +269,8 @@ class LobbyManager {
 
     t(key, fallback) {
         const i18n = window.SlimeVolleyI18n;
-        return i18n ? i18n.t(key) : fallback;
+        const val = i18n ? i18n.t(key) : null;
+        return val && val !== key ? val : fallback;
     }
 
     format(key, fallback, values = {}) {
@@ -306,7 +316,7 @@ class LobbyManager {
     showMultiplayerLobby() {
         this.showScreen('multiplayer-lobby');
         const input = document.querySelector('#multiplayer-lobby .player-name-input');
-        if (!input.value.trim()) {
+        if (input && !input.value.trim()) {
             setTimeout(() => input.focus(), 100);
         }
         this.refreshRoomList();
@@ -390,7 +400,6 @@ class LobbyManager {
         if (!name) return;
 
         if ((((__oc4 = room.metadata) === null || __oc4 === void 0 ? void 0 : __oc4.password))) {
-            // 비밀방: 비밀번호 입력 팝업
             this.pendingJoinRoom = room;
             document.getElementById('join-password').value = '';
             document.getElementById('password-modal').style.display = '';
@@ -468,16 +477,26 @@ class LobbyManager {
 
     // === Room Screen ===
     showRoomScreen(roomId, players, isHost, metadata) {
-        this.isHost = isHost;
         this.roomMetadata = metadata || null;
+        this.roomPlayers = players || [];
+        this.setHost(isHost);
         this.renderRoomTypeDisplay();
         this.updateRoomMeta(metadata);
-        this.updatePlayerList(players);
-        document.getElementById('btn-start-game').style.display = isHost ? 'block' : 'none';
-        document.getElementById('btn-ready').style.display = isHost ? 'none' : 'block';
-        this.syncReadyButtonLabel();
         this.clearChat();
         this.showScreen('room-screen');
+    }
+
+    setHost(isHost) {
+        this.isHost = !!isHost;
+        const startBtn = document.getElementById('btn-start-game');
+        const readyBtn = document.getElementById('btn-ready');
+        if (startBtn) startBtn.style.display = this.isHost ? 'block' : 'none';
+        if (readyBtn) {
+            readyBtn.style.display = this.isHost ? 'none' : 'block';
+            readyBtn.classList.remove('active');
+        }
+        this.syncReadyButtonLabel();
+        this.updatePlayerList(this.roomPlayers);
     }
 
     renderRoomTypeDisplay(metadata = this.roomMetadata) {
@@ -506,14 +525,22 @@ class LobbyManager {
     }
 
     updatePlayerList(players) {
-        this.roomPlayers = players;
+        this.roomPlayers = players || [];
         const listEl = document.getElementById('player-list');
+        if (!listEl) return;
         listEl.innerHTML = '';
         const myId = this.game.network.playerId;
 
         const teams = [[], []];
-        for (const p of players) {
+        for (const p of this.roomPlayers) {
             teams[p.team || 0].push(p);
+        }
+
+        const readyBtn = document.getElementById('btn-ready');
+        const me = this.roomPlayers.find(p => p.id === myId);
+        if (readyBtn && me && !me.isHost) {
+            readyBtn.classList.toggle('active', !!me.ready);
+            this.syncReadyButtonLabel();
         }
 
         for (let t = 0; t < 2; t++) {
@@ -521,13 +548,20 @@ class LobbyManager {
             teamDiv.className = `team-group team-${t}`;
             teamDiv.innerHTML = `<div class="team-label">${t === 0 ? this.t('room.teamA', '팀 A (블루)') : this.t('room.teamB', '팀 B (레드)')}</div>`;
 
+            if (teams[t].length === 0) {
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = 'player-item empty';
+                emptyDiv.innerHTML = `<span class="player-name empty-slot">${this.t('room.emptyTeam', '참가자 없음')}</span>`;
+                teamDiv.appendChild(emptyDiv);
+            }
+
             for (const p of teams[t]) {
                 const pDiv = document.createElement('div');
                 pDiv.className = `player-item ${p.ready ? 'ready' : ''} ${p.isHost ? 'host' : ''} ${p.id === myId ? 'me' : ''}`;
 
                 let badges = '';
                 if (p.isHost) badges += `<span class="player-badge host-badge">${this.t('room.host', '방장')}</span>`;
-                if (p.ready) badges += `<span class="player-badge ready-badge">${this.t('room.ready', '준비')}</span>`;
+                if (p.ready && !p.isHost) badges += `<span class="player-badge ready-badge">${this.t('room.ready', '준비')}</span>`;
                 if (p.isBot) badges += `<span class="player-badge bot-badge">${this.t('room.bot', '봇')}</span>`;
 
                 let pingHtml = '';
@@ -539,9 +573,11 @@ class LobbyManager {
 
                 let actionBtn = '';
                 if (this.isHost && !p.isHost && !p.isBot) {
-                    actionBtn = `<button class="btn-kick" data-id="${p.id}" title="강퇴">&#10005;</button>`;
+                    const kickTitle = this.escapeHtml(this.t('room.kickTitle', '강퇴'));
+                    actionBtn = `<button class="btn-kick" data-id="${p.id}" title="${kickTitle}" aria-label="${kickTitle}">&#10005;</button>`;
                 } else if (this.isHost && p.isBot) {
-                    actionBtn = `<button class="btn-kick btn-remove-bot" data-bot-id="${p.id}" title="봇 제거">&#10005;</button>`;
+                    const removeBotTitle = this.escapeHtml(this.t('room.removeBotTitle', '봇 제거'));
+                    actionBtn = `<button class="btn-kick btn-remove-bot" data-bot-id="${p.id}" title="${removeBotTitle}" aria-label="${removeBotTitle}">&#10005;</button>`;
                 }
 
                 pDiv.innerHTML = `
@@ -565,14 +601,6 @@ class LobbyManager {
             }
 
             const maxPerTeam = 4;
-            for (let i = teams[t].length; i < maxPerTeam; i++) {
-                const emptyDiv = document.createElement('div');
-                emptyDiv.className = 'player-item empty';
-                emptyDiv.innerHTML = `<span class="player-name empty-slot">${this.t('room.empty', '비어 있음')}</span>`;
-                teamDiv.appendChild(emptyDiv);
-            }
-
-            // 호스트: 봇 추가 버튼
             if (this.isHost && teams[t].length < maxPerTeam) {
                 const addBotBtn = document.createElement('button');
                 addBotBtn.className = 'btn-add-bot';
@@ -586,7 +614,7 @@ class LobbyManager {
             listEl.appendChild(teamDiv);
         }
 
-        const allReady = players.filter(p => !p.isHost).every(p => p.ready || p.isBot);
+        const allReady = this.roomPlayers.filter(p => !p.isHost).every(p => p.ready || p.isBot);
         const bothTeamsHavePlayers = teams[0].length > 0 && teams[1].length > 0;
         const startBtn = document.getElementById('btn-start-game');
         const blockedReason = !bothTeamsHavePlayers
@@ -638,7 +666,7 @@ class LobbyManager {
     }
 
     leaveRoom() {
-        this.game.backToLobby();
+        this.game.backToLobby({ keepConnection: true });
         this.game.sound.stopAll();
         this.game.network.leaveRoom();
         this.game.network.disconnect();
@@ -700,6 +728,13 @@ class LobbyManager {
         document.getElementById('game-over-title').className = won ? 'victory' : 'defeat';
         document.getElementById('game-over-score').textContent = `${scores[0]} - ${scores[1]}`;
 
+        const playAgainBtn = document.getElementById('btn-play-again');
+        if (playAgainBtn) {
+            playAgainBtn.textContent = this.game.mode === 'multiplayer'
+                ? this.t('gameOver.backToRoom', '대기실로')
+                : this.t('gameOver.playAgain', '다시 하기');
+        }
+
         const setsEl = document.getElementById('game-over-sets');
         if (setScores && setScores.length > 1) {
             setsEl.innerHTML = setScores.map((s, i) =>
@@ -721,7 +756,11 @@ class LobbyManager {
         if (mvp && mvp.length > 0) {
             const names = mvp.map(m => this.escapeHtml(m.nickname || '???')).join(', ');
             const stats = mvp.map(m =>
-                `${this.escapeHtml(m.nickname || '???')} (Kill: ${m.kills}, Receive: ${m.receives})`
+                this.format('gameOver.mvpStats', '{name} (득점 {kills} · 리시브 {receives})', {
+                    name: this.escapeHtml(m.nickname || '???'),
+                    kills: m.kills,
+                    receives: m.receives,
+                })
             ).join('<br>');
             mvpEl.innerHTML = `<div class="mvp-title">MVP</div><div class="mvp-names">${names}</div><div class="mvp-stats">${stats}</div>`;
         } else {

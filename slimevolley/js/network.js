@@ -14,6 +14,7 @@ class NetworkClient {
         this.pingInterval = null;
         this.lastPing = 0;
         this.myPing = 0;
+        this.smoothedRtt = 0;
         this.playerPings = {};
         this.lastSentInput = null;
         this.mySlotIndex = 0;
@@ -22,6 +23,9 @@ class NetworkClient {
         this._inputSeq = 0;
         this._lastInputSentAt = 0;
         this._inputBurstRemaining = 0;
+        this._eventId = 0;
+        this._seenEventIds = new Set();
+        this._seenEventOrder = [];
 
         // PeerJS P2P
         this.peerjs = new PeerJSManager();
@@ -79,13 +83,15 @@ class NetworkClient {
                 return;
             }
 
+            let settled = false;
             const timeout = setTimeout(() => {
+                if (settled) return;
+                settled = true;
                 reject(new Error('Connection timeout'));
-                this.ws.close();
+                try { this.ws.close(); } catch (e) {}
             }, 8000);
 
             this.ws.onopen = () => {
-                clearTimeout(timeout);
                 this.connected = true;
                 this.startPingLoop();
                 this.emit('connected');
@@ -96,10 +102,12 @@ class NetworkClient {
                     const msg = JSON.parse(event.data);
                     this.handleMessage(msg);
 
-                    if (msg.type === 'roomCreated' || msg.type === 'joined') {
+                    if (!settled && (msg.type === 'roomCreated' || msg.type === 'joined')) {
+                        settled = true;
                         clearTimeout(timeout);
                         resolve(msg);
-                    } else if (msg.type === 'error') {
+                    } else if (!settled && msg.type === 'error') {
+                        settled = true;
                         clearTimeout(timeout);
                         reject(new Error(msg.message || 'Server error'));
                     }
@@ -111,31 +119,105 @@ class NetworkClient {
             this.ws.onclose = (event) => {
                 clearTimeout(timeout);
                 this.connected = false;
+                if (!settled) {
+                    settled = true;
+                    reject(new Error(event.reason || 'Connection closed'));
+                }
                 this.emit('disconnected', { code: event.code, reason: event.reason });
             };
 
             this.ws.onerror = (error) => {
                 clearTimeout(timeout);
                 this.emit('error', error);
-                reject(error);
+                if (!settled) {
+                    settled = true;
+                    reject(error);
+                }
             };
         });
     }
 
     send(data) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify(data));
+            try {
+                this.ws.send(JSON.stringify(data));
+                return true;
+            } catch (e) {
+                return false;
+            }
         }
+        return false;
     }
 
     // === 게임 데이터: PeerJS P2P 전용 (WS 안 씀) ===
 
-    sendGameState(state) {
-        this.peerjs.broadcastRealtime({ type: 'gameState', state, seq: ++this._stateSeq });
+    static _round2(n) {
+        return Math.round(n * 100) / 100;
+    }
+
+    _quantizeState(state) {
+        if (!this._wireState) {
+            this._wireState = {
+                ball: { x: 0, y: 0, vx: 0, vy: 0, lastHitBy: -1, lastHitSlimeId: -1 },
+                slimes: [],
+                scores: [0, 0],
+                phase: '',
+                servingTeam: 0,
+                setsWon: [0, 0],
+                currentSet: 0,
+            };
+        }
+        const ws = this._wireState;
+        const round2 = NetworkClient._round2;
+        ws.ball.x = round2(state.ball.x);
+        ws.ball.y = round2(state.ball.y);
+        ws.ball.vx = round2(state.ball.vx);
+        ws.ball.vy = round2(state.ball.vy);
+        ws.ball.lastHitBy = state.ball.lastHitBy;
+        ws.ball.lastHitSlimeId = state.ball.lastHitSlimeId;
+
+        while (ws.slimes.length < state.slimes.length) {
+            ws.slimes.push({ id: 0, team: 0, x: 0, y: 0, vx: 0, vy: 0, onGround: true, colorIdx: 0 });
+        }
+        ws.slimes.length = state.slimes.length;
+        for (let i = 0; i < state.slimes.length; i++) {
+            const s = state.slimes[i];
+            const c = ws.slimes[i];
+            c.id = s.id;
+            c.team = s.team;
+            c.x = round2(s.x);
+            c.y = round2(s.y);
+            c.vx = round2(s.vx);
+            c.vy = round2(s.vy);
+            c.onGround = !!s.onGround;
+            c.colorIdx = s.colorIdx;
+        }
+
+        ws.scores[0] = state.scores[0];
+        ws.scores[1] = state.scores[1];
+        ws.phase = state.phase;
+        ws.servingTeam = state.servingTeam;
+        ws.setsWon[0] = state.setsWon ? state.setsWon[0] : 0;
+        ws.setsWon[1] = state.setsWon ? state.setsWon[1] : 0;
+        ws.currentSet = state.currentSet || 0;
+        return ws;
+    }
+
+    sendGameState(state, ackInputs = null) {
+        this.peerjs.broadcastRealtime({
+            type: 'gameState',
+            state: this._quantizeState(state),
+            seq: ++this._stateSeq,
+            ack: ackInputs || undefined,
+        });
     }
 
     sendGameEvent(eventData) {
-        this.peerjs.broadcast({ type: 'gameEvent', ...eventData });
+        this.peerjs.broadcast({
+            type: 'gameEvent',
+            eventId: ++this._eventId,
+            ...eventData,
+        });
     }
 
     sendInput(input) {
@@ -144,7 +226,10 @@ class NetworkClient {
         const now = performance.now();
 
         if (changed) {
-            this.lastSentInput = { ...input };
+            if (!this.lastSentInput) this.lastSentInput = { left: false, right: false, jump: false };
+            this.lastSentInput.left = !!input.left;
+            this.lastSentInput.right = !!input.right;
+            this.lastSentInput.jump = !!input.jump;
             // Repeat an input edge on the next render frame so unordered low-latency
             // delivery can recover quickly from a single lost packet.
             this._inputBurstRemaining = 1;
@@ -152,19 +237,21 @@ class NetworkClient {
 
         const heartbeatDue = now - this._lastInputSentAt >= 50;
         if (!changed && !heartbeatDue && this._inputBurstRemaining <= 0) {
-            return;
+            return null;
         }
 
         if (!changed && this._inputBurstRemaining > 0) {
             this._inputBurstRemaining--;
         }
         this._lastInputSentAt = now;
-        this.peerjs.broadcast({
+        const seq = ++this._inputSeq;
+        this.peerjs.broadcastRealtime({
             type: 'input',
-            input,
+            input: { left: !!input.left, right: !!input.right, jump: !!input.jump },
             slotIndex: this.mySlotIndex,
-            seq: ++this._inputSeq,
-        });
+            seq,
+        }, changed);
+        return seq;
     }
 
     // === PeerJS P2P 연결 ===
@@ -178,10 +265,8 @@ class NetworkClient {
         try {
             if (this.isHost) {
                 await this.peerjs.createHost(this.roomId, hostId);
-                console.log(`[P2P] Host peer created (host=${hostId}), waiting for connections...`);
             } else {
                 await this.peerjs.connectToHost(this.roomId, hostId);
-                console.log(`[P2P] Connected to host ${hostId}!`);
             }
         } catch (e) {
             console.error('[P2P] Connection failed:', e);
@@ -191,9 +276,6 @@ class NetworkClient {
 
     // 호스트 마이그레이션: 옛 PeerJS 정리하고 새 호스트로 재구성
     async migrateP2P(newHostPlayerId) {
-        console.log(`%c[P2P] Migrating to new host: ${newHostPlayerId}`, 'color: #FFB74D; font-weight: bold');
-
-        // 옛 PeerJS 완전 정리
         if (this._p2pPingInterval) {
             clearInterval(this._p2pPingInterval);
             this._p2pPingInterval = null;
@@ -202,39 +284,46 @@ class NetworkClient {
         this.p2pReady = false;
         this.p2pPings = {};
         this.myPing = 0;
+        this.smoothedRtt = 0;
         this.resetRealtimeState();
 
-        // 정리 시간 확보 (PeerJS 브로커 상태 갱신 대기)
-        await new Promise(r => setTimeout(r, 300));
+        // 짧은 정리 시간 확보
+        await new Promise(r => setTimeout(r, 120));
 
-        // 새 PeerJSManager 인스턴스로 교체 (이벤트 핸들러 재바인딩)
         this.peerjs = new PeerJSManager();
         this._rebindPeerJSHandlers();
 
-        // 새 호스트로 또는 새 호스트 자체로 초기화
         await this.initP2P(newHostPlayerId);
     }
 
-    // PeerJS 이벤트 핸들러 바인딩 (생성자에서도 같은 핸들러 사용)
+    // PeerJS 이벤트 핸들러 바인딩
     _rebindPeerJSHandlers() {
         this.peerjs.onMessage = (peerId, data) => {
             this.handleMessage(data);
         };
         this.peerjs.onPeerConnected = (peerId) => {
-            console.log(`%c[P2P] Peer connected: ${peerId}`, 'color: #66BB6A; font-weight: bold');
             this.p2pReady = true;
             this.emit('p2pReady');
             this.peerjs.pingPeer(peerId);
             this._startP2PPingLoop();
         };
         this.peerjs.onPeerDisconnected = (peerId) => {
-            console.log(`%c[P2P] Peer disconnected: ${peerId}`, 'color: #EF5350');
+            delete this.p2pPings[peerId];
             this.p2pReady = this.peerjs.connected;
         };
         this.peerjs._onPingResult = (peerId, rtt) => {
-            this.p2pPings[peerId] = Math.round(rtt);
-            this.myPing = Math.round(rtt);
+            const clampedRtt = Math.max(0, Math.min(2000, rtt));
+            this.p2pPings[peerId] = Math.round(clampedRtt);
+            const peerValues = Object.values(this.p2pPings);
+            const avgRtt = peerValues.length > 0
+                ? peerValues.reduce((sum, v) => sum + v, 0) / peerValues.length
+                : clampedRtt;
+            this.smoothedRtt = this.smoothedRtt > 0
+                ? this.smoothedRtt * 0.75 + avgRtt * 0.25
+                : avgRtt;
+            this.myPing = Math.round(this.smoothedRtt);
             this.send({ type: 'reportPing', ping: this.myPing });
+            this.emit('localPing', this.myPing);
         };
     }
 
@@ -244,10 +333,11 @@ class NetworkClient {
             for (const [peerId] of this.peerjs.connections) {
                 this.peerjs.pingPeer(peerId);
             }
-        }, 2000);
+        }, 1000);
     }
 
     handleMessage(msg) {
+        if (!msg || typeof msg !== 'object') return;
         switch (msg.type) {
             case 'roomCreated':
                 this.roomId = msg.roomId;
@@ -264,13 +354,14 @@ class NetworkClient {
                 break;
 
             case 'pong':
-                if (msg.t) {
-                    // P2P 핑이 있으면 P2P 핑 사용, 없으면 WS 핑
-                    if (!this.p2pReady) {
-                        this.myPing = Date.now() - msg.t;
-                        this.send({ type: 'reportPing', ping: this.myPing });
-                    }
-                    // P2P 연결 시에는 _onPingResult에서 보고함
+                if (msg.t && !this.p2pReady) {
+                    const rtt = Math.max(0, Date.now() - msg.t);
+                    this.smoothedRtt = this.smoothedRtt > 0
+                        ? this.smoothedRtt * 0.75 + rtt * 0.25
+                        : rtt;
+                    this.myPing = Math.round(this.smoothedRtt);
+                    this.send({ type: 'reportPing', ping: this.myPing });
+                    this.emit('localPing', this.myPing);
                 }
                 break;
 
@@ -294,7 +385,22 @@ class NetworkClient {
                 this.emit('gameState', msg);
                 break;
 
-            // rtcSignal은 더 이상 사용하지 않음 (PeerJS가 자체 시그널링)
+            case 'gameEvent':
+                if (Number.isSafeInteger(msg.eventId)) {
+                    if (this._seenEventIds.has(msg.eventId)) return;
+                    this._seenEventIds.add(msg.eventId);
+                    this._seenEventOrder.push(msg.eventId);
+                    if (this._seenEventOrder.length > 200) {
+                        const oldest = this._seenEventOrder.shift();
+                        this._seenEventIds.delete(oldest);
+                    }
+                }
+                this.emit('gameEvent', msg);
+                break;
+
+            case 'gameEnded':
+                this.emit('gameEnded', msg);
+                break;
 
             default:
                 this.emit(msg.type, msg);
@@ -330,6 +436,10 @@ class NetworkClient {
         this.send({ type: 'startGame', config });
     }
 
+    endGame() {
+        this.send({ type: 'gameEnded' });
+    }
+
     setMetadata(metadata) {
         this.send({ type: 'setMetadata', metadata });
     }
@@ -361,10 +471,12 @@ class NetworkClient {
         this.playerId = null;
         this.isHost = false;
         this.myPing = 0;
+        this.smoothedRtt = 0;
+        this.p2pPings = {};
         this.playerPings = {};
         this.resetRealtimeState();
         if (this.ws) {
-            this.ws.close();
+            try { this.ws.close(); } catch (e) {}
             this.ws = null;
         }
         this.connected = false;
@@ -376,6 +488,9 @@ class NetworkClient {
         this._inputSeq = 0;
         this._lastInputSentAt = 0;
         this._inputBurstRemaining = 0;
+        this._eventId = 0;
+        this._seenEventIds.clear();
+        this._seenEventOrder.length = 0;
         this.lastSentInput = null;
     }
 

@@ -5445,118 +5445,118 @@
     },
     {
       "path": "slimevolley/assets/images/ball.png",
-      "bytes": 48308,
-      "sha256": "35d819df95e96c53c83bd130626d712c91797effb277d7cbe8f8c804e136606e"
+      "bytes": 63376,
+      "sha256": "f566555dac23dd383de9603d9104004ea3642be1f18ac206fd7a841386405491"
     },
     {
       "path": "slimevolley/assets/images/ball.webp",
-      "bytes": 36304,
-      "sha256": "ba2734b5776e3ae3d395cad3d05f351e45578adbece26426965681fb2474a6f6"
+      "bytes": 43960,
+      "sha256": "b3e9d29db14fd7c74b158c0a50039ab632058f9dd50d3f4b7758f3ca13c3293a"
     },
     {
       "path": "slimevolley/assets/images/court-bg.webp",
-      "bytes": 90278,
-      "sha256": "53aa8654f0741451369d87c136a1406dc5363da4620ef6f6f8c78ab44b71f614"
+      "bytes": 60946,
+      "sha256": "7667bc42f3113b3790ae2332fca52d926cc7bec686d27a76478ba83ff6c70cce"
     },
     {
       "path": "slimevolley/assets/images/hit-spark.png",
-      "bytes": 24568,
-      "sha256": "7c01abcb3cd7732e2a391cc84665bff8db058c0441a55292b0c72f53a5d69976"
+      "bytes": 51518,
+      "sha256": "d84c83d2fe278ea26a21dd8bf5cca3533503cc18b5efcb56da3c8a102cbe60f3"
     },
     {
       "path": "slimevolley/assets/images/hit-spark.webp",
-      "bytes": 19856,
-      "sha256": "1f2df849b8951c9351d6cd6a8cf980bbe2dd2c7aecccedb9237f95fad3932d37"
+      "bytes": 18796,
+      "sha256": "332e1005aec43013a85b6f9d64c45f3749b8b95120013f7ea99dfb0aca02bb6b"
     },
     {
       "path": "slimevolley/assets/images/slime-azure.png",
-      "bytes": 95811,
-      "sha256": "8cc03830e23f10f38a74d03982a823b88adff5b87addfeb2dc82940934c01418"
+      "bytes": 68715,
+      "sha256": "16cef530ec7129a2377f030aeb2e90436985882a29a485ad05c326bd64d11084"
     },
     {
       "path": "slimevolley/assets/images/slime-azure.webp",
-      "bytes": 70080,
-      "sha256": "6cdab51bf91cc504cae9c1c49f90497bc80c0d5d9792cbd190f88bfa698cc124"
+      "bytes": 46166,
+      "sha256": "f3abf1264731134f06b76c260844e5ae304f728d6e144212363da1bb2c1ab0f9"
     },
     {
       "path": "slimevolley/assets/images/slime-blue.png",
-      "bytes": 101726,
-      "sha256": "6593aa432e06c18b17f6f447b84155e90bff054fe9015da0b5dc952687ec5a72"
+      "bytes": 77648,
+      "sha256": "6d177f9ce63c9da892bd922d9d19fed7d2e98c582461417bf1cea52bedb2c43d"
     },
     {
       "path": "slimevolley/assets/images/slime-blue.webp",
-      "bytes": 74826,
-      "sha256": "b947bf3e3735e118d2e4bf7d1a51e15405551263b0e3dd9f586b803090c8f915"
+      "bytes": 53832,
+      "sha256": "82c95e4b1dce213561c9980eba1c83cee2f5ab50f5e0f2acee24607c5f0aa95c"
     },
     {
       "path": "slimevolley/assets/images/slime-crimson.png",
-      "bytes": 82401,
-      "sha256": "7cbe4fb0c56de1887b5d9f80120423de0a24ef29c49777bf3aaf8a86cbf6f8cc"
+      "bytes": 62237,
+      "sha256": "0994a0b682a4d39856d5759592ff661454941fb04918bfd7e7e5d5a73933cd97"
     },
     {
       "path": "slimevolley/assets/images/slime-crimson.webp",
-      "bytes": 61278,
-      "sha256": "821a670841b51648760bee5feefd809109b3f71211b079661a0045ff387cf522"
+      "bytes": 40192,
+      "sha256": "eb11aeba360aa5ca696fd16bbbfbdd40f7740ed6f6b10fb25bb80774683008cb"
     },
     {
       "path": "slimevolley/assets/images/slime-cyan.png",
-      "bytes": 91017,
-      "sha256": "da532acddc85ec9880c3fe4c8be51e53071572bd209b134584c60a75af92deea"
+      "bytes": 62804,
+      "sha256": "78d52f808ac98a72fc006b8a2e5f4e3be53dcdff64404818f915b8e03d06e5c3"
     },
     {
       "path": "slimevolley/assets/images/slime-cyan.webp",
-      "bytes": 65968,
-      "sha256": "358770af3f195525fbe0d54d39a6eacaac373adcd7d22895064ffa2c5c3486cd"
+      "bytes": 16082,
+      "sha256": "a70c73d38c49a32c6a375d15e64f628d206948142d0be5ac025a2ba01845ba29"
     },
     {
       "path": "slimevolley/assets/images/slime-eye.png",
-      "bytes": 569,
-      "sha256": "a23f99900729baed30db177f31713b88fb30093c35c7ef3e02fbe42bdb54b7f2"
+      "bytes": 6255,
+      "sha256": "1d4568bee054666db859d0aaf00e40fa9a3eb9c71aebf26cf59723ab99ca7d5b"
     },
     {
       "path": "slimevolley/assets/images/slime-eye.webp",
-      "bytes": 422,
-      "sha256": "7f15130a176a4e14508e9e3cc0ebbe42e385830bdcadaa8386c85cd44f337650"
+      "bytes": 2350,
+      "sha256": "5bbaa7ab58d20e549bf17afb4e53859317b6a8d12585335f802a1a650edf14af"
     },
     {
       "path": "slimevolley/assets/images/slime-pink.png",
-      "bytes": 95335,
-      "sha256": "8b6fad810fbf6eb69b84f076e700416b8e9339d830cb7912e819f5c8862b345f"
+      "bytes": 68045,
+      "sha256": "264bfa9e0300ecb086264fad584bbe706f8c01fd6f9432bdbde6d501c8f7b654"
     },
     {
       "path": "slimevolley/assets/images/slime-pink.webp",
-      "bytes": 67796,
-      "sha256": "00c6b52224b9b8c542b4f19be7a6d1eef4e69dba6eaa1b8f75aa9ac7aa587680"
+      "bytes": 10122,
+      "sha256": "d1e78eeb9f41ffff995b448dc73fb4018b16c67de5caa363da9f26429797f82c"
     },
     {
       "path": "slimevolley/assets/images/slime-pupil.png",
-      "bytes": 346,
-      "sha256": "ebf1eb9dfad918516a794b58e11668db1617df906f1180f069f373d2ddfd60ca"
+      "bytes": 2088,
+      "sha256": "c365334d9edc6079f724bdf93363e137303cf9311bd1f4a982c009db6ba532e1"
     },
     {
       "path": "slimevolley/assets/images/slime-pupil.webp",
-      "bytes": 266,
-      "sha256": "6af67bf1580fe8b20421a775c0495dc52eca9191cb51fb43cf604aaf25dec970"
+      "bytes": 1086,
+      "sha256": "be139a81b44fb930d75fa60dc0d88069e738a71cd22443f89fdc96262e64095b"
     },
     {
       "path": "slimevolley/assets/images/slime-red.png",
-      "bytes": 108252,
-      "sha256": "6648e3b75e62e8fbff45402051d42811ccd04927445ea823f3a136df39cc6aaf"
+      "bytes": 68107,
+      "sha256": "b8140303af9fba3cc47e6e798c2349b7fb7bcf238aba5a1f5c077de427380007"
     },
     {
       "path": "slimevolley/assets/images/slime-red.webp",
-      "bytes": 78828,
-      "sha256": "71e16aab372ce6d3ffa57ae98c210981cf6270aa477e79a1174ae285142d809c"
+      "bytes": 16222,
+      "sha256": "9360004f4e9170a2475d36835144985936ef148cdf2cf1a4c5257bdc7bbd853f"
     },
     {
       "path": "slimevolley/assets/images/slime-shadow.png",
-      "bytes": 6433,
-      "sha256": "db557ab45ee86e0118e9741c08e5471113ae49c6ef54013a4132074cb1033d65"
+      "bytes": 2029,
+      "sha256": "defc8e18fdc4dcba6e6798cf5ff50bbb3269e100738a57df7ad7f221fa08dc88"
     },
     {
       "path": "slimevolley/assets/images/slime-shadow.webp",
-      "bytes": 3716,
-      "sha256": "6485e2247e5b33b26fbb96030a2d86e9bdbbd2c3b7db8df7654a79a9263b2d5f"
+      "bytes": 1274,
+      "sha256": "d08e85fb85b8ffff6f40e07ed5057d791e56c35733cd20065cdb4617cf75f6e9"
     },
     {
       "path": "slimevolley/sounds/floor.wav",

@@ -418,8 +418,18 @@ export class GameRoom {
         switch (msg.type) {
             case 'setTeam':
                 if (msg.team === 0 || msg.team === 1) {
-                    player.team = msg.team;
-                    this.broadcastRoomState();
+                    const targetTeamCount = this.players.filter(
+                        p => p.team === msg.team && p.id !== player.id
+                    ).length;
+                    if (targetTeamCount < 4) {
+                        player.team = msg.team;
+                        this.broadcastRoomState();
+                    } else {
+                        this.sendTo(ws, {
+                            type: 'error',
+                            message: 'Team is full (max 4 players per team).',
+                        });
+                    }
                 }
                 break;
 
@@ -436,6 +446,22 @@ export class GameRoom {
             case 'startGame':
                 if (player.id === this.hostId && this.canStart()) {
                     this.startGame(msg);
+                }
+                break;
+
+            case 'gameEnded':
+                if (player.id === this.hostId && this.gameStarted) {
+                    this.gameStarted = false;
+                    for (const p of this.players) {
+                        if (!p.isHost && !p.isBot) {
+                            p.ready = false;
+                        }
+                    }
+                    this.broadcastRoomState();
+                    this.notifyLobby('update', {
+                        roomId: this.roomId,
+                        gameStarted: false,
+                    });
                 }
                 break;
 
@@ -585,6 +611,7 @@ export class GameRoom {
 
         const humanCount = this.players.filter(p => !p.isBot).length;
         if (humanCount === 0) {
+            this.gameStarted = false;
             await this.notifyLobby('unregister', { roomId: this.roomId });
         } else {
             await this.notifyLobby('update', {
@@ -631,6 +658,9 @@ export class GameRoom {
 
     canStart() {
         if (this.players.length < 2) return false;
+        const teamACount = this.players.filter(p => p.team === 0).length;
+        const teamBCount = this.players.filter(p => p.team === 1).length;
+        if (teamACount === 0 || teamBCount === 0) return false;
         const nonHostHumans = this.players.filter(p => !p.isHost && !p.isBot);
         return nonHostHumans.every(p => p.ready);
     }

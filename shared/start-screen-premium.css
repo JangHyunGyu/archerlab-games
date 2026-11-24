@@ -213,38 +213,21 @@ body[data-game="parking-escape"] .menu-actions button:active {
   transform: translateY(2px) scale(0.99);
 }
 
-/* Slime Volley: stronger broadcast-card depth and mascot presence. */
+/* Slime Volley: clean calm panel separation without harsh neon framing. */
 body[data-game="slime-volley"] #main-menu .menu-container {
-  border-color: rgba(76, 230, 255, 0.36);
-  box-shadow:
-    0 34px 100px rgba(0, 0, 0, 0.54),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 -18px 50px rgba(0, 0, 0, 0.2),
-    0 0 56px rgba(59, 141, 255, 0.12);
-}
-
-body[data-game="slime-volley"] #main-menu .game-logo {
-  filter: saturate(1.08) contrast(1.03) drop-shadow(0 18px 28px rgba(0, 0, 0, 0.3));
-}
-
-body[data-game="slime-volley"] #main-menu .menu-title {
-  text-shadow:
-    0 4px 22px rgba(0, 0, 0, 0.58),
-    -8px 0 28px rgba(59, 141, 255, 0.1),
-    8px 0 28px rgba(255, 90, 98, 0.08);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
 }
 
 body[data-game="slime-volley"] #main-menu .btn-large {
-  transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+  transition: transform 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
 }
 
 body[data-game="slime-volley"] #main-menu .btn-large:hover {
-  transform: translateY(-2px);
-  filter: saturate(1.08) brightness(1.04);
+  transform: translateY(-1px);
 }
 
 body[data-game="slime-volley"] #main-menu .btn-large:active {
-  transform: translateY(2px) scale(0.995);
+  transform: translateY(1px);
 }
 
 @media (prefers-reduced-motion: no-preference) {

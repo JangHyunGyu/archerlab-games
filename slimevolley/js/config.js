@@ -51,7 +51,7 @@ const CONFIG = {
         slimeEye: 'assets/images/slime-eye.png',
         slimePupil: 'assets/images/slime-pupil.png',
         hitSpark: 'assets/images/hit-spark.png',
-        slimesIncludeEyes: true,
+        slimesIncludeEyes: false,
         slimes: [
             [
                 'assets/images/slime-blue.png',
@@ -75,7 +75,7 @@ const CONFIG = {
 
     // Network
     TICK_RATE: 60,
-    INTERPOLATION_DELAY: 20,
+    INTERPOLATION_DELAY: 10,
 
     // TURN (metered.ca)
     METERED_TURN_ENABLED: false,

@@ -125,7 +125,7 @@
         gtag('js', new Date());
         gtag('config', 'G-66FS0YCEEM');
     </script>
-    <link rel="stylesheet" href="css/style.css?v=20260913-immersive-v3">
+    <link rel="stylesheet" href="css/style.css?v=20261124-v1">
     <link rel="stylesheet" href="../shared/start-screen-premium.css?v=20260718-premium-v1">
     <script>
         // 모바일 주소창 높이를 반영한 실제 뷰포트 높이
@@ -145,8 +145,8 @@
   <script src="../assets/js/archerlab-session.js" defer data-archerlab-account></script>
     <meta property="og:image:secure_url" content="https://archerlab.dev/assets/images/slimevolley_link.png">
     <meta property="og:image:type" content="image/png">
-    <meta property="og:image:alt" content="ArcherLab Games: Cat Tower merge puzzle">
-    <meta name="twitter:image:alt" content="ArcherLab Games: Cat Tower merge puzzle">
+    <meta property="og:image:alt" content="슬라임 배구 - 무료 온라인 멀티플레이어 배구 게임">
+    <meta name="twitter:image:alt" content="슬라임 배구 - 무료 온라인 멀티플레이어 배구 게임">
 
     <script type="application/ld+json">
 {
@@ -177,7 +177,7 @@
         <!-- Header -->
         <header id="game-header">
             <a href="../" class="back-link" id="header-back" title="게임 목록으로 돌아가기" data-i18n-title="header.back">&#8592;</a>
-            <a href="https://archerlab.dev" rel="noopener noreferrer" class="header-archerlab-link">🏹 ArcherLab</a>
+            <a href="https://archerlab.dev" rel="noopener noreferrer" class="header-archerlab-link">ArcherLab</a>
             <button id="btn-sound" class="icon-btn" title="사운드 켜기/끄기" data-i18n="common.soundOn" data-i18n-title="header.sound">사운드 ON</button>
         </header>
 
@@ -191,43 +191,26 @@
                     <button type="button" class="language-btn" data-lang-choice="ko" data-i18n="language.ko">한국어</button>
                     <button type="button" class="language-btn" data-lang-choice="en" data-i18n="language.en">English</button>
                 </div>
-                <div class="game-logo game-logo-assets">
-                    <div class="logo-mascot logo-mascot-blue">
-                        <span class="logo-team-tag" aria-hidden="true">BLUE</span>
-                        <img class="logo-slime-img logo-slime-blue" src="assets/images/slime-blue.webp" data-png-fallback="assets/images/slime-blue.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" aria-hidden="true">
+                <div class="game-logo" aria-hidden="true">
+                    <div class="menu-slime-wrap menu-slime-blue">
+                        <img class="menu-slime-img" src="assets/images/slime-blue.webp?v=20261124-v1" data-png-fallback="assets/images/slime-blue.png?v=20261124-v1" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="">
+                        <span class="menu-slime-eye"><span class="menu-slime-pupil"></span></span>
                     </div>
-                    <div class="logo-ball-wrap" aria-hidden="true">
-                        <img class="logo-ball-img" src="assets/images/ball.webp" data-png-fallback="assets/images/ball.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="">
-                        <span class="logo-versus">VS</span>
-                    </div>
-                    <div class="logo-mascot logo-mascot-red">
-                        <span class="logo-team-tag" aria-hidden="true">RED</span>
-                        <img class="logo-slime-img logo-slime-red" src="assets/images/slime-red.webp" data-png-fallback="assets/images/slime-red.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" aria-hidden="true">
+                    <img class="menu-ball-img" src="assets/images/ball.webp?v=20261124-v1" data-png-fallback="assets/images/ball.png?v=20261124-v1" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="">
+                    <div class="menu-slime-wrap menu-slime-red">
+                        <img class="menu-slime-img" src="assets/images/slime-red.webp?v=20261124-v1" data-png-fallback="assets/images/slime-red.png?v=20261124-v1" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="">
+                        <span class="menu-slime-eye"><span class="menu-slime-pupil"></span></span>
                     </div>
                 </div>
-                <div class="menu-copy">
-                    <p class="menu-kicker" aria-hidden="true">ARCADE VOLLEY · MATCH READY</p>
-                    <h2 class="menu-title" data-i18n="app.name">슬라임 배구</h2>
-                    <p class="menu-subtitle" data-i18n="menu.subtitle">클래식 슬라임 배구 대전</p>
-                </div>
+                <h1 class="menu-title" data-i18n="app.name">슬라임 배구</h1>
 
                 <div class="menu-buttons">
-                    <button id="btn-practice" class="btn btn-primary btn-large">
-                        <span class="btn-icon">&#9889;</span>
-                        <span data-i18n="menu.practice">혼자 연습</span>
-                        <span class="btn-desc" data-i18n="menu.practiceDesc">봇 상대 연습 모드</span>
-                    </button>
-                    <button id="btn-multiplayer" class="btn btn-secondary btn-large">
-                        <span class="btn-icon" aria-hidden="true"><img src="assets/images/ball.webp" data-png-fallback="assets/images/ball.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt=""></span>
-                        <span data-i18n="menu.multiplayer">다같이 시합</span>
-                        <span class="btn-desc" data-i18n="menu.multiplayerDesc">온라인 멀티플레이어</span>
-                    </button>
+                    <button id="btn-practice" class="btn btn-primary btn-large" data-i18n="menu.practice">혼자 연습</button>
+                    <button id="btn-multiplayer" class="btn btn-secondary btn-large" data-i18n="menu.multiplayer">온라인 대전</button>
                 </div>
 
                 <div class="controls-guide">
-                    <p><strong data-i18n="controls.title">조작법</strong></p>
-                    <p><span data-i18n="controls.move">이동</span>: <kbd>&#8592;</kbd> <kbd>&#8594;</kbd> <span data-i18n="controls.or">또는</span> <kbd>A</kbd> <kbd>D</kbd></p>
-                    <p><span data-i18n="controls.jump">점프</span>: <kbd>&#8593;</kbd> <span data-i18n="controls.or">또는</span> <kbd>W</kbd> <span data-i18n="controls.or">또는</span> <kbd>Space</kbd></p>
+                    <p data-i18n="controls.compact">← → / A D 이동 · ↑ / W / Space 점프</p>
                 </div>
             </div>
         </div>
@@ -236,28 +219,25 @@
         <div id="practice-setup" class="screen">
             <div class="panel setup-panel">
                 <h2 data-i18n="practice.title">연습 모드</h2>
-                <div class="setup-art" aria-hidden="true">
-                    <img  src="assets/images/slime-blue.webp" data-png-fallback="assets/images/slime-blue.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="">
-                    <img  src="assets/images/ball.webp" data-png-fallback="assets/images/ball.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="">
-                    <img  src="assets/images/slime-red.webp" data-png-fallback="assets/images/slime-red.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="">
-                </div>
-                <div class="form-group">
-                    <label data-i18n="practice.myTeam">내 팀 인원</label>
-                    <select id="practice-my-team" class="input-select">
-                        <option value="1" selected data-i18n="practice.solo">1 (솔로)</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label data-i18n="practice.botTeam">봇 팀 인원</label>
-                    <select id="practice-bot-team" class="input-select">
-                        <option value="1" selected>1</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                    </select>
+                <div class="setup-team-row">
+                    <div class="form-group">
+                        <label data-i18n="practice.myTeam">내 팀 인원</label>
+                        <select id="practice-my-team" class="input-select">
+                            <option value="1" selected data-i18n="practice.solo">1 (솔로)</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="practice.botTeam">봇 팀 인원</label>
+                        <select id="practice-bot-team" class="input-select">
+                            <option value="1" selected>1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label data-i18n="practice.difficulty">난이도</label>
@@ -455,15 +435,15 @@
     <script src="../assets/vendor/peerjs/peerjs-1.5.5.min.js"></script>
 
     <!-- Game Scripts -->
-    <script src="js/config.js?v=49"></script>
-    <script src="js/physics.js?v=48"></script>
-    <script src="js/renderer.js?v=20260627-webp"></script>
-    <script src="js/bot.js?v=48"></script>
-    <script src="js/sound.js?v=48"></script>
-    <script src="js/webrtc.js?v=49"></script>
-    <script src="js/network.js?v=49"></script>
-    <script src="js/i18n.js?v=20261002-en-page-v1"></script>
-    <script src="js/lobby.js?v=20261009-leave-v1"></script>
-    <script src="js/main.js?v=20261103-input-seq-v1"></script>
+    <script src="js/config.js?v=20261124-v1"></script>
+    <script src="js/physics.js?v=20261124-v1"></script>
+    <script src="js/renderer.js?v=20261124-v1"></script>
+    <script src="js/bot.js?v=20261124-v1"></script>
+    <script src="js/sound.js?v=20261124-v1"></script>
+    <script src="js/webrtc.js?v=20261124-v1"></script>
+    <script src="js/network.js?v=20261124-v1"></script>
+    <script src="js/i18n.js?v=20261124-v1"></script>
+    <script src="js/lobby.js?v=20261124-v1"></script>
+    <script src="js/main.js?v=20261124-v1"></script>
 </body>
 </html>

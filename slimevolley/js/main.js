@@ -3,6 +3,14 @@ function svt(key, fallback) {
     return value && value !== key ? value : fallback;
 }
 
+function svtf(key, fallback, values = {}) {
+    let text = svt(key, fallback);
+    for (const [name, value] of Object.entries(values)) {
+        text = text.split(`{${name}}`).join(value);
+    }
+    return text;
+}
+
 // Main Game Controller
 class SlimeVolleyGame {
     constructor() {
@@ -20,10 +28,27 @@ class SlimeVolleyGame {
         this.gameLoop = null;
         this.countdown = 0;
         this.countdownTimer = null;
+        this.gameOverTimer = null;
         this.relayUrl = 'wss://relay.archerlab.dev';
         this._lastStateArrival = 0;
         this._stateIntervalMs = 1000 / 60;
         this._stateJitterMs = 0;
+        this._migrating = false;
+
+        // Client-side prediction & reconciliation state
+        this._pendingInputs = [];
+        this._pendingInputPool = [];
+        this._latestSentInputSeq = 0;
+        this._predAccumulator = 0;
+        this._predPrev = { x: 0, y: 0 };
+        this._predVisualOffsetX = 0;
+        this._predVisualOffsetY = 0;
+        this._lastLocalHitAt = 0;
+        this._lastBallHitSig = -1;
+        this._leadBlend = 0;
+        this._leadBall = { x: 0, y: 0, vx: 0, vy: 0 };
+        this._flushStateSoon = false;
+        this._ackScratch = {};
 
         this.setupInput();
         this.setupNetworkHandlers();
@@ -54,6 +79,7 @@ class SlimeVolleyGame {
 
     setupInput() {
         this._onKeyDown = (e) => {
+            if (e.repeat) return;
             this.keys[e.code] = true;
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
                 if (this.running) e.preventDefault();
@@ -95,30 +121,52 @@ class SlimeVolleyGame {
         const joystickKnob = document.getElementById('joystick-knob');
         if (!moveZone || !jumpZone) return;
 
-        // 좌우 이동: 터치 시작점 기준으로 좌/우 드래그
         let moveStartX = null;
+        let moveTouchId = null;
+        let jumpTouchId = null;
+
         this._resetTouchInput = () => {
             moveStartX = null;
+            moveTouchId = null;
+            jumpTouchId = null;
             moveZone.classList.remove('active');
             jumpZone.classList.remove('active');
             if (joystickKnob) joystickKnob.style.transform = '';
         };
         const DEAD_ZONE = 3;
-        const MAX_DRAG = 15; // 노브 최대 이동 범위
+        const MAX_DRAG = 15;
+
+        const pickTouch = (e, trackedId) => {
+            const list = (e.changedTouches && e.changedTouches.length) ? e.changedTouches : e.touches;
+            if (!list || list.length === 0) return null;
+            if (trackedId === null || trackedId === undefined) return list[0];
+            for (let i = 0; i < list.length; i++) {
+                const tid = list[i].identifier !== undefined ? list[i].identifier : 'default';
+                if (tid === trackedId) return list[i];
+            }
+            // Fallback for synthetic single-touch events without identifiers
+            if (!e.changedTouches) return list[0];
+            return null;
+        };
 
         this._onMoveStart = (e) => {
             e.preventDefault();
-            moveStartX = e.touches[0].clientX;
+            if (moveTouchId !== null) return;
+            const touch = pickTouch(e, null);
+            if (!touch) return;
+            moveTouchId = touch.identifier !== undefined ? touch.identifier : 'default';
+            moveStartX = touch.clientX;
             moveZone.classList.add('active');
         };
         this._onMoveMove = (e) => {
             e.preventDefault();
             if (moveStartX === null) return;
-            const dx = e.touches[0].clientX - moveStartX;
+            const touch = pickTouch(e, moveTouchId);
+            if (!touch) return;
+            const dx = touch.clientX - moveStartX;
             this.keys['ArrowLeft'] = dx < -DEAD_ZONE;
             this.keys['ArrowRight'] = dx > DEAD_ZONE;
             this._sendInputNow();
-            // 조이스틱 노브 이동
             if (joystickKnob) {
                 const clampedDx = Math.max(-MAX_DRAG, Math.min(MAX_DRAG, dx));
                 joystickKnob.style.transform = `translateX(${clampedDx}px)`;
@@ -126,7 +174,10 @@ class SlimeVolleyGame {
         };
         this._onMoveEnd = (e) => {
             e.preventDefault();
+            const touch = pickTouch(e, moveTouchId);
+            if (!touch && moveTouchId !== null) return;
             moveStartX = null;
+            moveTouchId = null;
             this.keys['ArrowLeft'] = false;
             this.keys['ArrowRight'] = false;
             this._sendInputNow();
@@ -138,15 +189,21 @@ class SlimeVolleyGame {
         moveZone.addEventListener('touchend', this._onMoveEnd, { passive: false });
         moveZone.addEventListener('touchcancel', this._onMoveEnd, { passive: false });
 
-        // 점프: 우측 영역 터치
         this._onJumpStart = (e) => {
             e.preventDefault();
+            if (jumpTouchId !== null) return;
+            const touch = pickTouch(e, null);
+            if (!touch) return;
+            jumpTouchId = touch.identifier !== undefined ? touch.identifier : 'default';
             this.keys['ArrowUp'] = true;
             this._sendInputNow();
             jumpZone.classList.add('active');
         };
         this._onJumpEnd = (e) => {
             e.preventDefault();
+            const touch = pickTouch(e, jumpTouchId);
+            if (!touch && jumpTouchId !== null) return;
+            jumpTouchId = null;
             this.keys['ArrowUp'] = false;
             this._sendInputNow();
             jumpZone.classList.remove('active');
@@ -166,7 +223,8 @@ class SlimeVolleyGame {
 
     _sendInputNow() {
         if (this.running && this.mode === 'multiplayer' && !this.network.isHost) {
-            this.network.sendInput(this.getMyInput());
+            const seq = this.network.sendInput(this.getMyInput());
+            if (seq) this._latestSentInputSeq = seq;
         }
     }
 
@@ -204,13 +262,13 @@ class SlimeVolleyGame {
             this.renderer.clearSlimes();
             this.renderer.clearBall();
         }
+        this.renderer.setNetworkPing(0);
 
         this.lobby.showScreen('game-screen');
         this.startCountdown();
     }
 
     startCountdown() {
-        // 이전 카운트다운과 종료 연출 정리
         if (this.countdownTimer) {
             clearInterval(this.countdownTimer);
             this.countdownTimer = null;
@@ -218,6 +276,16 @@ class SlimeVolleyGame {
         if (this.gameOverTimer) {
             clearTimeout(this.gameOverTimer);
             this.gameOverTimer = null;
+        }
+
+        // Position ball cleanly at serve start and render initial frame immediately
+        const halfW = CONFIG.COURT_WIDTH / 2;
+        this.physics.ball.x = this.physics.servingTeam === 0 ? halfW / 2 : halfW + halfW / 2;
+        this.physics.ball.y = 80;
+        this.physics.ball.vx = 0;
+        this.physics.ball.vy = 0;
+        if (this.renderer && this.renderer.initialized) {
+            this.renderer.render(this.physics.getState());
         }
 
         this.countdown = 3;
@@ -246,25 +314,23 @@ class SlimeVolleyGame {
     _pushRemoteState(state) {
         if (!this._stateBuffer) this._stateBuffer = [];
         if (!this._stateBufferPool) {
-            // 풀 미리 할당 (GC 최소화)
             this._stateBufferPool = [];
             for (let i = 0; i < 12; i++) {
                 this._stateBufferPool.push({
                     time: 0,
-                    ball: { x: 0, y: 0 },
+                    ball: { x: 0, y: 0, vx: 0, vy: 0, lastHitSlimeId: -1 },
                     slimes: []
                 });
             }
         }
 
-        // 풀에서 재사용 또는 shift된 엔트리 재활용
         let entry;
         if (this._stateBuffer.length >= 10) {
             entry = this._stateBuffer.shift();
         } else if (this._stateBufferPool.length > 0) {
             entry = this._stateBufferPool.pop();
         } else {
-            entry = { time: 0, ball: { x: 0, y: 0 }, slimes: [] };
+            entry = { time: 0, ball: { x: 0, y: 0, vx: 0, vy: 0, lastHitSlimeId: -1 }, slimes: [] };
         }
 
         const arrivalTime = performance.now();
@@ -282,71 +348,194 @@ class SlimeVolleyGame {
         entry.time = arrivalTime;
         entry.ball.x = state.ball.x;
         entry.ball.y = state.ball.y;
+        entry.ball.vx = state.ball.vx || 0;
+        entry.ball.vy = state.ball.vy || 0;
+        entry.ball.lastHitSlimeId = state.ball.lastHitSlimeId !== undefined ? state.ball.lastHitSlimeId : -1;
 
-        // 슬라임 배열 재사용
         while (entry.slimes.length < state.slimes.length) {
-            entry.slimes.push({ x: 0, y: 0 });
+            entry.slimes.push({ x: 0, y: 0, vx: 0, vy: 0 });
         }
         entry.slimes.length = state.slimes.length;
         for (let i = 0; i < state.slimes.length; i++) {
             entry.slimes[i].x = state.slimes[i].x;
             entry.slimes[i].y = state.slimes[i].y;
+            entry.slimes[i].vx = state.slimes[i].vx || 0;
+            entry.slimes[i].vy = state.slimes[i].vy || 0;
         }
 
         this._stateBuffer.push(entry);
     }
 
-    _getInterpolatedState() {
+    _getInterpolatedState(deltaMS = 16.667) {
         const buf = this._stateBuffer;
         const baseState = this.physics.getState();
         if (!buf || buf.length < 2) return baseState;
 
-        // Buffer only enough received snapshots to absorb measured arrival jitter.
-        // Base RTT is already present in the authoritative snapshot and must not be
-        // added a second time as render delay.
         const stateInterval = this._stateIntervalMs || (1000 / 60);
         const stateJitter = this._stateJitterMs || 0;
         const adaptiveDelay = Math.max(
             CONFIG.INTERPOLATION_DELAY,
-            Math.min(80, stateInterval + stateJitter * 2 + 2)
+            Math.min(55, stateInterval * 0.65 + stateJitter * 1.8 + 1)
         );
-        const renderTime = performance.now() - adaptiveDelay;
+        const now = performance.now();
+        const renderTime = now - adaptiveDelay;
+        const latest = buf[buf.length - 1];
 
-        // renderTime을 둘러싼 두 스냅샷 찾기
-        let i0 = 0, i1 = 1;
-        for (let i = 1; i < buf.length; i++) {
-            if (buf[i].time >= renderTime) {
-                i1 = i;
-                i0 = i - 1;
-                break;
+        if (renderTime >= latest.time) {
+            // Bounded velocity extrapolation (up to 24ms) so momentary packet jitter never stalls visuals
+            const extrapMs = Math.min(24, renderTime - latest.time);
+            const extrapFrames = extrapMs / (1000 / 120);
+            baseState.ball.x = latest.ball.x;
+            baseState.ball.y = latest.ball.y;
+            baseState.ball.vx = latest.ball.vx;
+            baseState.ball.vy = latest.ball.vy;
+            if (this.physics.phase === 'playing' && extrapFrames > 0) {
+                this.physics.stepBallOnly(baseState.ball, Math.floor(extrapFrames), extrapFrames - Math.floor(extrapFrames));
             }
-            if (i === buf.length - 1) {
-                // 모든 스냅샷이 renderTime보다 과거 → 최신 상태 사용
-                return baseState;
+            for (let i = 0; i < baseState.slimes.length; i++) {
+                if (latest.slimes[i]) {
+                    baseState.slimes[i].x = latest.slimes[i].x + latest.slimes[i].vx * extrapFrames;
+                    baseState.slimes[i].y = Math.min(CONFIG.GROUND_Y, latest.slimes[i].y + latest.slimes[i].vy * extrapFrames);
+                }
+            }
+        } else {
+            let i0 = 0, i1 = 1;
+            for (let i = 1; i < buf.length; i++) {
+                if (buf[i].time >= renderTime) {
+                    i1 = i;
+                    i0 = i - 1;
+                    break;
+                }
+            }
+            const s0 = buf[i0];
+            const s1 = buf[i1];
+            const dt = s1.time - s0.time;
+            const t = dt > 0 ? Math.max(0, Math.min(1, (renderTime - s0.time) / dt)) : 1;
+
+            baseState.ball.x = s0.ball.x + (s1.ball.x - s0.ball.x) * t;
+            baseState.ball.y = s0.ball.y + (s1.ball.y - s0.ball.y) * t;
+            baseState.ball.vx = s0.ball.vx + (s1.ball.vx - s0.ball.vx) * t;
+            baseState.ball.vy = s0.ball.vy + (s1.ball.vy - s0.ball.vy) * t;
+
+            for (let i = 0; i < baseState.slimes.length; i++) {
+                if (s0.slimes[i] && s1.slimes[i]) {
+                    baseState.slimes[i].x = s0.slimes[i].x + (s1.slimes[i].x - s0.slimes[i].x) * t;
+                    baseState.slimes[i].y = s0.slimes[i].y + (s1.slimes[i].y - s0.slimes[i].y) * t;
+                }
             }
         }
 
-        const s0 = buf[i0];
-        const s1 = buf[i1];
-        const dt = s1.time - s0.time;
-        const t = dt > 0 ? Math.max(0, Math.min(1, (renderTime - s0.time) / dt)) : 1;
+        // Bounded ball half-RTT forward lead during active rallies
+        const hitSig = latest.ball.lastHitSlimeId;
+        if (hitSig !== this._lastBallHitSig) {
+            this._lastBallHitSig = hitSig;
+            this._leadBlend = 0.25;
+        } else {
+            const blendStep = Math.min(1, (deltaMS || 16.667) / 80);
+            this._leadBlend = Math.min(1, this._leadBlend + blendStep);
+        }
 
-        // 위치만 보간, 나머지(점수/페이즈 등)는 최신 상태 사용
-        baseState.ball.x = s0.ball.x + (s1.ball.x - s0.ball.x) * t;
-        baseState.ball.y = s0.ball.y + (s1.ball.y - s0.ball.y) * t;
-
-        for (let i = 0; i < baseState.slimes.length; i++) {
-            if (s0.slimes[i] && s1.slimes[i]) {
-                baseState.slimes[i].x = s0.slimes[i].x + (s1.slimes[i].x - s0.slimes[i].x) * t;
-                baseState.slimes[i].y = s0.slimes[i].y + (s1.slimes[i].y - s0.slimes[i].y) * t;
+        const rtt = this.network.smoothedRtt || this.network.myPing || 0;
+        if (this.physics.phase === 'playing' && rtt > 0) {
+            const targetLeadMs = Math.min(20, Math.max(0, (rtt * 0.5) - adaptiveDelay * 0.5));
+            const leadMs = targetLeadMs * this._leadBlend;
+            if (leadMs > 0.5) {
+                const leadFrames = leadMs / (1000 / 120);
+                this._leadBall.x = baseState.ball.x;
+                this._leadBall.y = baseState.ball.y;
+                this._leadBall.vx = baseState.ball.vx;
+                this._leadBall.vy = baseState.ball.vy;
+                this.physics.stepBallOnly(this._leadBall, Math.floor(leadFrames), leadFrames - Math.floor(leadFrames));
+                baseState.ball.x = this._leadBall.x;
+                baseState.ball.y = this._leadBall.y;
             }
         }
 
         return baseState;
     }
 
+    _pushPendingInput(seq, input) {
+        let entry;
+        if (this._pendingInputs.length >= 120) {
+            entry = this._pendingInputs.shift();
+        } else if (this._pendingInputPool.length > 0) {
+            entry = this._pendingInputPool.pop();
+        } else {
+            entry = { seq: 0, time: 0, left: false, right: false, jump: false };
+        }
+        entry.seq = seq;
+        entry.time = performance.now();
+        entry.left = !!input.left;
+        entry.right = !!input.right;
+        entry.jump = !!input.jump;
+        this._pendingInputs.push(entry);
+    }
+
+    _clearPendingInputs() {
+        while (this._pendingInputs.length > 0) {
+            this._pendingInputPool.push(this._pendingInputs.pop());
+        }
+    }
+
+    _reconcileMySlime(msg, oldVisualX, oldVisualY) {
+        const mySlime = this.physics.slimes.find(s => s.id === this.mySlimeId);
+        if (!mySlime) return;
+
+        if (this.physics.phase !== 'playing') {
+            this._clearPendingInputs();
+            this._predAccumulator = 0;
+            this._predPrev.x = mySlime.x;
+            this._predPrev.y = mySlime.y;
+            this._predVisualOffsetX = 0;
+            this._predVisualOffsetY = 0;
+            return;
+        }
+
+        const ackSeq = (msg.ack && Number.isSafeInteger(msg.ack[this.mySlimeId]))
+            ? msg.ack[this.mySlimeId]
+            : null;
+
+        if (ackSeq === null) {
+            return;
+        }
+
+        const rtt = this.network.smoothedRtt || this.network.myPing || 0;
+        const ackCutoffTime = rtt > 0 ? performance.now() - Math.min(160, rtt) : Infinity;
+        while (this._pendingInputs.length > 0) {
+            const head = this._pendingInputs[0];
+            if (head.seq < ackSeq || (head.seq === ackSeq && head.time <= ackCutoffTime)) {
+                this._pendingInputPool.push(this._pendingInputs.shift());
+            } else {
+                break;
+            }
+        }
+
+        for (let i = 0; i < this._pendingInputs.length; i++) {
+            const p = this._pendingInputs[i];
+            mySlime.input.left = p.left;
+            mySlime.input.right = p.right;
+            mySlime.input.jump = p.jump;
+            this.physics.updateSlime(mySlime);
+            this.physics.clampSlimeX(mySlime);
+        }
+
+        if (oldVisualX !== undefined && oldVisualY !== undefined) {
+            const dx = oldVisualX - mySlime.x;
+            const dy = oldVisualY - mySlime.y;
+            const err = Math.hypot(dx, dy);
+            if (err > 40 || err < 1.0) {
+                this._predVisualOffsetX = 0;
+                this._predVisualOffsetY = 0;
+            } else {
+                this._predVisualOffsetX = dx;
+                this._predVisualOffsetY = dy;
+            }
+        }
+    }
+
     startGameLoop() {
         this.running = true;
+        this._migrating = false;
         this.physics.phase = 'serving';
         this.physics.freezeTimer = 60;
         this.physicsAccumulator = 0;
@@ -355,7 +544,19 @@ class SlimeVolleyGame {
         this._stateIntervalMs = 1000 / 60;
         this._stateJitterMs = 0;
 
-        // 렌더 보간용 이전 물리 상태
+        // Reset prediction state
+        this._clearPendingInputs();
+        this._latestSentInputSeq = 0;
+        this._predAccumulator = 0;
+        const mySlimeInit = this.physics.slimes.find(s => s.id === this.mySlimeId);
+        this._predPrev = mySlimeInit ? { x: mySlimeInit.x, y: mySlimeInit.y } : { x: 0, y: 0 };
+        this._predVisualOffsetX = 0;
+        this._predVisualOffsetY = 0;
+        this._lastLocalHitAt = 0;
+        this._lastBallHitSig = -1;
+        this._leadBlend = 0;
+        this._flushStateSoon = false;
+
         this._interpPrev = null;
 
         if (this.gameLoop) {
@@ -368,19 +569,78 @@ class SlimeVolleyGame {
 
         this.gameLoop = (ticker) => {
             if (!this.running) return;
-
-            // 호스트 마이그레이션 대응: 매 틱마다 동적 평가
-            // (closure에 캡처하면 becomeHost 후에도 비호스트 모드로 남는 버그)
-            const isNonHost = this.mode === 'multiplayer' && !this.network.isHost;
-
-            if (isNonHost) {
-                // 비호스트: 물리 안 돌림. 입력 전송 + 보간된 상태 렌더링.
-                this.network.sendInput(this.getMyInput());
-                this.renderer.render(this._getInterpolatedState());
+            if (this._migrating) {
+                this.renderer.render(this.physics.getState());
                 return;
             }
 
-            // 호스트 또는 연습모드: 물리 실행
+            const isNonHost = this.mode === 'multiplayer' && !this.network.isHost;
+
+            if (isNonHost) {
+                const myInput = this.getMyInput();
+                const sentSeq = this.network.sendInput(myInput);
+                if (sentSeq) this._latestSentInputSeq = sentSeq;
+
+                const mySlime = this.physics.slimes.find(s => s.id === this.mySlimeId);
+                if (mySlime && this.physics.phase === 'playing') {
+                    this._predAccumulator += Math.min(FIXED_DT * 4, ticker.deltaMS || 16.667);
+                    while (this._predAccumulator >= FIXED_DT) {
+                        this._predPrev.x = mySlime.x;
+                        this._predPrev.y = mySlime.y;
+                        mySlime.input.left = !!myInput.left;
+                        mySlime.input.right = !!myInput.right;
+                        mySlime.input.jump = !!myInput.jump;
+                        this.physics.updateSlime(mySlime);
+                        this.physics.resolveSlimeCollisions();
+                        this._pushPendingInput(this._latestSentInputSeq, myInput);
+                        this._predAccumulator -= FIXED_DT;
+                    }
+                    const decay = Math.pow(0.72, Math.min(2.5, (ticker.deltaMS || 16.667) / 16.667));
+                    this._predVisualOffsetX = Math.abs(this._predVisualOffsetX) < 0.2 ? 0 : this._predVisualOffsetX * decay;
+                    this._predVisualOffsetY = Math.abs(this._predVisualOffsetY) < 0.2 ? 0 : this._predVisualOffsetY * decay;
+                } else if (mySlime) {
+                    this._predAccumulator = 0;
+                    this._predPrev.x = mySlime.x;
+                    this._predPrev.y = mySlime.y;
+                    this._predVisualOffsetX = 0;
+                    this._predVisualOffsetY = 0;
+                    this._clearPendingInputs();
+                }
+
+                const renderState = this._getInterpolatedState(ticker.deltaMS);
+                if (mySlime) {
+                    const rsMy = renderState.slimes.find(s => s.id === this.mySlimeId);
+                    if (rsMy) {
+                        const alpha = this._predAccumulator / FIXED_DT;
+                        const interpX = this._predPrev.x + (mySlime.x - this._predPrev.x) * alpha;
+                        const interpY = this._predPrev.y + (mySlime.y - this._predPrev.y) * alpha;
+                        rsMy.x = interpX + this._predVisualOffsetX;
+                        rsMy.y = Math.min(CONFIG.GROUND_Y, interpY + this._predVisualOffsetY);
+                        rsMy.onGround = mySlime.onGround;
+                    }
+
+                    // Immediate local hit feedback (deduped against host gameEvent)
+                    if (this.physics.phase === 'playing') {
+                        const collision = this.physics.getBallSlimeCollision(mySlime, renderState.ball);
+                        const nowMs = performance.now();
+                        if (collision && nowMs - this._lastLocalHitAt > 200) {
+                            this._lastLocalHitAt = nowMs;
+                            this.sound.playHit(0.7);
+                            this.renderer.triggerSlimeBounce(this.mySlimeId, -0.18);
+                            this.renderer.spawnHitParticles(
+                                renderState.ball.x,
+                                renderState.ball.y,
+                                CONFIG.TEAM_COLORS[this.myTeam][0]
+                            );
+                        }
+                    }
+                }
+
+                this.renderer.render(renderState);
+                return;
+            }
+
+            // 호스트 또는 연습모드: 120Hz 물리 실행
             this.physicsAccumulator += ticker.deltaMS;
             if (this.physicsAccumulator > FIXED_DT * 4) {
                 this.physicsAccumulator = FIXED_DT * 4;
@@ -403,7 +663,6 @@ class SlimeVolleyGame {
         this.renderer.app.ticker.add(this.gameLoop);
     }
 
-    // 렌더 보간: 마지막 물리 스텝 이전 상태 저장 (GC 최소화)
     _saveInterpState() {
         if (!this._interpPrev) {
             this._interpPrev = {
@@ -422,7 +681,6 @@ class SlimeVolleyGame {
         }
     }
 
-    // 렌더 보간 적용: prev 와 current 사이를 alpha 비율로 보간
     _applyInterpolation(state, alpha) {
         const prev = this._interpPrev;
         if (!prev) return;
@@ -435,19 +693,16 @@ class SlimeVolleyGame {
         }
     }
 
-    // 호스트 로컬 입력은 인위적인 네트워크 지연 없이 즉시 적용한다.
     _getDelayedHostInput() {
         return this.getMyInput();
     }
 
     update() {
-        // 호스트만 물리 실행 (비호스트는 gameLoop에서 return됨)
         const mySlime = this.physics.slimes.find(s => s.id === this.mySlimeId);
         if (mySlime && !mySlime.isBot) {
             mySlime.input = this._getDelayedHostInput();
         }
 
-        // 멀티플레이어: 원격 플레이어 입력 적용 (서버에서 브로드캐스트 받은 것)
         if (this.mode === 'multiplayer' && this._remotePlayerInputs) {
             for (const slime of this.physics.slimes) {
                 if (slime.id !== this.mySlimeId && !slime.isBot) {
@@ -473,16 +728,34 @@ class SlimeVolleyGame {
         const result = this.physics.update();
         this.handlePhysicsResult(result);
 
-        // 호스트: 게임 상태를 클라이언트에 전송 (60fps — 120fps 물리 중 매 2틱)
+        // 호스트: 게임 상태를 클라이언트에 전송 (60fps + 입력 변화/임팩트 즉시 플러시)
         if (this.mode === 'multiplayer' && this.network.isHost) {
             if (!this._netSendCounter) this._netSendCounter = 0;
             this._netSendCounter++;
+            if (this._flushStateSoon || (result && result.type && result.type !== 'jump')) {
+                this._netSendCounter = 2;
+                this._flushStateSoon = false;
+            }
             if (this._netSendCounter >= 2) {
                 this._netSendCounter = 0;
-                this.network.sendGameState(this.physics.getState());
+                let ackMap = null;
+                if (this._remoteInputSeqs && this._remoteInputSeqs.size > 0) {
+                    ackMap = this._ackScratch;
+                    for (const key in ackMap) delete ackMap[key];
+                    for (const [slotIdx, seqVal] of this._remoteInputSeqs) {
+                        ackMap[slotIdx] = seqVal;
+                    }
+                }
+                this.network.sendGameState(this.physics.getState(), ackMap);
             }
 
             if (result) {
+                if (result.wallBounce) {
+                    this.network.sendGameEvent({ event: 'wallBounce' });
+                }
+                if (result.netBounce) {
+                    this.network.sendGameEvent({ event: 'netBounce' });
+                }
                 if (result.type === 'hit') {
                     const intensity = Math.sqrt(
                         this.physics.ball.vx ** 2 + this.physics.ball.vy ** 2
@@ -516,6 +789,7 @@ class SlimeVolleyGame {
                         setScores: result.setScores,
                         mvp: result.mvp,
                     });
+                    this.network.endGame();
                 }
             }
         }
@@ -524,18 +798,27 @@ class SlimeVolleyGame {
     handlePhysicsResult(result) {
         if (!result) return;
 
-        // 점프 사운드 (어떤 이벤트에든 포함될 수 있음)
         if (result.jumped && result.jumped.length > 0) {
             this.sound.playJump();
         }
+        if (result.wallBounce) {
+            this.sound.playWallBounce();
+        }
+        if (result.netBounce) {
+            this.sound.playNetBounce();
+        }
+        if (result.floorBounce) {
+            this.sound.playFloorBounce();
+        }
 
-        if (result.type === 'jump') return; // 점프만 있는 경우 여기서 종료
+        if (result.type === 'jump' || result.type === 'bounce') return;
 
         if (result.type === 'hit') {
             const intensity = Math.sqrt(
                 this.physics.ball.vx ** 2 + this.physics.ball.vy ** 2
             ) / CONFIG.BALL_MAX_SPEED;
             this.sound.playHit(intensity);
+            this.renderer.triggerSlimeBounce(result.slime.id, -0.18);
             this.renderer.spawnHitParticles(
                 this.physics.ball.x, this.physics.ball.y,
                 CONFIG.TEAM_COLORS[result.slime.team][0]
@@ -555,7 +838,11 @@ class SlimeVolleyGame {
             this.sound.playScore(result.setWinner);
             this.renderer.shake(10);
             this.renderer.showMessage(
-                `Set ${result.setNumber}! (${result.setsWon[0]}-${result.setsWon[1]})`,
+                svtf('game.setScoreBanner', `Set ${result.setNumber}! (${result.setsWon[0]}-${result.setsWon[1]})`, {
+                    n: result.setNumber,
+                    a: result.setsWon[0],
+                    b: result.setsWon[1],
+                }),
                 1800
             );
         } else if (result.type === 'gameOver') {
@@ -580,13 +867,23 @@ class SlimeVolleyGame {
             const botTeamSize = parseInt(document.getElementById('practice-bot-team').value);
             const difficulty = document.getElementById('practice-difficulty').value;
             this.startPractice(myTeamSize, botTeamSize, difficulty);
+        } else if (this.mode === 'multiplayer') {
+            this.backToLobby({ keepConnection: true });
+            if (this.network.connected) {
+                this.lobby.setHost(this.network.isHost);
+                this.lobby.showScreen('room-screen');
+            } else {
+                this.lobby.showMultiplayerLobby();
+            }
         }
     }
 
-    backToLobby() {
+    backToLobby(opts) {
         this.resetInput();
         this.running = false;
-        if (this.gameLoop && this.renderer.app) {
+        this._migrating = false;
+        this._hideMigrationOverlay();
+        if (this.gameLoop && this.renderer && this.renderer.app) {
             this.renderer.app.ticker.remove(this.gameLoop);
             this.gameLoop = null;
         }
@@ -599,16 +896,22 @@ class SlimeVolleyGame {
             this.gameOverTimer = null;
         }
         this.sound.stopAll();
-        if (this.renderer.initialized) {
+        if (this.renderer && this.renderer.initialized) {
+            this.renderer.setNetworkPing(0);
             this.renderer.clearMessages();
             this.renderer.clearSlimes();
             this.renderer.clearBall();
         }
+        if (this.mode === 'multiplayer' && !(opts && opts.keepConnection)) {
+            if (this.network.connected || this.network.roomId) {
+                this.network.leaveRoom();
+                this.network.disconnect();
+            }
+        }
     }
 
     destroy() {
-        this.backToLobby();
-        // Remove window-level input listeners
+        this.backToLobby({ keepConnection: true });
         if (this._onKeyDown) {
             window.removeEventListener('keydown', this._onKeyDown);
         }
@@ -659,43 +962,42 @@ class SlimeVolleyGame {
     // === Multiplayer ===
     async becomeHost() {
         this.network.isHost = true;
+        this._migrating = true;
 
-        // 모든 봇 슬라임에 대해 BotAI 생성
         for (const slime of this.physics.slimes) {
             if (slime.isBot && !this.botMap.has(slime.id)) {
-                this.botMap.set(slime.id, new BotAI('normal'));
+                this.botMap.set(slime.id, new BotAI('normal', (this._gameSeed || 12345) + slime.id));
             }
         }
 
-        // 호스트 전환 시 시뮬레이션 상태 초기화
-        // (비호스트 시절 받아둔 마지막 gameState가 이미 physics에 적용되어 있음)
         this.physicsAccumulator = 0;
         this._netSendCounter = 0;
         this._interpPrev = null;
-        this._stateBuffer = []; // 비호스트용 보간 버퍼는 더 이상 불필요
+        this._stateBuffer = [];
+        this._clearPendingInputs();
+        this._predVisualOffsetX = 0;
+        this._predVisualOffsetY = 0;
         this._remotePlayerInputs = new Map();
         this._remoteInputSeqs = new Map();
 
-        // 봇이 된 옛 호스트의 입력은 비우고 봇 AI가 채우도록
         for (const slime of this.physics.slimes) {
             if (slime.isBot) {
                 slime.input = { left: false, right: false, jump: false };
             }
         }
 
-        // 마이그레이션 로딩 오버레이 표시
         this._showMigrationOverlay(svt('migration.switching', '새 호스트로 전환 중...'), svt('migration.switchingBody', '게임이 곧 재개됩니다'));
 
-        // P2P 재구성: 클라이언트 → 호스트로 역할 변경
         try {
             await this.network.migrateP2P(this.network.playerId);
-            console.log('[Migration] Successfully became P2P host');
+            this._migrating = false;
             this._hideMigrationOverlay();
             if (this.renderer) {
                 this.renderer.showNotice(svt('migration.youAreHost', '당신이 새 호스트입니다'), 2500);
             }
         } catch (e) {
             console.error('[Migration] Failed to become P2P host:', e);
+            this._migrating = false;
             this._hideMigrationOverlay();
             if (this.renderer) {
                 this.renderer.showNotice(svt('migration.switchFailed', '호스트 전환 실패'), 2500);
@@ -706,7 +1008,6 @@ class SlimeVolleyGame {
     setupNetworkHandlers() {
         this.network.on('roomCreated', async (msg) => {
             this.lobby.showRoomScreen(msg.roomId, msg.players, true, msg.metadata);
-            // 호스트: PeerJS Peer 미리 생성 (로비에서 P2P 핑 표시)
             try {
                 await this.network.initP2P(this.network.playerId);
             } catch (e) {
@@ -716,7 +1017,6 @@ class SlimeVolleyGame {
 
         this.network.on('joined', async (msg) => {
             this.lobby.showRoomScreen(msg.roomId, msg.players, false, msg.metadata);
-            // 비호스트: 호스트에 PeerJS 연결 (로비에서 P2P 핑 표시)
             const hostPlayer = (msg.players || []).find(p => p.isHost);
             const hostPlayerId = hostPlayer ? hostPlayer.id : null;
             if (!hostPlayerId) {
@@ -740,54 +1040,75 @@ class SlimeVolleyGame {
         });
 
         this.network.on('playerLeft', async (msg) => {
-            // 로비 UI 업데이트
             this.lobby.updatePlayerList(msg.players);
 
-            // 게임 중 퇴장 처리
             if (this.running && this.mode === 'multiplayer') {
-                // 나간 유저 이름 찾기 (봇 대체 전에)
                 let leftName = null;
                 if (msg.slotIndex !== undefined) {
                     const slime = this.physics.slimes.find(s => s.id === msg.slotIndex);
-                    if (slime) leftName = slime.nickname;
+                    if (slime) {
+                        leftName = slime.nickname;
+                        if (!slime.isBot) {
+                            slime.isBot = true;
+                            slime.nickname = (slime.nickname || 'Player') + ' (Bot)';
+                            const seed = (this._gameSeed || 12345) + slime.id;
+                            this.botMap.set(slime.id, new BotAI('normal', seed));
+                        }
+                    }
                 }
 
-                // 호스트 이전 처리
                 if (msg.newHostId === this.network.playerId && !this.network.isHost) {
-                    // 내가 새 호스트가 됨
                     await this.becomeHost();
                 } else if (msg.newHostId && !this.network.isHost && msg.newHostId !== this.network.playerId) {
-                    // 나는 비호스트인데 호스트가 바뀜 → 새 호스트로 재연결
-                    this._showMigrationOverlay(svt('migration.title', '호스트 이전 중...'), svt('migration.reconnecting', '새 호스트에 연결하고 있습니다'));
-                    try {
-                        await this.network.migrateP2P(msg.newHostId);
-                        this._hideMigrationOverlay();
-                        if (this.renderer) {
-                            this.renderer.showNotice(svt('migration.connected', '새 호스트에 연결됨'), 1500);
-                        }
-                    } catch (e) {
-                        console.error('[Migration] Failed to migrate to new host:', e);
-                        this._hideMigrationOverlay();
-                        if (this.renderer) {
-                            this.renderer.showNotice(svt('migration.connectFailed', '호스트 연결 실패 — 봇 모드로 진행'), 3000);
+                    const hostStillSame = this.network.peerjs && this.network.peerjs.isPeerConnected(
+                        PeerJSManager.makeHostPeerId(this.network.roomId, msg.newHostId)
+                    );
+                    if (!hostStillSame) {
+                        this._migrating = true;
+                        this._showMigrationOverlay(svt('migration.title', '호스트 이전 중...'), svt('migration.reconnecting', '새 호스트에 연결하고 있습니다'));
+                        try {
+                            await this.network.migrateP2P(msg.newHostId);
+                            this._migrating = false;
+                            this._hideMigrationOverlay();
+                            if (this.renderer) {
+                                this.renderer.showNotice(svt('migration.connected', '새 호스트에 연결됨'), 1500);
+                            }
+                        } catch (e) {
+                            console.error('[Migration] Failed to migrate to new host:', e);
+                            this._migrating = false;
+                            this._hideMigrationOverlay();
+                            if (this.renderer) {
+                                this.renderer.showNotice(svt('migration.connectFailed', '호스트 연결 실패 — 봇 모드로 진행'), 3000);
+                            }
                         }
                     }
                 }
 
-                // 나간 유저의 슬라임을 봇으로 대체 (양쪽 모두)
-                if (msg.slotIndex !== undefined) {
-                    const slime = this.physics.slimes.find(s => s.id === msg.slotIndex);
-                    if (slime && !slime.isBot) {
-                        slime.isBot = true;
-                        slime.nickname = (slime.nickname || 'Player') + ' (Bot)';
-                        const seed = (this._gameSeed || 12345) + slime.id;
-                        this.botMap.set(slime.id, new BotAI('normal', seed));
-                    }
-                }
-
-                // 퇴장 알림 표시
                 if (leftName && this.renderer) {
-                    this.renderer.showNotice(`${leftName} left → Bot`, 2500);
+                    this.renderer.showNotice(
+                        svtf('game.playerLeftBot', `${leftName} left → Bot`, { name: leftName }),
+                        2500
+                    );
+                }
+            } else if (this.lobby && this.lobby.currentScreen === 'room-screen') {
+                // 대기실 호스트 승계 처리
+                if (msg.newHostId === this.network.playerId && !this.network.isHost) {
+                    this.network.isHost = true;
+                    this.lobby.setHost(true);
+                    try {
+                        await this.network.migrateP2P(this.network.playerId);
+                    } catch (e) {
+                        console.warn('[P2P] Lobby host migration failed:', e);
+                    }
+                } else if (msg.newHostId && !this.network.isHost) {
+                    const targetPeer = PeerJSManager.makeHostPeerId(this.network.roomId, msg.newHostId);
+                    if (!this.network.peerjs.isPeerConnected(targetPeer)) {
+                        try {
+                            await this.network.migrateP2P(msg.newHostId);
+                        } catch (e) {
+                            console.warn('[P2P] Lobby reconnect failed:', e);
+                        }
+                    }
                 }
             }
         });
@@ -800,11 +1121,15 @@ class SlimeVolleyGame {
             this.lobby.addChatMessage(msg.name, msg.message);
         });
 
-        // P2P 연결 성공 알림
         this.network.on('p2pReady', () => {
-            console.log('%c[P2P] ✅ Direct connection established!', 'color: #4FC3F7; font-weight: bold');
-            if (this.renderer && this.renderer.initialized) {
-                this.renderer.showNotice('P2P Connected!', 2000);
+            if (this.renderer && this.renderer.initialized && this.running) {
+                this.renderer.showNotice(svt('game.p2pConnected', 'P2P 연결됨'), 1800);
+            }
+        });
+
+        this.network.on('localPing', (ping) => {
+            if (this.renderer && this.renderer.initialized && this.mode === 'multiplayer') {
+                this.renderer.setNetworkPing(ping);
             }
         });
 
@@ -813,8 +1138,9 @@ class SlimeVolleyGame {
         });
 
         this.network.on('kicked', () => {
+            this.backToLobby({ keepConnection: true });
             this.network.disconnect();
-            this.lobby.showError('방장이 내보냈습니다');
+            this.lobby.showError(svt('game.kicked', '방장이 내보냈습니다'));
             this.lobby.showScreen('main-menu');
         });
 
@@ -833,7 +1159,6 @@ class SlimeVolleyGame {
             });
             this.physics.initSlimes(msg.teamSizes);
 
-            // 슬라임에 닉네임 매핑 + 봇 초기화 (양쪽 모두 동일한 시드로)
             const gameSeed = (msg.config && msg.config.gameSeed) || 12345;
             if (msg.players) {
                 for (const p of msg.players) {
@@ -857,6 +1182,7 @@ class SlimeVolleyGame {
                 this.renderer.clearSlimes();
                 this.renderer.clearBall();
             }
+            this.renderer.setNetworkPing(this.network.myPing || 0);
 
             this.lobby.showScreen('game-screen');
 
@@ -864,23 +1190,21 @@ class SlimeVolleyGame {
             this._remotePlayerInputs = new Map();
             this._remoteInputSeqs = new Map();
 
-            // 봇만 있으면 P2P 불필요 → 바로 시작
             const humanPeers = msg.players.filter(p => p.id !== this.network.playerId && !p.isBot);
             if (humanPeers.length === 0) {
                 this.startCountdown();
                 return;
             }
 
-            // P2P는 로비에서 이미 연결됨 — 확인만
             if (this.network.p2pReady) {
                 this.startCountdown();
             } else {
-                // 아직 안됐으면 잠깐 대기
-                this.renderer.showMessage('P2P 연결 중...', 8000);
+                this.renderer.showMessage(svt('game.p2pConnecting', 'P2P 연결 중...'), 8000);
                 try {
-                    // 아직 initP2P 안 됐으면 시도
                     if (!this.network.peerjs.peer) {
-                        await this.network.initP2P();
+                        const hostPlayer = (msg.players || []).find(p => p.isHost);
+                        const hostId = this.network.isHost ? this.network.playerId : (hostPlayer ? hostPlayer.id : null);
+                        await this.network.initP2P(hostId);
                     }
                     await new Promise((resolve, reject) => {
                         if (this.network.p2pReady) { resolve(); return; }
@@ -894,28 +1218,35 @@ class SlimeVolleyGame {
                     this.startCountdown();
                 } catch (e) {
                     console.error('[P2P] Failed:', e);
-                    this.lobby.showError('P2P 연결 실패. 다시 시도해주세요.');
+                    this.lobby.showError(svt('game.p2pFailed', 'P2P 연결 실패. 다시 시도해주세요.'));
                     this.lobby.showScreen('room-screen');
                 }
             }
         });
 
         this.network.on('gameState', (msg) => {
-            // 비호스트: 호스트 상태 적용 + 보간 버퍼에 추가
             if (!this.network.isHost && msg.state) {
+                const mySlime = this.physics.slimes.find(s => s.id === this.mySlimeId);
+                const oldVisualX = mySlime ? mySlime.x + this._predVisualOffsetX : undefined;
+                const oldVisualY = mySlime ? mySlime.y + this._predVisualOffsetY : undefined;
+
                 this.physics.setState(msg.state);
                 this._pushRemoteState(msg.state);
+                this._reconcileMySlime(msg, oldVisualX, oldVisualY);
             }
         });
 
         this.network.on('input', (msg) => {
-            // 호스트: 원격 플레이어 입력 수신
             if (this.network.isHost && msg.input && msg.slotIndex !== undefined) {
                 if (this._remotePlayerInputs) {
                     if (!this._remoteInputSeqs) this._remoteInputSeqs = new Map();
                     const hasSequence = Number.isSafeInteger(msg.seq);
                     const lastSequence = this._remoteInputSeqs.get(msg.slotIndex);
                     if (!hasSequence || lastSequence === undefined || msg.seq > lastSequence) {
+                        const prev = this._remotePlayerInputs.get(msg.slotIndex);
+                        if (!prev || prev.left !== msg.input.left || prev.right !== msg.input.right || prev.jump !== msg.input.jump) {
+                            this._flushStateSoon = true;
+                        }
                         this._remotePlayerInputs.set(msg.slotIndex, msg.input);
                         if (hasSequence) this._remoteInputSeqs.set(msg.slotIndex, msg.seq);
                     }
@@ -924,22 +1255,42 @@ class SlimeVolleyGame {
         });
 
         this.network.on('gameEvent', (msg) => {
-            // 비호스트: 호스트의 이벤트 효과 재생
             if (!this.network.isHost) {
-                if (msg.event === 'hit') {
-                    this.sound.playHit(msg.intensity || 0.5);
-                    this.renderer.spawnHitParticles(msg.x, msg.y, msg.color);
+                if (msg.event === 'wallBounce') {
+                    this.sound.playWallBounce();
+                } else if (msg.event === 'netBounce') {
+                    this.sound.playNetBounce();
+                } else if (msg.event === 'hit') {
+                    const isLocalRecentHit = msg.slimeId === this.mySlimeId &&
+                        (performance.now() - this._lastLocalHitAt) < 220;
+                    if (!isLocalRecentHit) {
+                        this.sound.playHit(msg.intensity || 0.5);
+                        if (msg.slimeId !== undefined) {
+                            this.renderer.triggerSlimeBounce(msg.slimeId, -0.18);
+                        }
+                        this.renderer.spawnHitParticles(msg.x, msg.y, msg.color);
+                    }
                     if (msg.intensity > 0.6) this.renderer.shake(msg.intensity * 6);
                 } else if (msg.event === 'scored') {
+                    this.sound.playFloorBounce();
                     this.sound.playScore(msg.team);
                     this.renderer.spawnScoreParticles(msg.team);
                     this.renderer.shake(8);
                     this.renderer.showMessage(`${msg.scores[0]} - ${msg.scores[1]}`, CONFIG.POINT_FREEZE);
                 } else if (msg.event === 'setWon') {
+                    this.sound.playFloorBounce();
                     this.sound.playScore(msg.setWinner);
                     this.renderer.shake(10);
-                    this.renderer.showMessage(`Set ${msg.setNumber}! (${msg.setsWon[0]}-${msg.setsWon[1]})`, 1800);
+                    this.renderer.showMessage(
+                        svtf('game.setScoreBanner', `Set ${msg.setNumber}! (${msg.setsWon[0]}-${msg.setsWon[1]})`, {
+                            n: msg.setNumber,
+                            a: msg.setsWon[0],
+                            b: msg.setsWon[1],
+                        }),
+                        1800
+                    );
                 } else if (msg.event === 'gameOver') {
+                    this.sound.playFloorBounce();
                     this.running = false;
                     const won = msg.winner === this.myTeam;
                     this.sound.playGameOver(won);
@@ -956,12 +1307,12 @@ class SlimeVolleyGame {
         });
 
         this.network.on('error', () => {
-            this.lobby.showError('Server error');
+            this.lobby.showError(svt('game.serverError', '서버 연결 오류'));
         });
 
         this.network.on('disconnected', () => {
             if (this.running) {
-                this.lobby.showError('Connection lost');
+                this.lobby.showError(svt('game.connectionLost', '연결이 끊겼습니다'));
             }
         });
     }
@@ -971,12 +1322,10 @@ class SlimeVolleyGame {
         this.network.startGame({ gameSeed: Date.now() });
     }
 
-    // === Fullscreen ===
     enterFullscreen() { var __oc0;
         (((__oc0 = window.ArcherImmersive) === null || __oc0 === void 0 ? void 0 : __oc0.autoEnter()));
     }
 
-    // === Sound ===
     toggleSound() {
         this.sound.setMuted(!this.sound.muted);
         this.updateSoundButton();
@@ -1013,7 +1362,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (msg === 'Script error.' && !stack) return 'noise';
         if (/Can't find variable: (gmo|__gCrWeb|ytcfg|__)/.test(msg)) return 'noise';
         if (/ResizeObserver loop/.test(msg)) return 'noise';
-        // External scripts
         if (src && /googletagmanager|google-analytics|gtag\/js|cloudflare|chrome-extension|moz-extension|safari-extension/.test(src)) return 'external';
         if (src && /^undefined:/.test(src) && !(stack || '').match(/\/(assets|js|modules)\//)) return 'external';
         if (/Loading chunk|dynamically imported module/.test(msg)) return 'network';

@@ -4,21 +4,25 @@ class PeerJSManager {
     constructor() {
         this.peer = null;
         this.connections = new Map(); // peerId -> DataConnection
+        this.fastChannels = new Map(); // peerId -> negotiated unreliable RTCDataChannel
         this.onMessage = null;
         this.onPeerConnected = null;
         this.onPeerDisconnected = null;
         this.connected = false;
         this.myPeerId = null;
         this._pingTimers = {};
+        const decoderCtor = typeof globalThis !== 'undefined' ? globalThis['TextDecoder'] : null;
+        this._textDecoder = typeof decoderCtor === 'function' ? Reflect.construct(decoderCtor, []) : null;
     }
 
     static get MAX_REALTIME_BUFFERED_BYTES() {
-        return 64 * 1024;
+        return 4 * 1024;
     }
 
     // TURN 크레덴셜 가져오기 (metered.ca)
     async _fetchIceServers() {
         const fallback = [
+            { urls: 'stun:stun.cloudflare.com:3478' },
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
         ];
@@ -33,7 +37,6 @@ class PeerJSManager {
             );
             if (!res.ok) throw new Error(`TURN API ${res.status}`);
             const servers = await res.json();
-            console.log(`%c[TURN] Got ${servers.length} ICE servers from metered.ca`, 'color: #FFB74D');
             return servers;
         } catch (e) {
             console.warn('[TURN] Failed to fetch credentials, using STUN only:', e);
@@ -52,6 +55,7 @@ class PeerJSManager {
         return new Promise(async (resolve, reject) => {
             const id = PeerJSManager.makeHostPeerId(roomId, hostPlayerId);
             const iceServers = await this._fetchIceServers();
+            const rtcConfig = { iceServers, iceCandidatePoolSize: 4 };
 
             // 이전 peer가 있으면 정리
             if (this.peer) {
@@ -60,7 +64,7 @@ class PeerJSManager {
 
             this.peer = new Peer(id, {
                 debug: 1,
-                config: { iceServers }
+                config: rtcConfig
             });
 
             const timeout = setTimeout(() => {
@@ -70,11 +74,9 @@ class PeerJSManager {
             this.peer.on('open', (peerId) => {
                 clearTimeout(timeout);
                 this.myPeerId = peerId;
-                console.log(`%c[PeerJS] Host ready: ${peerId}`, 'color: #4FC3F7; font-weight: bold');
 
                 // 들어오는 연결 수신
                 this.peer.on('connection', (conn) => {
-                    console.log(`[PeerJS] Incoming connection from: ${conn.peer}`);
                     this._setupConnection(conn);
                 });
 
@@ -87,19 +89,25 @@ class PeerJSManager {
                 // ID 충돌 시 재시도
                 if (err.type === 'unavailable-id') {
                     const retryId = id + '_' + Date.now().toString(36);
-                    console.log(`[PeerJS] ID taken, retrying with: ${retryId}`);
                     this.peer = new Peer(retryId, {
                         debug: 1,
-                        config: { iceServers }
+                        config: rtcConfig
                     });
+                    const retryTimeout = setTimeout(() => {
+                        reject(new Error('PeerJS host open timeout'));
+                    }, 10000);
                     this.peer.on('open', (peerId) => {
+                        clearTimeout(retryTimeout);
                         this.myPeerId = peerId;
                         this.peer.on('connection', (conn) => {
                             this._setupConnection(conn);
                         });
                         resolve(peerId);
                     });
-                    this.peer.on('error', (err2) => reject(err2));
+                    this.peer.on('error', (err2) => {
+                        clearTimeout(retryTimeout);
+                        reject(err2);
+                    });
                 } else {
                     reject(err);
                 }
@@ -120,8 +128,7 @@ class PeerJSManager {
                     err && (err.type === 'peer-unavailable' ||
                             (err.message && err.message.includes('timeout')));
                 if (attempt < maxRetries && retryable) {
-                    const delay = 400 + attempt * 400;
-                    console.log(`[PeerJS] Connect retry ${attempt + 1}/${maxRetries} in ${delay}ms`);
+                    const delay = 200 + attempt * 250;
                     await new Promise(r => setTimeout(r, delay));
                     continue;
                 }
@@ -135,6 +142,7 @@ class PeerJSManager {
         return new Promise(async (resolve, reject) => {
             const hostId = PeerJSManager.makeHostPeerId(roomId, hostPlayerId);
             const iceServers = await this._fetchIceServers();
+            const rtcConfig = { iceServers, iceCandidatePoolSize: 4 };
 
             if (this.peer) {
                 try { this.peer.destroy(); } catch (e) {}
@@ -142,79 +150,154 @@ class PeerJSManager {
 
             this.peer = new Peer(undefined, {
                 debug: 1,
-                config: { iceServers }
+                config: rtcConfig
             });
 
-            let checkOpen = null;
+            let settled = false;
+            let activeConn = null;
+
+            const cleanupFail = (err) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timeout);
+                reject(err);
+            };
 
             const timeout = setTimeout(() => {
-                if (checkOpen) clearInterval(checkOpen);
-                reject(new Error('PeerJS connect timeout'));
+                if (activeConn) {
+                    try { activeConn.close(); } catch (e) {}
+                }
+                cleanupFail(new Error('PeerJS connect timeout'));
             }, 10000);
 
             this.peer.on('open', (myId) => {
+                if (settled) return;
                 this.myPeerId = myId;
-                console.log(`[PeerJS] Client peer open: ${myId}`);
-                console.log(`[PeerJS] Connecting to host: ${hostId}`);
 
                 const conn = this.peer.connect(hostId, {
-                    // Game traffic favors the newest packet. An unordered channel avoids
-                    // head-of-line blocking when an older state packet is delayed.
+                    // PeerJS implements reliable: false as { ordered: false }, avoiding
+                    // head-of-line blocking for unordered events while staying reliable.
                     reliable: false,
                     serialization: 'json',
                 });
+                activeConn = conn;
+
+                const onOpen = () => {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(timeout);
+                    resolve(myId);
+                };
+                if (typeof conn.once === 'function') {
+                    conn.once('open', onOpen);
+                } else {
+                    conn.on('open', onOpen);
+                }
+                conn.on('error', (err) => cleanupFail(err));
+                conn.on('close', () => {
+                    if (!settled) cleanupFail(new Error('PeerJS connection closed before open'));
+                });
 
                 this._setupConnection(conn);
-
-                // 연결 성공 대기
-                checkOpen = setInterval(() => {
-                    if (conn.open) {
-                        clearInterval(checkOpen);
-                        clearTimeout(timeout);
-                        resolve(myId);
-                    }
-                }, 100);
+                if (conn.open) onOpen();
             });
 
             this.peer.on('error', (err) => {
-                clearTimeout(timeout);
                 console.error('[PeerJS] Client error:', err.type, err);
-                reject(err);
+                cleanupFail(err);
             });
         });
     }
 
+    _attachFastChannel(conn) {
+        const peerId = conn.peer;
+        const pc = conn.peerConnection;
+        if (!pc || this.fastChannels.has(peerId) || typeof pc.createDataChannel !== 'function') {
+            return;
+        }
+        try {
+            const dc = pc.createDataChannel('sv_rt', {
+                negotiated: true,
+                id: 100,
+                ordered: false,
+                maxRetransmits: 0,
+            });
+            dc.binaryType = 'arraybuffer';
+            dc.onmessage = (ev) => {
+                try {
+                    const raw = typeof ev.data === 'string'
+                        ? ev.data
+                        : (this._textDecoder ? this._textDecoder.decode(ev.data) : '');
+                    const parsed = JSON.parse(raw);
+                    this._handleIncomingData(peerId, parsed);
+                } catch (e) {}
+            };
+            dc.onclose = () => {
+                if (this.fastChannels.get(peerId) === dc) {
+                    this.fastChannels.delete(peerId);
+                }
+            };
+            dc.onerror = () => {};
+            this.fastChannels.set(peerId, dc);
+        } catch (e) {}
+    }
+
+    _handleIncomingData(peerId, data) {
+        if (!data || typeof data !== 'object') return;
+        if (data._p === 1) {
+            // ping → pong 응답 (실시간 채널 우선 사용)
+            const pong = { _p: 2, _t: data._t };
+            if (!this._sendFastTo(peerId, pong)) {
+                this.sendTo(peerId, pong);
+            }
+            return;
+        }
+        if (data._p === 2) {
+            // pong 수신 → RTT 계산
+            if (this._onPingResult) {
+                this._onPingResult(peerId, performance.now() - data._t);
+            }
+            return;
+        }
+
+        if (this.onMessage) this.onMessage(peerId, data);
+    }
+
+    _sendFastTo(peerId, data) {
+        const dc = this.fastChannels.get(peerId);
+        if (dc && dc.readyState === 'open') {
+            try {
+                dc.send(typeof data === 'string' ? data : JSON.stringify(data));
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+        return false;
+    }
+
     _setupConnection(conn) {
         const peerId = conn.peer;
+        this._attachFastChannel(conn);
 
         conn.on('open', () => {
             this.connections.set(peerId, conn);
+            this._attachFastChannel(conn);
             this.connected = true;
-            console.log(`%c[PeerJS] ✅ Connected to ${peerId}`, 'color: #66BB6A; font-weight: bold');
             if (this.onPeerConnected) this.onPeerConnected(peerId);
         });
 
         conn.on('data', (data) => {
-            // PeerJS가 자동 역직렬화 해줌
-            if (data._p === 1) {
-                // ping → pong 응답
-                this.sendTo(peerId, { _p: 2, _t: data._t });
-                return;
-            }
-            if (data._p === 2) {
-                // pong 수신 → RTT 계산
-                if (this._onPingResult) {
-                    this._onPingResult(peerId, performance.now() - data._t);
-                }
-                return;
-            }
-
-            if (this.onMessage) this.onMessage(peerId, data);
+            this._handleIncomingData(peerId, data);
         });
 
         conn.on('close', () => {
-            console.log(`[PeerJS] Connection closed: ${peerId}`);
             this.connections.delete(peerId);
+            const dc = this.fastChannels.get(peerId);
+            if (dc) {
+                try { dc.close(); } catch (e) {}
+                this.fastChannels.delete(peerId);
+            }
             this._updateConnected();
             if (this.onPeerDisconnected) this.onPeerDisconnected(peerId);
         });
@@ -256,12 +339,31 @@ class PeerJSManager {
         return ok;
     }
 
-    broadcastRealtime(data) {
+    broadcastRealtime(data, forceFallbackOnCongestion = false) {
         if (this.connections.size === 0) return false;
         let ok = true;
+        let encoded = null;
         for (const [peerId, conn] of this.connections) {
+            const dc = this.fastChannels.get(peerId);
+            if (dc && dc.readyState === 'open') {
+                if (dc.bufferedAmount > PeerJSManager.MAX_REALTIME_BUFFERED_BYTES) {
+                    if (!forceFallbackOnCongestion || !conn.open) {
+                        ok = false;
+                        continue;
+                    }
+                } else {
+                    try {
+                        if (encoded === null) encoded = JSON.stringify(data);
+                        dc.send(encoded);
+                        continue;
+                    } catch (e) {
+                        ok = false;
+                    }
+                }
+            }
+
             const bufferedAmount = conn.dataChannel ? conn.dataChannel.bufferedAmount : 0;
-            if (!conn.open || bufferedAmount > PeerJSManager.MAX_REALTIME_BUFFERED_BYTES) {
+            if (!conn.open || (!forceFallbackOnCongestion && bufferedAmount > PeerJSManager.MAX_REALTIME_BUFFERED_BYTES)) {
                 // Do not add obsolete snapshots behind an already congested send queue.
                 ok = false;
                 continue;
@@ -277,12 +379,14 @@ class PeerJSManager {
     }
 
     pingPeer(peerId) {
-        return this.sendTo(peerId, { _p: 1, _t: performance.now() });
+        const pingMsg = { _p: 1, _t: performance.now() };
+        if (this._sendFastTo(peerId, pingMsg)) return true;
+        return this.sendTo(peerId, pingMsg);
     }
 
     isPeerConnected(peerId) {
         const conn = this.connections.get(peerId);
-        return conn && conn.open;
+        return !!(conn && conn.open);
     }
 
     _updateConnected() {
@@ -294,6 +398,10 @@ class PeerJSManager {
             clearTimeout(this._pingTimers[id]);
         }
         this._pingTimers = {};
+        for (const [, dc] of this.fastChannels) {
+            try { dc.close(); } catch (e) {}
+        }
+        this.fastChannels.clear();
         for (const [, conn] of this.connections) {
             try { conn.close(); } catch (e) {}
         }

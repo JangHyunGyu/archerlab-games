@@ -84,7 +84,8 @@
       "entry": "slimevolley/index.html",
       "tests": [
         "node slimevolley/validate.js",
-        "node --test slimevolley/input-lifecycle.test.cjs"
+        "node --test slimevolley/input-lifecycle.test.cjs",
+        "node --test slimevolley/multiplayer-latency.test.cjs"
       ]
     },
     {

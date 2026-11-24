@@ -11,7 +11,7 @@ class SeededRNG {
     }
 }
 
-// Bot AI for Slime Volleyball - Advanced v2
+// Bot AI for Slime Volleyball - Advanced v2 (with multi-bot zone spread)
 class BotAI {
     constructor(difficulty = 'normal', seed = 42) {
         this.difficulty = difficulty;
@@ -42,7 +42,7 @@ class BotAI {
     saveState() {
         return {
             frameCounter: this.frameCounter,
-            cachedInput: { ...this.cachedInput },
+            cachedInput: { left: this.cachedInput.left, right: this.cachedInput.right, jump: this.cachedInput.jump },
             state: this.state,
             jumpCooldown: this.jumpCooldown,
             rngSeed: this.rng.seed,
@@ -52,7 +52,9 @@ class BotAI {
 
     loadState(s) {
         this.frameCounter = s.frameCounter;
-        this.cachedInput = { ...s.cachedInput };
+        this.cachedInput.left = !!s.cachedInput.left;
+        this.cachedInput.right = !!s.cachedInput.right;
+        this.cachedInput.jump = !!s.cachedInput.jump;
         this.state = s.state;
         this.jumpCooldown = s.jumpCooldown;
         this.rng.seed = s.rngSeed;
@@ -73,13 +75,12 @@ class BotAI {
         input.jump = false;
         const team = slime.team;
         const halfW = CONFIG.COURT_WIDTH / 2;
-        const myLeft = team === 0 ? 0 : halfW;
-        const myRight = team === 0 ? halfW : CONFIG.COURT_WIDTH;
+        const myLeft = team === 0 ? CONFIG.SLIME_RADIUS : halfW + CONFIG.NET_WIDTH / 2 + CONFIG.SLIME_RADIUS;
+        const myRight = team === 0 ? halfW - CONFIG.NET_WIDTH / 2 - CONFIG.SLIME_RADIUS : CONFIG.COURT_WIDTH - CONFIG.SLIME_RADIUS;
         const netSide = team === 0
             ? CONFIG.NET_X - CONFIG.NET_WIDTH / 2 - CONFIG.SLIME_RADIUS - 3
             : CONFIG.NET_X + CONFIG.NET_WIDTH / 2 + CONFIG.SLIME_RADIUS + 3;
 
-        // 다단계 공 예측: 착지점 + 궤적 전체
         const prediction = this.predictBallTrajectory(ball, slime);
         const predicted = prediction.landing;
         const intercept = prediction.intercept;
@@ -89,9 +90,51 @@ class BotAI {
         const predictedOnMySide = team === 0 ? predicted.x < halfW + 30 : predicted.x > halfW - 30;
         const ballComingToMe = ballOnMySide || predictedOnMySide;
 
-        // 정확도 지터 (난이도에 따라 줄어듦)
         const jitter = (1 - this.accuracy) * 30;
         const jitterX = (this.rng.next() - 0.5) * jitter;
+
+        // Multi-bot team coordination: only closest bot chases ball; teammates cover evenly spaced zones
+        const teamBots = Array.isArray(allSlimes)
+            ? allSlimes.filter(s => s.team === team && s.isBot)
+            : [slime];
+
+        if (teamBots.length >= 2) {
+            const targetBallX = (intercept && intercept.frames < 120) ? intercept.x : predicted.x;
+            let primaryBot = teamBots[0];
+            let bestDist = Infinity;
+            for (const botSlime of teamBots) {
+                const d = Math.abs(botSlime.x - targetBallX);
+                if (d < bestDist || (d === bestDist && botSlime.id < primaryBot.id)) {
+                    bestDist = d;
+                    primaryBot = botSlime;
+                }
+            }
+
+            if (slime.id !== primaryBot.id) {
+                const slot = teamBots.indexOf(slime);
+                const count = teamBots.length;
+                const zoneWidth = (myRight - myLeft) / count;
+                const zoneX = myLeft + zoneWidth * (slot + 0.5);
+                const localDanger = ballOnMySide && Math.abs(ball.x - slime.x) < CONFIG.SLIME_RADIUS * 2.2;
+                if (!localDanger) {
+                    const diff = zoneX - slime.x;
+                    const threshold = CONFIG.SLIME_RADIUS * 0.25;
+                    if (diff < -threshold) input.left = true;
+                    else if (diff > threshold) input.right = true;
+                    if (slime.onGround && this.jumpCooldown <= 0) {
+                        const dx = ball.x - slime.x;
+                        const dy = ball.y - slime.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < (CONFIG.SLIME_RADIUS + CONFIG.BALL_RADIUS) * 2.0 && ball.y < slime.y && ball.vy > 0) {
+                            input.jump = true;
+                            this.jumpCooldown = 18;
+                        }
+                    }
+                    this.cachedInput = input;
+                    return input;
+                }
+            }
+        }
 
         // 상태 결정
         this.updateState(slime, ball, ballComingToMe, predicted, intercept, team, halfW);
@@ -120,26 +163,18 @@ class BotAI {
         const dx = ball.x - slime.x;
         const dy = ball.y - slime.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const ballHigh = ball.y < CONFIG.GROUND_Y - CONFIG.NET_HEIGHT;
         const hitZone = CONFIG.SLIME_RADIUS + CONFIG.BALL_RADIUS;
 
         if (ballComingToMe) {
-            // 공이 가까이 + 위에 있음 + 공격 가능한 위치 → 공격
             if (dist < hitZone * 4 && ball.y < slime.y && Math.abs(dx) < CONFIG.SLIME_RADIUS * 3) {
                 this.state = 'attack';
             } else if (intercept && intercept.frames < 80) {
-                // 인터셉트 가능한 궤적이면 공격적 접근
                 this.state = 'attack';
             } else {
                 this.state = 'approach';
             }
         } else {
-            // 상대 쪽에 공이 있음
-            if (ballHigh && this.rng.next() < this.aggression * 0.6) {
-                this.state = 'retreat'; // 네트 앞 대기
-            } else {
-                this.state = 'retreat';
-            }
+            this.state = 'retreat';
         }
     }
 
@@ -147,16 +182,11 @@ class BotAI {
         const dx = ball.x - slime.x;
         const dy = ball.y - slime.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const hitZone = CONFIG.SLIME_RADIUS + CONFIG.BALL_RADIUS;
 
-        // 공격 위치: 네트 반대쪽에서 공 아래로 들어가서 네트 쪽으로 쳐올리기
-        // 슬라임 머리 꼭대기에서 공을 치면 거의 수직으로 올라감
-        // 약간 네트 반대쪽에 위치하면 공이 네트 쪽으로 날아감
         const attackOffset = team === 0
-            ? -CONFIG.SLIME_RADIUS * 0.4  // 왼팀: 공 왼쪽에서 → 오른쪽으로 날림
-            : CONFIG.SLIME_RADIUS * 0.4;   // 오른팀: 공 오른쪽에서 → 왼쪽으로 날림
+            ? -CONFIG.SLIME_RADIUS * 0.4
+            : CONFIG.SLIME_RADIUS * 0.4;
 
-        // 인터셉트 포인트가 있으면 그 위치 사용, 없으면 예측 착지점
         let targetX;
         if (intercept && intercept.frames < 60) {
             targetX = intercept.x + attackOffset + jitterX;
@@ -165,39 +195,30 @@ class BotAI {
         }
 
         const diff = targetX - slime.x;
-        const threshold = CONFIG.SLIME_RADIUS * 0.15; // 더 정밀한 위치 조정
+        const threshold = CONFIG.SLIME_RADIUS * 0.15;
 
         if (diff < -threshold) input.left = true;
         else if (diff > threshold) input.right = true;
 
-        // 점프 타이밍 결정: 물리 시뮬레이션 기반
         if (slime.onGround && this.jumpCooldown <= 0) {
             const shouldJump = this.calculateJumpTiming(slime, ball, dist, dx);
-            if (shouldJump) {
-                if (this.rng.next() < this.jumpTiming) {
-                    input.jump = true;
-                    this.jumpCooldown = 18;
-                }
+            if (shouldJump && this.rng.next() < this.jumpTiming) {
+                input.jump = true;
+                this.jumpCooldown = 18;
             }
         }
     }
 
     calculateJumpTiming(slime, ball, dist, dx) {
         const hitZone = CONFIG.SLIME_RADIUS + CONFIG.BALL_RADIUS;
-        const jumpSpeed = CONFIG.SLIME_JUMP_SPEED; // negative (upward)
+        const jumpSpeed = CONFIG.SLIME_JUMP_SPEED;
         const gravity = CONFIG.GRAVITY;
         const ballGravity = CONFIG.BALL_GRAVITY;
-
-        // 점프 정점까지의 프레임 수
         const framesToApex = Math.abs(jumpSpeed) / gravity;
 
-        // 점프 정점에서의 슬라임 Y 위치
-        const slimeApexY = CONFIG.GROUND_Y + jumpSpeed * framesToApex + 0.5 * gravity * framesToApex * framesToApex;
-
-        // 다양한 시간에서 공-슬라임 거리 체크 (점프 전체 궤적)
         for (let t = 5; t < framesToApex * 2.5; t += 3) {
             const slimeY = CONFIG.GROUND_Y + jumpSpeed * t + 0.5 * gravity * t * t;
-            if (slimeY > CONFIG.GROUND_Y) break; // 착지했으면 중단
+            if (slimeY > CONFIG.GROUND_Y) break;
 
             const ballFutureX = ball.x + ball.vx * t;
             const ballFutureY = ball.y + ball.vy * t + 0.5 * ballGravity * t * t;
@@ -206,18 +227,15 @@ class BotAI {
             const fdy = ballFutureY - slimeY;
             const fdist = Math.sqrt(fdx * fdx + fdy * fdy);
 
-            // 공이 슬라임 히트존에 들어오는 타이밍
             if (fdist < hitZone * 1.3 && fdy < 0) {
                 return true;
             }
         }
 
-        // 긴급: 공이 빠르게 내려오고 바로 위에 있음
         if (ball.vy > 0.5 && dist < hitZone * 2.2 && ball.y < slime.y && Math.abs(dx) < CONFIG.SLIME_RADIUS * 2) {
             return true;
         }
 
-        // 공이 낮게 오고 있으면 점프해서 받기
         if (ball.y > CONFIG.GROUND_Y - CONFIG.SLIME_RADIUS * 3 &&
             dist < hitZone * 2.5 && ball.y < slime.y) {
             return true;
@@ -227,7 +245,6 @@ class BotAI {
     }
 
     doApproach(input, slime, ball, predicted, intercept, team, jitterX) {
-        // 인터셉트 가능 지점으로 이동
         let targetX;
         if (intercept && intercept.frames < 120) {
             targetX = intercept.x + jitterX;
@@ -247,28 +264,24 @@ class BotAI {
 
         if (slime.onGround && this.jumpCooldown <= 0) {
             const shouldJump = this.calculateJumpTiming(slime, ball, dist, dx);
-            if (shouldJump) {
-                if (this.rng.next() < this.jumpTiming) {
-                    input.jump = true;
-                    this.jumpCooldown = 18;
-                }
+            if (shouldJump && this.rng.next() < this.jumpTiming) {
+                input.jump = true;
+                this.jumpCooldown = 18;
             }
         }
     }
 
     doDefend(input, slime, ball, predicted, intercept, team, halfW, myLeft, myRight, jitterX) {
-        // 수비: 예측 착지점 바로 아래로 이동 (정밀도에 따라 중앙과 보간)
         const centerX = (myLeft + myRight) / 2;
         const defenseX = predicted.x * this.positionPrecision + centerX * (1 - this.positionPrecision) + jitterX;
 
-        const clampedX = Math.max(myLeft + CONFIG.SLIME_RADIUS, Math.min(myRight - CONFIG.SLIME_RADIUS, defenseX));
+        const clampedX = Math.max(myLeft, Math.min(myRight, defenseX));
         const diff = clampedX - slime.x;
         const threshold = CONFIG.SLIME_RADIUS * 0.25;
 
         if (diff < -threshold) input.left = true;
         else if (diff > threshold) input.right = true;
 
-        // 공이 내려오고 있으면 점프 준비
         const dx = ball.x - slime.x;
         const dy = ball.y - slime.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -283,12 +296,10 @@ class BotAI {
     }
 
     doRetreat(input, slime, ball, team, myLeft, myRight) {
-        // 네트 앞 수비 위치로 이동 (상대 공격 대비)
         const netX = team === 0
             ? CONFIG.NET_X - CONFIG.NET_WIDTH / 2 - CONFIG.SLIME_RADIUS * 2.5
             : CONFIG.NET_X + CONFIG.NET_WIDTH / 2 + CONFIG.SLIME_RADIUS * 2.5;
 
-        // 더 공격적인 봇은 네트에 더 가까이
         const retreatX = team === 0
             ? myLeft + (netX - myLeft) * (0.5 + this.aggression * 0.4)
             : netX + (myRight - netX) * (0.5 - this.aggression * 0.4);
@@ -299,7 +310,6 @@ class BotAI {
         if (diff < -threshold) input.left = true;
         else if (diff > threshold) input.right = true;
 
-        // 후퇴 중에도 공이 갑자기 오면 반응
         const dx = ball.x - slime.x;
         const dy = ball.y - slime.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -313,7 +323,6 @@ class BotAI {
         }
     }
 
-    // 공 궤적 전체 예측: 착지점 + 슬라임이 인터셉트 가능한 지점
     predictBallTrajectory(ball, slime) {
         let x = ball.x;
         let y = ball.y;
@@ -335,12 +344,10 @@ class BotAI {
             x += vx;
             y += vy;
 
-            // 벽 반사
             if (x < br) { x = br; vx = -vx * CONFIG.BALL_BOUNCE_DAMPING; }
             if (x > CONFIG.COURT_WIDTH - br) { x = CONFIG.COURT_WIDTH - br; vx = -vx * CONFIG.BALL_BOUNCE_DAMPING; }
             if (y < br) { y = br; vy = -vy * CONFIG.BALL_BOUNCE_DAMPING; }
 
-            // 네트 충돌
             if (x + br > topLeft && x - br < topRight) {
                 if (y + br > netTop && y - br < netTop && vy > 0) {
                     y = netTop - br;
@@ -359,7 +366,6 @@ class BotAI {
                 }
             }
 
-            // 네트 상단 바운스
             if (x + br > netLeft - 4 && x - br < netRight + 4) {
                 if (y + br > netTop && y - br < netTop && vy > 0) {
                     y = netTop - br;
@@ -367,7 +373,6 @@ class BotAI {
                 }
             }
 
-            // 네트 상단 모서리 반사
             const corners = [
                 { x: topLeft, y: netTop },
                 { x: topRight, y: netTop },
@@ -389,11 +394,9 @@ class BotAI {
                 }
             }
 
-            // 인터셉트 가능 지점 계산 (내 쪽에 있고, 슬라임이 도달 가능한 높이)
             if (!intercept) {
                 const onMySide = slime.team === 0 ? x < CONFIG.COURT_WIDTH / 2 : x > CONFIG.COURT_WIDTH / 2;
                 if (onMySide && y > CONFIG.GROUND_Y - CONFIG.NET_HEIGHT * 1.5) {
-                    // 슬라임이 이 프레임까지 수평으로 도달 가능한지
                     const slimeReachX = Math.abs(x - slime.x);
                     const maxTravel = CONFIG.SLIME_SPEED * i;
                     if (slimeReachX < maxTravel + CONFIG.SLIME_RADIUS) {
@@ -402,7 +405,6 @@ class BotAI {
                 }
             }
 
-            // 바닥 도달
             if (y >= CONFIG.GROUND_Y - br) {
                 landing = { x, y: CONFIG.GROUND_Y - br, frames: i };
                 break;
