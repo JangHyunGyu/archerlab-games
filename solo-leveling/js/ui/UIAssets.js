@@ -239,32 +239,76 @@ export class UIAssets {
     }
 
     static createPanel(scene, x, y, w, h, opts = {}) {
-        if (scene.textures.exists('ui_skin_panel') && !opts.preferAsset) {
-            const image = scene.add.image(x, y, this.ensureSkinPanel(scene, w, h, opts.variant))
-                .setOrigin(0, 0).setDisplaySize(w, h);
-            if (opts.depth !== undefined) image.setDepth(opts.depth);
-            if (opts.scrollFactor !== undefined) image.setScrollFactor(opts.scrollFactor);
-            image.setUIState = state => {
-                image.setTint(state === 'hover' ? 0xffffff : 0xe4dfef);
-                return image;
+        const variant = opts.variant || 'panel';
+        let normalized = { ...opts };
+        if (variant === 'hud' || variant === 'slot' || variant === 'minimap') {
+            normalized = {
+                cut: 4,
+                fill: 0x0b0a16,
+                fillAlpha: 0.58,
+                border: 0x9b8ac4,
+                borderAlpha: 0.28,
+                borderWidth: 1,
+                ...normalized,
+                accent: 0,
+                glow: 0,
+                innerBorder: false,
+                ornament: false,
+                surfaceLines: false,
+                highlight: false,
             };
-            return image.setUIState('normal');
-        }
-        if (opts.variant === 'hud') {
-            opts = { ...opts, surfaceLines: false, ornament: false, innerBorder: false,
-                fill: 0x11101e, fillAlpha: 0.95, border: 0x77658e, borderAlpha: 0.55, glow: 0 };
+        } else if (variant === 'button') {
+            normalized = {
+                cut: 5,
+                fill: 0x121022,
+                fillAlpha: 0.68,
+                border: 0x9b8ac4,
+                borderAlpha: 0.36,
+                borderWidth: 1,
+                hover: {
+                    fill: 0x201a3a,
+                    fillAlpha: 0.88,
+                    border: 0xc8b5f8,
+                    borderAlpha: 0.78,
+                    borderWidth: 1,
+                    glow: 0,
+                },
+                ...normalized,
+                accent: 0,
+                glow: 0,
+                innerBorder: false,
+                ornament: false,
+                surfaceLines: false,
+                highlight: false,
+            };
+        } else {
+            normalized = {
+                cut: 6,
+                fill: 0x0d0b1a,
+                fillAlpha: 0.88,
+                border: 0x8f7bc4,
+                borderAlpha: 0.4,
+                borderWidth: 1,
+                ...normalized,
+                accent: 0,
+                glow: 0,
+                innerBorder: false,
+                ornament: false,
+                surfaceLines: false,
+                highlight: false,
+            };
         }
         // Most bundled panels were authored at one ratio and looked soft or distorted when
         // stretched. Runtime chrome is the default; fixed-ratio artwork opts in explicitly.
-        const normalAsset = opts.preferAsset ? this.resolveAsset(scene, opts.asset) : null;
-        const hoverAsset = opts.preferAsset ? this.resolveAsset(scene, opts.hoverAsset) : null;
-        const normal = normalAsset || this.ensurePanel(scene, w, h, opts);
+        const normalAsset = normalized.preferAsset ? this.resolveAsset(scene, normalized.asset) : null;
+        const hoverAsset = normalized.preferAsset ? this.resolveAsset(scene, normalized.hoverAsset) : null;
+        const normal = normalAsset || this.ensurePanel(scene, w, h, normalized);
         const hover = hoverAsset
-            || (opts.hover ? this.ensurePanel(scene, w, h, { ...opts, ...opts.hover }) : normal);
+            || (normalized.hover ? this.ensurePanel(scene, w, h, { ...normalized, ...normalized.hover }) : normal);
         const image = scene.add.image(x, y, normal).setOrigin(0, 0);
         image.setDisplaySize(w, h);
-        if (opts.depth !== undefined) image.setDepth(opts.depth);
-        if (opts.scrollFactor !== undefined) image.setScrollFactor(opts.scrollFactor);
+        if (normalized.depth !== undefined) image.setDepth(normalized.depth);
+        if (normalized.scrollFactor !== undefined) image.setScrollFactor(normalized.scrollFactor);
         image.setUIState = (state) => {
             image.setTexture(state === 'hover' ? hover : normal).setDisplaySize(w, h);
             return image;

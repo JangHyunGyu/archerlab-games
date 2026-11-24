@@ -1,13 +1,51 @@
-/* Keep the HTML controls aligned with the game's physical-pixel UI. */
-.archerlab-link { left: max(18px,env(safe-area-inset-left)); top: max(12px,env(safe-area-inset-top)); transform: none; min-height: 44px; display: inline-flex; align-items: center; padding: 10px 16px; border-color: #9c8fb340; color: #d1c6e4; background: #131020c9; font-size: 11px; letter-spacing: .06em; opacity: 1; border-radius: 6px; box-shadow: none; }
-.shadow-name-input { font-size: 16px; }
-body { height: 100dvh; }
-.shadow-name-entry { border: 8px solid transparent; border-image: url('assets/ui/skin-panel-v1.webp') 230 fill / 8px stretch; background: none !important; clip-path: none; filter: none !important; }
-#game-container canvas { margin: 0 !important; }
-.shadow-name-entry { --entry-accent: #b39bcf; background: linear-gradient(110deg, #71617e, #cbb590, #71617e); filter: drop-shadow(0 12px 28px #0007); }
-.shadow-name-input { background: #12101e; color: #eee6f5; }
-.archerlab-link:focus-visible { outline: 2px solid #e0c997; outline-offset: 3px; }
-@media (max-width: 768px),(max-height:500px) { .archerlab-link { left: max(14px,env(safe-area-inset-left)); top: max(10px,env(safe-area-inset-top)); transform: none; padding: 10px 14px; min-height: 44px; font-size: 11px; opacity: 1; } .shadow-name-input { font-size: 16px; } }
+/* Keep the HTML controls clean, minimal, and aligned with the physical-pixel UI. */
+.archerlab-link,
+.archerlab-link:hover {
+    left: max(18px, env(safe-area-inset-left));
+    top: max(12px, env(safe-area-inset-top));
+    transform: none;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 14px;
+    background: rgba(14, 12, 26, 0.58);
+    border: 1px solid rgba(182, 168, 224, 0.28);
+    border-radius: 8px;
+    color: #dcd2f2;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    opacity: 1;
+    box-shadow: none;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+.archerlab-link:hover {
+    background: rgba(28, 24, 52, 0.84);
+    border-color: rgba(204, 188, 248, 0.65);
+    color: #ffffff;
+}
+.archerlab-link:focus-visible { outline: 2px solid #c8b5f8; outline-offset: 3px; }
 
-.archerlab-link,.archerlab-link:hover { background: none; border: 12px solid transparent; border-image: url('assets/ui/crafted-frame-v1.webp') 290 fill / 12px / 0 stretch; border-radius: 0; padding: 3px 10px; color: #efe3ff; backdrop-filter: none; -webkit-backdrop-filter: none; }
-@media (max-width: 768px),(max-height:500px) { .archerlab-link { padding: 3px 10px; } }
+body { height: 100dvh; }
+#game-container canvas { margin: 0 !important; }
+.shadow-name-entry {
+    --entry-accent: #b39bcf;
+    background: rgba(13, 11, 26, 0.92);
+    border: 1px solid rgba(182, 168, 224, 0.36);
+    border-radius: 10px;
+    clip-path: none;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+.shadow-name-input { background: #12101e; color: #eee6f5; font-size: 16px; }
+
+@media (max-width: 768px), (max-height: 500px) {
+    .archerlab-link,
+    .archerlab-link:hover {
+        left: max(14px, env(safe-area-inset-left));
+        top: max(10px, env(safe-area-inset-top));
+        padding: 8px 12px;
+        min-height: 44px;
+        font-size: 11px;
+    }
+    .shadow-name-input { font-size: 16px; }
+}

@@ -105,17 +105,18 @@ export class SystemMessage {
         const safeX = Math.max(14, Math.min(uv(20), GAME_WIDTH * 0.045));
         const safeTop = Math.max(14, Math.min(uv(24), GAME_HEIGHT * 0.04));
         const safeBottom = Math.max(14, Math.min(uv(20), GAME_HEIGHT * 0.04));
-        const boxW = Math.max(1, Math.min(uv(430), GAME_WIDTH - safeX * 2));
+        const boxW = Math.max(1, Math.min(uv(320), GAME_WIDTH - safeX * 2));
         const maxBoxH = Math.max(1, GAME_HEIGHT - safeTop - safeBottom);
-        let lineH = uv(28);
-        const fixedH = uv(58);
-        if (fixedH + lineCount * lineH > maxBoxH) {
-            lineH = Math.max(18, Math.floor((maxBoxH - fixedH) / lineCount));
+        let lineH = uv(19);
+        const headerH = uv(22);
+        const padBottom = uv(10);
+        if (headerH + lineCount * lineH + padBottom > maxBoxH) {
+            lineH = Math.max(14, Math.floor((maxBoxH - headerH - padBottom) / lineCount));
         }
-        const boxH = Math.min(maxBoxH, fixedH + lineCount * lineH);
-        const preferredTop = this.placement === 'bottom' ? GAME_HEIGHT - safeBottom - boxH : portrait
-            ? Math.min(uv(156), GAME_HEIGHT * 0.2)
-            : Math.min(uv(72), GAME_HEIGHT * 0.13);
+        const boxH = Math.min(maxBoxH, headerH + lineCount * lineH + padBottom);
+        const preferredTop = this.placement === 'bottom'
+            ? GAME_HEIGHT - safeBottom - boxH
+            : (portrait ? uv(64) : uv(50));
         const boxTop = Math.max(safeTop, Math.min(preferredTop, GAME_HEIGHT - safeBottom - boxH));
         const boxLeft = cx - boxW / 2;
         const startY = boxTop + boxH / 2;
@@ -130,78 +131,56 @@ export class SystemMessage {
             boxW,
             boxH,
             {
-                asset: colors.asset,
-                cut: uv(8),
+                cut: uv(6),
                 fill: colors.bg,
-                fillAlpha: 0.86,
+                fillAlpha: 0.84,
                 border: colors.border,
-                borderAlpha: 0.9,
+                borderAlpha: 0.52,
                 borderWidth: 1,
-                accent: colors.border,
-                glow: 6,
-                variant: 'panel',
+                variant: 'hud',
                 depth: 201,
                 scrollFactor: 0,
             }
         ).setAlpha(0);
         elements.push(bg);
 
-        // Severity rail and corner markers make the message type readable at a glance.
-        const rail = this.scene.add.rectangle(boxLeft + uv(5), startY, Math.max(2, uv(3)), boxH - uv(18), colors.border, 0.88)
+        // Clean slim left severity accent bar
+        const rail = this.scene.add.rectangle(boxLeft + uv(4), startY, Math.max(2, uv(3)), boxH - uv(12), colors.border, 0.9)
             .setDepth(202).setScrollFactor(0).setAlpha(0);
-        const diamondL = this.scene.add.rectangle(boxLeft + uv(12), boxTop + uv(4), 6, 6, colors.border, 0.9)
-            .setDepth(202).setScrollFactor(0).setRotation(Math.PI / 4).setAlpha(0);
-        const diamondR = this.scene.add.rectangle(boxLeft + boxW - uv(12), boxTop + uv(4), 6, 6, colors.border, 0.9)
-            .setDepth(202).setScrollFactor(0).setRotation(Math.PI / 4).setAlpha(0);
-        elements.push(rail, diamondL, diamondR);
+        elements.push(rail);
 
-        const markerSize = Math.max(24, uv(26));
-        const markerPlate = this.scene.add.rectangle(
-            boxLeft + uv(22), boxTop + uv(22), markerSize, markerSize, colors.border, 0.13
-        ).setStrokeStyle(1, colors.border, 0.72).setDepth(202).setScrollFactor(0).setAlpha(0);
-        const marker = padText(this.scene.add.text(boxLeft + uv(22), boxTop + uv(22), colors.marker, {
-            fontSize: fs(12), fontFamily: UI_FONT_MONO, fontStyle: 'bold', color: colors.titleColor,
-            stroke: '#02040a', strokeThickness: 1,
-        }).setOrigin(0.5).setDepth(203).setScrollFactor(0).setAlpha(0), 2, 2);
-        elements.push(markerPlate, marker);
-
-        // Title text
-        const titleText = padText(this.scene.add.text(boxLeft + uv(43), boxTop + uv(12), msg.title, {
-            fontSize: fs(13),
+        // Compact header tag
+        const textX = boxLeft + uv(14);
+        const titleText = padText(this.scene.add.text(textX, boxTop + uv(6), msg.title, {
+            fontSize: fs(10),
             fontFamily: UI_FONT_MONO,
             fontStyle: 'bold',
             color: colors.titleColor,
             stroke: '#02040a',
             strokeThickness: 2,
-        }).setOrigin(0, 0).setDepth(203).setScrollFactor(0).setAlpha(0), 4, 5, 2, 2);
-        fitText(titleText, boxW - uv(62), uv(28), 0.68);
+        }).setOrigin(0, 0).setDepth(203).setScrollFactor(0).setAlpha(0), 2, 2);
+        fitText(titleText, boxW - uv(28), uv(16), 0.72);
         elements.push(titleText);
 
-        // Horizontal line under title
-        const titleLine = this.scene.add.rectangle(cx, boxTop + uv(43), boxW - uv(30), 1, colors.border, 0.5)
-            .setDepth(202).setScrollFactor(0).setAlpha(0);
-        elements.push(titleLine);
-
-        // The first line carries the message; subsequent lines read as supporting detail.
-        const bodyX = boxLeft + uv(20);
+        // Concise message lines
         msg.lines.forEach((line, i) => {
-            const bodyY = boxTop + uv(50) + i * lineH;
-            const body = padText(this.scene.add.text(bodyX, bodyY, line, {
-                fontSize: fs(i === 0 ? 15 : 13),
+            const bodyY = boxTop + headerH + i * lineH;
+            const body = padText(this.scene.add.text(textX, bodyY, line, {
+                fontSize: fs(i === 0 ? 12 : 11),
                 fontFamily: UI_FONT_KR,
                 fontStyle: i === 0 ? 'bold' : 'normal',
                 color: i === 0 ? colors.primaryTextColor : colors.textColor,
                 stroke: '#02040a',
                 strokeThickness: 2,
-                lineSpacing: 4,
-            }).setOrigin(0, 0).setDepth(203).setScrollFactor(0).setAlpha(0), 4, 5, 2, 2);
-            fitText(body, boxW - uv(40), lineH, 0.64);
+                lineSpacing: 2,
+            }).setOrigin(0, 0).setDepth(203).setScrollFactor(0).setAlpha(0), 2, 2);
+            fitText(body, boxW - uv(28), lineH, 0.66);
             elements.push(body);
         });
 
-        // A quiet lifetime bar communicates timing without adding copy.
+        // Subtle lifetime progress bar at bottom
         const progress = this.scene.add.rectangle(
-            boxLeft + uv(10), boxTop + boxH - uv(5), boxW - uv(20), Math.max(1, uv(2)), colors.border, 0.72
+            boxLeft + uv(8), boxTop + boxH - uv(3), boxW - uv(16), Math.max(1, uv(2)), colors.border, 0.65
         ).setOrigin(0, 0.5).setDepth(203).setScrollFactor(0).setAlpha(0);
         elements.push(progress);
         elements.forEach(element => element.setVisible(this.visible));
@@ -211,8 +190,7 @@ export class SystemMessage {
             return;
         }
 
-        // Cohesive slide-in replaces the old flicker, keeping the alert legible in motion.
-        const enterOffset = uv(10);
+        const enterOffset = uv(6);
         elements.forEach((el, idx) => {
             const finalY = el.y;
             el.setAlpha(0).setY(finalY - enterOffset);
@@ -220,25 +198,17 @@ export class SystemMessage {
                 targets: el,
                 alpha: 1,
                 y: finalY,
-                duration: 250,
-                delay: Math.min(idx * 12, 84),
+                duration: 200,
+                delay: Math.min(idx * 10, 50),
                 ease: 'Cubic.Out',
             });
-        });
-        titleLine.setScale(0.18, 1);
-        this.scene.tweens.add({
-            targets: titleLine,
-            scaleX: 1,
-            duration: 340,
-            delay: 70,
-            ease: 'Cubic.Out',
         });
         progress.setScale(1, 1);
         this.scene.tweens.add({
             targets: progress,
             scaleX: 0,
-            duration: Math.max(300, msg.duration - 240),
-            delay: 240,
+            duration: Math.max(300, msg.duration - 200),
+            delay: 200,
             ease: 'Linear',
         });
 

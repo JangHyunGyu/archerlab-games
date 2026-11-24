@@ -142,9 +142,9 @@ export class GameScene extends Phaser.Scene {
             {
                 label: 'INTERFACE',
                 run: () => {
-                    this.mobileControls = new MobileControls(this);
-                    this.statusWindow = new StatusWindow(this);
                     this.hud = new HUD(this);
+                    this.statusWindow = new StatusWindow(this);
+                    this.mobileControls = new MobileControls(this);
                     this.physics.add.collider(this.player, this.enemyManager.getGroup());
                 },
             },
@@ -722,20 +722,6 @@ export class GameScene extends Phaser.Scene {
                     t('resumeLoaded'),
                     `${t('levelLabel')} ${this.player.level} \u00b7 ${t('killLabel')} ${this.player.kills}`,
                 ], { duration: 2400, type: 'quest' });
-            });
-        } else {
-            this.time.delayedCall(500, () => {
-                this.systemMessage.show(t('sysSystem'), [
-                    t('sysEnterDungeon'),
-                    t('sysKillToLevel'),
-                ], { duration: 2400 });
-            });
-
-            this.time.delayedCall(3600, () => {
-                this.systemMessage.show(t('sysSystem'), [
-                    t('sysQuestComing'),
-                    t('sysTabHint'),
-                ], { duration: 2200, type: 'quest' });
             });
         }
     }

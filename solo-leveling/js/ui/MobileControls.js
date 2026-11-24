@@ -193,41 +193,32 @@ export class MobileControls {
         });
     }
 
-    _createButtons() { var __oc8;
-        const isPortrait = GAME_HEIGHT > GAME_WIDTH;
+    _createButtons() {
         const cssPerUnit = cssPerGameUnit(this.scene);
-        const minTouch = Math.ceil(46 / cssPerUnit);
-        const btnH = Math.max(uv(42), minTouch);
-        const btnW = Math.max(uv(isPortrait ? 68 : 72), Math.ceil(minTouch * 1.25));
+        const minTouch = Math.ceil(44 / cssPerUnit);
+        const btnGap = Math.max(uv(6), Math.ceil(6 / cssPerUnit));
+        const btnW = Math.max(uv(40), minTouch);
+        const btnH = Math.max(uv(34), minTouch);
         const btnX = GAME_WIDTH - uv(12) - btnW;
-        const statusY = isPortrait ? uv(70) : uv(118);
-        const soundY = statusY + btnH + uv(10);
+        const homeBottom = (this.scene && this.scene.hud && this.scene.hud._homeBottom)
+            ? this.scene.hud._homeBottom : uv(56);
+        const statusY = homeBottom + btnGap;
+        const soundY = statusY + btnH + btnGap;
         this.actionButtonBounds = { x: btnX, width: btnW };
 
         // Status button
         const statusPanel = UIAssets.createPanel(this.scene, btnX, statusY, btnW, btnH, {
-            asset: 'ui_button_cyan',
-            hoverAsset: 'ui_button_hover',
-            cut: uv(6),
-            fill: SYSTEM.BG_PANEL,
-            fillAlpha: 0.85,
-            border: SYSTEM.BORDER,
-            borderAlpha: 0.8,
-            borderWidth: 1,
-            accent: SYSTEM.BORDER,
-            glow: 3,
+            fillAlpha: 0.58,
             variant: 'button',
-            surfaceLines: false,
             depth: 600,
             scrollFactor: 0,
-            hover: { fill: SYSTEM.BG_PANEL_HI, fillAlpha: 0.97, borderWidth: 2, glow: 6 },
         });
         const statusHit = UIAssets.createHitArea(this.scene, btnX, statusY, btnW, btnH, 601).setScrollFactor(0);
         const statusText = padText(this.scene.add.text(btnX + btnW / 2, statusY + btnH / 2, t('hudStatus'), {
-            fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
-            color: SYSTEM.TEXT_CYAN,
+            fontSize: fs(10), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: '#d8d0ee',
         }).setOrigin(0.5).setDepth(602).setScrollFactor(0), 2, 2);
-        fitText(statusText, btnW - uv(8), btnH - uv(4), 0.62);
+        fitText(statusText, btnW - uv(6), btnH - uv(4), 0.62);
         this.elements.push(statusPanel, statusHit, statusText);
         this.buttonElements.push(statusPanel, statusHit, statusText);
         this.buttonHitAreas.push(statusHit);
@@ -237,9 +228,9 @@ export class MobileControls {
         statusHit.on('pointerdown', () => {
             if (this._isStatusModalOpen()) return;
             statusPanel.setUIState('hover');
-            this.scene.time.delayedCall(110, () => { return (
-((statusPanel === null || statusPanel === void 0 ? void 0 : statusPanel.active)) && statusPanel.setUIState('normal')
-); });
+            this.scene.time.delayedCall(110, () => {
+                if (statusPanel && statusPanel.active) statusPanel.setUIState('normal');
+            });
             if (this.scene.statusWindow) {
                 this.scene.statusWindow.toggle();
                 this._syncModalState(true);
@@ -248,29 +239,18 @@ export class MobileControls {
 
         // Sound button
         const soundPanel = UIAssets.createPanel(this.scene, btnX, soundY, btnW, btnH, {
-            asset: 'ui_button_cyan',
-            hoverAsset: 'ui_button_hover',
-            cut: uv(6),
-            fill: SYSTEM.BG_PANEL,
-            fillAlpha: 0.85,
-            border: SYSTEM.BORDER,
-            borderAlpha: 0.8,
-            borderWidth: 1,
-            accent: SYSTEM.BORDER,
-            glow: 3,
+            fillAlpha: 0.58,
             variant: 'button',
-            surfaceLines: false,
             depth: 600,
             scrollFactor: 0,
-            hover: { fill: SYSTEM.BG_PANEL_HI, fillAlpha: 0.97, borderWidth: 2, glow: 6 },
         });
         const soundHit = UIAssets.createHitArea(this.scene, btnX, soundY, btnW, btnH, 601).setScrollFactor(0);
-        const soundEnabled = (((__oc8 = this.scene.soundManager) === null || __oc8 === void 0 ? void 0 : __oc8.enabled)) !== false;
-        this.soundBtnText = padText(this.scene.add.text(btnX + btnW / 2, soundY + btnH / 2, soundEnabled ? 'SND' : 'MUTE', {
-            fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
-            color: soundEnabled ? SYSTEM.TEXT_CYAN : SYSTEM.TEXT_MUTED,
+        const soundEnabled = !(this.scene.soundManager && this.scene.soundManager.enabled === false);
+        this.soundBtnText = padText(this.scene.add.text(btnX + btnW / 2, soundY + btnH / 2, soundEnabled ? 'SND' : 'OFF', {
+            fontSize: fs(10), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: soundEnabled ? '#d8d0ee' : SYSTEM.TEXT_MUTED,
         }).setOrigin(0.5).setDepth(602).setScrollFactor(0), 2, 2);
-        fitText(this.soundBtnText, btnW - uv(8), btnH - uv(4), 0.62);
+        fitText(this.soundBtnText, btnW - uv(6), btnH - uv(4), 0.62);
         this.elements.push(soundPanel, soundHit, this.soundBtnText);
         this.buttonElements.push(soundPanel, soundHit, this.soundBtnText);
         this.buttonHitAreas.push(soundHit);
@@ -280,14 +260,14 @@ export class MobileControls {
         soundHit.on('pointerdown', () => {
             if (this._isStatusModalOpen()) return;
             soundPanel.setUIState('hover');
-            this.scene.time.delayedCall(110, () => { return (
-((soundPanel === null || soundPanel === void 0 ? void 0 : soundPanel.active)) && soundPanel.setUIState('normal')
-); });
+            this.scene.time.delayedCall(110, () => {
+                if (soundPanel && soundPanel.active) soundPanel.setUIState('normal');
+            });
             if (this.scene.soundManager) {
                 const enabled = this.scene.soundManager.toggleSound();
-                this.soundBtnText.setText(enabled ? 'SND' : 'MUTE');
-                this.soundBtnText.setColor(enabled ? SYSTEM.TEXT_CYAN : SYSTEM.TEXT_MUTED);
-                fitText(this.soundBtnText, btnW - uv(8), btnH - uv(4), 0.62);
+                this.soundBtnText.setText(enabled ? 'SND' : 'OFF');
+                this.soundBtnText.setColor(enabled ? '#d8d0ee' : SYSTEM.TEXT_MUTED);
+                fitText(this.soundBtnText, btnW - uv(6), btnH - uv(4), 0.62);
             }
         });
     }

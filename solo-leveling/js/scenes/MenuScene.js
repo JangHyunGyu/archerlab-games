@@ -334,13 +334,13 @@ export class MenuScene extends Phaser.Scene {
             }).setOrigin(origin, 0).setDepth(4).setResolution(2);
             return el;
         };
+        const openCharacters = () => this._showCharacterSelectModal(id => startGame(false, id));
         const cx = layout.portrait ? cssW / 2 : layout.x;
         const origin = layout.portrait ? .5 : 0;
         const titleText = LANG === 'ko' ? '그림자\n서바이벌' : LANG === 'ja' ? 'シャドウ\nサバイバル' : 'SHADOW\nSURVIVAL';
         const title = addText(cx, layout.top, titleText, layout.titleSize, '#f0e9f6', origin, true);
         title.setShadow(0, 4 * px, '#281b41', 0, false, true);
         this._fitText(title, layout.contentW * px, layout.titleSize * 2.3 * px);
-        this._createPremiumHero(layout, px);
 
         const startGame = async (resume = false, characterIdOverride = null) => { var __oc2, __oc3, __oc4;
             if (this._startingGame) return;
@@ -364,6 +364,7 @@ export class MenuScene extends Phaser.Scene {
             if (duration) this.cameras.main.fadeOut(duration, 0, 0, 0);
             this.time.delayedCall(duration, () => this.scene.start('GameScene', { resume, characterId }));
         };
+        this._createPremiumHero(layout, px, openCharacters);
         const btnW = Math.min(layout.contentW, 360);
         const btnX = layout.portrait ? (cssW - btnW) / 2 : layout.x;
         let actionY = layout.actionsY;
@@ -378,7 +379,6 @@ export class MenuScene extends Phaser.Scene {
             });
             actionY += layout.buttonH + layout.gap;
         }
-        const openCharacters = () => this._showCharacterSelectModal(id => startGame(false, id));
         this._makePremiumAction(btnX, actionY, btnW, layout.buttonH, px, {
             label: t('startGame'), primary: true, onClick: openCharacters,
         });
@@ -421,28 +421,38 @@ export class MenuScene extends Phaser.Scene {
     }
 
     _makePremiumAction(x, y, w, h, px, { label, meta = '', primary = false, onClick }) {
-        const textureKey = primary ? 'ui_crafted_button' : 'ui_skin_button';
-        const texture = this.textures.get(textureKey);
-        // Exclude the generated wide button's transparent vertical gutter at render time.
-        if (primary && !texture.has('face')) texture.add('face', 0, 0, 100, 2172, 510);
-        const skin = this.add.image((x + w / 2) * px, (y + h / 2) * px, textureKey, primary ? 'face' : undefined)
-            .setDisplaySize((w + 10) * px, (h + 14) * px).setDepth(5);
-        const draw = (hover = false) => {
-            skin.setTint(primary || hover ? 0xffffff : 0xb1aabc);
-            skin.setAlpha(primary || hover ? 1 : .88);
-        };
-        draw();
-        const title = this.add.text((x + w / 2) * px, (y + h * (meta ? .35 : .5)) * px, label, {
-            fontFamily: UI_FONT_KR, fontSize: `${(meta ? 16 : 19) * px}px`, fontStyle: 'bold',
-            color: primary ? '#fff3e0' : '#d2c8df',
+        const bx = x * px;
+        const by = y * px;
+        const bw = w * px;
+        const bh = h * px;
+        const radius = Math.min(10 * px, bh * 0.28);
+        const bg = this.add.graphics().setDepth(5);
+        const title = this.add.text((x + w / 2) * px, (y + h * (meta ? .36 : .5)) * px, label, {
+            fontFamily: UI_FONT_KR, fontSize: `${(meta ? 15 : 18) * px}px`, fontStyle: 'bold',
+            color: primary ? '#ffffff' : '#e4dcf5',
         }).setOrigin(.5).setDepth(6).setResolution(2);
-        this._fitText(title, (w - 40) * px, h * (meta ? .52 : .8) * px);
+        this._fitText(title, (w - 32) * px, h * (meta ? .5 : .78) * px);
         if (meta) {
             const sub = this.add.text((x + w / 2) * px, (y + h * .73) * px, meta, {
-                fontFamily: UI_FONT_KR, fontSize: `${10 * px}px`, color: '#a89bb9',
+                fontFamily: UI_FONT_KR, fontSize: `${10 * px}px`, color: '#b4a6cd',
             }).setOrigin(.5).setDepth(6).setResolution(2);
             this._fitText(sub, (w - 24) * px, h * .24 * px);
         }
+        const draw = (hover = false) => {
+            bg.clear();
+            const fillColor = primary ? (hover ? 0x6d42e8 : 0x5a2fd4) : (hover ? 0x1e1938 : 0x121022);
+            const fillAlpha = primary ? (hover ? 1 : 0.94) : (hover ? 0.9 : 0.72);
+            const borderColor = primary ? 0xb39dfa : (hover ? 0xc8b5f8 : 0x9c8ac8);
+            const borderAlpha = primary ? (hover ? 1 : 0.75) : (hover ? 0.72 : 0.36);
+            bg.fillStyle(fillColor, fillAlpha);
+            bg.fillRoundedRect(bx, by, bw, bh, radius);
+            bg.lineStyle(Math.max(1, px), borderColor, borderAlpha);
+            bg.strokeRoundedRect(bx, by, bw, bh, radius);
+            if (!primary) {
+                title.setColor(hover ? '#ffffff' : '#e4dcf5');
+            }
+        };
+        draw(false);
         const hit = this.add.rectangle((x + w / 2) * px, (y + h / 2) * px, w * px, h * px, 0, 0)
             .setDepth(8).setInteractive({ useHandCursor: true });
         hit.on('pointerover', () => draw(true));
@@ -451,25 +461,27 @@ export class MenuScene extends Phaser.Scene {
         this._menuKeyboardActions.push(hit);
     }
 
-    _createPremiumHero(layout, px) {
+    _createPremiumHero(layout, px, onHeroClick = null) {
         const character = getCharacter(this.selectedCharacterId);
         const characterText = getCharacterText(character);
         const key = this._getCharacterHeroTexture(character);
         if (!this.textures.exists(key)) return;
         const x = layout.heroX * px, y = layout.heroY * px, size = layout.heroSize * px;
         const rings = this.add.graphics().setDepth(2);
-        rings.lineStyle(px, 0xc3a577, .5);
-        rings.strokeCircle(x, y, size * .53);
-        rings.lineStyle(px, 0x9980c0, .25);
-        rings.strokeCircle(x, y, size * .57);
+        rings.lineStyle(Math.max(1, px), 0x9e88d6, 0.42);
+        rings.strokeCircle(x, y, size * .515);
         this._heroPreviewSprite = this.add.image(x, y, key).setDepth(3).setDisplaySize(size, size);
+        if (onHeroClick) {
+            this._heroPreviewSprite.setInteractive({ useHandCursor: true });
+            this._heroPreviewSprite.on('pointerdown', () => { if (!this._startingGame) onHeroClick(); });
+        }
         this._applyHeroPreviewMask(this._heroPreviewSprite, x, y, size);
         this._heroPreviewMaxW = size;
         this._heroPreviewMaxH = size;
-        const captionY = y + size * .57 + 14 * px;
+        const captionY = y + size * .54 + 10 * px;
         this._heroPreviewCaption = this.add.text(x, captionY, characterText.name, {
-            fontFamily: UI_FONT_KR, fontSize: `${layout.short ? 13 * px : 16 * px}px`,
-            fontStyle: 'bold', color: '#e4d7ef',
+            fontFamily: UI_FONT_KR, fontSize: `${layout.short ? 13 * px : 15 * px}px`,
+            fontStyle: 'bold', color: '#e4dcf5',
         }).setOrigin(.5, 0).setDepth(4).setResolution(2);
         this._heroPreviewCaptionMeta = null;
     }
@@ -1375,15 +1387,9 @@ export class MenuScene extends Phaser.Scene {
             });
         }
 
-        const leftShadeW = isPortrait ? GAME_WIDTH : GAME_WIDTH * 0.58;
-        this.add.rectangle(leftShadeW / 2, GAME_HEIGHT / 2, leftShadeW, GAME_HEIGHT, 0x020611, isPortrait ? 0.36 : 0.38)
+        // Uniform full-screen subtle scrim (eliminates the vertical seam across the backdrop)
+        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x050510, 0.42)
             .setDepth(-34);
-        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.08, GAME_WIDTH, GAME_HEIGHT * 0.2, 0x010309, isPortrait ? 0.32 : (isShortLandscape ? 0.28 : 0.14))
-            .setDepth(-33);
-        if (isPortrait) {
-            this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.82, GAME_WIDTH, GAME_HEIGHT * 0.42, 0x010309, 0.3)
-                .setDepth(-33);
-        }
 
         const portalX = GAME_WIDTH * (isPortrait ? 0.54 : 0.72);
         const portalY = GAME_HEIGHT * (isShortLandscape ? 0.47 : 0.52);
@@ -1996,15 +2002,6 @@ export class MenuScene extends Phaser.Scene {
             .setDepth(depth)
             .setInteractive();
         elements.push(dim);
-
-        if (this.textures.exists('env_shadow_portal')) {
-            const portal = this.add.image(cx, cy, 'env_shadow_portal')
-                .setDepth(depth + 1)
-                .setAlpha(isPortrait ? 0.18 : 0.14)
-                .setScale(isPortrait ? 3.1 : 2.25)
-                .setBlendMode(Phaser.BlendModes.ADD);
-            elements.push(portal);
-        }
 
         const boxW = isShortLandscape ? (cssW - 32) * px : isPortrait
             ? Math.min(GAME_WIDTH - uv(36), uv(560))
