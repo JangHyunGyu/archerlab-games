@@ -118,7 +118,7 @@ async function createBlockpangApplication(options) {
     // Create PixiJS Application (v8 async init)
     const app = await createBlockpangApplication({
         resizeTo: container,
-        backgroundColor: 0xF5ECDA,
+        backgroundColor: 0x07091E,
         antialias: true,
         resolution: Math.min(window.devicePixelRatio || 1, 2),
         autoDensity: true,

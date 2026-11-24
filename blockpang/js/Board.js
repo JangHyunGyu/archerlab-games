@@ -584,10 +584,17 @@ class Board {
         }
         this._hintActiveCount = hintIdx;
 
-        // Pulse animation for hint container (kill previous before starting new)
-        if (nearCompleteFound && !this._hintPulseActive) {
+        const tweens = this.game && this.game.effects && Array.isArray(this.game.effects.tweens)
+            ? this.game.effects.tweens
+            : [];
+        const hasPulseTween = tweens.some(t => t && t._isHintPulse);
+        if (!nearCompleteFound) {
+            if (this._hintPulseActive) this.clearCompletionHints();
+            return;
+        }
+        if (!this._hintPulseActive || !hasPulseTween) {
             this._hintPulseActive = true;
-            // Tag the tween so we can find and kill it later
+            const boardSelf = this;
             const hintRef = this.hintContainer;
             const tween = {
                 elapsed: 0,
@@ -595,14 +602,18 @@ class Board {
                 _isHintPulse: true,
                 update(dt) {
                     if (!hintRef || hintRef.destroyed) {
+                        boardSelf._hintPulseActive = false;
                         return true;
                     }
-                    // Check if any hints are visible
                     let anyVisible = false;
                     for (let i = 0; i < hintRef.children.length; i++) {
                         if (hintRef.children[i].visible) { anyVisible = true; break; }
                     }
-                    if (!anyVisible) return true;
+                    if (!anyVisible) {
+                        boardSelf._hintPulseActive = false;
+                        hintRef.alpha = 1;
+                        return true;
+                    }
                     this.elapsed += dt;
                     const pulse = 0.6 + Math.sin(this.elapsed * 0.006) * 0.4;
                     hintRef.alpha = pulse;

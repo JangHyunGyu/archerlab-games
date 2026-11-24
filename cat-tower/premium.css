@@ -119,8 +119,8 @@
 .btn:hover::after,#menu .btn:hover::after { filter: brightness(1.06) drop-shadow(0 4px 2px #a271474d); }
 .btn:active,#menu .btn:active { transform: translateY(3px); box-shadow: none; }
 #menu #play-btn::before { content: none; }
-#menu #play-btn { min-height: 74px; padding: 14px 40px; color: #633217; font-size: 22px; text-shadow: 0 1px #ffce9c; }
-#menu #play-btn::after { border: 0; inset: -2px -6px; background: url('assets/ui/crafted-button-v1.webp') center / 100% 150% no-repeat; }
+#menu #play-btn { min-height: 74px; padding: 14px 54px; color: #FFFDF5; font-size: 22px; text-shadow: 0 2px 0 #6A2E1A, 0 0 8px rgba(80, 30, 14, 0.32); }
+#menu #play-btn::after { border: 0; inset: -2px -6px; background: url('assets/ui/crafted-button-v1.webp') center / 100% 138% no-repeat; }
 .icon-btn,.icon-btn.muted,.topbar-btn,.lang-switch { background: none; border: 12px solid transparent; border-image: var(--crafted-frame) 275 fill / 12px / 0 stretch; box-shadow: none; border-radius: 0; }
 .icon-btn { padding: 0; }
 .topbar-btn { padding: 0 6px; }

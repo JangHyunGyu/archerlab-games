@@ -103,23 +103,25 @@
   .game-controls .button { padding: 8px 4px; font-size: 11px; }
   body:has(.game-screen.is-active) .archerlab-link { top: 12px; left: max(24px,env(safe-area-inset-left)); transform: none; }
 }
-/* Authored artwork: wide jewel buttons and a separate frame for compact controls. */
-:root { --crafted-frame: url('../images/ui/crafted-frame-v1.webp'); }
+/* Clean jewel-cabinet UI surfaces with clear primary/secondary/ghost hierarchy. */
 .title-bg { opacity: .72; filter: saturate(.9); }
 .title-plaque { margin-bottom: 0; }
 .title-content h1 { background: linear-gradient(#fff9da 20%,#f5dfa4 48%,#bb8b46 90%); background-clip: text; -webkit-background-clip: text; color: transparent; filter: drop-shadow(0 3px #513713); text-shadow: none; }
 .button,.button:hover,.button:active,.icon-button,.icon-button:hover,.archerlab-link { position: relative; isolation: isolate; background: none; border: 0; box-shadow: none; color: #fff2c9; text-shadow: 0 2px 2px #001c18; }
-.button { min-height: 52px; padding: 12px 24px; font-weight: 800; }
-.button::before,.icon-button::before { content: ''; display: block; position: absolute; inset: -2px; z-index: -1; border: 14px solid transparent; border-image: var(--crafted-frame) 290 fill / 14px / 0 stretch; background: none; opacity: 1; transform: none; filter: drop-shadow(0 3px 2px #0005); transition: filter .15s; }
-.button:hover::before,.icon-button:hover::before { filter: brightness(1.18) drop-shadow(0 4px 3px #0005); }
+.button { min-height: 52px; padding: 12px 24px; border-radius: 14px; font-weight: 800; }
+.button::before,.icon-button::before { content: ''; display: block; position: absolute; inset: 0; z-index: -1; border-radius: inherit; border: 1px solid rgba(114, 216, 212, 0.4); background: linear-gradient(180deg, rgba(20, 68, 79, 0.94), rgba(7, 27, 36, 0.96)); box-shadow: inset 0 1px rgba(255, 255, 255, 0.14), 0 6px 16px rgba(0, 0, 0, 0.34); transition: filter .15s, border-color .15s; }
+.button-primary, .button-primary:hover, .button-primary:active { color: #2b1503; text-shadow: 0 1px 0 rgba(255, 248, 214, 0.55); }
+.button-primary::before { border-color: rgba(255, 246, 196, 0.78); background: linear-gradient(180deg, #ffe799 0%, #eab547 58%, #b97c1e 100%); box-shadow: inset 0 1px rgba(255, 255, 255, 0.45), 0 4px 0 #70490b, 0 12px 24px rgba(0, 0, 0, 0.36); }
+.button-ghost, .button-ghost:hover { color: #d8f4ef; }
+.button-ghost::before { border-color: rgba(159, 222, 220, 0.28); background: linear-gradient(180deg, rgba(11, 41, 51, 0.78), rgba(4, 17, 24, 0.86)); box-shadow: inset 0 1px rgba(255, 255, 255, 0.08); }
+.button:hover::before,.icon-button:hover::before { filter: brightness(1.12); border-color: rgba(246, 205, 105, 0.65); }
 .button:active,.icon-button:active { transform: translateY(2px); }
-.title-actions #play-btn { min-height: 78px; background: none; padding: 14px 42px; border: 0; }
-.title-actions #play-btn::before { display: block; border: 0; inset: -2px -8px; background: url('../images/ui/crafted-button-v1.webp') center / 100% 158% no-repeat; }
+.title-actions #play-btn { min-height: 74px; padding: 14px 42px; }
 #play-btn .btn-label { font-size: 24px; letter-spacing: .02em; }
-.icon-button { display: grid; place-items: center; }
+.icon-button { display: grid; place-items: center; min-width: 44px; min-height: 44px; border-radius: 12px; }
 .icon-button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .is-muted .sound-waves { opacity: .2; }
-.archerlab-link { position: fixed; border: 12px solid transparent; border-image: var(--crafted-frame) 290 fill / 12px / 0 stretch; padding: 4px 12px; }
+.archerlab-link { position: fixed; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; border-radius: 12px; border: 1px solid rgba(246, 205, 105, 0.42); background: linear-gradient(180deg, rgba(16, 56, 66, 0.94), rgba(5, 20, 28, 0.96)); box-shadow: inset 0 1px rgba(255, 248, 214, 0.16), 0 8px 20px rgba(0, 0, 0, 0.36); padding: 6px 14px; }
 /* Gameplay already reserves space above the HUD for this link. */
 html.archer-immersive-fs body[data-game="jewelria"]:has(#game-screen.is-active) > .archerlab-link {
   top: max(12px, env(safe-area-inset-top, 0px)) !important;
@@ -129,11 +131,11 @@ html.archer-immersive-fs body[data-game="jewelria"]:has(#game-screen.is-active) 
     padding-top: max(62px, calc(env(safe-area-inset-top, 0px) + 61px));
   }
 }
-.record-strip > div { border: 14px solid transparent; border-image: var(--crafted-frame) 290 fill / 14px / 0 stretch; padding: 2px 8px; text-align: center; }
-.hud-stat { border: 12px solid transparent; border-image: var(--crafted-frame) 290 fill / 12px / 0 stretch; background: none; box-shadow: none; padding: 0 4px; }
-.modal-card { border: 18px solid transparent; border-image: var(--crafted-frame) 290 fill / 18px / 0 stretch; background: none; border-radius: 0; padding: 18px; }
-.board-frame { border: 0; background: none; box-shadow: none; }
-.board-frame::before { content: ''; position: absolute; inset: -3px; border: 18px solid transparent; border-image: var(--crafted-frame) 290 fill / 18px / 0 stretch; pointer-events: none; }
+.record-strip > div { border: 1px solid rgba(246, 205, 105, 0.36); border-radius: 14px; background: linear-gradient(180deg, rgba(14, 51, 61, 0.9), rgba(4, 18, 25, 0.95)); box-shadow: inset 0 1px rgba(255, 248, 214, 0.14), 0 8px 20px rgba(0, 0, 0, 0.3); padding: 8px 10px; text-align: center; }
+.hud-stat { border: 1px solid rgba(246, 205, 105, 0.34); border-radius: 14px; background: linear-gradient(180deg, rgba(15, 54, 64, 0.9), rgba(4, 18, 25, 0.95)); box-shadow: inset 0 1px rgba(255, 248, 214, 0.14), 0 8px 20px rgba(0, 0, 0, 0.28); padding: 6px 8px; }
+.modal-card { border: 1px solid rgba(246, 205, 105, 0.45); border-radius: 20px; background: linear-gradient(180deg, rgba(12, 44, 54, 0.95), rgba(3, 15, 22, 0.98)); box-shadow: 0 24px 56px rgba(0, 0, 0, 0.56), inset 0 1px rgba(255, 245, 200, 0.18); padding: 20px; }
+.board-frame { border: 2px solid rgba(246, 205, 105, 0.48); border-radius: 18px; background: linear-gradient(155deg, rgba(16, 62, 72, 0.96), rgba(5, 22, 29, 0.98)); box-shadow: inset 0 1px rgba(255, 245, 200, 0.22), 0 18px 34px rgba(0, 0, 0, 0.42); }
+.board-frame::before { content: ''; position: absolute; inset: 4px; border: 1px solid rgba(246, 205, 105, 0.24); border-radius: 13px; pointer-events: none; }
 .board { inset: 16px; }
 .modal-actions { gap: 12px; }
 .modal-actions .button { flex: 1 1 110px; }

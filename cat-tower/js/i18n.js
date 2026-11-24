@@ -33,7 +33,7 @@
       'over.replay': '다시 도전',
       'over.menu': '메인 메뉴',
       'over.submitRank': '랭킹 등록',
-      'over.skipRank': 'Skip',
+      'over.skipRank': '건너뛰기',
       'over.nicknamePh': '닉네임 (20자)',
       'over.submitting': '등록 중...',
       'over.submitOk': '등록 완료!',

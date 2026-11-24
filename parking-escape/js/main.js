@@ -23,7 +23,6 @@
 
   const ASSETS = {
     menu: "assets/ui/menu-bg-v2.png",
-    board: "assets/ui/board-surface.png",
     cinematicBoard: "assets/ui/game-board-cinematic.png",
     asphaltTile: "assets/ui/asphalt-tile.png",
   };
@@ -59,11 +58,11 @@
     { body: 0xff334a, dark: 0x8c1422, light: 0xffd5d9, glass: 0x10243d, glow: 0xff5064 },
     { body: 0x2f8cff, dark: 0x0e3f8e, light: 0xcde8ff, glass: 0x071b33, glow: 0x4fb4ff },
     { body: 0xffc533, dark: 0x9b6a08, light: 0xfff1b8, glass: 0x211507, glow: 0xffd45a },
+    { body: 0xf2f5fa, dark: 0x8c98a6, light: 0xffffff, glass: 0x182234, glow: 0xddeaff },
     { body: 0x43d36f, dark: 0x166b32, light: 0xd8ffe2, glass: 0x071c10, glow: 0x55ee8b },
     { body: 0xa66bff, dark: 0x4d2494, light: 0xf0e4ff, glass: 0x160b2c, glow: 0xba86ff },
-    { body: 0xf2f5fa, dark: 0x8c98a6, light: 0xffffff, glass: 0x182234, glow: 0xddeaff },
-    { body: 0x101827, dark: 0x05080f, light: 0xb6c7e3, glass: 0x02050a, glow: 0x5f8dff },
     { body: 0xff8a2a, dark: 0x91400e, light: 0xffdfbd, glass: 0x201005, glow: 0xffa24a },
+    { body: 0x101827, dark: 0x05080f, light: 0xb6c7e3, glass: 0x02050a, glow: 0x5f8dff },
   ];
 
   const $ = id => document.getElementById(id);
@@ -815,9 +814,10 @@
       const viewportW = window.innerWidth;
       const viewportH = window.innerHeight;
       const compact = viewportW < 620;
-      const topSafe = compact ? 96 : 118;
-      const bottomSafe = compact ? 12 : 30;
-      const side = compact ? 10 : 32;
+      const shortLandscape = viewportW > viewportH && viewportH <= 500;
+      const topSafe = shortLandscape ? 62 : compact ? 96 : 118;
+      const bottomSafe = shortLandscape ? 10 : compact ? 12 : 30;
+      const side = compact ? 10 : shortLandscape ? 16 : 32;
       const frameCells = textures[ASSETS.cinematicBoard] ? 1.16 : 0.42;
       const maxBoardW = viewportW - side * 2;
       const maxBoardH = viewportH - topSafe - bottomSafe;
@@ -861,7 +861,7 @@
       this.boardY = Math.round(topSafe + visualPad + Math.max(0, (usableHeight - decoratedHeight) / 2));
       this.boardLayer.position.set(this.boardX, this.boardY);
 
-      if (this.mode === "playing" && !this.animating) {
+      if (this.vehicles.length > 0 && !this.animating && this.mode !== "menu") {
         this.cancelTweens({ clearFx: true });
         this.renderBoard();
       }
@@ -883,7 +883,7 @@
       platformShadow.y = this.cell * 0.18;
       this.surfaceLayer.addChild(platformShadow);
 
-      const boardTexture = textures[ASSETS.cinematicBoard] || textures[ASSETS.board];
+      const boardTexture = textures[ASSETS.cinematicBoard];
       if (boardTexture) {
         const surface = new PIXI.Sprite(boardTexture);
         surface.x = -pad;
@@ -1015,8 +1015,9 @@
       container.zIndex = vehicle.target ? 10 : 1;
       vehicle.container = container;
       container.position.set(vehicle.x * this.cell, vehicle.y * this.cell);
-      const hitPadX = vehicle.axis === "V" ? Math.max(0, (44 - this.cell) / 2) : 0;
-      const hitPadY = vehicle.axis === "H" ? Math.max(0, (44 - this.cell) / 2) : 0;
+      const maxHitPad = Math.max(0, this.cell * 0.25);
+      const hitPadX = vehicle.axis === "V" ? Math.min(maxHitPad, Math.max(0, (44 - this.cell) / 2)) : 0;
+      const hitPadY = vehicle.axis === "H" ? Math.min(maxHitPad, Math.max(0, (44 - this.cell) / 2)) : 0;
       container.hitArea = new PIXI.Rectangle(
         -hitPadX,
         -hitPadY,
@@ -1095,13 +1096,17 @@
       if (!this.drag || event.pointerId !== this.drag.pointerId) return;
       const { vehicle, originX, originY, startX, startY, range } = this.drag;
       if (vehicle.axis === "H") {
-        const dx = Math.round((event.global.x - startX) / this.cell);
-        const nextX = clamp(originX + dx, range.min, range.max);
-        vehicle.container.x = nextX * this.cell;
+        vehicle.container.x = clamp(
+          originX * this.cell + (event.global.x - startX),
+          range.min * this.cell,
+          range.max * this.cell
+        );
       } else {
-        const dy = Math.round((event.global.y - startY) / this.cell);
-        const nextY = clamp(originY + dy, range.min, range.max);
-        vehicle.container.y = nextY * this.cell;
+        vehicle.container.y = clamp(
+          originY * this.cell + (event.global.y - startY),
+          range.min * this.cell,
+          range.max * this.cell
+        );
       }
     }
 
@@ -1272,8 +1277,9 @@
     blockPulse(vehicle) {
       this.playTone("blocked");
       this.showToast(t("toast.blocked"));
-      const originalX = vehicle.container.x;
-      const originalY = vehicle.container.y;
+      const originalX = vehicle.x * this.cell;
+      const originalY = vehicle.y * this.cell;
+      vehicle.container.position.set(originalX, originalY);
       if (motionEnabled()) {
         const state = { t: 0 };
         let tween;
@@ -1309,17 +1315,18 @@
     }
 
     update(deltaMS) {
+      const dt = clamp(Number.isFinite(deltaMS) ? deltaMS : 0, 0, 100);
       const width = app.screen.width;
       const height = app.screen.height;
       for (const spark of this.bgSparks) {
-        spark.phase += deltaMS * spark.speed;
+        spark.phase += dt * spark.speed;
         spark.x = spark.baseX * width + Math.sin(spark.phase) * 10;
         spark.y = spark.baseY * height + Math.cos(spark.phase * 0.8) * 7;
       }
 
       for (let i = this.tweens.length - 1; i >= 0; i--) {
         const tween = this.tweens[i];
-        tween.elapsed += deltaMS;
+        tween.elapsed += dt;
         const t = clamp(tween.elapsed / tween.duration, 0, 1);
         if (tween.update(t)) {
           if (tween.done) tween.done();
@@ -1328,8 +1335,14 @@
       }
 
       if (this.mode === "playing" && !this.animating) {
-        this.timeLeft = Math.max(0, this.timeLeft - deltaMS / 1000);
-        this.updateHud();
+        const prevSec = Math.ceil(Math.max(0, this.timeLeft));
+        const prevLow = prevSec <= 5;
+        this.timeLeft = Math.max(0, this.timeLeft - dt / 1000);
+        const curSec = Math.ceil(Math.max(0, this.timeLeft));
+        const curLow = curSec <= 5;
+        if (curSec !== prevSec || curLow !== prevLow) {
+          this.updateHud();
+        }
         this.maybePlayTimeAlert();
         if (this.timeLeft <= 0) {
           this.failLevel();
@@ -1844,19 +1857,19 @@
       glass.roundRect(w * 0.5 - cabinW * 0.5, h * 0.24, cabinW, h * 0.52, cell * 0.08)
         .fill({ color: palette.glass, alpha: 0.84 })
         .stroke({ width: Math.max(1, cell * 0.014), color: 0xdff7ff, alpha: 0.26 });
-      body.rect(w - inset * 2.2, h * 0.28, inset * 0.9, h * 0.16).fill({ color: 0xfff0a4, alpha: 0.9 });
-      body.rect(w - inset * 2.2, h * 0.56, inset * 0.9, h * 0.16).fill({ color: 0xfff0a4, alpha: 0.9 });
-      body.rect(inset * 1.3, h * 0.28, inset * 0.7, h * 0.16).fill({ color: 0xff3048, alpha: 0.72 });
-      body.rect(inset * 1.3, h * 0.56, inset * 0.7, h * 0.16).fill({ color: 0xff3048, alpha: 0.72 });
+      body.rect(inset * 1.3, h * 0.28, inset * 0.9, h * 0.16).fill({ color: 0xfff0a4, alpha: 0.9 });
+      body.rect(inset * 1.3, h * 0.56, inset * 0.9, h * 0.16).fill({ color: 0xfff0a4, alpha: 0.9 });
+      body.rect(w - inset * 2.0, h * 0.28, inset * 0.7, h * 0.16).fill({ color: 0xff3048, alpha: 0.72 });
+      body.rect(w - inset * 2.0, h * 0.56, inset * 0.7, h * 0.16).fill({ color: 0xff3048, alpha: 0.72 });
     } else {
       const cabinH = Math.min(h * 0.38, cell * 0.82);
       glass.roundRect(w * 0.24, h * 0.5 - cabinH * 0.5, w * 0.52, cabinH, cell * 0.08)
         .fill({ color: palette.glass, alpha: 0.84 })
         .stroke({ width: Math.max(1, cell * 0.014), color: 0xdff7ff, alpha: 0.26 });
-      body.rect(w * 0.28, inset * 1.3, w * 0.16, inset * 0.75).fill({ color: 0xfff0a4, alpha: 0.9 });
-      body.rect(w * 0.56, inset * 1.3, w * 0.16, inset * 0.75).fill({ color: 0xfff0a4, alpha: 0.9 });
-      body.rect(w * 0.28, h - inset * 2.1, w * 0.16, inset * 0.65).fill({ color: 0xff3048, alpha: 0.72 });
-      body.rect(w * 0.56, h - inset * 2.1, w * 0.16, inset * 0.65).fill({ color: 0xff3048, alpha: 0.72 });
+      body.rect(w * 0.28, h - inset * 2.2, w * 0.16, inset * 0.75).fill({ color: 0xfff0a4, alpha: 0.9 });
+      body.rect(w * 0.56, h - inset * 2.2, w * 0.16, inset * 0.75).fill({ color: 0xfff0a4, alpha: 0.9 });
+      body.rect(w * 0.28, inset * 1.3, w * 0.16, inset * 0.65).fill({ color: 0xff3048, alpha: 0.72 });
+      body.rect(w * 0.56, inset * 1.3, w * 0.16, inset * 0.65).fill({ color: 0xff3048, alpha: 0.72 });
     }
     container.addChild(glass);
 

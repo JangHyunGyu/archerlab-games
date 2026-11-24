@@ -307,6 +307,14 @@ class UIManager {
             clearTimeout(this._nameInputFocusTimer);
             this._nameInputFocusTimer = null;
         }
+        if (this._nameInputViewportHandler) {
+            if (window.visualViewport) {
+                window.visualViewport.removeEventListener('resize', this._nameInputViewportHandler);
+                window.visualViewport.removeEventListener('scroll', this._nameInputViewportHandler);
+            }
+            window.removeEventListener('resize', this._nameInputViewportHandler);
+            this._nameInputViewportHandler = null;
+        }
         const input = this._nameInputElement;
         if (!input) return;
         if (this._nameInputFocusHandler) input.removeEventListener('focus', this._nameInputFocusHandler);
@@ -503,11 +511,23 @@ class UIManager {
             this.soundIconSprite.width = hudIconSize;
             this.soundIconSprite.height = hudIconSize;
             this.soundIconSprite.position.set(innerRight, soundButtonY);
+            const st = this.soundIconSprite.texture;
+            const sw = (st && st.width) || 96;
+            const sh = (st && st.height) || 96;
+            const padX = Math.max(0, (48 - hudIconSize) / 2) / Math.max(0.05, Math.abs(this.soundIconSprite.scale.x));
+            const padY = Math.max(0, (48 - hudIconSize) / 2) / Math.max(0.05, Math.abs(this.soundIconSprite.scale.y));
+            this.soundIconSprite.hitArea = new PIXI.Rectangle(-sw - padX, -padY, sw + padX * 2, sh + padY * 2);
         }
         if (this.homeIconSprite) {
             this.homeIconSprite.width = hudIconSize;
             this.homeIconSprite.height = hudIconSize;
             this.homeIconSprite.position.set(innerLeft, homeButtonY);
+            const ht = this.homeIconSprite.texture;
+            const hw = (ht && ht.width) || 96;
+            const hh = (ht && ht.height) || 96;
+            const padX = Math.max(0, (48 - hudIconSize) / 2) / Math.max(0.05, Math.abs(this.homeIconSprite.scale.x));
+            const padY = Math.max(0, (48 - hudIconSize) / 2) / Math.max(0.05, Math.abs(this.homeIconSprite.scale.y));
+            this.homeIconSprite.hitArea = new PIXI.Rectangle(-padX, -padY, hw + padX * 2, hh + padY * 2);
         }
 
         const hudHitSize = Math.max(48, hudIconSize + 24);
@@ -954,7 +974,7 @@ class UIManager {
             ? Math.min(1.45, Math.max(1, Math.min(w / 1280, h / 720)))
             : Math.min(1.22, Math.max(1, w / 430));
 
-        const splashTexture = getBlockpangTexture('titleBackdropClean') || getBlockpangTexture('titleSplash');
+        const splashTexture = getBlockpangTexture('titleBackdropClean');
         if (splashTexture) {
             const splash = new PIXI.Sprite(splashTexture);
             const tw = splashTexture.width || (((__oc1 = splashTexture.orig) === null || __oc1 === void 0 ? void 0 : __oc1.width)) || 1;
@@ -1203,7 +1223,7 @@ class UIManager {
             }
 
             const tileSize = Math.max(14, heroSize * 0.125);
-            const tileStep = tileSize * 0.99;
+            const tileStep = tileSize * 1.04;
             const tileSpecs = [
                 ['blockTile0', -2.0, -1.7], ['blockTile0', -1.2, -1.7], ['blockTile0', -2.0, -0.9],
                 ['blockTile7', -0.35, -0.2], ['blockTile7', 0.45, -0.2], ['blockTile7', 1.25, -0.2], ['blockTile7', 0.45, 0.6],
@@ -1517,31 +1537,27 @@ class UIManager {
         if (reduceMotion) {
             container.alpha = 1;
         } else {
-            liftTargets.forEach(el => { el.y += 16; el.alpha = 0; });
+            liftTargets.forEach(el => { el._liftBaseY = el.y; el.y = el._liftBaseY + 16; el.alpha = 0; });
 
             this.game.effects.tweens.push({
                 elapsed: 0,
                 duration: 700,
                 _isTitleTween: true,
                 _titleRoot: container,
-                _lastLift: 0,
                 update(dt) {
                     if (!container || container.destroyed) return true;
                     this.elapsed += dt;
                     const t = Math.min(this.elapsed / this.duration, 1);
                     container.alpha = easeOutCubic(Math.min(t / 0.4, 1));
 
-                    const lift = easeOutCubic(t) * 16;
-                    const delta = lift - this._lastLift;
-                    this._lastLift = lift;
                     liftTargets.forEach((el, i) => {
                         if (!el || el.destroyed) return;
-                        // Stagger
                         const stagger = i * 0.04;
-                        if (t < stagger) { el.alpha = 0; return; }
+                        if (t < stagger) { el.alpha = 0; el.y = el._liftBaseY + 16; return; }
                         const lt = Math.min((t - stagger) / (1 - stagger), 1);
-                        el.alpha = easeOutCubic(lt);
-                        el.y -= delta;
+                        const e = easeOutCubic(lt);
+                        el.alpha = e;
+                        el.y = el._liftBaseY + 16 * (1 - e);
                     });
                     return t >= 1;
                 }
@@ -1777,15 +1793,15 @@ class UIManager {
 
         yOff += scoreVal.height + 10;
 
-        // New best indicator — a small honey-gold pill instead of glow+sparkles
+        // New best indicator — dark ink on honey-gold pill for crisp readability
         if (isNewBest) {
             const newBest = new PIXI.Text({
                 text: getText('newRecord'),
                 style: {
                     fontFamily: FONT_BODY,
                     fontSize: Math.min(13, panelW * 0.038),
-                    fill: THEME.white,
-                    fontWeight: '700',
+                    fill: 0x160E00,
+                    fontWeight: '800',
                     letterSpacing: 1.5,
                 },
             });
@@ -2210,7 +2226,8 @@ class UIManager {
                 return;
             }
 
-            const rowH = Math.min(28, maxHeight / Math.min(rankings.length + 1, 20));
+            const headerH = Math.min(26, Math.max(20, maxHeight * 0.08));
+            const rowH = Math.max(30, Math.min(34, (maxHeight - headerH - 8) / 8));
             let y = startY;
 
             // Header
@@ -2271,8 +2288,18 @@ class UIManager {
                 },
             ];
 
+            const listTop = y;
+            const listH = Math.max(60, startY + maxHeight - listTop);
+            const rowsCont = new PIXI.Container();
+            overlay.addChild(rowsCont);
+
+            const listMask = new PIXI.Graphics();
+            listMask.rect(panelX + 12, listTop, panelW - 24, listH).fill({ color: 0xFFFFFF });
+            overlay.addChild(listMask);
+            rowsCont.mask = listMask;
+
+            let rowY = listTop;
             rankings.forEach((entry, i) => {
-                if (y + rowH > startY + maxHeight) return;
 
                 const isTop = i < 3;
                 const medal = isTop ? medalStyles[i] : null;
@@ -2292,13 +2319,14 @@ class UIManager {
                     rowBg.roundRect(rowX + 4, y + 3, 3, rowH - 12, 2)
                         .fill({ color: medal.metal, alpha: 0.78 });
                 }
-                overlay.addChild(rowBg);
+                rowBg.y = rowY - y;
+                rowsCont.addChild(rowBg);
 
                 const badgeW = isTop ? Math.min(30, rowH + 5) : Math.min(28, rowH + 3);
                 const badgeH = Math.max(16, rowH - 9);
                 const badge = new PIXI.Graphics();
                 const badgeCx = panelX + 25 + badgeW / 2;
-                const badgeCy = y + rowH / 2 - 2;
+                const badgeCy = rowY + rowH / 2 - 2;
                 if (medal) {
                     const r = Math.min(rowH * 0.42, 12.5);
                     badge.poly([
@@ -2327,7 +2355,7 @@ class UIManager {
                     badge.roundRect(panelX + 25, y + (rowH - badgeH) / 2 - 2, badgeW, badgeH, badgeH / 2)
                         .stroke({ width: 1, color: THEME.secondary, alpha: 0.34 });
                 }
-                overlay.addChild(badge);
+                rowsCont.addChild(badge);
 
                 const rowStyle = {
                     fontFamily: FONT_BODY,
@@ -2348,7 +2376,7 @@ class UIManager {
                 });
                 rankText.anchor.set(0.5, 0.5);
                 rankText.position.set(badgeCx, badgeCy);
-                overlay.addChild(rankText);
+                rowsCont.addChild(rankText);
 
                 const nameText = new PIXI.Text({ text: entry.player_name, style: rowStyle });
                 const scoreText = new PIXI.Text({
@@ -2356,16 +2384,52 @@ class UIManager {
                     style: { ...rowStyle },
                 });
                 scoreText.anchor.set(1, 0.5);
-                scoreText.position.set(panelX + panelW - 28, y + rowH / 2 - 2);
-                overlay.addChild(scoreText);
+                scoreText.position.set(panelX + panelW - 28, rowY + rowH / 2 - 2);
+                rowsCont.addChild(scoreText);
 
                 nameText.anchor.set(0, 0.5);
-                nameText.position.set(panelX + 66, y + rowH / 2 - 2);
+                nameText.position.set(panelX + 66, rowY + rowH / 2 - 2);
                 this._fitTextToWidth(nameText, panelW - 168, 9);
-                overlay.addChild(nameText);
+                rowsCont.addChild(nameText);
 
-                y += rowH;
+                rowY += rowH;
             });
+
+            const totalRowsH = rowY - listTop;
+            const maxScroll = Math.max(0, totalRowsH - listH);
+            if (maxScroll > 0) {
+                let scrollOffset = 0;
+                const applyScroll = (next) => {
+                    scrollOffset = Math.max(0, Math.min(maxScroll, next));
+                    rowsCont.y = -scrollOffset;
+                };
+                const scrollZone = new PIXI.Graphics();
+                scrollZone.rect(panelX + 12, listTop, panelW - 24, listH).fill({ color: 0x000000, alpha: 0.001 });
+                scrollZone.eventMode = 'static';
+                let dragStartY = 0;
+                let dragStartOffset = 0;
+                let draggingList = false;
+                scrollZone.on('pointerdown', (e) => {
+                    draggingList = true;
+                    dragStartY = e.global.y;
+                    dragStartOffset = scrollOffset;
+                });
+                scrollZone.on('pointermove', (e) => {
+                    if (!draggingList) return;
+                    applyScroll(dragStartOffset - (e.global.y - dragStartY));
+                });
+                const endDrag = () => { draggingList = false; };
+                scrollZone.on('pointerup', endDrag);
+                scrollZone.on('pointerupoutside', endDrag);
+                scrollZone.on('pointercancel', endDrag);
+                overlay.addChildAt(scrollZone, Math.max(0, overlay.children.indexOf(rowsCont)));
+
+                this._hofWheelHandler = (ev) => {
+                    if (!this._hofOverlay || this._hofOverlay.destroyed) return;
+                    applyScroll(scrollOffset + (ev.deltaY || 0) * 0.55);
+                };
+                window.addEventListener('wheel', this._hofWheelHandler, { passive: true });
+            }
 
         } catch (e) {
             if (e && e.name === 'AbortError') return;
@@ -2401,6 +2465,10 @@ class UIManager {
         if (this._hofAbortController) {
             this._hofAbortController.abort();
             this._hofAbortController = null;
+        }
+        if (this._hofWheelHandler) {
+            window.removeEventListener('wheel', this._hofWheelHandler);
+            this._hofWheelHandler = null;
         }
         if (this._hofOverlay) {
             this._destroyDynamicTree(this._hofOverlay);
@@ -2559,10 +2627,29 @@ class UIManager {
         input.addEventListener('focus', onFocus);
         input.addEventListener('blur', onBlur);
 
-        const lastName = localStorage.getItem('blockpang_player_name') || '';
+        let lastName = '';
+        try { lastName = localStorage.getItem('blockpang_player_name') || ''; } catch (_) {}
         input.value = lastName;
 
         document.body.appendChild(input);
+        const positionInputForViewport = () => {
+            if (!input.parentNode) return;
+            const vv = window.visualViewport;
+            const visH = vv ? vv.height : window.innerHeight;
+            const visTop = vv ? vv.offsetTop : 0;
+            const visLeft = vv ? vv.offsetLeft : 0;
+            const visW = vv ? vv.width : window.innerWidth;
+            const targetTop = Math.min(h / 2 - 2, visTop + visH * 0.44);
+            input.style.left = `${visLeft + visW / 2}px`;
+            input.style.top = `${Math.max(visTop + 40, targetTop)}px`;
+        };
+        positionInputForViewport();
+        this._nameInputViewportHandler = positionInputForViewport;
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', positionInputForViewport);
+            window.visualViewport.addEventListener('scroll', positionInputForViewport);
+        }
+        window.addEventListener('resize', positionInputForViewport);
         this._nameInputElement = input;
         this._nameInputFocusHandler = onFocus;
         this._nameInputBlurHandler = onBlur;
@@ -2753,15 +2840,25 @@ class UIManager {
                         },
                     }),
                 });
+                const resJson = await response.json().catch(() => null);
                 if (!response.ok) {
                     responseStatus = response.status;
                     try {
-                        responseText = (await response.text()).slice(0, 500);
+                        responseText = resJson ? JSON.stringify(resJson).slice(0, 500) : '';
                     } catch (_) {}
-                    const error = new Error(`rank submit ${response.status}`);
+                    const error = new Error((resJson && resJson.error) || `rank submit ${response.status}`);
                     error.responseStatus = responseStatus;
                     error.responseText = responseText;
                     throw error;
+                }
+                if (resJson && resJson.pending) {
+                    setSubmitting(false);
+                    setSubmitStatus(getText('rankPending'));
+                    setTimeout(() => {
+                        cleanup();
+                        if (onComplete) onComplete();
+                    }, 950);
+                    return;
                 }
                 cleanup();
                 if (onComplete) onComplete();
@@ -2796,5 +2893,17 @@ class UIManager {
 
         this._nameInputOverlay = overlay;
         this.game.app.stage.addChild(overlay);
+    }
+
+    handleViewportResize() {
+        if (this._nameInputViewportHandler) this._nameInputViewportHandler();
+        if (this._hofOverlay && !this._hofOverlay.destroyed) {
+            this._closeHallOfFame();
+            this.showHallOfFame();
+        }
+        if (this.gameOverOverlay && !this.gameOverOverlay.destroyed && this.game && this.game.isGameOver) {
+            const s = this.game.scoreManager;
+            this.showGameOver(s.score, s.bestScore, s.score > 0 && s.score >= s.bestScore);
+        }
     }
 }

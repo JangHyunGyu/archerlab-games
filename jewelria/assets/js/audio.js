@@ -254,6 +254,18 @@ export class AudioManager {
     return this.enabled;
   }
 
+  suspend() {
+    if (this.ctx && this.ctx.state === 'running' && this.ctx.suspend) {
+      this.ctx.suspend().catch(() => {});
+    }
+  }
+
+  resume() {
+    if (this.enabled && this.ctx && this.ctx.state === 'suspended' && this.ctx.resume) {
+      this.ctx.resume().catch(() => {});
+    }
+  }
+
   play(name, intensity = 1, detail = {}) {
     if (!this.enabled) return;
     this.unlock().then(() => {

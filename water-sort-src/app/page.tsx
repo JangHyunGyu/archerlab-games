@@ -377,7 +377,7 @@ export default function Home() {
         <div className="lab-badge"><span aria-hidden="true">✦</span> {c.badge}</div>
         <h1 className={'game-title' + (uiLang === 'en' ? ' game-title-en' : '')} aria-label={c.title}>{uiLang === 'en' ? <><span>Bubbly</span><span>Lab<span className="title-bubble" aria-hidden="true">✧</span></span></> : <><span>보글보글</span><span>실험실<span className="title-bubble" aria-hidden="true">✧</span></span></>}</h1>
         <p className="start-tagline">{c.tagline}</p>
-        <div className="hero-art"><img src="/water-sort/lab-hero.webp" width="600" height="400" decoding="async" alt="" fetchPriority="high"/><span className="hero-spark spark-a" aria-hidden="true">✦</span><span className="hero-spark spark-b" aria-hidden="true">✧</span></div>
+        <div className="hero-art"><img src="/water-sort/lab-hero.webp?v=2" width="600" height="400" decoding="async" alt="" fetchPriority="high"/><span className="hero-spark spark-a" aria-hidden="true">✦</span><span className="hero-spark spark-b" aria-hidden="true">✧</span></div>
         <div className="start-actions">
           <button className="primary-button play-button" disabled={!ready || busy} onClick={() => { if (savedRun) setModal('restart'); else void perform('start'); }}><span aria-hidden="true">▶</span>{c.newGame}</button>
           <button className="secondary-button continue-button" disabled={!ready || busy || !canContinue} onClick={() => { void perform('resume'); }}><span aria-hidden="true">▶</span>{c.continueGame}</button>

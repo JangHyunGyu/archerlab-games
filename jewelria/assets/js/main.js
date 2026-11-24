@@ -29,11 +29,13 @@ let ranking = null;
 let input = null;
 let state = null;
 let selected = null;
+let keyboardGrabbed = false;
 let locked = false;
 let resolving = false;
 let playGeneration = 0;
 let timerId = null;
 let rankSubmitInFlight = false;
+let pausedByRanks = false;
 
 queueMicrotask(boot);
 
@@ -44,7 +46,8 @@ async function boot() {
   input = ui.createInput({
     tap: handleTap,
     swipe: handleSwipe,
-    keyboardMove: handleKeyboardMove
+    keyboardMove: handleKeyboardMove,
+    keyboardConfirm: handleKeyboardConfirm
   });
   input.setEnabled(false);
   bindButtons();
@@ -57,8 +60,10 @@ async function boot() {
   }
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) pauseGame({ playSound: false });
+    if (document.hidden) audio.suspend(); else audio.resume();
   });
   window.addEventListener('pagehide', () => pauseGame({ playSound: false }));
+  window.addEventListener('pagehide', () => audio.suspend());
 }
 
 function bindButtons() {
@@ -73,6 +78,7 @@ function bindButtons() {
   on('resume-btn', 'click', () => {
     resumeGame();
   });
+  on('pause-sound-btn', 'click', toggleSound);
   on('pause-restart-btn', 'click', () => {
     audio.play('button');
     ui.hidePause();
@@ -85,7 +91,7 @@ function bindButtons() {
   });
   on('rank-open-title', 'click', openRanks);
   on('rank-open-game', 'click', openRanks);
-  on('rank-close', 'click', () => ui.hideModal(ui.refs.rankModal));
+  on('rank-close', 'click', closeRanks);
   on('sound-toggle-title', 'click', toggleSound);
   on('retry-btn', 'click', () => {
     audio.play('button');
@@ -113,6 +119,8 @@ function startGame() {
   const board = new BoardModel(BOARD_SIZE);
   board.generateInitial();
   selected = null;
+  keyboardGrabbed = false;
+  pausedByRanks = false;
   locked = false;
   resolving = false;
   state = {
@@ -203,6 +211,8 @@ function goTitle() {
   locked = false;
   resolving = false;
   selected = null;
+  keyboardGrabbed = false;
+  pausedByRanks = false;
   state = null;
   input.setEnabled(false);
   ui.hidePause();
@@ -215,6 +225,7 @@ function goTitle() {
 function handleTap(cell) {
   if (!canPlay() || !state.board.inBounds(cell.row, cell.col)) return;
   audio.unlock();
+  keyboardGrabbed = false;
   if (!selected) {
     selected = cell;
     ui.renderBoard(state.board.grid, selected);
@@ -236,19 +247,40 @@ function handleTap(cell) {
 function handleSwipe(from, to) {
   if (!canPlay() || !state.board.inBounds(to.row, to.col)) return;
   audio.unlock();
+  keyboardGrabbed = false;
   attemptSwap(from, to);
+}
+
+function handleKeyboardConfirm() {
+  if (!canPlay()) return;
+  audio.unlock();
+  if (!selected) {
+    selected = { row: 0, col: 0 };
+    keyboardGrabbed = true;
+  } else {
+    keyboardGrabbed = !keyboardGrabbed;
+  }
+  ui.renderBoard(state.board.grid, selected);
 }
 
 function handleKeyboardMove(dir) {
   if (!canPlay()) return;
+  audio.unlock();
   if (!selected) {
     selected = { row: 0, col: 0 };
+    keyboardGrabbed = false;
     ui.renderBoard(state.board.grid, selected);
     return;
   }
   const to = { row: selected.row + dir.row, col: selected.col + dir.col };
   if (!state.board.inBounds(to.row, to.col)) return;
-  attemptSwap(selected, to);
+  if (keyboardGrabbed) {
+    keyboardGrabbed = false;
+    attemptSwap(selected, to);
+    return;
+  }
+  selected = to;
+  ui.renderBoard(state.board.grid, selected);
 }
 
 async function attemptSwap(from, to) {
@@ -458,6 +490,7 @@ async function submitRank() {
   ui.setRankSubmitLoading(true, ui.text('등록 중...', 'Submitting...', '登録中...'));
   let submitted = false;
   try {
+    saveLocalRank(name, state.score, { mode: 'time_attack', time_limit: TIME_LIMIT });
     const result = await ranking.submit(name, state.score, {
       mode: 'time_attack',
       time_limit: TIME_LIMIT
@@ -481,6 +514,17 @@ async function submitRank() {
 
 async function openRanks() {
   audio.play('button');
+  if (state && state.status === 'playing') {
+    pauseTimer();
+    if (state.timeUp || state.timeLeft <= 0) {
+      endGame();
+      return;
+    }
+    state.status = 'paused';
+    locked = true;
+    input.setEnabled(false);
+    pausedByRanks = true;
+  }
   ui.showRankLoading();
   const myName = loadNickname();
   try {
@@ -490,6 +534,17 @@ async function openRanks() {
     const localRows = localRowsWithRank();
     if (localRows.length) ui.renderRanks(localRows, myName);
     else ui.showRankError();
+  }
+}
+
+function closeRanks() {
+  ui.hideModal(ui.refs.rankModal);
+  if (pausedByRanks && state && state.status === 'paused') {
+    pausedByRanks = false;
+    state.status = 'playing';
+    locked = resolving;
+    input.setEnabled(!resolving);
+    resumeTimer();
   }
 }
 

@@ -1,4 +1,4 @@
-import { storage } from './api.mjs?v=20261124-v15';
+import { storage } from './api.mjs?v=20261124-v16';
 
 const files = {
     click: 'ui-click.mp3',
@@ -73,6 +73,7 @@ export class GameAudio {
                     .then(r => { if (!r.ok) throw new Error('Sound unavailable'); return r.arrayBuffer(); }))
                     .then(data => { if (!data) throw new Error('Sound unavailable'); return this.ctx.decodeAudioData(data); })
                     .then(buffer => { this.buffers.set(key, buffer); return buffer; })
+                    .catch(err => { this.loading.delete(key); throw err; })
             );
         }
         return this.loading.get(key);

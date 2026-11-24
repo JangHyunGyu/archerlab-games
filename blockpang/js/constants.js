@@ -38,11 +38,8 @@ const FONT_BODY    = "'Pretendard Variable', 'Pretendard', 'Noto Sans KR', 'Noto
 
 const BLOCKPANG_ASSET_MANIFEST = {
     arcadeBg: 'assets/ui/arcade-bg.webp',
-    titleSplash: 'assets/ui/title-splash.webp',
     titleBackdropClean: 'assets/ui/title-backdrop-clean.webp',
     boardPanel: 'assets/ui/board-panel.webp',
-    glassPanel: 'assets/ui/glass-panel.webp',
-    glassPanelFill: 'assets/ui/glass-panel-fill.webp',
     rankPopupFrame: 'assets/ui/rank-popup-frame.webp',
     effectSoftCircle: 'assets/ui/effect-soft-circle.webp',
     effectShard: 'assets/ui/effect-shard.webp',
@@ -81,11 +78,8 @@ const BLOCKPANG_ASSET_MANIFEST = {
 
 const BLOCKPANG_PNG_FALLBACKS = {
     arcadeBg: 'assets/ui/arcade-bg.png',
-    titleSplash: 'assets/ui/title-splash.png',
     titleBackdropClean: 'assets/ui/title-backdrop-clean.png',
     boardPanel: 'assets/ui/board-panel.png',
-    glassPanel: 'assets/ui/glass-panel.png',
-    glassPanelFill: 'assets/ui/glass-panel-fill.png',
     rankPopupFrame: 'assets/ui/rank-popup-frame.png',
     effectSoftCircle: 'assets/ui/effect-soft-circle.png',
     effectShard: 'assets/ui/effect-shard.png',
@@ -287,10 +281,12 @@ const _documentLang = typeof document !== 'undefined'
     : '';
 let _storedLang = null;
 try { _storedLang = localStorage.getItem('blockpang_lang'); } catch (_) {}
-let currentLang = LANGUAGES.includes(_storedLang) ? _storedLang
+const _pathname = typeof location !== 'undefined' ? (location.pathname || '') : '';
+const _routeLang = /\/index-en(?:\.html)?$/i.test(_pathname) ? 'en' : '';
+let currentLang = _routeLang || (LANGUAGES.includes(_storedLang) ? _storedLang
     : LANGUAGES.includes(_documentLang) ? _documentLang
     : LANGUAGES.includes(_browserLang) ? _browserLang
-    : 'ko';
+    : 'ko');
 
 // ─── Game API Config ───
 const GAME_API_URL = 'https://game-api.yama5993.workers.dev';
@@ -301,8 +297,8 @@ const I18N = {
         gameTitle: '블럭팡',
         titleTagline: '빈칸에 쏙, 한 줄이면 팡!\n줄을 지우고 점수를 올리세요.',
         gameStart: '게임 시작',
-        language: '다국어',
-        contact: '연락하기',
+        language: '언어',
+        contact: '문의하기',
         gameOver: 'GAME OVER',
         playAgain: '다시 하기',
         backToTitle: '타이틀로',
@@ -315,16 +311,17 @@ const I18N = {
         blockPuzzle: 'BLOCK PUZZLE',
         hallOfFame: '명예의 전당',
         ranking: '랭킹',
-        noRecords: '기록이 없습니다',
+        noRecords: '아직 기록이 없어요',
         close: '닫기',
         enterName: '이름을 입력하세요',
         submit: '등록',
         skip: '건너뛰기',
         nameInputTitle: '명예의 전당 등록',
         rankSubmitted: '등록 완료!',
+        rankPending: '검토 대기 중입니다',
         rankSubmitFailed: '등록에 실패했습니다. 다시 시도해주세요.',
         yourRank: '순위',
-        loading: '로딩 중...',
+        loading: '불러오는 중...',
         continueGame: '이어하기',
     },
     en: {
@@ -352,6 +349,7 @@ const I18N = {
         skip: 'SKIP',
         nameInputTitle: 'HALL OF FAME',
         rankSubmitted: 'Submitted!',
+        rankPending: 'Submitted for review',
         rankSubmitFailed: 'Submit failed. Try again.',
         yourRank: 'Rank',
         loading: 'Loading...',
@@ -382,6 +380,7 @@ const I18N = {
         skip: 'スキップ',
         nameInputTitle: '殿堂入り',
         rankSubmitted: '登録完了！',
+        rankPending: '承認待ちとして登録されました',
         rankSubmitFailed: '登録に失敗しました。もう一度お試しください。',
         yourRank: '順位',
         loading: '読み込み中...',

@@ -4,7 +4,9 @@
   <script src="../shared/ranking-delivery.js?v=20261006-client-exception-v1"></script>
   <meta charset="UTF-8">
   <meta http-equiv="origin-trial" content="Agn9opFYdjvT/UqEIvt4RnCkmN8Kt+8/lzvg731pKSz7MpNoJkLvra/pLOIFgR9GZb39JbBGeJ+CDO++Tus3FggAAABmeyJvcmlnaW4iOiJodHRwczovL2FyY2hlcmxhYi5kZXY6NDQzIiwiZmVhdHVyZSI6IkhUTUxJbkNhbnZhcyIsImV4cGlyeSI6MTc5MjQ1NDQwMCwiaXNTdWJkb21haW4iOnRydWV9">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <script>if(new URLSearchParams(location.search).get('lang')==='ja'){document.documentElement.lang='ja';document.documentElement.classList.add('i18n-pending');}</script>
+  <style>html.i18n-pending body{opacity:0}</style>
   <meta name="theme-color" content="#071a22">
   <title>Jewelria - Free Match-3 Jewel Puzzle | ArcherLab Games</title>
   <meta name="description" content="Play Jewelria, a free browser match-3 jewel puzzle game for PC and mobile.">
@@ -28,10 +30,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="assets/images/ui/apple-touch-icon.png">
   <link rel="preload" as="image" href="assets/images/ui/jewelria-splash.webp" type="image/webp">
-  <link rel="preload" as="image" href="assets/images/ui/crafted-button-v1.webp" type="image/webp">
-  <link rel="preload" as="image" href="assets/images/ui/crafted-frame-v1.webp" type="image/webp">
-  <link rel="stylesheet" href="assets/css/style.css?v=20260710-title-v1">
-  <link rel="stylesheet" href="assets/css/premium.css?v=20261008-fullscreen-link-v1">
+  <link rel="stylesheet" href="assets/css/style.css?v=20261124-jewelria-overhaul-v2">
+  <link rel="stylesheet" href="assets/css/premium.css?v=20261124-jewelria-overhaul-v2">
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -107,15 +107,15 @@
     <meta property="og:image:height" content="630">
     <meta property="og:image:secure_url" content="https://game.archerlab.dev/jewelria/assets/images/ui/og-image.png">
     <meta property="og:image:type" content="image/png">
-    <meta property="og:image:alt" content="ArcherLab Games: Cat Tower merge puzzle">
-    <meta name="twitter:image:alt" content="ArcherLab Games: Cat Tower merge puzzle">
+    <meta property="og:image:alt" content="Jewelria - Free Match-3 Jewel Puzzle">
+    <meta name="twitter:image:alt" content="Jewelria - Free Match-3 Jewel Puzzle">
 
     <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebPage",
-  "@id": "https://game.archerlab.dev/jewelria/#webpage",
-  "url": "https://game.archerlab.dev/jewelria/",
+  "@id": "https://game.archerlab.dev/jewelria/index-en#webpage",
+  "url": "https://game.archerlab.dev/jewelria/index-en",
   "primaryImageOfPage": {
     "@type": "ImageObject",
     "url": "https://game.archerlab.dev/jewelria/assets/images/ui/og-image.png",
@@ -205,6 +205,7 @@
       <h2 id="pause-title">TAKE A BREAK</h2>
       <div class="modal-actions">
         <button id="resume-btn" class="button button-primary" type="button">CONTINUE</button>
+        <button id="pause-sound-btn" class="button button-secondary" type="button" aria-pressed="true">Sound: On</button>
         <button id="pause-restart-btn" class="button button-secondary" type="button">RETRY</button>
         <button id="pause-home-btn" class="button button-secondary" type="button">TITLE</button>
       </div>
@@ -309,8 +310,9 @@
       text('.record-strip > div:first-child span', copy.time);
       text('.record-strip > div:last-child span', copy.best);
       text('#play-btn .btn-label', copy.play);
+      document.documentElement.classList.remove('i18n-pending');
     })();
   </script>
-  <script type="module" src="assets/js/main.js?v=20260913-crafted-ui-v1&ranking=20261006-client-exception-v1&cascade=20261009-run-v1&locale=20261103-ja-v1"></script>
+  <script type="module" src="assets/js/main.js?v=20260913-crafted-ui-v1&ranking=20261006-client-exception-v1&cascade=20261009-run-v1&locale=20261103-ja-v1&overhaul=20261124-v2"></script>
 </body>
 </html>

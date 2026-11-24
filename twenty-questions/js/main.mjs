@@ -1,6 +1,6 @@
-import { messages, translation } from './i18n.mjs?v=20261124-v15';
-import { request, requestId, storage, reportException } from './api.mjs?v=20261124-v15';
-import { GameAudio } from './audio.mjs?v=20261124-v15';
+import { messages, translation } from './i18n.mjs?v=20261124-v16';
+import { request, requestId, storage, reportException } from './api.mjs?v=20261124-v16';
+import { GameAudio } from './audio.mjs?v=20261124-v16';
 
 const locale = document.documentElement.lang === 'en' ? 'en' : 'ko';
 const t = translation(locale);
@@ -47,11 +47,11 @@ let sendSubmittedByForm = false;
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const isTouchDevice = () => window.matchMedia('(hover: none), (pointer: coarse)').matches || navigator.maxTouchPoints > 0;
 const VFX_SPRITES = {
-    cool: 'assets/ui/vfx-pulse-cyan.webp?v=20261124-v15',
-    warm: 'assets/ui/vfx-sigil-violet.webp?v=20261124-v15',
-    hot: 'assets/ui/vfx-flare-hot.webp?v=20261124-v15',
-    molten: 'assets/ui/vfx-nova-molten.webp?v=20261124-v15',
-    exact: 'assets/ui/vfx-compass-burst-1024.webp?v=20261124-v15',
+    cool: 'assets/ui/vfx-pulse-cyan.webp?v=20261124-v16',
+    warm: 'assets/ui/vfx-sigil-violet.webp?v=20261124-v16',
+    hot: 'assets/ui/vfx-flare-hot.webp?v=20261124-v16',
+    molten: 'assets/ui/vfx-nova-molten.webp?v=20261124-v16',
+    exact: 'assets/ui/vfx-compass-burst-1024.webp?v=20261124-v16',
 };
 const HAPTIC_PATTERNS = {
     unknown: [24, 30, 24],

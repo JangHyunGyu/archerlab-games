@@ -62,6 +62,9 @@
       this._BONK_GLOBAL_MS = 55;
       // merge/combo 직전·중에는 bonk 일시 차단 — 보이스 누적 + 리미터 포화로 찌직거리는 원인
       this._bonkLockUntil = 0;
+      // Legend 팡파레 재생 중 후속 merge/combo가 releaseAll로 끊지 않도록 잠금
+      this._legendLockUntil = 0;
+      this._meowAudio = null;
 
       this._visibilityHandler = () => {
         if (!document.hidden && this.enabled && this._initialized) {
@@ -308,7 +311,11 @@
       this._pendingMergeTier = -1;
       this._pendingComboLevel = -1;
       this._bonkLockUntil = 0;
+      this._legendLockUntil = 0;
       this._lastBonkAt = 0;
+      if (this._meowAudio) {
+        try { this._meowAudio.pause(); this._meowAudio.currentTime = 0; } catch (_err) {}
+      }
       if (!this._hasTone()) return;
       try {
         const now = this._now();
@@ -443,6 +450,7 @@
     // 뒤이어 combo가 호출되면 큐에 든 merge는 취소됨(보이스 적층/리미터 포화 방지).
     playMerge(newTier) {
       if (!this._canPlay()) return;
+      if (performance.now() < this._legendLockUntil) return;
       this.ensureContext();
       if (!this._hasTone()) return;
 
@@ -458,6 +466,7 @@
         const tier = this._pendingMergeTier;
         this._pendingMergeTier = -1;
         if (tier < 0) return; // combo가 취소함
+        if (performance.now() < this._legendLockUntil) return;
         if (!this._hasTone()) return;
         this._playMergeImpl(tier);
       }, this._COALESCE_MS);
@@ -520,6 +529,7 @@
     // 큐된 merge는 combo가 흡수(사운드 적층 방지). merge 타이머도 취소한다.
     playCombo(level) {
       if (!this._canPlay()) return;
+      if (performance.now() < this._legendLockUntil) return;
       this.ensureContext();
       if (!this._hasTone()) return;
 
@@ -538,6 +548,7 @@
         const lvl = this._pendingComboLevel;
         this._pendingComboLevel = -1;
         if (lvl < 0) return;
+        if (performance.now() < this._legendLockUntil) return;
         if (!this._hasTone()) return;
         this._playComboImpl(lvl);
       }, this._COALESCE_MS);
@@ -695,6 +706,12 @@
       if (!this._canPlay()) return;
       this.ensureContext();
       if (!this._hasTone()) return;
+      this._legendLockUntil = performance.now() + 950;
+      this._bonkLockUntil = performance.now() + 950;
+      this._pendingMergeTier = -1;
+      this._pendingComboLevel = -1;
+      if (this._mergeTimer) { clearTimeout(this._mergeTimer); this._mergeTimer = null; }
+      if (this._comboTimer) { clearTimeout(this._comboTimer); this._comboTimer = null; }
       const now = this._now();
 
       try {
@@ -959,10 +976,26 @@
     }
 
     // ── Toggle / Destroy ─────────────────────────────────────────
+    playMeow() {
+      if (!this.enabled) return;
+      try {
+        if (!this._meowAudio) {
+          this._meowAudio = new Audio('sound/stu9-cute-cat-352656.mp3');
+          this._meowAudio.volume = 0.8;
+        } else {
+          this._meowAudio.currentTime = 0;
+        }
+        this._meowAudio.play().catch(() => {});
+      } catch (_err) {}
+    }
+
     toggle() {
       this.enabled = !this.enabled;
       if (typeof Tone !== 'undefined') {
         Tone.Destination.mute = !this.enabled;
+      }
+      if (!this.enabled && this._meowAudio) {
+        try { this._meowAudio.pause(); this._meowAudio.currentTime = 0; } catch (_err) {}
       }
       this._saveEnabled();
       return this.enabled;

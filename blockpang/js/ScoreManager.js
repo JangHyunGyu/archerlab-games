@@ -76,7 +76,7 @@ class ScoreManager {
     _saveBest() {
         if (this.score > this.bestScore) {
             this.bestScore = this.score;
-            localStorage.setItem('blockpang_best', String(this.bestScore));
+            try { localStorage.setItem('blockpang_best', String(this.bestScore)); } catch (_) {}
         }
     }
 

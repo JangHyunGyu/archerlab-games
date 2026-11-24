@@ -46,6 +46,10 @@ body {
 
 body::before,
 body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
   z-index: -1;
   background: linear-gradient(90deg, rgba(9, 10, 8, 0.64), transparent 35%, transparent 65%, rgba(9, 10, 8, 0.64));
 }
@@ -567,6 +571,12 @@ noscript {
   -webkit-overflow-scrolling: touch;
 }
 
+.school-zombie-rank-layer--gameover {
+  top: 26.05%;
+  padding: 0 42px 18px;
+  background: transparent;
+}
+
 /* A landscape canvas is narrow; nickname controls need the full viewport. */
 @media (orientation: landscape) {
   .school-zombie-rank-layer {
@@ -580,14 +590,10 @@ noscript {
 
   .school-zombie-rank-layer.school-zombie-rank-layer--gameover {
     top: 0;
+    padding: max(14px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+    background: rgba(12, 13, 10, 0.9);
   }
 
-}
-
-.school-zombie-rank-layer--gameover {
-  top: 26.05%;
-  padding: 0 42px 18px;
-  background: transparent;
 }
 
 .school-zombie-rank-prep {

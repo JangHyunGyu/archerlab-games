@@ -62,7 +62,7 @@
       "rank.pendingStatus": "기록을 보관했습니다. 자동으로 등록합니다.",
       "rank.doneStatus": "등록 완료",
       "rank.syncFail": "기록 동기화가 끊겨 등록하지 못했습니다",
-      "rank.submitFail": "등록 실패. 다시 시도하거나 Skip하세요",
+      "rank.submitFail": "등록 실패. 다시 시도하거나 건너뛰기를 눌러주세요",
       "rank.skipped": "등록을 건너뛰었습니다",
       "rank.allClear": "ALL CLEAR",
       "toast.blocked": "이 방향으로는 움직일 수 없습니다",
@@ -165,8 +165,7 @@
     try { global.localStorage.setItem(LANG_KEY, next); } catch (error) { /* Keep playing if storage is blocked. */ }
   }
 
-  let lang = pathLang() || queryLang() || storedLang() || documentLang() || "ko";
-  persist(lang);
+  let lang = pathLang() || queryLang() || documentLang() || storedLang() || "ko";
 
   function t(key, vars) {
     const dict = STRINGS[lang] || STRINGS.ko;

@@ -8,13 +8,20 @@ function englishEntry(html, game, config) {
     result = result.replace(/(<link rel="canonical" href=")[^"]+("\s*\/?>)/, `$1${url}$2`);
     result = result.replace(/(<meta property="og:url" content=")[^"]+("\s*\/?>)/, `$1${url}$2`);
     result = result.replace('property="og:locale" content="ko_KR"', 'property="og:locale" content="en_US"');
-    result = result.replace(/(<script\s+type="application\/ld\+json">)([\s\S]*?)(<\/script>)/, (_, start, raw, end) => {
+    result = result.replace(/(<script\s+type="application\/ld\+json">)([\s\S]*?)(<\/script>)/g, (_, start, raw, end) => {
         const data = JSON.parse(raw);
+        const types = [].concat(data['@type'] || []);
         data.url = url;
-        data.name = config.gameName;
-        data.inLanguage = 'en';
-        if (data.mainEntityOfPage) data.mainEntityOfPage = url;
-        if (data.offers) data.offers.priceCurrency = 'USD';
+        if (types.includes('WebPage')) {
+            data['@id'] = `${url}#webpage`;
+            if (config.title) data.name = config.title;
+        }
+        if (types.includes('VideoGame')) {
+            data.name = config.gameName;
+            data.inLanguage = 'en';
+            if (data.mainEntityOfPage) data.mainEntityOfPage = url;
+            if (data.offers) data.offers.priceCurrency = 'USD';
+        }
         return start + '\n' + JSON.stringify(data, null, 2) + '\n    ' + end;
     });
     if (game === 'jewelria') {
@@ -26,7 +33,7 @@ function englishEntry(html, game, config) {
             '다시하기': 'RETRY', '명예의 전당': 'HALL OF FAME', '잠시 쉬어가기': 'TAKE A BREAK',
             '계속하기': 'CONTINUE', '타이틀': 'TITLE', '타임 어택 종료': 'Time Attack Over',
             '최고': 'BEST', '명예의 전당 등록': 'Submit your score', '등록': 'SUBMIT',
-            '건너뛰기': 'SKIP', '명예의 전당 TOP 20': 'HALL OF FAME TOP 20', '불러오는 중...': 'Loading...'
+            '건너뛰기': 'SKIP', '명예의 전당 TOP 20': 'HALL OF FAME TOP 20', '불러오는 중...': 'Loading...', '사운드 켜짐': 'Sound: On', '닫기': 'Close'
         };
         for (const [ko, en] of Object.entries(text)) body = body.split(`>${ko}<`).join(`>${en}<`);
         const attributes = {
@@ -42,6 +49,7 @@ function englishEntry(html, game, config) {
         }
         body = body.replace('data-lang="ko"', 'data-lang="en"');
         result = result.slice(0, split) + body;
+        result = result.split('쥬얼리아 Jewelria - 무료 매치3 보석 퍼즐').join('Jewelria - Free Match-3 Jewel Puzzle');
     }
     return result;
 }

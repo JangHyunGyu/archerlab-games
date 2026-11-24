@@ -233,9 +233,15 @@
 
   function show(el) {
     el.classList.remove('hidden');
-    if (el && el.id === 'game') scheduleFitGameLayout();
+    if (el && el.id === 'game') {
+      document.body.classList.add('in-game');
+      scheduleFitGameLayout();
+    }
   }
-  function hide(el) { el.classList.add('hidden'); }
+  function hide(el) {
+    el.classList.add('hidden');
+    if (el && el.id === 'game') document.body.classList.remove('in-game');
+  }
 
   // -------- 로컬 스토리지 --------
   const STORAGE_KEY = 'cat-tower.v1';
@@ -603,7 +609,7 @@
       slop: 0.03,
       label: 'cat',
     });
-    body.cat = { tier: tierIdx, merging: false, spawnedAt: performance.now(), aboveSince: 0 };
+    body.cat = { tier: tierIdx, merging: false, spawnedAt: simNowMs, aboveSince: 0 };
     World.add(world, body);
     if (asStatic) Body.setStatic(body, true);
     log(`createCat tier=${tierIdx}(${tier.name}) pos=(${x.toFixed(1)}, ${y.toFixed(1)}) ${asStatic ? 'STATIC' : 'dynamic'}`);
@@ -972,7 +978,7 @@
     if (!Number.isFinite(currentCat.mass) || currentCat.inverseMass === 0) {
       err(`dropCurrent: setStatic(false) 후 mass 이상 mass=${currentCat.mass} invMass=${currentCat.inverseMass} — _original이 누락됐을 가능성 (createCat 수정 회귀?)`);
     }
-    currentCat.cat.spawnedAt = performance.now();
+    currentCat.cat.spawnedAt = simNowMs;
     ((sound === null || sound === void 0 ? void 0 : sound.playDrop(tier)));
     markSaveDirty();
     log(`dropCurrent tier=${tier} at (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)})`);
@@ -989,9 +995,12 @@
   }
 
   // -------- 입력 --------
+  let activePointerId = null;
   function setupInput() {
     const onPointer = (e) => {
+      if (!running || gameOver) return;
       const rect = canvas.getBoundingClientRect();
+      if (!rect.width) return;
       const xInCss = (e.clientX - rect.left);
       const scale = FIELD_W / rect.width;
       pointerX = Math.max(0, Math.min(FIELD_W, xInCss * scale));
@@ -1004,29 +1013,46 @@
       }
     };
     canvas.addEventListener('pointerdown', (e) => {
+      if (!running || gameOver) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if (pointerActive && activePointerId !== null && activePointerId !== e.pointerId) return;
       pointerActive = true;
-      canvas.setPointerCapture(e.pointerId);
+      activePointerId = e.pointerId;
+      try { canvas.setPointerCapture(e.pointerId); } catch (_err) {}
       onPointer(e);
     });
     canvas.addEventListener('pointermove', (e) => {
-      if (!pointerActive && e.pointerType !== 'mouse') return;
+      if (!running || gameOver) return;
+      if (pointerActive) {
+        if (activePointerId !== null && e.pointerId !== activePointerId) return;
+      } else if (e.pointerType !== 'mouse') {
+        return;
+      }
       onPointer(e);
     });
     // 마우스도 움직임 추적 (탭 아니어도)
-    canvas.addEventListener('mousemove', (e) => onPointer(e));
+    canvas.addEventListener('mousemove', (e) => { if (running && !gameOver) onPointer(e); });
     canvas.addEventListener('pointerup', (e) => {
+      if (!running || gameOver) return;
+      if (!pointerActive || (activePointerId !== null && e.pointerId !== activePointerId)) return;
       onPointer(e);
       pointerActive = false;
+      activePointerId = null;
+      try { canvas.releasePointerCapture(e.pointerId); } catch (_err) {}
       dropCurrent();
     });
-    canvas.addEventListener('pointercancel', () => { pointerActive = false; });
+    canvas.addEventListener('pointercancel', (e) => {
+      if (activePointerId !== null && e.pointerId !== activePointerId) return;
+      pointerActive = false;
+      activePointerId = null;
+    });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
   // -------- 게임 오버 판정 --------
   function checkGameOver(bodiesSnapshot = null) {
     if (gameOver) return false;
-    const now = performance.now();
+    const now = simNowMs;
     const bodies = bodiesSnapshot || Composite.allBodies(world);
     let changed = false;
     let anyDanger = false;
@@ -1198,7 +1224,7 @@
     ctx.restore();
   }
 
-  function render(bodiesSnapshot = null) {
+  function render(bodiesSnapshot = null, frameStep = 1) {
     // 배경 — 은은한 베이지 + 경계선
     ctx.clearRect(0, 0, FIELD_W, FIELD_H);
     ctx.fillStyle = fieldBgGradient || '#F5F0DF';
@@ -1247,7 +1273,7 @@
 
     for (let i = landingDustEffects.length - 1; i >= 0; i--) {
       const e = landingDustEffects[i];
-      e.age++;
+      e.age += frameStep;
       if (e.age >= e.max) { landingDustEffects.splice(i, 1); continue; }
       drawLandingDustEffect(e);
     }
@@ -1262,7 +1288,7 @@
     // 합성 이펙트
     for (let i = mergeEffects.length - 1; i >= 0; i--) {
       const e = mergeEffects[i];
-      e.age++;
+      e.age += frameStep;
       if (e.age >= e.max) { mergeEffects.splice(i, 1); continue; }
       const t = e.age / e.max;
       const ease = 1 - Math.pow(1 - t, 2);
@@ -1296,7 +1322,7 @@
     nextCtx.clearRect(0, 0, 72, 72);
     updateNextCatLabel();
     if (nextTier == null) return;
-    const r = Math.min(27, TIERS[nextTier].radius);
+    const r = Math.min(24, TIERS[nextTier].radius);
     CatAssets.drawCat(nextCtx, nextTier, 36, 36, 0, r);
   }
 
@@ -1306,10 +1332,14 @@
 
   // -------- 메인 루프 --------
   let lastTs = 0;
+  let simNowMs = 0;
   let loopToken = 0; // 중복 RAF 체인 방지: restart 시 이전 루프를 무효화
   let _frameCount = 0;
   let _lastFpsAt = 0;
   let _framesSinceFps = 0;
+  let _stuckAccMs = 0;
+  let _assertAccMs = 0;
+  let _saveAccMs = 0;
 
   function makeTick(myToken) {
     return function tick(ts) {
@@ -1318,27 +1348,35 @@
         return;
       }
       try {
-        const dt = Math.min(16.666, ts - lastTs || 16.666);
-        if (dt > 50) warn(`프레임 지연 감지 dt=${dt.toFixed(1)}ms (탭 백그라운드?)`);
+        const rawDt = lastTs ? (ts - lastTs) : 16.666;
+        if (rawDt > 50) warn(`프레임 지연 감지 dt=${rawDt.toFixed(1)}ms (탭 백그라운드?)`);
+        const dt = Math.min(16.666, Math.max(0, rawDt));
+        simNowMs += dt;
+        const frameStep = dt / 16.666;
         Engine.update(engine, dt);
         let bodies = Composite.allBodies(world);
         if (checkGameOver(bodies)) bodies = Composite.allBodies(world);
         _frameCount++;
-        // 매 30프레임(약 0.5초)마다 stuck merge 검사 — 정적 접촉으로 갇힌 쌍 구제
-        if (_frameCount % 30 === 0 && scanStuckMerges(bodies)) {
-          bodies = Composite.allBodies(world);
+        _stuckAccMs += dt;
+        _assertAccMs += dt;
+        _saveAccMs += dt;
+        if (_stuckAccMs >= 500) {
+          _stuckAccMs = 0;
+          if (scanStuckMerges(bodies)) bodies = Composite.allBodies(world);
         }
-        // 매 60프레임(약 1초)마다 NaN 감시 + 옵션으로 상태 스냅샷
-        if (_frameCount % 60 === 0) {
+        if (_assertAccMs >= 1000) {
+          _assertAccMs = 0;
           assertBodiesFinite('tick', bodies);
           pruneBonkCooldown(bodies);
           _lastFpsAt = ts;
           _framesSinceFps = 0;
         }
-        // 매 90프레임(약 1.5초)마다 이어서하기용 자동저장
-        if (_frameCount % 180 === 0) autoSave(false, bodies);
+        if (_saveAccMs >= 3000) {
+          _saveAccMs = 0;
+          autoSave(false, bodies);
+        }
         _framesSinceFps++;
-        render(bodies);
+        render(bodies, frameStep);
       } catch (e) {
         err('loop tick 예외:', e.message, e.stack);
         running = false;
@@ -1366,6 +1404,13 @@
     setDangerActive(false);
     running = true;
     dropCooldown = false;
+    pointerActive = false;
+    activePointerId = null;
+    pointerX = FIELD_W / 2;
+    simNowMs = 0;
+    _stuckAccMs = 0;
+    _assertAccMs = 0;
+    _saveAccMs = 0;
     saveDirty = false;
     lastAutoSaveAt = 0;
     mergeEffects.length = 0;
@@ -1415,6 +1460,12 @@
       setDangerActive(false);
       running = true;
       dropCooldown = false;
+      pointerActive = false;
+      activePointerId = null;
+      simNowMs = 0;
+      _stuckAccMs = 0;
+      _assertAccMs = 0;
+      _saveAccMs = 0;
       saveDirty = false;
       lastAutoSaveAt = 0;
       mergeEffects.length = 0;
@@ -1439,7 +1490,7 @@
         if (typeof c.t !== 'number' || !Number.isFinite(c.x) || !Number.isFinite(c.y)) continue;
         const body = createCat(c.t, c.x, c.y, false);
         if (!body) continue;
-        body.cat.spawnedAt = performance.now() - POST_DROP_GRACE_MS - 1;
+        body.cat.spawnedAt = simNowMs - POST_DROP_GRACE_MS - 1;
         Body.setAngle(body, Number.isFinite(c.a) ? c.a : 0);
         Body.setVelocity(body, {
           x: Number.isFinite(c.vx) ? c.vx : 0,
@@ -1450,8 +1501,8 @@
       }
 
       // 상단 대기 고양이 복원 (없으면 새로 스폰)
-      nextTier = (typeof data.nextTier === 'number') ? data.nextTier : pickNextTier();
-      if (data.current && typeof data.current.t === 'number') {
+      nextTier = (Number.isInteger(data.nextTier) && data.nextTier >= 0 && data.nextTier <= MAX_SPAWN_TIER) ? data.nextTier : pickNextTier();
+      if (data.current && Number.isInteger(data.current.t) && data.current.t >= 0 && data.current.t < TIERS.length) {
         const curX = Number.isFinite(data.current.x) ? data.current.x : FIELD_W / 2;
         const r = TIERS[data.current.t].radius;
         const clampedX = Math.min(FIELD_W - r, Math.max(r, curX));
@@ -1504,6 +1555,8 @@
     if (running && !gameOver) autoSave(true);
     running = false;
     gameOver = false;
+    pointerActive = false;
+    activePointerId = null;
     setDangerActive(false);
     currentCat = null; // 이전 게임 참조 정리
     updateCurrentCatLabel(null);
@@ -1527,8 +1580,9 @@
       const cell = document.createElement('div');
       cell.className = 'tier-cell';
       const c = document.createElement('canvas');
-      c.width = 64; c.height = 64;
+      c.width = 128; c.height = 128;
       const cctx = c.getContext('2d');
+      cctx.scale(2, 2);
       CatAssets.drawCat(cctx, i, 32, 32, 0, 22);
       cell.appendChild(c);
       const label = document.createElement('div');
@@ -1553,9 +1607,10 @@
 
       const c = document.createElement('canvas');
       c.setAttribute('aria-hidden', 'true');
-      c.width = 36;
-      c.height = 36;
+      c.width = 72;
+      c.height = 72;
       const cctx = c.getContext('2d');
+      cctx.scale(2, 2);
       CatAssets.drawCat(cctx, i, 18, 18, 0, 12);
       cell.appendChild(c);
 
@@ -1760,8 +1815,10 @@
 
       // 버튼 바인딩
       const playBtn = $('play-btn');
+      const resumeMenuInitBtn = $('resume-btn-menu');
       let playLabelState = 'loading';
       playBtn.disabled = true;
+      if (resumeMenuInitBtn) resumeMenuInitBtn.disabled = true;
       playBtn.textContent = tt('menu.loading');
 
       $('how-btn').addEventListener('click', () => { ((sound === null || sound === void 0 ? void 0 : sound.playButton())); log('UI: how 열기'); show(modals.how); });
@@ -1834,13 +1891,7 @@
         // 첫 user gesture에서 AudioContext 초기화 (iOS/Safari 대응)
         ((sound === null || sound === void 0 ? void 0 : sound.ensureContext()));
         ((sound === null || sound === void 0 ? void 0 : sound.playButton()));
-        if (((sound === null || sound === void 0 ? void 0 : sound.enabled))) {
-          try {
-            const catSfx = new Audio('sound/stu9-cute-cat-352656.mp3');
-            catSfx.volume = 0.8;
-            catSfx.play().catch(() => {});
-          } catch (e) {}
-        }
+        ((sound === null || sound === void 0 ? void 0 : sound.playMeow()));
         log('UI: 플레이 클릭');
         hide(screens.menu);
         show(screens.game);
@@ -1872,6 +1923,7 @@
         try { ((sound === null || sound === void 0 ? void 0 : sound.init())); log('SoundManager pre-init 완료'); } catch (e) { warn('SoundManager pre-init 실패:', e.message); }
         playLabelState = 'ready';
         playBtn.disabled = false;
+        if (resumeMenuInitBtn) resumeMenuInitBtn.disabled = false;
         playBtn.textContent = tt('menu.play');
       } catch (e) {
         err('에셋 로드 실패:', e.message, e.stack);

@@ -10,7 +10,7 @@ const STARTER_CHIPS = {
 const directory = fileURLToPath(new URL('../', import.meta.url));
 const escape = text => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
 const skinIcon = (name, size = 22) =>
-    `<img src="assets/ui/${name}-48.webp?v=3" srcset="assets/ui/${name}-48.webp?v=3 1x, assets/ui/${name}-96.webp?v=3 2x" alt="" width="${size}" height="${size}" decoding="async">`;
+    `<img src="assets/ui/${name}-48.webp?v=4" srcset="assets/ui/${name}-48.webp?v=4 1x, assets/ui/${name}-96.webp?v=4 2x" alt="" width="${size}" height="${size}" decoding="async">`;
 
 for (const locale of ['ko', 'en']) {
     const t = messages[locale];
@@ -45,11 +45,11 @@ for (const locale of ['ko', 'en']) {
   <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': ['VideoGame', 'WebApplication'], name: t.title, description: `${t.intro} ${t.rules}`, url, image: 'https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png', inLanguage: locale, applicationCategory: 'GameApplication', operatingSystem: 'Any', gamePlatform: ['Web Browser', 'Mobile Browser'], playMode: 'SinglePlayer', isAccessibleForFree: true, dateModified: '2026-11-20', author: { '@type': 'Organization', name: 'ArcherLab', url: 'https://archerlab.dev' } })}</script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261124-v15">
+  <link rel="stylesheet" href="css/style.css?v=20261124-v16">
   <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
   <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
   <script src="../shared/browser-check.js?v=20261005-env-guard-v1"></script>
-  <script type="module" src="js/main.mjs?v=20261124-v15"></script>
+  <script type="module" src="js/main.mjs?v=20261124-v16"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 </head>
 <body data-no-fullscreen data-screen="title">
@@ -62,7 +62,7 @@ for (const locale of ['ko', 'en']) {
   </div>
   <header class="site-header">
     <a class="brand" href="../" aria-label="${text('portal')}">
-      <img src="assets/ui/compass-chronograph-160.webp?v=3" srcset="assets/ui/compass-chronograph-160.webp?v=3 1x, assets/ui/compass-chronograph-320.webp?v=3 2x" alt="" width="30" height="37" decoding="async">
+      <img src="assets/ui/compass-chronograph-160.webp?v=4" srcset="assets/ui/compass-chronograph-160.webp?v=4 1x, assets/ui/compass-chronograph-320.webp?v=4 2x" alt="" width="30" height="37" decoding="async">
       <span>ArcherLab</span>
     </a>
     <div class="header-controls">
@@ -102,8 +102,8 @@ for (const locale of ['ko', 'en']) {
       </div>
       <div class="hero-art">
         <div class="compass-showcase" aria-hidden="true">
-          <img class="showcase-burst" src="assets/ui/vfx-compass-burst-512.webp?v=3" alt="" width="240" height="240" decoding="async">
-          <img class="showcase-compass" src="assets/ui/compass-chronograph-320.webp?v=3" srcset="assets/ui/compass-chronograph-320.webp?v=3 1x, assets/ui/compass-chronograph-640.webp?v=3 2x" alt="" width="136" height="170" decoding="async">
+          <img class="showcase-burst" src="assets/ui/vfx-compass-burst-512.webp?v=4" alt="" width="240" height="240" decoding="async">
+          <img class="showcase-compass" src="assets/ui/compass-chronograph-320.webp?v=4" srcset="assets/ui/compass-chronograph-320.webp?v=4 1x, assets/ui/compass-chronograph-640.webp?v=4 2x" alt="" width="136" height="170" decoding="async">
         </div>
         <div class="example-card crafted-frame" aria-label="${text('example_heading')}">
           <div class="example-head">
@@ -130,7 +130,7 @@ for (const locale of ['ko', 'en']) {
       <div class="chronometer-console crafted-frame">
         <div class="hud-primary">
           <div class="hud-card timer-card">
-            <span><img class="timer-emblem" src="assets/ui/compass-chronograph-160.webp?v=3" alt="" width="18" height="22" decoding="async">${text('timer_label')}</span>
+            <span><img class="timer-emblem" src="assets/ui/compass-chronograph-160.webp?v=4" alt="" width="18" height="22" decoding="async">${text('timer_label')}</span>
             <strong id="game-timer" aria-live="off">06:00:00</strong>
           </div>
           <div class="hud-card"><span>${text('guess_count')}</span><strong id="guess-count-display">0</strong></div>
@@ -150,7 +150,7 @@ for (const locale of ['ko', 'en']) {
       </div>
       <div id="result-wrap" class="result-wrap">
         <div id="vfx-burst" class="vfx-burst" aria-hidden="true">
-          <img src="assets/ui/vfx-compass-burst-512.webp?v=3" srcset="assets/ui/vfx-compass-burst-512.webp?v=3 1x, assets/ui/vfx-compass-burst-1024.webp?v=3 2x" alt="" width="440" height="440" decoding="async">
+          <img src="assets/ui/vfx-compass-burst-512.webp?v=4" srcset="assets/ui/vfx-compass-burst-512.webp?v=4 1x, assets/ui/vfx-compass-burst-1024.webp?v=4 2x" alt="" width="440" height="440" decoding="async">
         </div>
         <div id="result-banner" class="result-banner crafted-frame" hidden>
           <p id="record-badge" class="record-badge" hidden>${text('new_record')}</p>

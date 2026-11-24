@@ -1485,6 +1485,44 @@ h2 {
     padding: 16px;
   }
 
+  .hud {
+    top: max(6px, env(safe-area-inset-top));
+    grid-template-columns: 44px repeat(4, minmax(52px, 1fr));
+    min-height: 48px;
+    padding: 4px;
+    gap: 4px;
+    width: min(470px, calc(100vw - 128px));
+  }
+
+  .stat {
+    min-height: 38px;
+    padding: 3px 6px 2px;
+  }
+
+  .stat strong {
+    margin-top: 2px;
+    font-size: 0.95rem;
+  }
+
+  .hud {
+    top: max(6px, env(safe-area-inset-top));
+    grid-template-columns: 44px repeat(4, minmax(52px, 1fr));
+    min-height: 48px;
+    padding: 4px;
+    gap: 4px;
+    width: min(470px, calc(100vw - 128px));
+  }
+
+  .stat {
+    min-height: 38px;
+    padding: 3px 6px 2px;
+  }
+
+  .stat strong {
+    margin-top: 2px;
+    font-size: 0.95rem;
+  }
+
   .rank-content {
     flex: 1 1 auto;
     min-height: 0;
@@ -1510,7 +1548,10 @@ h2 {
   border-radius: 4px;
   background: rgba(12, 16, 21, 0.62);
   color: #f3f0e6;
-  font: 800 13px/1 inherit;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
   letter-spacing: 0.08em;
   cursor: pointer;
 }

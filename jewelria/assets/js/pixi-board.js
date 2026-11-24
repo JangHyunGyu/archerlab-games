@@ -68,7 +68,19 @@ export class PixiBoard {
     this.gap = 0;
     this.origin = 0;
     this.pointerStart = null;
+    this.activePointerId = null;
+    this._timeouts = new Set();
     this._ready = false;
+  }
+
+  _later(fn, ms, onCancel = null) {
+    const entry = { id: 0, onCancel };
+    entry.id = setTimeout(() => {
+      this._timeouts.delete(entry);
+      fn();
+    }, ms);
+    this._timeouts.add(entry);
+    return entry.id;
   }
 
   async init() {
@@ -271,6 +283,7 @@ export class PixiBoard {
     }
     container.addChild(visual);
     container._visual = visual;
+    container._baseCell = this.cell;
 
     if (gem.special) {
       const marker = this._makeSpecialMarker(gem.special, gem.type);
@@ -405,11 +418,11 @@ export class PixiBoard {
     sprite.x = tx;
     this._tween(sprite, { y: ty }, dur, easeOutCubic, delay);
     const landDelay = delay + dur * 0.76;
-    setTimeout(() => {
+    this._later(() => {
       if (!sprite.parent || sprite.destroyed) return;
       this._spawnLandingPulse(tx, ty, distance);
       this._tween(sprite, { scale: 1.1 }, 70, easeOutCubic);
-      setTimeout(() => {
+      this._later(() => {
         if (!sprite.parent || sprite.destroyed) return;
         this._tween(sprite, { scale: 1 }, 180, easeOutBack);
       }, 72);
@@ -447,13 +460,13 @@ export class PixiBoard {
           this._spawnRing(this.cellX(cell.col), this.cellY(cell.row), color, 1.45);
           this._tween(s, { scale: 1.42 }, duration * 0.38, easeOutCubic);
           this._tween(s, { alpha: 0 }, duration, easeInQuad);
-          setTimeout(() => this._tween(s, { scale: 0 }, duration * 0.5, easeInQuad), duration * 0.38);
+          this._later(() => this._tween(s, { scale: 0 }, duration * 0.5, easeInQuad), duration * 0.38);
         };
         const wait = stagger > 0 ? i * stagger : 0;
-        if (wait > 0) setTimeout(run, wait); else run();
+        if (wait > 0) this._later(run, wait); else run();
       });
       const total = duration + (stagger > 0 ? Math.max(0, ordered.length - 1) * stagger : 0);
-      return new Promise((resolve) => setTimeout(resolve, total));
+      return new Promise((resolve) => this._later(resolve, total, resolve));
     } else if (className === 'invalid') {
       for (const cell of cells) {
         const entry = this._entryAt(cell.row, cell.col);
@@ -464,11 +477,11 @@ export class PixiBoard {
         const entry = this._entryAt(cell.row, cell.col);
         if (entry) {
           this._tween(entry.sprite, { scale: 1.18 }, duration * 0.5, easeOutBack);
-          setTimeout(() => this._tween(entry.sprite, { scale: 1 }, duration * 0.5, easeOutCubic), duration * 0.5);
+          this._later(() => this._tween(entry.sprite, { scale: 1 }, duration * 0.5, easeOutCubic), duration * 0.5);
         }
       }
     }
-    return new Promise((resolve) => setTimeout(resolve, duration));
+    return new Promise((resolve) => this._later(resolve, duration, resolve));
   }
 
   /** 매치 셀을 중심에서 바깥쪽으로 퍼지는 순서로 정렬해 순차적으로 깨지게 한다. */
@@ -539,7 +552,7 @@ export class PixiBoard {
     };
     ordered.forEach((cell, i) => {
       const wait = stagger > 0 ? i * stagger : 0;
-      if (wait > 0) setTimeout(() => burstCell(cell), wait); else burstCell(cell);
+      if (wait > 0) this._later(() => burstCell(cell), wait); else burstCell(cell);
     });
 
     const centerColor = TYPE_COLORS[dominant] || 0xfff0a8;
@@ -885,10 +898,15 @@ export class PixiBoard {
   }
 
   _shake(sprite, amplitude, duration) {
+    if (!sprite || sprite.destroyed) return;
     const baseX = sprite.x;
     const start = performance.now();
     const tween = { custom: true, done: false };
     tween.tick = () => {
+      if (!sprite || sprite.destroyed) {
+        tween.done = true;
+        return;
+      }
       const t = (performance.now() - start) / duration;
       if (t >= 1) {
         sprite.x = baseX;
@@ -968,7 +986,7 @@ export class PixiBoard {
       const m = entry.sprite && entry.sprite._specialMarker;
       if (!m) continue;
       const w = Math.sin(this._clock * 0.005 + m._phase);
-      m.scale.set(1 + w * 0.07);
+      m.scale.set((m._baseScale || 1) * (1 + w * 0.07));
       if (m._glow) m._glow.alpha = 0.7 + w * 0.3;
     }
 
@@ -1003,7 +1021,13 @@ export class PixiBoard {
     canvas.style.touchAction = 'none';
     canvas.addEventListener('pointerdown', (e) => this._onPointerDown(e));
     canvas.addEventListener('pointerup', (e) => this._onPointerUp(e));
-    canvas.addEventListener('pointercancel', () => { this.pointerStart = null; });
+    const resetPointer = (e) => {
+      if (this.activePointerId !== null && e.pointerId !== this.activePointerId) return;
+      this.pointerStart = null;
+      this.activePointerId = null;
+    };
+    canvas.addEventListener('pointercancel', resetPointer);
+    canvas.addEventListener('lostpointercapture', resetPointer);
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     if (this.mountEl.hasAttribute && this.mountEl.tabIndex >= 0) {
       this.mountEl.addEventListener('keydown', (e) => this._onKeyDown(e));
@@ -1022,15 +1046,26 @@ export class PixiBoard {
 
   _onPointerDown(e) {
     if (!this.enabled) return;
+    if (typeof e.button === 'number' && e.button > 0) return;
+    if (this.activePointerId !== null) return;
     const cell = this._cellFromEvent(e);
     if (!cell) return;
-    this.pointerStart = { ...cell, x: e.clientX, y: e.clientY };
+    this.activePointerId = e.pointerId;
+    try { this.app.canvas.setPointerCapture(e.pointerId); } catch (_err) {}
+    this.pointerStart = { ...cell, pointerId: e.pointerId, x: e.clientX, y: e.clientY };
   }
 
   _onPointerUp(e) { var __oc6, __oc7, __oc8, __oc9;
-    if (!this.enabled || !this.pointerStart) return;
+    if (!this.pointerStart || e.pointerId !== this.pointerStart.pointerId) return;
     const start = this.pointerStart;
     this.pointerStart = null;
+    this.activePointerId = null;
+    try {
+      if (this.app.canvas.hasPointerCapture && this.app.canvas.hasPointerCapture(e.pointerId)) {
+        this.app.canvas.releasePointerCapture(e.pointerId);
+      }
+    } catch (_err) {}
+    if (!this.enabled) return;
     const dx = e.clientX - start.x;
     const dy = e.clientY - start.y;
     const dist = Math.hypot(dx, dy);
@@ -1047,8 +1082,13 @@ export class PixiBoard {
     (((__oc9 = (__oc8 = this.callbacks).tap) === null || __oc9 === void 0 ? void 0 : __oc9.call(__oc8, { row: start.row, col: start.col })));
   }
 
-  _onKeyDown(e) { var __oc10, __oc11;
+  _onKeyDown(e) { var __oc10, __oc11, __oc12, __oc13;
     if (!this.enabled) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      (((__oc13 = (__oc12 = this.callbacks).keyboardConfirm) === null || __oc13 === void 0 ? void 0 : __oc13.call(__oc12)));
+      return;
+    }
     const map = {
       ArrowUp: { row: -1, col: 0 },
       ArrowDown: { row: 1, col: 0 },
@@ -1074,6 +1114,10 @@ export class PixiBoard {
         visual.width = target;
         visual.height = target;
       }
+      if (entry.sprite._specialMarker && entry.sprite._baseCell) {
+        entry.sprite._specialMarker._baseScale = this.cell / entry.sprite._baseCell;
+        entry.sprite._specialMarker.scale.set(entry.sprite._specialMarker._baseScale);
+      }
     }
     this._updateSelection();
   }
@@ -1086,6 +1130,13 @@ export class PixiBoard {
   }
 
   clear() {
+    for (const entry of this._timeouts) {
+      clearTimeout(entry.id);
+      if (entry.onCancel) entry.onCancel();
+    }
+    this._timeouts.clear();
+    this.pointerStart = null;
+    this.activePointerId = null;
     for (const entry of this.sprites.values()) {
       this.gemLayer.removeChild(entry.sprite);
       entry.sprite.destroy({ children: true });

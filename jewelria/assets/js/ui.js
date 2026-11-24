@@ -51,6 +51,7 @@ export class UI {
       '#rank-open-game': 'ランキング',
       '#pause-title': '一時停止',
       '#resume-btn': '続ける',
+      '#pause-sound-btn': 'サウンド: ON',
       '#pause-restart-btn': 'やり直す',
       '#pause-home-btn': 'タイトルへ',
       '#result-title': 'タイムアップ',
@@ -264,6 +265,13 @@ export class UI {
       button.classList.toggle('is-muted', !enabled);
       button.setAttribute('aria-pressed', String(enabled));
     });
+    const pauseSound = document.getElementById('pause-sound-btn');
+    if (pauseSound) {
+      pauseSound.textContent = enabled
+        ? this.text('사운드 켜짐', 'Sound: On', 'サウンド: ON')
+        : this.text('사운드 꺼짐', 'Sound: Off', 'サウンド: OFF');
+      pauseSound.setAttribute('aria-pressed', String(enabled));
+    }
   }
 
   updateHUD(state) {

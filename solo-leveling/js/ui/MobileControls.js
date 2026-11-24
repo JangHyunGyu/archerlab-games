@@ -89,7 +89,7 @@ export class MobileControls {
             this._syncModalState();
             if (this._isStatusModalOpen()) return;
             if (this.pointerId !== null) return;
-            if (this._isInActionButtonColumn(pointer.x)) return;
+            if (this._isInActionButtonColumn(pointer.x, pointer.y)) return;
 
             this.pointerId = pointer.id;
             this.joystick.active = true;
@@ -170,10 +170,14 @@ export class MobileControls {
         return !!(((__oc7 = (__oc6 = this.scene) === null || __oc6 === void 0 ? void 0 : __oc6.statusWindow) === null || __oc7 === void 0 ? void 0 : __oc7.isOpen));
     }
 
-    _isInActionButtonColumn(pointerX) {
+    _isInActionButtonColumn(pointerX, pointerY) {
         const bounds = this.actionButtonBounds;
         if (!bounds) return false;
-        return pointerX >= bounds.x && pointerX <= bounds.x + bounds.width;
+        const inX = pointerX >= bounds.x && pointerX <= bounds.x + bounds.width;
+        if (typeof pointerY !== 'number' || typeof bounds.y !== 'number' || typeof bounds.height !== 'number') {
+            return inX;
+        }
+        return inX && pointerY >= bounds.y && pointerY <= bounds.y + bounds.height;
     }
 
     _syncModalState(force = false) {
@@ -204,7 +208,8 @@ export class MobileControls {
             ? this.scene.hud._homeBottom : uv(56);
         const statusY = homeBottom + btnGap;
         const soundY = statusY + btnH + btnGap;
-        this.actionButtonBounds = { x: btnX, width: btnW };
+        const totalBtnH = btnH * 2 + btnGap;
+        this.actionButtonBounds = { x: btnX - uv(6), y: statusY - uv(6), width: btnW + uv(12), height: totalBtnH + uv(12) };
 
         // Status button
         const statusPanel = UIAssets.createPanel(this.scene, btnX, statusY, btnW, btnH, {
@@ -289,13 +294,25 @@ export class MobileControls {
 
     updateLayout() {
         // GameScene rebuilds controls after a resize. Refresh visibility and keep the
-        // exclusion strip tied to the live hit-area bounds in case this is called directly.
-        const activeHit = this.buttonHitAreas.find(hit => { return (
-(hit === null || hit === void 0 ? void 0 : hit.active)
-); });
-        if (((activeHit === null || activeHit === void 0 ? void 0 : activeHit.getBounds))) {
-            const bounds = activeHit.getBounds();
-            this.actionButtonBounds = { x: bounds.x, width: bounds.width };
+        // exclusion box tied to the live hit-area bounds in case this is called directly.
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (let i = 0; i < this.buttonHitAreas.length; i++) {
+            const hit = this.buttonHitAreas[i];
+            if (!hit || !hit.active || typeof hit.getBounds !== 'function') continue;
+            const b = hit.getBounds();
+            if (b.x < minX) minX = b.x;
+            if (b.y < minY) minY = b.y;
+            if (b.x + b.width > maxX) maxX = b.x + b.width;
+            if (b.y + b.height > maxY) maxY = b.y + b.height;
+        }
+        if (Number.isFinite(minX) && Number.isFinite(minY)) {
+            const pad = uv(6);
+            this.actionButtonBounds = {
+                x: minX - pad,
+                y: minY - pad,
+                width: (maxX - minX) + pad * 2,
+                height: (maxY - minY) + pad * 2,
+            };
         }
         this._syncModalState(true);
     }

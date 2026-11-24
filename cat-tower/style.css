@@ -212,6 +212,7 @@ body {
 }
 #topbar > * { pointer-events: auto; }
 /* 게임 중에는 숨김 (ArcherLab 링크/언어 토글) — 몰입도 우선 */
+body.in-game #topbar,
 body:has(#game:not(.hidden)) #topbar { display: none; }
 .topbar-btn {
   background: rgba(255, 251, 241, 0.92);
@@ -484,7 +485,8 @@ h1 {
   margin-top: 2px;
 }
 .next-cat-name {
-  width: 64px;
+  width: 100%;
+  max-width: 78px;
   min-height: 13px;
   margin-top: 2px;
   color: var(--ink-soft);
@@ -698,9 +700,12 @@ h1 {
 .gameover-body {
   align-items: center;
 }
+.gameover-body > .btn {
+  width: 100%;
+}
 .gameover-visual {
-  width: min(176px, 58vw);
-  aspect-ratio: 256 / 160;
+  width: min(192px, 60vw);
+  aspect-ratio: 512 / 288;
   margin: -10px auto -4px;
   background: image-set(url("assets/ui/gameover-cats.webp") type("image/webp"), url("assets/ui/gameover-cats.png") type("image/png")) center / contain no-repeat;
   filter: drop-shadow(0 5px 0 rgba(58, 41, 32, 0.16));
@@ -774,10 +779,7 @@ h1 {
   padding: 28px 22px 20px;
   background-color: #FFF7E9;
   background-image:
-    linear-gradient(180deg, rgba(255, 251, 241, 0.36), rgba(255, 247, 233, 0.72)),
-    url("assets/ui/rank-popup-frame.webp");
-  background-size: cover;
-  background-position: center;
+    linear-gradient(180deg, rgba(255, 251, 241, 0.90), rgba(255, 245, 224, 0.96));
   border-color: var(--line);
   box-shadow:
     0 6px 0 0 var(--line),
@@ -958,7 +960,7 @@ h1 {
   inset: -1px auto -1px 0;
   width: 42%;
   border-radius: inherit;
-  background: linear-gradient(90deg, transparent, var(--accent) 28%, var(--gold) 72%, transparent);
+  background: linear-gradient(90deg, transparent, var(--accent) 28%, var(--yellow) 72%, transparent);
   filter: drop-shadow(0 0 8px rgba(196, 117, 42, 0.5));
   animation: rankSubmitBar 0.92s ease-in-out infinite;
 }
@@ -1291,8 +1293,8 @@ body {
 }
 
 .next-cat-name {
-  color: #FFF0C6;
-  text-shadow: 0 2px 0 rgba(70, 34, 13, 0.45);
+  color: #4A2B16;
+  text-shadow: 0 1px 0 rgba(255, 250, 232, 0.85);
 }
 
 .best-card,
@@ -1314,10 +1316,7 @@ body {
 .rank-body {
   background-color: #FFF7E9;
   background-image:
-    linear-gradient(180deg, rgba(255, 251, 241, 0.36), rgba(255, 247, 233, 0.72)),
-    url("assets/ui/rank-popup-frame.webp");
-  background-size: cover;
-  background-position: center;
+    linear-gradient(180deg, rgba(255, 251, 241, 0.90), rgba(255, 245, 224, 0.96));
   box-shadow:
     0 6px 0 0 #2D1A0E,
     0 16px 28px rgba(58, 41, 32, 0.24),
@@ -1403,9 +1402,10 @@ body {
     align-items: center;
     justify-content: center;
     gap: var(--strip-gap);
+    max-width: 100%;
     min-height: 50px;
-    padding: 5px 10px;
-    overflow: visible;
+    padding: 5px 8px;
+    overflow: hidden;
     border-width: 3px;
     border-radius: 999px 18px 18px 999px;
     background-color: #FFF4D8;
@@ -1429,10 +1429,10 @@ body {
   .game-tier-cell {
     position: relative;
     z-index: 1;
-    flex: 0 0 clamp(28px, 7.7vw, 33px);
+    flex: 0 0 clamp(21px, 6.8vw, 32px);
     min-width: 0;
-    width: clamp(28px, 7.7vw, 33px);
-    height: 34px;
+    width: clamp(21px, 6.8vw, 32px);
+    height: clamp(28px, 8vw, 34px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1445,15 +1445,15 @@ body {
   }
 
   .game-tier-cell canvas {
-    width: var(--tier-icon-size);
-    height: var(--tier-icon-size);
+    width: clamp(20px, 6.2vw, 30px);
+    height: clamp(20px, 6.2vw, 30px);
     filter: drop-shadow(0 2px 0 rgba(74, 43, 22, 0.18));
   }
 
   .game-tier-cell:last-child {
-    flex-basis: clamp(38px, 10.2vw, 44px);
-    width: clamp(38px, 10.2vw, 44px);
-    height: clamp(38px, 10.2vw, 44px);
+    flex-basis: clamp(30px, 9.2vw, 44px);
+    width: clamp(30px, 9.2vw, 44px);
+    height: clamp(30px, 9.2vw, 44px);
     margin-left: 2px;
     border: 3px solid var(--line);
     background: rgba(255, 248, 223, 0.78);
@@ -1461,8 +1461,8 @@ body {
   }
 
   .game-tier-cell:last-child canvas {
-    width: clamp(34px, 9vw, 40px);
-    height: clamp(34px, 9vw, 40px);
+    width: clamp(26px, 8vw, 40px);
+    height: clamp(26px, 8vw, 40px);
   }
 
   .game-tier-text {

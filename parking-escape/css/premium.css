@@ -103,7 +103,10 @@ body[data-game="parking-escape"] .lang-switch-btn {
   border-radius: 4px;
   background: rgba(12, 16, 21, 0.62);
   color: #f3f0e6;
-  font: 800 13px/1 inherit;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
   letter-spacing: 0.08em;
   cursor: pointer;
 }

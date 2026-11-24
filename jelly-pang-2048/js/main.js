@@ -104,7 +104,7 @@
   const RANK_COLORS = [
     0xf76f9d, 0xff9c38, 0xffdf46, 0x83d928,
     0x4fd8ba, 0x42c5f5, 0x8e65f3, 0xf03f9b,
-    0xf04437, 0xffca3a, 0xf39c12, 0xffd76a,
+    0xf04437, 0xffb627, 0xffd43b, 0xd97cff,
   ];
 
   function hexColor(value) {
@@ -229,6 +229,9 @@
   let moveToken = 0;
   let won = false;
   let keepPlaying = false;
+  let loadErrorActive = false;
+  let scoreTween = null;
+  let activePointerId = null;
   let pointerStart = null;
   let audioCtx = null;
   let soundPools = {};
@@ -295,6 +298,7 @@
   }
 
   function showLoadError() { var __oc6, __oc7;
+    loadErrorActive = true;
     serverTripCount = 0;
     (((__oc6 = refs.shell) === null || __oc6 === void 0 ? void 0 : __oc6.classList.remove("is-server-loading")));
     (((__oc7 = refs.serverLoader) === null || __oc7 === void 0 ? void 0 : __oc7.classList.add("hidden")));
@@ -305,10 +309,14 @@
     refs.messageEyebrow.textContent = t("error.eyebrow");
     refs.messageTitle.textContent = t("error.title");
     refs.messageCopy.textContent = t("error.copy");
-    refs.keepPlaying.style.display = "none";
+    refs.rankSubmitPanel.classList.add("hidden");
+    showDefaultModalActions(false);
+    refs.tryAgain.textContent = t("error.title");
+    refs.tryAgain.onclick = () => location.reload();
   }
 
   function showTitle() {
+    abandonPendingMove();
     locked = true;
     hideModal();
     hideRanks();
@@ -481,6 +489,10 @@
         w: "up",
         s: "down",
       };
+      const targetEl = event.target || document.activeElement;
+      if (targetEl && (targetEl.tagName === "INPUT" || targetEl.tagName === "TEXTAREA" || targetEl.tagName === "SELECT" || targetEl.isContentEditable)) {
+        return;
+      }
       const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
       const dir = map[key];
       if (!dir) return;
@@ -489,21 +501,29 @@
     }, { passive: false });
 
     appCanvas.addEventListener("pointerdown", (event) => {
+      if (event.pointerType === "mouse" && event.button !== 0) return;
       resumeAudio();
+      activePointerId = event.pointerId;
       pointerStart = { x: event.clientX, y: event.clientY };
+      try { appCanvas.setPointerCapture(event.pointerId); } catch (_err) {}
     }, { passive: true });
 
     appCanvas.addEventListener("pointerup", (event) => {
       if (!pointerStart) return;
+      if (activePointerId !== null && event.pointerId !== activePointerId) return;
       const dx = event.clientX - pointerStart.x;
       const dy = event.clientY - pointerStart.y;
       pointerStart = null;
+      activePointerId = null;
+      try { appCanvas.releasePointerCapture(event.pointerId); } catch (_err) {}
       if (Math.max(Math.abs(dx), Math.abs(dy)) < 28) return;
       move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
     }, { passive: true });
 
-    appCanvas.addEventListener("pointercancel", () => {
+    appCanvas.addEventListener("pointercancel", (event) => {
+      if (activePointerId !== null && event.pointerId !== activePointerId) return;
       pointerStart = null;
+      activePointerId = null;
     });
 
     appCanvas.addEventListener("contextmenu", (event) => event.preventDefault());
@@ -540,7 +560,7 @@
     refs.soundToggle.addEventListener("click", () => toggleSound());
     refs.rankOpen.addEventListener("click", () => openRanks());
     refs.rankClose.addEventListener("click", () => hideRanks());
-    refs.tryAgain.addEventListener("click", () => startGame());
+    refs.tryAgain.addEventListener("click", () => { if (!loadErrorActive) startGame(); });
     refs.backToTitle.addEventListener("click", () => showTitle());
     refs.keepPlaying.addEventListener("click", () => {
       keepPlaying = true;
@@ -819,7 +839,6 @@
       );
 
       highlight.clear();
-      highlight.lineStyle(Math.max(2, BOARD.cell * 0.018), 0xffffff, 0.42 + proximity * 0.2);
       const highlightHalf = Math.max(endRadius * 0.28, halfDistance * 0.66);
       highlight.moveTo(-highlightHalf, -neckRadius * 0.42);
       highlight.bezierCurveTo(
@@ -830,6 +849,7 @@
         highlightHalf,
         -neckRadius * 0.34
       );
+      highlight.stroke({ width: Math.max(2, BOARD.cell * 0.018), color: 0xffffff, alpha: 0.42 + proximity * 0.2 });
     }
 
     bridge.__beforeDestroy = stopTicker;
@@ -934,7 +954,7 @@
     if (!refs.titleScreen.classList.contains("hidden")) return;
     if (serverTripCount > 0) return;
     resumeAudio();
-    if (locked || refs.modal.classList.contains("hidden") === false && !keepPlaying) return;
+    if (locked || !refs.modal.classList.contains("hidden") || !refs.rankModal.classList.contains("hidden")) return;
 
     const result = buildMove(dir);
     if (!result.changed) {
@@ -1319,13 +1339,17 @@
       if (score > 0) celebrate(16);
     }
 
+    if (scoreTween) {
+      scoreTween.kill();
+      scoreTween = null;
+    }
     if (instant) {
       refs.score.textContent = formatScore(score);
       return;
     }
 
     const tween = { value: previous };
-    gsap.to(tween, {
+    scoreTween = gsap.to(tween, {
       value: score,
       duration: 0.36,
       ease: "power2.out",
@@ -1333,6 +1357,7 @@
         refs.score.textContent = formatScore(Math.round(tween.value));
       },
       onComplete: () => {
+        scoreTween = null;
         refs.score.textContent = formatScore(score);
       },
     });
@@ -1443,10 +1468,9 @@
     shadow.endFill();
 
     const panel = new PIXI.Graphics();
-    panel.beginFill(0x77b8a9, 0.38);
-    panel.lineStyle(3, 0xf5fff8, 0.7);
-    panel.drawRoundedRect(BOARD.x, BOARD.y, BOARD.size, BOARD.size, 44);
-    panel.endFill();
+    panel.roundRect(BOARD.x, BOARD.y, BOARD.size, BOARD.size, 44);
+    panel.fill({ color: 0x77b8a9, alpha: 0.38 });
+    panel.stroke({ width: 3, color: 0xf5fff8, alpha: 0.7 });
 
     const glass = new PIXI.Graphics();
     glass.beginFill(0xf9fff5, 0.15);
@@ -1459,11 +1483,10 @@
       for (let col = 0; col < SIZE; col++) {
         const pos = cellTopLeft(row, col);
         const cell = new PIXI.Graphics();
-        cell.beginFill(0xf5fff8, 0.60);
-        cell.drawRoundedRect(pos.x, pos.y, BOARD.cell, BOARD.cell, 28);
-        cell.endFill();
-        cell.lineStyle(2, 0xffffff, 0.55);
-        cell.drawRoundedRect(pos.x + 1, pos.y + 1, BOARD.cell - 2, BOARD.cell - 2, 27);
+        cell.roundRect(pos.x, pos.y, BOARD.cell, BOARD.cell, 28);
+        cell.fill({ color: 0xf5fff8, alpha: 0.60 });
+        cell.roundRect(pos.x + 1, pos.y + 1, BOARD.cell - 2, BOARD.cell - 2, 27);
+        cell.stroke({ width: 2, color: 0xffffff, alpha: 0.55 });
         boardLayer.addChild(cell);
 
         const inner = new PIXI.Graphics();
@@ -1597,6 +1620,10 @@
 
   async function submitRank() {
     if (rankSubmitInFlight || score <= 0) return;
+    if ((ranking.unsupported || ranking.syncFailed) && ranking.moveSeq <= 0 && !ranking.sessionId) {
+      setSubmitStatus(t("rank.failed"), "fail");
+      return;
+    }
     const name = refs.nicknameInput.value.trim().slice(0, 20);
     if (!name) {
       setSubmitStatus(t("rank.needName"), "fail");
@@ -1798,9 +1825,9 @@
       const inner = BOARD.cell * (0.24 + Math.random() * 0.08);
       const outer = BOARD.cell * (0.72 + Math.random() * 0.34);
       const rayColor = i % 4 === 0 ? 0xffffff : i % 2 === 0 ? nextColor : color;
-      rays.lineStyle(i % 4 === 0 ? 9 : 5, rayColor, i % 4 === 0 ? 1 : 0.82);
       rays.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner);
       rays.lineTo(Math.cos(angle) * outer, Math.sin(angle) * outer);
+      rays.stroke({ width: i % 4 === 0 ? 9 : 5, color: rayColor, alpha: i % 4 === 0 ? 1 : 0.82 });
     }
     rays.x = x;
     rays.y = y;
@@ -1853,7 +1880,7 @@
 
       particle.beginFill(particleColor, 0.98);
       if (shape === 0) {
-        particle.drawEllipse(-size * 0.42, -size * 0.72, size * 0.84, size * 1.44);
+        particle.drawEllipse(0, 0, size * 0.42, size * 0.72);
       } else if (shape === 1) {
         particle.drawCircle(0, 0, size * 0.55);
       } else {
@@ -2121,9 +2148,9 @@
     });
     label.anchor.set(0.5);
     const accentLine = new PIXI.Graphics();
-    accentLine.lineStyle(7, accent, 0.92);
     accentLine.moveTo(-label.width * 0.38, fontSize * 0.6);
     accentLine.lineTo(label.width * 0.38, fontSize * 0.6);
+    accentLine.stroke({ width: 7, color: accent, alpha: 0.92 });
     callout.addChild(accentLine, label);
     const halfWidth = label.width * 0.56;
     callout.x = Math.max(BOARD.x + halfWidth, Math.min(BOARD.x + BOARD.size - halfWidth, x));
@@ -2228,8 +2255,8 @@
     const ringCount = PREFERS_REDUCED_MOTION ? 1 : IS_TOUCH_DEVICE ? 2 : rings.length;
     rings.slice(0, ringCount).forEach((ring) => {
       const wave = new PIXI.Graphics();
-      wave.lineStyle(ring.width, ring.color, 0.94);
-      wave.drawCircle(0, 0, BOARD.cell * 0.3);
+      wave.circle(0, 0, BOARD.cell * 0.3);
+      wave.stroke({ width: ring.width, color: ring.color, alpha: 0.94 });
       wave.x = x;
       wave.y = y;
       wave.alpha = 0;
@@ -2449,11 +2476,13 @@
   function playSynthSound(type) {
     if (!audioCtx) return;
     const now = audioCtx.currentTime;
-    const gain = audioCtx.createGain();
-    gain.connect(audioCtx.destination);
-    gain.gain.setValueAtTime(0.0001, now);
 
     const playTone = (freq, start, duration, volume, wave = "sine") => {
+      const gain = audioCtx.createGain();
+      gain.connect(audioCtx.destination);
+      gain.gain.setValueAtTime(0.0001, now + start);
+      gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume), now + start + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + start + duration);
       const osc = audioCtx.createOscillator();
       osc.type = wave;
       osc.frequency.setValueAtTime(freq, now + start);
@@ -2461,8 +2490,6 @@
       osc.connect(gain);
       osc.start(now + start);
       osc.stop(now + start + duration);
-      gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume), now + start + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + start + duration);
     };
 
     if (type === "merge" || type === "mergeCombo") {
@@ -2490,7 +2517,7 @@
       this.moveSeq = 0;
       this.verifiedScore = 0;
       this.sessionData = null;
-      this.rngState = 0;
+      this.rngState = null;
       this.pendingEvents = [];
       this.unsupported = false;
       this.syncFailed = false;
@@ -2503,7 +2530,7 @@
       this.moveSeq = 0;
       this.verifiedScore = 0;
       this.sessionData = null;
-      this.rngState = 0;
+      this.rngState = null;
       this.pendingEvents = [];
       this.unsupported = false;
       this.syncFailed = false;
@@ -2558,7 +2585,7 @@
     }
 
     nextSpawn(cells) {
-      if (this.unsupported || this.syncFailed || !this.rngState || !Array.isArray(cells) || cells.length === 0) return null;
+      if (this.unsupported || this.syncFailed || this.rngState === null || !Array.isArray(cells) || cells.length === 0) return null;
       const spot = cells[Math.floor(this.nextRandom() * cells.length)] || cells[cells.length - 1];
       const rank = this.nextRandom() < 0.9 ? 0 : 1;
       return { row: spot.row, col: spot.col, rank };

@@ -318,6 +318,14 @@ class Game {
                 );
             }
 
+            if (typeof this._pendingClearApply === 'function') {
+                const apply = this._pendingClearApply;
+                this._pendingClearApply = null;
+                try { apply(); } catch (_) {}
+                this.ui.updateScore(this.scoreManager.score, this.scoreManager.bestScore);
+                this.ui.updateLevel(this.scoreManager.level, this.scoreManager.levelProgress);
+            }
+
             if (this.tray.allPlaced()) {
                 this.generatePieces();
             } else {
@@ -441,9 +449,12 @@ class Game {
             this._createBackground();
         }
 
-        // Resize title screen if visible
+        // Resize title screen or open overlays cleanly
         if (this.state === 'title' && this.ui.titleContainer) {
             this.ui.showTitleScreen();
+        }
+        if (this.ui && typeof this.ui.handleViewportResize === 'function') {
+            this.ui.handleViewportResize();
         }
     }
 
@@ -752,7 +763,9 @@ entry.gameId === GAME_ID_BLOCKPANG
             this.effects.playScreenZoomPulse(pulse, 240);
         }
 
+        this._pendingClearApply = clearResult.apply;
         this.effects.playFlashEffect(clearResult.sprites, () => {
+            this._pendingClearApply = null;
             try {
                 clearResult.apply();
 
@@ -884,7 +897,7 @@ entry.gameId === GAME_ID_BLOCKPANG
     }
 
     _clearSave() {
-        localStorage.removeItem('blockpang_save');
+        try { localStorage.removeItem('blockpang_save'); } catch (_) {}
     }
 
     static hasSavedGame() {

@@ -6,6 +6,9 @@ class InputManager {
         this.dragContainer = null;
         this.dragPieceData = null;
         this.dragReturning = false;
+        this._dragPointerId = null;
+        this._dragTouchId = null;
+        this._dragReturnStartedAt = 0;
         this.dragLayer = new PIXI.Container();
         this.dragGlow = null;
         this.isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -68,8 +71,12 @@ class InputManager {
         this.dragging = true;
         this.dragPieceIndex = slotIndex;
         this.dragPieceData = piece;
+        this._dragPointerId = event && event.pointerId !== undefined ? event.pointerId : null;
+        const tList = event && event.nativeEvent && event.nativeEvent.changedTouches;
+        this._dragTouchId = (tList && tList[0]) ? tList[0].identifier : null;
         this._trailTimer = 0;
         this._dragLastSeenAt = performance.now();
+        this._dragReturnStartedAt = 0;
         this._clearDragTweens();
 
         // Hide the tray piece
@@ -135,6 +142,7 @@ class InputManager {
 
     onPointerMove(event) {
         if (!this.dragging || !this.dragContainer || !this.dragPieceData) return;
+        if (this._dragPointerId !== null && event && event.pointerId !== undefined && event.pointerId !== this._dragPointerId) return;
 
         const pos = event.global;
         const clampedPos = this._clampDragPosition(pos.x, pos.y + this.dragOffsetY);
@@ -312,6 +320,7 @@ class InputManager {
 
     onPointerCancel(event) {
         if (!this.dragging) return;
+        if (this._dragPointerId !== null && event && event.pointerId !== undefined && event.pointerId !== this._dragPointerId) return;
         if (window._sendGameError) {
             window._sendGameError(
                 'PointerCancel',
@@ -331,6 +340,7 @@ class InputManager {
 
     onPointerUp(event) {
         if (!this.dragging) return;
+        if (this._dragPointerId !== null && event && event.pointerId !== undefined && event.pointerId !== this._dragPointerId) return;
 
         const pos = event.global;
         const clampedPos = this._clampDragPosition(pos.x, pos.y + this.dragOffsetY);
@@ -456,6 +466,7 @@ class InputManager {
 
     _handleWindowPointerUp(event) {
         if (!this.dragging) return;
+        if (this._dragPointerId !== null && event && event.pointerId !== undefined && event.pointerId !== this._dragPointerId) return;
         if (!this._isClientPointInCanvas(event)) {
             this.game.board.clearGhost();
             this.game.sound.playInvalid();
@@ -464,16 +475,21 @@ class InputManager {
         }
 
         const global = this._eventToGlobal(event);
-        if (global) this.onPointerUp({ global });
+        if (global) this.onPointerUp({ global, pointerId: this._dragPointerId });
     }
 
-    _handleWindowPointerCancel() {
+    _handleWindowPointerCancel(event) {
         if (!this.dragging && !this.dragReturning) return;
+        if (this._dragPointerId !== null && event && event.pointerId !== undefined && event.pointerId !== this._dragPointerId) return;
         this.cancelDrag({ animate: true, restorePiece: true });
     }
 
-    _handleWindowTouchEnd() {
+    _handleWindowTouchEnd(event) {
         if (!this.dragging && !this.dragReturning) return;
+        if (this._dragTouchId !== null && event && event.changedTouches) {
+            const matched = Array.from(event.changedTouches).some(t => t.identifier === this._dragTouchId);
+            if (!matched) return;
+        }
         this.cancelDrag({ animate: true, restorePiece: true });
     }
 
@@ -510,8 +526,11 @@ class InputManager {
             return;
         }
 
-        if (this.dragging && performance.now() - this._dragLastSeenAt > 4500) {
+        const now = performance.now();
+        if (this.dragging && now - this._dragLastSeenAt > 4500) {
             this.cancelDrag({ animate: true, restorePiece: true });
+        } else if (this.dragReturning && this._dragReturnStartedAt && now - this._dragReturnStartedAt > 1200) {
+            this.cancelDrag({ animate: false, restorePiece: true });
         }
     }
 
@@ -527,6 +546,9 @@ class InputManager {
         // Stop ghost updates immediately to prevent re-showing during animation
         this.dragging = false;
         this.dragReturning = true;
+        this._dragPointerId = null;
+        this._dragTouchId = null;
+        this._dragReturnStartedAt = performance.now();
 
         if (!this.dragContainer) {
             this.game.tray.showPiece(slotIdx);
@@ -631,13 +653,16 @@ class InputManager {
         this.dragReturning = false;
         this.dragPieceIndex = -1;
         this.dragPieceData = null;
+        this._dragPointerId = null;
+        this._dragTouchId = null;
+        this._dragReturnStartedAt = 0;
         this._dragLastSeenAt = 0;
     }
 
     _checkNearComplete(shape, gridX, gridY) {
         const board = this.game.board;
-        // Simulate placement and check if any row/col would be 0 empty (i.e., line clear)
-        // by counting how many cells would complete rows/cols
+        const checkedRows = new Set();
+        const checkedCols = new Set();
         for (let r = 0; r < shape.length; r++) {
             for (let c = 0; c < shape[r].length; c++) {
                 if (!shape[r][c]) continue;
@@ -645,18 +670,34 @@ class InputManager {
                 const gc = gridX + c;
                 if (gr < 0 || gr >= GRID_SIZE || gc < 0 || gc >= GRID_SIZE) continue;
 
-                // Check row completion
-                let rowEmpty = 0;
-                for (let cc = 0; cc < GRID_SIZE; cc++) {
-                    if (board.grid[gr][cc] === -1) {
-                        // Check if this empty cell is filled by our piece
-                        const inPiece = shape[gr - gridY] && shape[gr - gridY][cc - gridX];
-                        if (!inPiece) rowEmpty++;
+                if (!checkedRows.has(gr)) {
+                    checkedRows.add(gr);
+                    let rowEmpty = 0;
+                    for (let cc = 0; cc < GRID_SIZE; cc++) {
+                        if (board.grid[gr][cc] === -1) {
+                            const inPiece = shape[gr - gridY] && shape[gr - gridY][cc - gridX];
+                            if (!inPiece) rowEmpty++;
+                        }
+                    }
+                    if (rowEmpty === 0) {
+                        this.game.sound.playNearComplete(0);
+                        return;
                     }
                 }
-                if (rowEmpty === 0) {
-                    this.game.sound.playNearComplete(0);
-                    return;
+
+                if (!checkedCols.has(gc)) {
+                    checkedCols.add(gc);
+                    let colEmpty = 0;
+                    for (let rr = 0; rr < GRID_SIZE; rr++) {
+                        if (board.grid[rr][gc] === -1) {
+                            const inPiece = shape[rr - gridY] && shape[rr - gridY][gc - gridX];
+                            if (!inPiece) colEmpty++;
+                        }
+                    }
+                    if (colEmpty === 0) {
+                        this.game.sound.playNearComplete(0);
+                        return;
+                    }
                 }
             }
         }

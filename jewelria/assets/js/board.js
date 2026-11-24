@@ -120,14 +120,17 @@ export class BoardModel {
     const remove = new Map();
     const specials = new Map();
     const activated = [];
+    const activatedKeys = new Set();
     const originKeys = originCells.map(cellKey);
 
     for (const match of matches) {
       let createAt = null;
       if (match.length >= 4) {
-        createAt = match.cells.find((cell) => originKeys.includes(cellKey(cell))) || match.cells[Math.floor(match.cells.length / 2)];
-        const sourceGem = this.get(createAt.row, createAt.col);
-        if (sourceGem) {
+        const preferred = match.cells.find((cell) => originKeys.includes(cellKey(cell)) && !specials.has(cellKey(cell)));
+        const fallback = match.cells[Math.floor(match.cells.length / 2)];
+        createAt = preferred || (!specials.has(cellKey(fallback)) ? fallback : match.cells.find((cell) => !specials.has(cellKey(cell))));
+        const sourceGem = createAt ? this.get(createAt.row, createAt.col) : null;
+        if (sourceGem && createAt) {
           specials.set(cellKey(createAt), {
             row: createAt.row,
             col: createAt.col,
@@ -140,17 +143,27 @@ export class BoardModel {
       for (const cell of match.cells) {
         const key = cellKey(cell);
         const gem = this.get(cell.row, cell.col);
-        if (gem && gem.special) activated.push({ ...cell, special: gem.special, type: gem.type });
+        if (gem && gem.special && !activatedKeys.has(key)) {
+          activatedKeys.add(key);
+          activated.push({ ...cell, special: gem.special, type: gem.type });
+        }
         if (!specials.has(key)) remove.set(key, { ...cell });
       }
     }
 
-    for (const active of activated) {
+    let head = 0;
+    while (head < activated.length) {
+      const active = activated[head++];
       const cells = active.special === 'row'
         ? range(0, this.size).map((col) => ({ row: active.row, col }))
         : range(0, this.size).map((row) => ({ row, col: active.col }));
       for (const cell of cells) {
         const key = cellKey(cell);
+        const targetGem = this.get(cell.row, cell.col);
+        if (targetGem && targetGem.special && !activatedKeys.has(key)) {
+          activatedKeys.add(key);
+          activated.push({ ...cell, special: targetGem.special, type: targetGem.type });
+        }
         if (!specials.has(key)) remove.set(key, cell);
       }
     }

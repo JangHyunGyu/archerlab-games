@@ -1,23 +1,27 @@
-/* Optical-glass controls, exported from the generated artwork. */
+/* Clean optical-glass controls cohesive with luminous playfield. */
 body[data-game="lumen-shift"] .menu-screen .menu-command { width: min(380px,46%); margin-top: 40px; }
 body[data-game="lumen-shift"] .menu-screen .menu-actions { grid-template-columns: minmax(0,1fr); gap: 12px; }
-body[data-game="lumen-shift"] :is(.primary-button,.secondary-button,.submit-row button) { position: relative; isolation: isolate; background: none; color: #e8ffff; border: 0; border-radius: 0; box-shadow: none; clip-path: none; min-height: 60px; padding: 12px 26px; text-shadow: 0 2px 4px #001; font-weight: 750; overflow: visible; }
-body[data-game="lumen-shift"] :is(.primary-button,.secondary-button,.submit-row button)::before { content: ""; position: absolute; inset: -10px -4px; z-index: -1; background: url('../assets/ui/skin-button-v1.webp') center / 100% 100% no-repeat; pointer-events: none; transition: filter .16s; }
-body[data-game="lumen-shift"] .secondary-button::before { filter: saturate(.28) brightness(.74); }
-body[data-game="lumen-shift"] :is(.primary-button,.secondary-button)::after { display: none; }
-body[data-game="lumen-shift"] .menu-screen :is(.primary-button,.secondary-button) { min-height: 76px; padding: 12px 32px; background: none; border: 0; box-shadow: none; color: #ebffff; justify-content: center; backdrop-filter: none; -webkit-backdrop-filter: none; }
-body[data-game="lumen-shift"] .menu-screen :is(.primary-button,.secondary-button)::before { inset: -10px -4px; width: auto; height: auto; opacity: 1; transform: none; animation: none; transition: filter .16s; background: url('../assets/ui/skin-button-v1.webp') center / 100% 100% no-repeat; }
-body[data-game="lumen-shift"] .menu-screen :is(.primary-button,.secondary-button):hover::before { transform: none; }
+body[data-game="lumen-shift"] :is(.primary-button,.secondary-button,.submit-row button) { position: relative; isolation: isolate; background: none; color: #e8ffff; border: 0; border-radius: 10px; box-shadow: none; clip-path: none; min-height: 60px; padding: 12px 26px; text-shadow: 0 2px 4px #001; font-weight: 750; overflow: visible; }
+body[data-game="lumen-shift"] :is(.primary-button,.submit-row button),
+body[data-game="lumen-shift"] .menu-screen .primary-button { color: #052229; text-shadow: 0 1px 0 rgba(255,255,255,0.45); }
+body[data-game="lumen-shift"] :is(.primary-button,.secondary-button,.submit-row button)::before,
+body[data-game="lumen-shift"] .menu-screen :is(.primary-button,.secondary-button)::before { content: ""; position: absolute; inset: 0; z-index: -1; width: auto; height: auto; opacity: 1; transform: none; animation: none; border-radius: inherit; border: 1px solid rgba(173, 249, 255, 0.72); background: linear-gradient(135deg, #d8fff8 0%, #86ecf0 55%, #48c9db 100%); box-shadow: inset 0 1px rgba(255,255,255,0.65), 0 4px 0 #175c6e, 0 12px 28px rgba(72, 201, 219, 0.24); pointer-events: none; transition: filter .16s, border-color .16s; }
+body[data-game="lumen-shift"] .secondary-button::before,
+body[data-game="lumen-shift"] .menu-screen .secondary-button::before { border-color: rgba(140, 214, 240, 0.34); background: linear-gradient(180deg, rgba(20, 32, 54, 0.94), rgba(10, 18, 34, 0.96)); box-shadow: inset 0 1px rgba(255,255,255,0.12), 0 8px 20px rgba(0,0,0,0.34); }
+body[data-game="lumen-shift"] :is(.primary-button,.secondary-button)::after,
 body[data-game="lumen-shift"] .menu-screen :is(.primary-button,.secondary-button)::after { display: none; }
+body[data-game="lumen-shift"] .menu-screen :is(.primary-button,.secondary-button) { min-height: 70px; padding: 12px 32px; background: none; border: 0; border-radius: 10px; clip-path: none; box-shadow: none; justify-content: center; backdrop-filter: none; -webkit-backdrop-filter: none; }
+body[data-game="lumen-shift"] .menu-screen .secondary-button { color: #ebffff; text-shadow: 0 2px 4px #001; }
+body[data-game="lumen-shift"] .menu-screen :is(.primary-button,.secondary-button):hover::before { transform: none; }
 body[data-game="lumen-shift"] .menu-screen .button-copy { font-size: 19px; letter-spacing: .07em; }
-body[data-game="lumen-shift"] :is(.icon-button,.touch-controls button,.control-drag-handle) { border: 7px solid transparent; border-image: url('../assets/ui/skin-panel-v1.webp') 180 fill / 7px stretch; background: none; border-radius: 0; box-shadow: none; color: #e1faff; }
-body[data-game="lumen-shift"] .touch-controls [data-action="drop"] { border-image-width: 9px; color: #c5ffff; }
-body[data-game="lumen-shift"] .touch-controls [data-action="rotate"] { color: #e5d3ff; }
-body[data-game="lumen-shift"] :is(.hud-main,.effect-stat) { position: relative; isolation: isolate; border-color: transparent; background: none; border-radius: 0; }
-body[data-game="lumen-shift"] :is(.hud-main,.effect-stat)::before { content: ""; position: absolute; inset: 0; z-index: -1; border: 9px solid transparent; border-image: url('../assets/ui/skin-panel-v1.webp') 180 fill / 9px stretch; pointer-events: none; }
+body[data-game="lumen-shift"] :is(.icon-button,.touch-controls button,.control-drag-handle) { border: 1px solid rgba(144, 216, 240, 0.36); background: linear-gradient(180deg, rgba(16, 30, 48, 0.92), rgba(7, 15, 28, 0.96)); border-radius: 10px; box-shadow: inset 0 1px rgba(219, 248, 255, 0.16), 0 4px 12px rgba(0, 0, 0, 0.34); color: #e1faff; }
+body[data-game="lumen-shift"] .touch-controls [data-action="drop"] { border-color: rgba(135, 244, 240, 0.55); background: linear-gradient(180deg, rgba(31, 78, 92, 0.94), rgba(15, 43, 54, 0.96)); color: #c5ffff; }
+body[data-game="lumen-shift"] .touch-controls [data-action="rotate"] { border-color: rgba(176, 156, 245, 0.52); background: linear-gradient(180deg, rgba(46, 41, 82, 0.94), rgba(24, 22, 50, 0.96)); color: #e5d3ff; }
+body[data-game="lumen-shift"] :is(.hud-main,.effect-stat) { position: relative; isolation: isolate; border-color: transparent; background: none; border-radius: 10px; }
+body[data-game="lumen-shift"] :is(.hud-main,.effect-stat)::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; border: 1px solid rgba(145, 216, 240, 0.34); background: linear-gradient(180deg, rgba(12, 26, 44, 0.92), rgba(5, 13, 25, 0.95)); box-shadow: inset 0 1px rgba(255,255,255,0.12), 0 8px 20px rgba(0,0,0,0.32); pointer-events: none; }
 body[data-game="lumen-shift"] .compact-screen, body[data-game="lumen-shift"] .result-screen { justify-content: center; padding: max(16px,var(--safe-top)) max(16px,var(--safe-right)) max(16px,var(--safe-bottom)) max(16px,var(--safe-left)); }
-.dialog-card { position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: center; gap: 16px; width: min(480px,100%); max-height: calc(100dvh - max(16px,var(--safe-top)) - max(16px,var(--safe-bottom))); padding: 28px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
-.dialog-card::before { content: ""; position: absolute; inset: 0; z-index: -1; border: 24px solid transparent; border-image: url('../assets/ui/skin-panel-v1.webp') 180 fill / 24px stretch; pointer-events: none; }
+.dialog-card { position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: center; gap: 16px; width: min(480px,100%); max-height: calc(100dvh - max(16px,var(--safe-top)) - max(16px,var(--safe-bottom))); padding: 28px; border-radius: 16px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.dialog-card::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; border: 1px solid rgba(146, 222, 246, 0.38); background: linear-gradient(160deg, rgba(14, 28, 48, 0.96), rgba(5, 11, 22, 0.98)); box-shadow: 0 24px 60px rgba(0,0,0,0.6), inset 0 1px rgba(255,255,255,0.14); pointer-events: none; }
 body[data-game="lumen-shift"] .dialog-card > :is(.menu-actions,.submit-row,.result-head,.ranking-list) { width: 100%; flex-shrink: 0; }
 body[data-game="lumen-shift"] .dialog-card .ranking-list { max-height: min(34dvh,300px); overflow-y: auto; }
 body[data-game="lumen-shift"] .dialog-card h2 { margin: 8px 0; }
@@ -25,8 +29,8 @@ body[data-game="lumen-shift"] .dialog-card .result-head > span { display: none; 
 body[data-game="lumen-shift"] .dialog-card .submit-status:empty { display: none; }
 body[data-game="lumen-shift"] .dialog-card .result-head strong:empty { display: none; }
 @media (hover:hover) {
-  body[data-game="lumen-shift"] .primary-button:hover::before { filter: brightness(1.18); }
-  body[data-game="lumen-shift"] .secondary-button:hover::before { filter: saturate(.7) brightness(1.12); }
+  body[data-game="lumen-shift"] :is(.primary-button,.menu-screen .primary-button):hover::before { transform: none; filter: brightness(1.08); }
+  body[data-game="lumen-shift"] :is(.secondary-button,.menu-screen .secondary-button):hover::before { transform: none; filter: brightness(1.14); border-color: rgba(140, 214, 240, 0.58); }
 }
 body[data-game="lumen-shift"] :is(.primary-button,.secondary-button):active { transform: translateY(2px); }
 @media (orientation:portrait) {

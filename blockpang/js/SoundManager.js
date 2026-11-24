@@ -32,6 +32,7 @@ class SoundManager {
         // WAV audio pools (HTMLAudioElement fallback) + decoded AudioBuffers (preferred)
         this._wavPools = {};
         this._wavBuffers = {};
+        this._wavPendingDecode = {};
         this._pendingTimeouts = new Set();
         this._destroyed = false;
 
@@ -156,17 +157,15 @@ class SoundManager {
     // ── WAV Audio Pool System ─────────────────────────────────────
 
     _createPool(name, src, poolSize = 4) {
-        // HTMLAudioElement pool serves as fallback until Web Audio decode completes
+        // Single metadata-only fallback element + on-demand reuse; avoid eager N-way download alongside decode fetch.
         this._wavPools[name] = [];
-        for (let i = 0; i < poolSize; i++) {
-            const audio = new Audio(src);
-            audio.preload = 'auto';
-            this._wavPools[name].push(audio);
-        }
+        const audio = new Audio(src);
+        audio.preload = 'none';
+        this._wavPools[name].push(audio);
+        this._wavPools[name]._maxSize = poolSize;
+        this._wavPools[name]._src = src;
         this._wavPools[name]._index = 0;
 
-        // Preferred path: pre-decode once, play via AudioBufferSourceNode (avoids
-        // mobile HTMLAudio state bugs that surface NotSupportedError on rapid reuse)
         this._decodeWavBuffer(name, src);
     }
 
@@ -181,13 +180,18 @@ class SoundManager {
     _decodeWavBuffer(name, src) {
         const ctx = this._getAudioContext();
         if (!ctx || !ctx.decodeAudioData) return;
+        if (this._wavBuffers[name] || this._wavPendingDecode[name]) return;
+        this._wavPendingDecode[name] = true;
         fetch(src)
             .then((r) => r.arrayBuffer())
             .then((buf) => ctx.decodeAudioData(buf))
             .then((audioBuffer) => {
                 if (!this._destroyed) this._wavBuffers[name] = audioBuffer;
             })
-            .catch(() => { /* fall back to HTMLAudio pool */ });
+            .catch(() => { /* fall back to HTMLAudio pool */ })
+            .finally(() => {
+                delete this._wavPendingDecode[name];
+            });
     }
 
     _playWav(name, volumeMultiplier = 1) {
@@ -889,10 +893,13 @@ class SoundManager {
         this._fm.harmonicity.value = 3;
         this._fm.modulationIndex.value = 8;
         this._fm.volume.value = -14;
+        if (typeof this._fm.frequency.cancelScheduledValues === 'function') {
+            this._fm.frequency.cancelScheduledValues(now);
+        }
         this._fm.triggerAttackRelease('A4', 0.12, now);
-        this._fm.frequency.setValueAtTime(Tone.Frequency('A4').toFrequency(), now);
+        this._fm.frequency.setValueAtTime(Math.max(20, Tone.Frequency('A4').toFrequency()), now + 0.001);
         this._fm.frequency.exponentialRampToValueAtTime(
-            Tone.Frequency('D3').toFrequency(), now + 0.12
+            Math.max(20, Tone.Frequency('D3').toFrequency()), now + 0.12
         );
 
         // Soft rubber bonk

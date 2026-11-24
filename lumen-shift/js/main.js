@@ -1173,6 +1173,31 @@ class AudioDirector {
     }
   }
 
+  suspend() {
+    this.wasBackingPlaying = !!(this.nativeBacking && this.nativeBacking.paused === false);
+    if (this.nativeBacking && this.nativeBacking.paused === false) {
+      try { this.nativeBacking.pause(); } catch (_err) {}
+    }
+    if (this.nativeZoneLoop && this.nativeZoneLoop.paused === false) {
+      try { this.nativeZoneLoop.pause(); } catch (_err) {}
+    }
+    try {
+      const ctx = window.Tone && window.Tone.context && (window.Tone.context.rawContext || window.Tone.context);
+      if (ctx && ctx.state === "running" && ctx.suspend) ctx.suspend().catch(() => {});
+    } catch (_err) {}
+  }
+
+  resume(allowBacking = true) {
+    try {
+      const ctx = window.Tone && window.Tone.context && (window.Tone.context.rawContext || window.Tone.context);
+      if (ctx && ctx.state === "suspended" && ctx.resume) ctx.resume().catch(() => {});
+    } catch (_err) {}
+    if (allowBacking && this.wasBackingPlaying && this.nativeBacking && this.nativeBacking.paused) {
+      this.wasBackingPlaying = false;
+      this.startNativeBackingTrack();
+    }
+  }
+
   playSfx(key, volumeDb = 0, delay = 0) { var __oc20;
     if (this.playNative(this.nativeSfx, key, volumeDb, delay)) return true;
     return this.playPlayer((((__oc20 = this.sfxPlayers) === null || __oc20 === void 0 ? void 0 : __oc20[key])), volumeDb, delay);
@@ -6565,8 +6590,14 @@ class LumenShiftApp {
     this.elements.submit.addEventListener("click", () => this.submitScore());
     this.elements.nickname.addEventListener("change", () => writeStorage("nickname", this.elements.nickname.value.trim()));
     document.addEventListener("visibilitychange", () => {
-      if (document.hidden && this.core.status === "playing") this.togglePause(true);
+      if (document.hidden) {
+        if (this.core.status === "playing") this.togglePause(true);
+        this.audio.suspend();
+      } else if (this.core.status === "playing") {
+        this.audio.resume(true);
+      }
     });
+    window.addEventListener("pagehide", () => this.audio.suspend());
   }
 
   makeCallbacks() {
@@ -6728,8 +6759,10 @@ class LumenShiftApp {
     const status = forcePause === true ? (this.core.status = "paused") : this.core.togglePause();
     this.audio.ui(status === "paused" ? "pause" : "resume");
     if (status === "paused") {
+      this.audio.suspend();
       this.elements.pause.classList.remove("is-hidden");
     } else if (status === "playing") {
+      this.audio.resume(true);
       this.elements.pause.classList.add("is-hidden");
     }
   }

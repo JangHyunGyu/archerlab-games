@@ -17,16 +17,16 @@
   --line-soft: rgba(181, 195, 200, 0.16);
   --line-strong: rgba(255, 230, 168, 0.56);
   --frame-skin: image-set(
-    url('../assets/ui/crafted-panel-512.webp?v=3') 1x,
-    url('../assets/ui/crafted-panel-1024.webp?v=3') 2x
+    url('../assets/ui/crafted-panel-512.webp?v=4') 1x,
+    url('../assets/ui/crafted-panel-1024.webp?v=4') 2x
   );
   --btn-gold-skin: image-set(
-    url('../assets/ui/crafted-btn-gold-360.webp?v=3') 1x,
-    url('../assets/ui/crafted-btn-gold-720.webp?v=3') 2x
+    url('../assets/ui/crafted-btn-gold-360.webp?v=4') 1x,
+    url('../assets/ui/crafted-btn-gold-720.webp?v=4') 2x
   );
   --btn-teal-skin: image-set(
-    url('../assets/ui/crafted-btn-teal-360.webp?v=3') 1x,
-    url('../assets/ui/crafted-btn-teal-720.webp?v=3') 2x
+    url('../assets/ui/crafted-btn-teal-360.webp?v=4') 1x,
+    url('../assets/ui/crafted-btn-teal-720.webp?v=4') 2x
   );
   --shadow: 0 24px 60px rgba(0, 0, 0, 0.58);
   --sans: 'Noto Sans KR', 'Manrope', 'Malgun Gothic', system-ui, -apple-system, sans-serif;
@@ -76,9 +76,9 @@ button:focus-visible, a:focus-visible, input:focus-visible {
     linear-gradient(90deg, rgba(6, 16, 24, 0.72) 0%, rgba(6, 16, 24, 0.36) 56%, rgba(6, 16, 24, 0.48) 100%),
     linear-gradient(180deg, rgba(6, 16, 24, 0.42) 0%, transparent 22%, transparent 78%, rgba(6, 16, 24, 0.76) 100%),
     image-set(
-      url('../assets/backgrounds/study-desktop-960.webp?v=3') 1x,
-      url('../assets/backgrounds/study-desktop-1440.webp?v=3') 1.5x,
-      url('../assets/backgrounds/study-desktop-1920.webp?v=3') 2x
+      url('../assets/backgrounds/study-desktop-960.webp?v=4') 1x,
+      url('../assets/backgrounds/study-desktop-1440.webp?v=4') 1.5x,
+      url('../assets/backgrounds/study-desktop-1920.webp?v=4') 2x
     );
   background-position: center;
   background-size: cover;
@@ -90,9 +90,9 @@ button:focus-visible, a:focus-visible, input:focus-visible {
     background-image:
       linear-gradient(180deg, rgba(6, 16, 24, 0.62) 0%, rgba(6, 16, 24, 0.25) 45%, rgba(6, 16, 24, 0.72) 100%),
       image-set(
-        url('../assets/backgrounds/study-mobile-480.webp?v=3') 1x,
-        url('../assets/backgrounds/study-mobile-828.webp?v=3') 2x,
-        url('../assets/backgrounds/study-mobile-1080.webp?v=3') 3x
+        url('../assets/backgrounds/study-mobile-480.webp?v=4') 1x,
+        url('../assets/backgrounds/study-mobile-828.webp?v=4') 2x,
+        url('../assets/backgrounds/study-mobile-1080.webp?v=4') 3x
       );
   }
 }
@@ -234,7 +234,7 @@ body[data-screen='game'] .observatory-bg {
   width: 100%;
   max-width: 1180px;
   margin: 0 auto;
-  padding: 14px max(clamp(16px, 4vw, 40px), env(safe-area-inset-right, 0px)) 14px max(clamp(16px, 4vw, 40px), env(safe-area-inset-left, 0px));
+  padding: max(14px, env(safe-area-inset-top, 0px)) max(clamp(16px, 4vw, 40px), env(safe-area-inset-right, 0px)) 14px max(clamp(16px, 4vw, 40px), env(safe-area-inset-left, 0px));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -991,6 +991,25 @@ body.keyboard-open .game-screen {
   color: #364554;
   text-shadow: none;
 }
+:root[data-theme='light'] .guess-loading-text {
+  color: #5e3d0a;
+  text-shadow: none;
+}
+:root[data-theme='light'] .turn-feedback {
+  background: rgba(246, 239, 224, 0.96);
+  border-color: rgba(164, 121, 46, 0.55);
+  color: #1d2633;
+}
+:root[data-theme='light'] .turn-feedback[data-kind='error'] {
+  background: rgba(255, 232, 234, 0.96);
+  border-color: rgba(176, 40, 56, 0.45);
+  color: #8c1d2b;
+}
+:root[data-theme='light'] .turn-feedback[data-kind='warm'] {
+  background: rgba(255, 245, 219, 0.96);
+  border-color: rgba(164, 121, 46, 0.65);
+  color: #6e4508;
+}
 .composer-status-slot.is-loading .input-hint {
   opacity: 0;
   visibility: hidden;
@@ -1020,7 +1039,8 @@ body.keyboard-open .game-screen {
 }
 .guess-loading-gauge {
   position: relative;
-  width: clamp(114px, 31vw, 132px);
+  width: clamp(56px, 16vw, 72px);
+  max-height: 28px;
   aspect-ratio: 640 / 338;
   flex-shrink: 0;
   filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.65));
@@ -1738,7 +1758,7 @@ body.keyboard-open .game-screen {
 
 /* 낮은 높이의 데스크톱(1280x720) 및 태블릿 가로(1024x768) */
 @media (min-width: 821px) and (max-height: 820px) {
-  .site-header { padding: 8px max(clamp(16px, 3vw, 32px), env(safe-area-inset-right, 0px)) 8px max(clamp(16px, 3vw, 32px), env(safe-area-inset-left, 0px)); }
+  .site-header { padding: max(8px, env(safe-area-inset-top, 0px)) max(clamp(16px, 3vw, 32px), env(safe-area-inset-right, 0px)) 8px max(clamp(16px, 3vw, 32px), env(safe-area-inset-left, 0px)); }
   .site-footer { padding: 6px max(clamp(16px, 3vw, 32px), env(safe-area-inset-right, 0px)) max(10px, env(safe-area-inset-bottom, 0px)) max(clamp(16px, 3vw, 32px), env(safe-area-inset-left, 0px)); }
   .chronometer-console { padding: 4px 8px; gap: 6px; }
   .hud-card { padding: 5px 8px; }
@@ -1767,8 +1787,8 @@ body.keyboard-open .game-screen {
 }
 
 @media (max-width: 600px) {
-  .site-header { padding: 10px max(12px, env(safe-area-inset-right, 0px)) 10px max(12px, env(safe-area-inset-left, 0px)); gap: 6px; }
-  body[data-screen='game'] .site-header { padding: 6px max(12px, env(safe-area-inset-right, 0px)) 6px max(12px, env(safe-area-inset-left, 0px)); }
+  .site-header { padding: max(10px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 10px max(12px, env(safe-area-inset-left, 0px)); gap: 6px; }
+  body[data-screen='game'] .site-header { padding: max(6px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 6px max(12px, env(safe-area-inset-left, 0px)); }
   .brand { width: 44px; min-width: 44px; justify-content: center; }
   .brand > span { display: none; }
   .header-controls { gap: 4px; }
@@ -1833,7 +1853,7 @@ body.keyboard-open .game-screen {
   .rule-token { font-size: 11px; padding: 3px 9px; }
   .hero-actions #start { min-height: 48px; padding: 8px 22px; font-size: 15.5px; }
   .hero-records { margin-top: 12px; }
-  body[data-screen='game'] .site-header { padding: 4px max(8px, env(safe-area-inset-right, 0px)) 4px max(8px, env(safe-area-inset-left, 0px)); }
+  body[data-screen='game'] .site-header { padding: max(4px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) 4px max(8px, env(safe-area-inset-left, 0px)); }
   .icon-button { width: 44px; height: 44px; }
   .game-screen { padding: 4px max(8px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); gap: 5px; }
   .chronometer-console { border-width: 8px; border-image-width: 8px; padding: 3px 5px; gap: 4px; }
@@ -1855,7 +1875,7 @@ body.keyboard-open .game-screen {
 
 /* 폰 가로 모드 전용 2컬럼 콕핏 (667x375, 844x390, 932x430) */
 @media (max-height: 520px) and (orientation: landscape) {
-  .site-header { padding: 4px max(12px, env(safe-area-inset-right, 0px)) 4px max(12px, env(safe-area-inset-left, 0px)); }
+  .site-header { padding: max(4px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 4px max(12px, env(safe-area-inset-left, 0px)); }
   .icon-button { width: 44px; height: 44px; }
   body[data-screen='game'] .site-footer { display: none; }
   .title-screen {

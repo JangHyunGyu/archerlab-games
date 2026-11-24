@@ -1524,15 +1524,18 @@ class EffectManager {
             intensity *= 0.18;
             duration = Math.min(duration, 180);
         }
+        this.tweens = this.tweens.filter(tw => !tw || !tw._isZoomPulse);
         const w = this.game.app.screen.width;
         const h = this.game.app.screen.height;
 
+        zc.scale.set(1);
         zc.pivot.set(w / 2, h / 2);
         zc.position.set(w / 2, h / 2);
 
         this.tweens.push({
             elapsed: 0,
             duration,
+            _isZoomPulse: true,
             update(dt) {
                 if (zc.destroyed) return true;
                 this.elapsed += dt;

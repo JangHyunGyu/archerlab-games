@@ -194,7 +194,9 @@ p {
   aspect-ratio: 500 / 180;
   margin-top: -2px;
   place-items: center;
-  background: image-set(url("../images/ui/ui-title-plaque.webp") type("image/webp"), url("../images/ui/ui-title-plaque.png") type("image/png")) center / 100% 100% no-repeat;
+  background: radial-gradient(ellipse at center, rgba(16, 68, 78, 0.72), rgba(5, 22, 29, 0.34) 68%, transparent 100%);
+  border: 1px solid rgba(246, 205, 105, 0.28);
+  border-radius: 22px;
   filter: drop-shadow(0 20px 34px rgba(0, 0, 0, 0.38));
 }
 
@@ -283,9 +285,9 @@ p {
   min-width: 0;
   padding: 10px 8px;
   border-radius: var(--radius);
-  background:
-    linear-gradient(180deg, rgba(15, 52, 61, 0.84), rgba(5, 20, 28, 0.9)),
-    image-set(url("../images/ui/ui-hud-panel.webp") type("image/webp"), url("../images/ui/ui-hud-panel.png") type("image/png")) center / 100% 100% no-repeat;
+  border: 1px solid rgba(246, 205, 105, 0.34);
+  background: linear-gradient(180deg, rgba(15, 52, 61, 0.88), rgba(5, 20, 28, 0.94));
+  box-shadow: inset 0 1px rgba(255, 248, 214, 0.14), 0 8px 20px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(10px);
 }
 
@@ -337,7 +339,10 @@ p {
   position: absolute;
   inset: -8px -12px;
   z-index: -1;
-  background: var(--button-skin, image-set(url("../images/ui/ui-button-secondary.webp") type("image/webp"), url("../images/ui/ui-button-secondary.png") type("image/png"))) center / 100% 100% no-repeat;
+  border-radius: inherit;
+  border: 1px solid var(--button-border, rgba(114, 216, 212, 0.38));
+  background: var(--button-skin, linear-gradient(180deg, rgba(20, 68, 79, 0.94), rgba(7, 27, 36, 0.96)));
+  box-shadow: var(--button-shadow, inset 0 1px rgba(255, 255, 255, 0.14), 0 6px 16px rgba(0, 0, 0, 0.32));
   pointer-events: none;
   transition: filter 140ms ease, opacity 140ms ease, transform 140ms ease;
 }
@@ -352,7 +357,9 @@ p {
 }
 
 .button-primary {
-  --button-skin: image-set(url("../images/ui/ui-button-primary.webp") type("image/webp"), url("../images/ui/ui-button-primary.png") type("image/png"));
+  --button-skin: linear-gradient(180deg, #ffe799 0%, #eab547 58%, #b97c1e 100%);
+  --button-border: rgba(255, 246, 196, 0.72);
+  --button-shadow: inset 0 1px rgba(255, 255, 255, 0.45), 0 4px 0 #70490b, 0 12px 24px rgba(0, 0, 0, 0.36);
   color: #2d1805;
   text-shadow: 0 1px 0 rgba(255, 246, 198, 0.45);
 }
@@ -373,12 +380,14 @@ p {
 }
 
 .button-secondary {
-  --button-skin: image-set(url("../images/ui/ui-button-secondary.webp") type("image/webp"), url("../images/ui/ui-button-secondary.png") type("image/png"));
+  --button-skin: linear-gradient(180deg, rgba(20, 68, 79, 0.94), rgba(7, 27, 36, 0.96));
+  --button-border: rgba(114, 216, 212, 0.38);
   color: #eafff9;
 }
 
 .button-ghost {
-  --button-skin: image-set(url("../images/ui/ui-button-ghost.webp") type("image/webp"), url("../images/ui/ui-button-ghost.png") type("image/png"));
+  --button-skin: linear-gradient(180deg, rgba(12, 42, 52, 0.76), rgba(4, 18, 25, 0.84));
+  --button-border: rgba(159, 222, 220, 0.28);
   color: var(--ink-soft);
 }
 
@@ -417,7 +426,8 @@ p {
 }
 
 .icon-button {
-  --button-skin: image-set(url("../images/ui/ui-icon-button.webp") type("image/webp"), url("../images/ui/ui-icon-button.png") type("image/png"));
+  --button-skin: linear-gradient(180deg, rgba(18, 60, 70, 0.92), rgba(6, 24, 32, 0.96));
+  --button-border: rgba(246, 205, 105, 0.36);
   display: inline-grid;
   place-items: center;
   min-width: 42px;
@@ -473,9 +483,9 @@ p {
   min-width: 0;
   padding: 8px 10px;
   border-radius: var(--radius);
-  background:
-    linear-gradient(180deg, rgba(16, 56, 65, 0.84), rgba(4, 18, 25, 0.9)),
-    image-set(url("../images/ui/ui-hud-panel.webp") type("image/webp"), url("../images/ui/ui-hud-panel.png") type("image/png")) center / 100% 100% no-repeat;
+  border: 1px solid rgba(246, 205, 105, 0.32);
+  background: linear-gradient(180deg, rgba(16, 56, 65, 0.9), rgba(4, 18, 25, 0.95));
+  box-shadow: inset 0 1px rgba(255, 248, 214, 0.14);
   text-align: center;
 }
 
@@ -531,9 +541,8 @@ p {
   margin: 0 auto;
   padding: 10px 12px;
   border-radius: var(--radius);
-  background:
-    linear-gradient(180deg, rgba(10, 39, 49, 0.84), rgba(3, 15, 22, 0.92)),
-    image-set(url("../images/ui/ui-modal-panel.webp") type("image/webp"), url("../images/ui/ui-modal-panel.png") type("image/png")) center / 100% 100% no-repeat;
+  border: 1px solid rgba(246, 205, 105, 0.3);
+  background: linear-gradient(180deg, rgba(10, 39, 49, 0.9), rgba(3, 15, 22, 0.96));
 }
 
 .stage-label {
@@ -566,9 +575,8 @@ p {
   padding: 4px 9px 4px 6px;
   border-radius: var(--radius);
   border: 1px solid rgba(92, 204, 212, 0.24);
-  background:
-    linear-gradient(180deg, rgba(14, 49, 58, 0.86), rgba(4, 18, 25, 0.9)),
-    image-set(url("../images/ui/ui-hud-panel.webp") type("image/webp"), url("../images/ui/ui-hud-panel.png") type("image/png")) center / 100% 100% no-repeat;
+  border: 1px solid rgba(92, 204, 212, 0.24);
+  background: linear-gradient(180deg, rgba(14, 49, 58, 0.9), rgba(4, 18, 25, 0.94));
   color: var(--ink-soft);
   font-size: 13px;
   font-weight: 900;
@@ -642,7 +650,9 @@ p {
   max-width: 100%;
   aspect-ratio: 590 / 620;
   margin: clamp(8px, 2vw, 20px) auto;
-  background: image-set(url("../images/ui/ui-board-frame.webp") type("image/webp"), url("../images/ui/ui-board-frame.png") type("image/png")) center / 100% 100% no-repeat;
+  border: 2px solid rgba(246, 205, 105, 0.45);
+  border-radius: 18px;
+  background: linear-gradient(155deg, rgba(16, 62, 72, 0.96), rgba(5, 22, 29, 0.98));
   filter:
     drop-shadow(0 18px 28px rgba(0, 0, 0, 0.34))
     drop-shadow(0 0 18px rgba(255, 221, 114, 0.15));
@@ -1153,9 +1163,9 @@ p {
   overflow: auto;
   padding: 18px;
   border-radius: var(--radius);
-  background:
-    linear-gradient(180deg, rgba(12, 42, 52, 0.88), rgba(3, 15, 22, 0.94)),
-    image-set(url("../images/ui/ui-modal-panel.webp") type("image/webp"), url("../images/ui/ui-modal-panel.png") type("image/png")) center / 100% 100% no-repeat;
+  border: 1px solid rgba(246, 205, 105, 0.42);
+  background: linear-gradient(180deg, rgba(12, 42, 52, 0.94), rgba(3, 15, 22, 0.98));
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.56), inset 0 1px rgba(255, 245, 200, 0.16);
 }
 
 .small-card {
@@ -1189,9 +1199,8 @@ p {
   min-height: 136px;
   padding: 12px;
   border-radius: var(--radius);
-  background:
-    linear-gradient(180deg, rgba(13, 46, 56, 0.86), rgba(4, 18, 25, 0.92)),
-    image-set(url("../images/ui/ui-hud-panel.webp") type("image/webp"), url("../images/ui/ui-hud-panel.png") type("image/png")) center / 100% 100% no-repeat;
+  border: 1px solid rgba(92, 204, 212, 0.28);
+  background: linear-gradient(180deg, rgba(13, 46, 56, 0.9), rgba(4, 18, 25, 0.95));
   color: var(--ink);
   text-align: left;
   cursor: pointer;
@@ -1249,9 +1258,9 @@ p {
 .result-stats > div {
   padding: 10px 8px;
   border-radius: var(--radius);
-  background:
-    linear-gradient(180deg, rgba(15, 52, 61, 0.84), rgba(5, 20, 28, 0.9)),
-    image-set(url("../images/ui/ui-hud-panel.webp") type("image/webp"), url("../images/ui/ui-hud-panel.png") type("image/png")) center / 100% 100% no-repeat;
+  border: 1px solid rgba(246, 205, 105, 0.34);
+  background: linear-gradient(180deg, rgba(15, 52, 61, 0.88), rgba(5, 20, 28, 0.94));
+  box-shadow: inset 0 1px rgba(255, 248, 214, 0.14), 0 8px 20px rgba(0, 0, 0, 0.28);
 }
 
 .rank-submit {
@@ -1260,9 +1269,8 @@ p {
   margin: 12px 0 16px;
   padding: 12px;
   border-radius: var(--radius);
-  background:
-    linear-gradient(180deg, rgba(10, 39, 49, 0.78), rgba(3, 15, 22, 0.88)),
-    image-set(url("../images/ui/ui-modal-panel.webp") type("image/webp"), url("../images/ui/ui-modal-panel.png") type("image/png")) center / 100% 100% no-repeat;
+  border: 1px solid rgba(246, 205, 105, 0.3);
+  background: linear-gradient(180deg, rgba(10, 39, 49, 0.86), rgba(3, 15, 22, 0.94));
 }
 
 .rank-submit label {
@@ -1325,7 +1333,7 @@ p {
   inset: -1px auto -1px 0;
   width: 42%;
   border-radius: inherit;
-  background: linear-gradient(90deg, transparent, var(--cyan) 28%, var(--gold) 72%, transparent);
+  background: linear-gradient(90deg, transparent, var(--teal) 28%, var(--gold) 72%, transparent);
   filter: drop-shadow(0 0 10px rgba(75, 214, 218, 0.64));
   animation: rankSubmitBar 0.92s ease-in-out infinite;
 }
@@ -1358,9 +1366,8 @@ p {
   min-height: 40px;
   padding: 6px 10px;
   border-radius: var(--radius);
-  background:
-    linear-gradient(180deg, rgba(14, 49, 58, 0.86), rgba(4, 18, 25, 0.9)),
-    image-set(url("../images/ui/ui-hud-panel.webp") type("image/webp"), url("../images/ui/ui-hud-panel.png") type("image/png")) center / 100% 100% no-repeat;
+  border: 1px solid rgba(92, 204, 212, 0.24);
+  background: linear-gradient(180deg, rgba(14, 49, 58, 0.9), rgba(4, 18, 25, 0.94));
 }
 
 .rank-row.top1 {
@@ -1443,9 +1450,7 @@ p {
   padding: 10px 14px;
   border: 1px solid rgba(246, 205, 105, 0.34);
   border-radius: var(--radius);
-  background:
-    linear-gradient(180deg, rgba(10, 39, 49, 0.88), rgba(3, 15, 22, 0.94)),
-    image-set(url("../images/ui/ui-hud-panel.webp") type("image/webp"), url("../images/ui/ui-hud-panel.png") type("image/png")) center / 100% 100% no-repeat;
+  background: linear-gradient(180deg, rgba(10, 39, 49, 0.94), rgba(3, 15, 22, 0.98));
   color: var(--ink);
   font-size: 13px;
   font-weight: 850;

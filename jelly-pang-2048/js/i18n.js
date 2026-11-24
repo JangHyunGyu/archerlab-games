@@ -36,18 +36,18 @@
       "board.empty": "빈칸",
       "board.summary": "점수 {score}점. 최고 젤리 {best}. 빈 칸 {empty}개.",
       "board.live": "4 곱하기 4 젤리 보드. {rows}. {summary}",
-      "modal.crownEyebrow": "Crown Jelly",
-      "modal.winTitle": "You win!",
+      "modal.crownEyebrow": "왕관 젤리",
+      "modal.winTitle": "2048 달성!",
       "modal.crownCopy": "왕관 젤리를 이어서 키우세요.",
-      "modal.finalScore": "Final Score",
+      "modal.finalScore": "최종 점수",
       "modal.nickname": "닉네임 입력",
       "modal.submit": "등록",
       "modal.skip": "건너뛰기",
-      "modal.keep": "Keep playing",
-      "modal.retry": "Try again",
+      "modal.keep": "계속하기",
+      "modal.retry": "다시 하기",
       "modal.home": "시작 화면",
-      "modal.overEyebrow": "Game over",
-      "modal.overTitle": "No moves",
+      "modal.overEyebrow": "게임 오버",
+      "modal.overTitle": "더 이상 움직일 수 없어요",
       "modal.overCopy": "더 이상 움직일 수 없어요.",
       "rank.aria": "명예의 전당",
       "rank.kicker": "Hall of Fame",
@@ -72,9 +72,9 @@
       "controls.down": "아래로 이동",
       "controls.right": "오른쪽으로 이동",
       "controls.hint": "화면을 밀거나 방향키로 움직여요",
-      "error.eyebrow": "Load error",
-      "error.title": "Reload",
-      "error.copy": "라이브러리를 불러오지 못했습니다.",
+      "error.eyebrow": "불러오기 오류",
+      "error.title": "새로고침",
+      "error.copy": "리소스를 불러오지 못했습니다. 다시 시도해 주세요.",
       "announce.resume": "게임을 이어합니다.",
       "announce.newGame": "새 게임을 시작합니다.",
       "announce.blocked": "움직일 수 없는 방향입니다.",
@@ -201,15 +201,21 @@
   }
 
   function resolveLang() {
-    return langFromPathname()
-      || langFromQuery()
+    if (langFromPathname() === "en") return "en";
+    if (normalize(document.documentElement.lang) === "ko" && !langFromQuery()) {
+      const explicitKey = "jelly-pang-2048-lang-explicit";
+      let explicit = null;
+      try { explicit = localStorage.getItem(explicitKey); } catch (_err) {}
+      if (explicit === "ko" || explicit === "en") return explicit;
+      return "ko";
+    }
+    return langFromQuery()
       || readStored()
       || normalize(document.documentElement.lang)
       || "ko";
   }
 
   let lang = resolveLang();
-  save(lang);
 
   function t(key, vars) {
     const primary = DICTS[lang] || DICTS.ko;
@@ -249,6 +255,7 @@
     if (!normalized) return;
     lang = normalized;
     save(lang);
+    try { localStorage.setItem("jelly-pang-2048-lang-explicit", lang); } catch (_err) {}
     apply();
   }
 
