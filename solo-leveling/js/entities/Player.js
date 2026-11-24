@@ -993,13 +993,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     getClosestEnemy(range) {
         const enemies = this.getAllEnemies();
         let closest = null;
-        let closestDist = range || 999999;
+        const maxDist = range || 999999;
+        let closestDistSq = maxDist * maxDist;
 
         for (const enemy of enemies) {
             if (!enemy.active) continue;
-            const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
-            if (dist < closestDist) {
-                closestDist = dist;
+            const dx = enemy.x - this.x;
+            const dy = enemy.y - this.y;
+            const distSq = dx * dx + dy * dy;
+            if (distSq < closestDistSq) {
+                closestDistSq = distSq;
                 closest = enemy;
             }
         }

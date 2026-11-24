@@ -107,8 +107,8 @@ const TEXTS = {
         playerName: '성진우',
         hudStatus: '상태',
         enemies: {
-            goblin: '고블린', antSoldier: '개미 병사', orc: '오크',
-            iceBear: '아이스 베어', stoneGolem: '스톤 골렘', darkMage: '다크 메이지',
+            goblin: '고블린', steelFangLycan: '강철 이빨 라이칸', antSoldier: '개미 병사', orc: '오크',
+            iceBear: '아이스 베어', iceElf: '아이스 엘프', stoneGolem: '스톤 골렘', darkMage: '다크 메이지',
             ironKnight: '아이언 나이트', demonWarrior: '마족 전사',
         },
         weapons: {
@@ -217,8 +217,8 @@ const TEXTS = {
         playerName: 'Sung Jinwoo',
         hudStatus: 'Status',
         enemies: {
-            goblin: 'Goblin', antSoldier: 'Ant Soldier', orc: 'Orc',
-            iceBear: 'Ice Bear', stoneGolem: 'Stone Golem', darkMage: 'Dark Mage',
+            goblin: 'Goblin', steelFangLycan: 'Steel-Fang Lycan', antSoldier: 'Ant Soldier', orc: 'Orc',
+            iceBear: 'Ice Bear', iceElf: 'Ice Elf', stoneGolem: 'Stone Golem', darkMage: 'Dark Mage',
             ironKnight: 'Iron Knight', demonWarrior: 'Demon Warrior',
         },
         weapons: {
@@ -326,8 +326,8 @@ const TEXTS = {
         playerName: '旬',
         hudStatus: 'ステータス',
         enemies: {
-            goblin: 'ゴブリン', antSoldier: 'アリ兵士', orc: 'オーク',
-            iceBear: 'アイスベア', stoneGolem: 'ストーンゴーレム', darkMage: 'ダークメイジ',
+            goblin: 'ゴブリン', steelFangLycan: '鋼牙ライカン', antSoldier: 'アリ兵士', orc: 'オーク',
+            iceBear: 'アイスベア', iceElf: 'アイスエルフ', stoneGolem: 'ストーンゴーレム', darkMage: 'ダークメイジ',
             ironKnight: 'アイアンナイト', demonWarrior: '魔族戦士',
         },
         weapons: {

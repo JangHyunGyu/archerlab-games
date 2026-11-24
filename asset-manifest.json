@@ -5539,6 +5539,31 @@
       "sha256": "23cd4abcf8c5572f494a438ca7c0a527ddbece8ae7825f2626c61915c2b14dd3"
     },
     {
+      "path": "solo-leveling/assets/atlases/boss_beru.webp",
+      "bytes": 118942,
+      "sha256": "e903855ee0c4de68aad5d5da6f85a217fd8c2c12586c10c4d1b39f2800e262bd"
+    },
+    {
+      "path": "solo-leveling/assets/atlases/boss_igris.webp",
+      "bytes": 101646,
+      "sha256": "1608cbd208663aa2f96e03af066778ceba0d088128ded21105afd2821a289d9b"
+    },
+    {
+      "path": "solo-leveling/assets/atlases/boss_tusk.webp",
+      "bytes": 110468,
+      "sha256": "fae4642cd1cfc9544ca13b0272d020df683083c67201458fc6a3543a1402e4f2"
+    },
+    {
+      "path": "solo-leveling/assets/atlases/enemies_early.webp",
+      "bytes": 326334,
+      "sha256": "1ad8ec9a55dd3e36fabb3080c5041acd7012608c0dc4e79aca6e2c8576fa805d"
+    },
+    {
+      "path": "solo-leveling/assets/atlases/enemies_late.webp",
+      "bytes": 332158,
+      "sha256": "cacc7f5c456fa81b29b6a0f48da883a170ed87520469e58c74d52d55b29a59eb"
+    },
+    {
       "path": "solo-leveling/assets/atlases/motion_flame_mage.webp",
       "bytes": 415296,
       "sha256": "16728dd4113e9bc5412d5123c566531f7493abc5e2f573bf6e9465ac53114e51"
@@ -5604,14 +5629,44 @@
       "sha256": "a98928fafc24fb53f4aa01278e546312bb1f900d5ba4a815cfb5677cf165fbb2"
     },
     {
+      "path": "solo-leveling/assets/bosses/motion_sources/beru/attack_right.png",
+      "bytes": 1006423,
+      "sha256": "63794a383e0518636b8dc94b8fa17ab2a354f26fba8dd537d652080d044f86f6"
+    },
+    {
+      "path": "solo-leveling/assets/bosses/motion_sources/beru/walk_right.png",
+      "bytes": 1061743,
+      "sha256": "5d30d7f3a9fbaa51ae2e3014275119dab344258c6d11422669e90516a9e52259"
+    },
+    {
+      "path": "solo-leveling/assets/bosses/motion_sources/igris/attack_right.png",
+      "bytes": 982757,
+      "sha256": "612f8d1ad95cedc0d7e5dadd4db9eaa9f2a241bcc67c8553a1f97237888ee10d"
+    },
+    {
+      "path": "solo-leveling/assets/bosses/motion_sources/igris/walk_right.png",
+      "bytes": 1084255,
+      "sha256": "55b32973830dc6599c76ba3fd2a589b7be85688c6418f401b5201258e7f2816f"
+    },
+    {
+      "path": "solo-leveling/assets/bosses/motion_sources/tusk/attack_right.png",
+      "bytes": 1071046,
+      "sha256": "ddfe2cae30420d08c25ffe27be705f51e2b3953eea10800eb823e1216d566d2f"
+    },
+    {
+      "path": "solo-leveling/assets/bosses/motion_sources/tusk/walk_right.png",
+      "bytes": 1037024,
+      "sha256": "e42a34c0ab793a7c73755714bcc09985a6599b9cdc4f56dbb5cb3be995bca245"
+    },
+    {
       "path": "solo-leveling/assets/bosses/source/beru.png",
-      "bytes": 216007,
-      "sha256": "ee855058b60b8287d9a0c0edfd08e92201de85d60f5bf143a36c220398287b42"
+      "bytes": 214477,
+      "sha256": "2812f4c2e81d6a632f430264f4ab667c7d21f94051c402c0cfeedd31b3425d21"
     },
     {
       "path": "solo-leveling/assets/bosses/source/beru.webp",
-      "bytes": 46332,
-      "sha256": "b644da6180c163aa017df0369d2c722da9b106bad91a8e11b61341e4b7543e75"
+      "bytes": 60302,
+      "sha256": "93e1e5d62ddb8be563263370393d7a09e8413977b8477465d8c9be29b1d269f1"
     },
     {
       "path": "solo-leveling/assets/bosses/source/boss_sheet_alpha.png",
@@ -5635,23 +5690,23 @@
     },
     {
       "path": "solo-leveling/assets/bosses/source/igris.png",
-      "bytes": 620477,
-      "sha256": "94479276d506fb38bd70effd13306876316fe17aaf392d5fc398c4e793d4b55f"
+      "bytes": 205122,
+      "sha256": "937536932a14ca75b12f8c7a68aff5c7de65f290c8d52b0f2d82c451b794ea7e"
     },
     {
       "path": "solo-leveling/assets/bosses/source/igris.webp",
-      "bytes": 127986,
-      "sha256": "82975e56e18bc298631a94f5e5cbac0aeec85cb9ab72926fe02976051fd401bc"
+      "bytes": 51654,
+      "sha256": "914654e6bee409c9d236cf8061d1f496ae973ba61af23dbfef670c2723b99df6"
     },
     {
       "path": "solo-leveling/assets/bosses/source/tusk.png",
-      "bytes": 786836,
-      "sha256": "489a5b99102a64f3cf67a2d7dacbd3a66429a6d990a53684067fcb3d670adc69"
+      "bytes": 228140,
+      "sha256": "6be1f2a0fc5a914b1d13248ef279f1cc00ad023ae14ff67bb27a5c2152a33c9e"
     },
     {
       "path": "solo-leveling/assets/bosses/source/tusk.webp",
-      "bytes": 160116,
-      "sha256": "5b9e852cbb4e92d35e377204157f6aa80b6f1269090f96bc67731382581d6535"
+      "bytes": 55348,
+      "sha256": "07e358d6fccc504ab80ef529c0b32a1ff6e1fbf55b7f381ff653182f5e409269"
     },
     {
       "path": "solo-leveling/assets/effects/arise/arise_hand.png",
@@ -8725,63 +8780,63 @@
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_beru_acid_0.png",
-      "bytes": 29946,
-      "sha256": "360eaf5504af304a99b4b7f8cb7b1ad7731c21cae996f128460cfe1c1755d7c4"
+      "bytes": 5508,
+      "sha256": "3329c598b503a1d5504272ec6ba0e2f748648e06dac16178e6bdac549f7c359d"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_beru_acid_0.webp",
-      "bytes": 6638,
-      "sha256": "4142c72c812cf7608290b7211ced4188ca7b6a5fd2f5abc3022dc9c440e8b34d"
+      "bytes": 2914,
+      "sha256": "0380bcd9557eecd2d08c69e811d76027ade62f0194aac2608035bb7358bb5157"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_beru_acid_1.png",
-      "bytes": 49444,
-      "sha256": "ae54ecb16a3a1534b177115404721a6fe98c311086cb69ec4421b36a9ae436cd"
+      "bytes": 7398,
+      "sha256": "b2fd8fcc7b0d0662104332a8a820241c7bd13f096731139cb18b48176114aa85"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_beru_acid_1.webp",
-      "bytes": 15608,
-      "sha256": "b003572c99a27a0c615e74a9908205c1c72a07dc863439767aded0efc9e77542"
+      "bytes": 3730,
+      "sha256": "52c9774981186e6dc670c8933faad822b6c3c767e43dca47e172a871a1debe85"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_beru_acid_2.png",
-      "bytes": 58083,
-      "sha256": "4187198864504389ba1bc2ba08367d71f12eaf71b431d72eeaca040e0318f360"
+      "bytes": 20750,
+      "sha256": "a7bc8d1cdaa852bbb3bc6b0f00029de815d836818f205fe3fdee76606801694c"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_beru_acid_2.webp",
-      "bytes": 18562,
-      "sha256": "81a19ac831e5959f83505b3568bf977504a775cca9ad92ca03f2ea62e44f6fbb"
+      "bytes": 9232,
+      "sha256": "c78aa718b29ff03c04a389c8bf5eae69fe35d97b74e4c3c8b41605cc547c4f4a"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_beru_acid_3.png",
-      "bytes": 58405,
-      "sha256": "72b56d39d7c745ba2002d8f4220489b47d6bf9561aac64b695a2f6b6b752a952"
+      "bytes": 43711,
+      "sha256": "bc896107609d724016ba1a4bebfa200e5ea8eefe222ed673e78912b32e9d7992"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_beru_acid_3.webp",
-      "bytes": 18646,
-      "sha256": "5e3c45dacd8d3c0af1f8d5ac03b126182eac44837238df213f9943712df89b97"
+      "bytes": 17642,
+      "sha256": "e6ac830afaebe74027052c8d50cffd06efb9e9e0f9e644206387d667b284bd6b"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_beru_acid_4.png",
-      "bytes": 54223,
-      "sha256": "e44519d10f89b79d5fecf804caf4681ea2fee3ef04279d4ae065be86d9e86dfb"
+      "bytes": 21316,
+      "sha256": "845779189f1111dd0d6990d51c558b758d56f74bc398f6091596ea613c015635"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_beru_acid_4.webp",
-      "bytes": 16964,
-      "sha256": "3f45e8f788c7f6a326ad2011576f24fa60d2c2ef761f378f1953474bc23fd78f"
+      "bytes": 11508,
+      "sha256": "10ef42fdfb6054c6f02f421fedd64a4ad71bd1ff056dde5f05cbd9494dc2e395"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_beru_acid_5.png",
-      "bytes": 56456,
-      "sha256": "0bd6644a964260e2cdc1e4e3e79cef62d5c440664900c13522ce9f5a04981561"
+      "bytes": 18108,
+      "sha256": "d562b1883f61b6d0d538cca89c1221fea1b3e5053cd6f932a57e9866d3376ca0"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_beru_acid_5.webp",
-      "bytes": 17750,
-      "sha256": "ae8add2aea7016c61764ba5a2a193dc236200e506329c129ab393b9c5248b06a"
+      "bytes": 9850,
+      "sha256": "62c4903a68d35c62d82416f61d2725f985dec2a96fd7bcf134e899b01aa02a9e"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_death_beru_0.png",
@@ -9025,183 +9080,183 @@
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_igris_slash_0.png",
-      "bytes": 32513,
-      "sha256": "7ce1128f9341013fdcf773cefbd7ff04643d4e67fabafedaf6c0e720163ee7d0"
+      "bytes": 7369,
+      "sha256": "1ee763f7c76787b9e64f58b442c35a8d1b302141e8fe70a724f5c48c1885a503"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_igris_slash_0.webp",
-      "bytes": 6966,
-      "sha256": "f4a8594e77346475d45aca1d26c922d512cd489e74026bb69bcfefba24b1902f"
+      "bytes": 4002,
+      "sha256": "d183942918032450f2a8ed36102605b4c62d0b098a0b3cff2220c07d0c5e1bb7"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_igris_slash_1.png",
-      "bytes": 56647,
-      "sha256": "097cf6b27bfd9f83812579ae297cabb431da5b54c70b95b4005ff4601102dbed"
+      "bytes": 9765,
+      "sha256": "c848141fb5eaffe9791bc5f71c4e42f77f0c7aa634fcd39af738d5a78a2f1456"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_igris_slash_1.webp",
-      "bytes": 17456,
-      "sha256": "42d7c3058fbc501720a704da0df6ef3da70427810f319f38f32257829c2d8dd9"
+      "bytes": 5028,
+      "sha256": "c89c559ea0d5b89bdbd1996483ab7b04ebfdb2383a1dc8f072aa5164c0a15699"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_igris_slash_2.png",
-      "bytes": 72786,
-      "sha256": "f6aef62dc55102abf99b8463998f033a2880ccdf78cb82b5656c445c5b608bad"
+      "bytes": 29725,
+      "sha256": "75bdd4fc4a889f374e13a37ef89fb74ea56819ea9961fe818abee2f5b44737d3"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_igris_slash_2.webp",
-      "bytes": 24870,
-      "sha256": "1bbab46463dd9b7d6189d0f31f38dddcadc1cd72fb5087c8ab1cb32b934e13cd"
+      "bytes": 12726,
+      "sha256": "685a2a2facdaf78b8f53c57d4d25d65b9f24398f81196783efcb435d567d0591"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_igris_slash_3.png",
-      "bytes": 81150,
-      "sha256": "18a8c68ba657c920a2db0138115f1ee95ce5e1df8efb1b7e29940abf0e327deb"
+      "bytes": 64797,
+      "sha256": "ab2733683ded0c932e7ff639d6bc0b46421ba810f9d215da5ca2f9d5cc810c3b"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_igris_slash_3.webp",
-      "bytes": 29012,
-      "sha256": "720bbfd2d19c3e3b1a031aac6b4efa81891dd96eb990da4e56658928b5f1f87e"
+      "bytes": 51752,
+      "sha256": "749d9f806db4c9e26586bc6b652b80a26af9074abee54b1c5853176bac42fcc1"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_igris_slash_4.png",
-      "bytes": 67563,
-      "sha256": "65307a7428befac4d035309c1a51516140e408a7c45a72faa22959d39e5f70a3"
+      "bytes": 16486,
+      "sha256": "652d50c22184153a0382fc6ce498bcc8842e546037c275b1834df7234ebd1348"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_igris_slash_4.webp",
-      "bytes": 24164,
-      "sha256": "292a73b7497354535066df0284a33f423260f48788f638417f819d59d0e8040e"
+      "bytes": 8248,
+      "sha256": "96a9ee1c01fd19a1f3f5e5517d94bcf2f2bcd357c8467285b3348897cfc1d25e"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_igris_slash_5.png",
-      "bytes": 51291,
-      "sha256": "92a6117ad456501970f2c616490e95c5c9a7a3ec58c32d1ad78e6630b6386ac1"
+      "bytes": 14046,
+      "sha256": "36179914c0d78ad11a039b9fda24f9cb6b00cdf67873165a0e1e6c59f79546cd"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_igris_slash_5.webp",
-      "bytes": 15952,
-      "sha256": "f9180bd47bf16a22eb8e81bc8ada9b50f2ff2ec5b906ee7d5e294d4c9ad1fcc5"
+      "bytes": 7058,
+      "sha256": "7b380f86e199ae594842d5e3f732b0a443ac2370dbfc5facf4c9f0f1f0849361"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_tusk_slam_0.png",
-      "bytes": 53056,
-      "sha256": "63d14c29930c1ec88bf4edcacae71e04d505ffcf63b5015386fef5741128dace"
+      "bytes": 7746,
+      "sha256": "96875da986a627aeb83dc411f499c636cc167486a06b6e0c0335a33ce974cfd1"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_tusk_slam_0.webp",
-      "bytes": 15842,
-      "sha256": "3f1d6aa3fce369ee924759e8dfbdf138f70e7faa60f0626c954a4c53d6b359c1"
+      "bytes": 3930,
+      "sha256": "20a17fc7083a35dd44d57adbf4c99bbb78f478eeda1a9226f7ea04d9cb5b257a"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_tusk_slam_1.png",
-      "bytes": 84389,
-      "sha256": "b4c1d02810c026570cfabcaff8463c8abdd772b196f3dda8a25a96b53f24459c"
+      "bytes": 10465,
+      "sha256": "2e31c517124fc4eebe52fa2d2d08d3e567238eaa46f24c0976b89927f5b4b6e9"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_tusk_slam_1.webp",
-      "bytes": 29450,
-      "sha256": "d9f1d8a9299dc6cc54333a41d76be4e5d9d096b6c8cee92ccf6e6b15fc5c94d8"
+      "bytes": 5122,
+      "sha256": "c2c7a21d29583813f6cf205b7ca36b2e7b4e653e8c0f96e6bad21080055ad9d4"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_tusk_slam_2.png",
-      "bytes": 97809,
-      "sha256": "ea95cf62a07e00490396027b68ba5e1784e903418ca6963f371fb9220028d08e"
+      "bytes": 32035,
+      "sha256": "8b330c0c5253bf3ad87dec910a2f8100520c9ea054dfd185500bb3a947c3b5bd"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_tusk_slam_2.webp",
-      "bytes": 35248,
-      "sha256": "7a592a22b857c2658315da9d7d7c1943a503bc297ee3b453e82d4d32f1223b95"
+      "bytes": 13594,
+      "sha256": "f4d924f27c602240788ad66d9cc798fe156b436a907fc577079c3838a3dcdaa7"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_tusk_slam_3.png",
-      "bytes": 95746,
-      "sha256": "6899cd289fe88c6b024a955bcbac9f1ec689f3fa41d8cee93b85d1f13cc5f5a3"
+      "bytes": 87983,
+      "sha256": "4afcfa8194cac8218f4049b7eb80cc7128e4c09cd7e1b9a4b9ee74404b3e71c2"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_tusk_slam_3.webp",
-      "bytes": 33900,
-      "sha256": "201f3e4cf5bc135668e9055abaf0815add58e39faa8a039b593472058b3ff610"
+      "bytes": 74354,
+      "sha256": "cbd6f3d129e34082f309c7f2d5ad635f4c9d672873f8882ee17b339855f22f55"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_tusk_slam_4.png",
-      "bytes": 91981,
-      "sha256": "3aa4c8965f73b66bd9ac53cfd7637413af72503a6d26681a1b52dcf454085aec"
+      "bytes": 29688,
+      "sha256": "7d381bdc09791c1f300357c8dbf791c50b2e27b091299f193742a5e3361684d4"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_tusk_slam_4.webp",
-      "bytes": 32218,
-      "sha256": "a7c0e89450d495cf5b0c7188d741bb4fada1148d7e644749075204a73521a767"
+      "bytes": 17942,
+      "sha256": "b0cdf2dcbf32b30926532b29506b8764c2de851a81628faab7039360ab5a3ff4"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_tusk_slam_5.png",
-      "bytes": 83749,
-      "sha256": "81b3644424580d669b0972825592e719c992cb5f136a1028213817e12ee9af84"
+      "bytes": 25659,
+      "sha256": "29103eeaaf256a3d539bb258c12fb8e89f071ab53ba33be8e442707073ba9c33"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/boss_tusk_slam_5.webp",
-      "bytes": 27628,
-      "sha256": "f7cc861088eca78ad4e47c678158b9b70e7c34d7ba6ae0bdea1b63ed35dd8d1c"
+      "bytes": 15466,
+      "sha256": "d52c46971003e6d179d6811ebf67a91729337565d4817beb2cfd68d281984f68"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/dark_mage_orb_0.png",
-      "bytes": 24651,
-      "sha256": "e65f69a838f996b78638160f7ed4586e9a3618ca33c80a64077aa33bcc126190"
+      "bytes": 4542,
+      "sha256": "eddfdb1ceec83df01d51b9bdba4ef8321d955f6b9b69b3523d3622afdaadfa52"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/dark_mage_orb_0.webp",
-      "bytes": 5048,
-      "sha256": "35ca907ba8175d16bed900af15e204c6679ae480a9bae2ca9b1f94e00d1def60"
+      "bytes": 2422,
+      "sha256": "193f8480075ffe7d4cd0cd659254664238849ccc88253b535c93a8b4c4261c87"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/dark_mage_orb_1.png",
-      "bytes": 32721,
-      "sha256": "4300680f73f10029c3b9c6ad2a21b327386db3516684a1d8edb98415ad558f42"
+      "bytes": 6010,
+      "sha256": "6db0e456b7a4490b94aead4fcdf66655a8590533ca9d4431b6c1a3a5c93e33a0"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/dark_mage_orb_1.webp",
-      "bytes": 11398,
-      "sha256": "b6f023e3fb55a017817d7e638639c888039ee585e0b1be7510872ed3dcc0eb6d"
+      "bytes": 3084,
+      "sha256": "17310db5ca7543f437832f0f5bbe1f09b1e7be38e3d648685446f2f05cd9a89d"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/dark_mage_orb_2.png",
-      "bytes": 42114,
-      "sha256": "536609cdf6a73f6e4169023fe5841ce0dd9689221f6f1fc35a11b903ddf7a4cb"
+      "bytes": 29387,
+      "sha256": "367a04ac7e5d95d521029b0af82d6db3e3f03496a7efe9a6793c8ad12f897efd"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/dark_mage_orb_2.webp",
-      "bytes": 17678,
-      "sha256": "6df596fd6f933515718c3f2c0740582af3791733e6f8204f7905367b9f6175af"
+      "bytes": 11410,
+      "sha256": "d915f006882c08b38871059e92259b84d4d6b4975d8b0a31188b58233a5d8028"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/dark_mage_orb_3.png",
-      "bytes": 43337,
-      "sha256": "069c388124d538f9be29e24c1cd3945df100787fbc5df52783b183e3a5fc1e12"
+      "bytes": 63477,
+      "sha256": "64afa38b8f82e8f669d715f963d0977648658d1b3e8638865b7b57d60a1c9752"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/dark_mage_orb_3.webp",
-      "bytes": 19282,
-      "sha256": "58db28cbb3d5cb0c6c3db3987d170078f6ec1f29a2d33a76ccf5dcfa2c7b29cb"
+      "bytes": 51480,
+      "sha256": "eff9f1723706763503e573d32e462c9779c1f47f443fbefd5ac87b01713145b5"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/dark_mage_orb_4.png",
-      "bytes": 40131,
-      "sha256": "53e2bf85ac67ffad2d192549e18dfad1bea35c602a93d6b5f6da4b742f1a0077"
+      "bytes": 23886,
+      "sha256": "da192dac23141fa75506d9db6e484f0d4d8a983fa25e860bcdb2f27a22a52a60"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/dark_mage_orb_4.webp",
-      "bytes": 17330,
-      "sha256": "5c37a05149aef9950c24d82318b8df0abeb332d70ae48ae5169f99f0175c0123"
+      "bytes": 11094,
+      "sha256": "ee3c0ebcb8c567c391a5ddb5927b520871b500872762fee9290f2d3629e99475"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/dark_mage_orb_5.png",
-      "bytes": 41437,
-      "sha256": "3d4e5a74ab3db905fc2357f1301f38a2774f92e1721ba367659ae7e694ef0c08"
+      "bytes": 20527,
+      "sha256": "d276e6b6a8e37fdaf466ed6b5db167a4f1faee0d8d164ab09b108ff5e175bcc6"
     },
     {
       "path": "solo-leveling/assets/effects/enemy_boss/dark_mage_orb_5.webp",
-      "bytes": 18964,
-      "sha256": "6a2de4b0bef4c4884284c629c138862a4449430b5733b3a82f6a95874f72e217"
+      "bytes": 9354,
+      "sha256": "86026e64d5f3d6c80283a7510530f868b88c945036a5923112966f7352e5cc26"
     },
     {
       "path": "solo-leveling/assets/effects/ruler_authority.png",
@@ -9714,6 +9769,26 @@
       "sha256": "785581ec385b3e15a2bc23c9c1294fbb89a0748b91f792129ab836db9498aab4"
     },
     {
+      "path": "solo-leveling/assets/effects/source/native_rgba/boss_beru_acid.png",
+      "bytes": 715481,
+      "sha256": "982036102e08a07793e81e7db7faed533bdd6eb281287c9ec62ab36ed8efabf3"
+    },
+    {
+      "path": "solo-leveling/assets/effects/source/native_rgba/boss_igris_slash.png",
+      "bytes": 853660,
+      "sha256": "9666c1460920be53abd7cb7f67bb9f18a9981ddb33c5bbdf6116e1d855533bc5"
+    },
+    {
+      "path": "solo-leveling/assets/effects/source/native_rgba/boss_tusk_slam.png",
+      "bytes": 1027464,
+      "sha256": "128b399b94b1125a3c42a33640cfe3a67a933378969245c4caed6dc96545ec33"
+    },
+    {
+      "path": "solo-leveling/assets/effects/source/native_rgba/dark_mage_orb.png",
+      "bytes": 818768,
+      "sha256": "fd9ee96cfa6ec585a593e1aad39ddaeb1dcce7690a71941a84bdc55fc00e8f37"
+    },
+    {
       "path": "solo-leveling/assets/effects/source/sanctuary_hit_v2_16f_imagegen_sheet_black.png",
       "bytes": 1646544,
       "sha256": "315cdd4d22132319745d6baaab945882a67872046d6eba9eefca0fca5d01c297"
@@ -9804,34 +9879,134 @@
       "sha256": "ec48078d1c0052073eebc49b6c9c07d940baf03c4d71a52c06278ccc9656182e"
     },
     {
+      "path": "solo-leveling/assets/enemies/motion_sources/antSoldier/attack_right.png",
+      "bytes": 967227,
+      "sha256": "79bd4f6119e3c2015968536d295732d795e61517694118ce0b9ce0432a0f04da"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/antSoldier/walk_right.png",
+      "bytes": 990407,
+      "sha256": "a6f70feae61cfda596b37ac540767cb1319220f0b379014f61347f0ac942d08e"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/darkMage/attack_right.png",
+      "bytes": 1035903,
+      "sha256": "8661fe499c7de15afd97c5ddc5f009bffbfddfb56ee17888c7e63998c20672bd"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/darkMage/walk_right.png",
+      "bytes": 1023190,
+      "sha256": "ad089d19a273b535bb96da61cfd3fb84eab5725e0356e5e205be89bc107399b7"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/demonWarrior/attack_right.png",
+      "bytes": 1006945,
+      "sha256": "02fa300f8f93b1aa7a26c9f543e314e25a47cc9cf6d9c7d1cda207514c2ce498"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/demonWarrior/walk_right.png",
+      "bytes": 1035510,
+      "sha256": "470a499183c87b941a663414d0f29b43ea78d3f297e38a838b59a8e9798420ae"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/goblin/attack_right.png",
+      "bytes": 919039,
+      "sha256": "793d6b3a207b85ddb1d2328cdbae7bf295720056ebbf915e9111ee8b4a2153d7"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/goblin/walk_right.png",
+      "bytes": 930816,
+      "sha256": "f5fb90da8797eb20043a9bf87d15531262c4a609ccb9f7d08fc401abb4a88588"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/iceBear/attack_right.png",
+      "bytes": 1010798,
+      "sha256": "26becaac7e2f8370af141182ce3c51e2c3570db0e991486d89faa496c5e6511f"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/iceBear/walk_right.png",
+      "bytes": 984490,
+      "sha256": "7f438d0ffe7e18f74e462981394f4b6d04cac4b5277c3658a71ed3d918819b03"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/iceElf/attack_right.png",
+      "bytes": 1041753,
+      "sha256": "3c483365b2ad1240cefc47bc2c02f63ac541fd7d8ebe011b44be263233402772"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/iceElf/walk_right.png",
+      "bytes": 1076234,
+      "sha256": "7fe917620115ce1a610fff571136764b24d0ab59fa7c23c5d52fe3784e5feae5"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/ironKnight/attack_right.png",
+      "bytes": 1024114,
+      "sha256": "3a25159d844cac13522f817042c3a77c1ad115d88d514591d21c989bcaed1c2d"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/ironKnight/walk_right.png",
+      "bytes": 1049808,
+      "sha256": "b8959a7cb1c760dfc02752eb7d0b182f8e8516f40e4fb47b9f256bd0cae1908c"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/orc/attack_right.png",
+      "bytes": 1071063,
+      "sha256": "9f42e9999acfdb50dc501c17bfedae7585155c57e776a0a9ee00cdfd836aa2bc"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/orc/walk_right.png",
+      "bytes": 1087819,
+      "sha256": "cb7ab0706ffb0a6858e11bf0360c7eb63c1e8c5b620031955c312d610e4d1a16"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/steelFangLycan/attack_right.png",
+      "bytes": 796134,
+      "sha256": "7121d53a500da97cb9f122926bb168d1bbb359544c6f319365dbf20f1c12d254"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/steelFangLycan/walk_right.png",
+      "bytes": 849585,
+      "sha256": "afb1cc3200c1f4249d6bd21e9d56118bee22335f9df065ffcd282fc8ae3ce887"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/stoneGolem/attack_right.png",
+      "bytes": 985777,
+      "sha256": "10683af0225ae88e1e804d94305adbf856da75ab65c35ec48ea0694e7dc180c1"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/motion_sources/stoneGolem/walk_right.png",
+      "bytes": 988216,
+      "sha256": "8d7877470816b7e789d4c071379e18ecef46d7da36868d0fbfed76f240a8d631"
+    },
+    {
       "path": "solo-leveling/assets/enemies/source/antSoldier.png",
-      "bytes": 279799,
-      "sha256": "e8b3c6192c3faf83575a95a790ee5e54fc340b8a60470bc8de49c233921a6ca8"
+      "bytes": 201822,
+      "sha256": "11cfefd784ee0b6056beb3bad31b41f8ad170275dcb6f2869369442d2a551e42"
     },
     {
       "path": "solo-leveling/assets/enemies/source/antSoldier.webp",
-      "bytes": 51086,
-      "sha256": "4d7a3b0ce888284f8319441708d4cbffa855de06e51e6e777b4c2167142cddaa"
+      "bytes": 59510,
+      "sha256": "9505a711c0ccd11c1f708e722da5d1e3e9a09c6a363418277e5d6b5486104bf1"
     },
     {
       "path": "solo-leveling/assets/enemies/source/darkMage.png",
-      "bytes": 187649,
-      "sha256": "82df75c8f761904828f2c7570628e7724346220c939c962a7d885ee2c1df3ea4"
+      "bytes": 209785,
+      "sha256": "2231ac1e8decae6967a5b1668d658b5f1c08f43ea29f59a9b0b9b49d0e9b5f0e"
     },
     {
       "path": "solo-leveling/assets/enemies/source/darkMage.webp",
-      "bytes": 38172,
-      "sha256": "7bdff1baf7580375beab4753b42054e2e971842a34c0598673f4ea6bee5cdf7c"
+      "bytes": 52986,
+      "sha256": "dcf99acdfd5dcf08d1ff00a971286a82fadf88673fd65681194d8ceac50575f7"
     },
     {
       "path": "solo-leveling/assets/enemies/source/demonWarrior.png",
-      "bytes": 292590,
-      "sha256": "362bcf14a45293a0b17b359b29f2c82e0221b7786cf5e5c400c1ad63ccc6df0e"
+      "bytes": 186112,
+      "sha256": "d94429aac52f98b342836450a4f053b2152f64fc3f1de494c0758c207de8bbf5"
     },
     {
       "path": "solo-leveling/assets/enemies/source/demonWarrior.webp",
-      "bytes": 55804,
-      "sha256": "b125f5445d680054a33214463760dd8cf9819070a5e39f67235bbf99c9f7bc7f"
+      "bytes": 49142,
+      "sha256": "ae7be4ef3d1479a8182431dbe37264089cfaeaa250fe2b37db03040488070191"
     },
     {
       "path": "solo-leveling/assets/enemies/source/enemy_sheet_alpha.png",
@@ -9855,53 +10030,73 @@
     },
     {
       "path": "solo-leveling/assets/enemies/source/goblin.png",
-      "bytes": 117713,
-      "sha256": "5f65af2145971143bb1c14330690f2638ce3be7fc64492caf3965fe2a95232ad"
+      "bytes": 169396,
+      "sha256": "ca37fe61c7f8ebfeae49c2f98cd3b7824aeeb049a0a28a5b1e98eb2eb98f5241"
     },
     {
       "path": "solo-leveling/assets/enemies/source/goblin.webp",
-      "bytes": 26758,
-      "sha256": "2e86feea29d09557eaea33d3b853dabf467621b4388debfd983dc39a9dae7a7d"
+      "bytes": 45782,
+      "sha256": "f941031ef08f0c94290e13bb90b78fe896b3bd3f383893b4c5f266221590fb83"
     },
     {
       "path": "solo-leveling/assets/enemies/source/iceBear.png",
-      "bytes": 226242,
-      "sha256": "f78c01a887ee6be61f3918db51019e93df44bc5e47bcffaae7b67b77ad3f2b7d"
+      "bytes": 220747,
+      "sha256": "1c3a3f19693f9beecf0552b613d736e559c9b0a5267a21c13c9bd067454cfa50"
     },
     {
       "path": "solo-leveling/assets/enemies/source/iceBear.webp",
-      "bytes": 48644,
-      "sha256": "7c7a96537e92c7c482f416b3b827bed6149c6ac5efd4e0634fefc11ae5e0b877"
+      "bytes": 51090,
+      "sha256": "e557524858629d1a86bc7bad629c0f44e43bba8cd0f0e353c05ff8666fe9829d"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/source/iceElf.png",
+      "bytes": 216747,
+      "sha256": "3c7168afd7bd0276870a647ce005c9b7255ba4a1a76d5b7c2b9ff97f9aa73dde"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/source/iceElf.webp",
+      "bytes": 54530,
+      "sha256": "97fb73000a3e07a6602851a39917acc932958c329b0d98ef627ae090af641665"
     },
     {
       "path": "solo-leveling/assets/enemies/source/ironKnight.png",
-      "bytes": 187556,
-      "sha256": "4942588ca522bbf1b972f9a0e5fb204613f954b2b7c066139e09d80dd52e6fee"
+      "bytes": 200646,
+      "sha256": "fb4eaad9934d99361fd925a7f07a06fef943c5688b095063c136ad8df413de95"
     },
     {
       "path": "solo-leveling/assets/enemies/source/ironKnight.webp",
-      "bytes": 39406,
-      "sha256": "419a917bc664ba7d92148d174695bbe4e670506daead1572ad96e370f4e01f9c"
+      "bytes": 48106,
+      "sha256": "5f44875d890127368001c44a6bb66df6bc2ee7e4fb605e426e3f1a5fd4ee9bec"
     },
     {
       "path": "solo-leveling/assets/enemies/source/orc.png",
-      "bytes": 244251,
-      "sha256": "aa184f335e8a7930e04499961813e508f01011cd83fca43dc95fcb36c50d3794"
+      "bytes": 208279,
+      "sha256": "42a1627a71ccf03c97b1a6dae4a650366f47689ade0976143f046d4f33dca48a"
     },
     {
       "path": "solo-leveling/assets/enemies/source/orc.webp",
-      "bytes": 52408,
-      "sha256": "be643ce83accabfddf4708c5c709b555c205ece65ca81cbaa4a4944f97e8a9b0"
+      "bytes": 49476,
+      "sha256": "acc4e961a66f969f533c19d9e9232f9ee6c166de3f213e21a857a91d56879ddb"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/source/steelFangLycan.png",
+      "bytes": 155819,
+      "sha256": "9eed5134c3eed065618ba75d3de6ca69c78b04903be31f65a51aa7129c650c4e"
+    },
+    {
+      "path": "solo-leveling/assets/enemies/source/steelFangLycan.webp",
+      "bytes": 39408,
+      "sha256": "678214382431c865750992796a3d2c5dc04cb6f34860ab21fe1b527a0a8268fc"
     },
     {
       "path": "solo-leveling/assets/enemies/source/stoneGolem.png",
-      "bytes": 255970,
-      "sha256": "155360c07faf8e4d4619fe915e3ee22c472813efac7403b07422b2930fd77b85"
+      "bytes": 203405,
+      "sha256": "304063c13ad52f949072602d892066c5b68ec0f5ad682f8e942a59135fec7c6a"
     },
     {
       "path": "solo-leveling/assets/enemies/source/stoneGolem.webp",
-      "bytes": 63204,
-      "sha256": "ad1f58eb007c4ab7837eb105ca5cb429b1b5500054adc8bf47a953bd7bfec224"
+      "bytes": 45192,
+      "sha256": "486105d2ab52dcebd92fabe812b136d9458d8be61097b490a71962bf4ed3ef4c"
     },
     {
       "path": "solo-leveling/assets/environment/cracked_pillar.png",

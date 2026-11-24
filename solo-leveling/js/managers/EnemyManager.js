@@ -156,6 +156,13 @@ export class EnemyManager {
         }
 
         const children = this.pool.getChildren();
+        let activeCount = 0;
+        for (let i = 0; i < children.length; i++) {
+            if (children[i].active) activeCount++;
+        }
+        this._lastActiveCount = activeCount;
+        Enemy._beginFrame(this.scene, activeCount);
+
         for (let i = 0; i < children.length; i++) {
             const enemy = children[i];
             if (enemy.active) {
@@ -192,15 +199,37 @@ export class EnemyManager {
         return base * (1 + this._getPressureStepCount() * 0.045);
     }
 
+    _getActiveEnemyCap() {
+        const isMobile = typeof window !== 'undefined' && (
+            window.innerWidth <= 900
+            || ('ontouchstart' in window)
+            || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0)
+        );
+        return isMobile ? 125 : 180;
+    }
+
+    _getRawMaxEnemies(minutes) {
+        const lateRamp = Math.max(0, minutes - 12) * 4 + Math.max(0, minutes - 22) * 2;
+        return Math.floor(
+            WAVE_CONFIG.maxEnemiesOnScreen
+            + minutes * 7
+            + lateRamp
+            + this._getPressureStepCount() * 6
+        );
+    }
+
     _getEnemyStatProfile(minutes, { elite = false } = {}) {
         const difficulty = this._getDifficultyMultiplier(minutes);
         const steps = this._getPressureStepCount();
         const lateMinutes = Math.max(0, minutes - 12);
+        const rawMax = this._getRawMaxEnemies(minutes);
+        const cap = this._getActiveEnemyCap();
+        const overflowMult = rawMax > cap ? Math.min(2.2, rawMax / cap) : 1;
 
-        const hp = difficulty * (1 + steps * 0.035 + lateMinutes * 0.012);
+        const hp = difficulty * (1 + steps * 0.035 + lateMinutes * 0.012) * overflowMult;
         const attack = 1 + (difficulty - 1) * 0.42 + steps * 0.04 + lateMinutes * 0.018;
         const speed = 1 + (difficulty - 1) * 0.045 + steps * 0.015 + lateMinutes * 0.004;
-        const xp = 1 + (difficulty - 1) * 0.52 + steps * 0.04;
+        const xp = (1 + (difficulty - 1) * 0.52 + steps * 0.04) * overflowMult;
 
         if (!elite) return { hp, attack, speed, xp };
         return {
@@ -230,13 +259,7 @@ export class EnemyManager {
     }
 
     _getMaxEnemies(minutes) {
-        const lateRamp = Math.max(0, minutes - 12) * 4 + Math.max(0, minutes - 22) * 2;
-        return Math.floor(
-            WAVE_CONFIG.maxEnemiesOnScreen
-            + minutes * 7
-            + lateRamp
-            + this._getPressureStepCount() * 6
-        );
+        return Math.min(this._getRawMaxEnemies(minutes), this._getActiveEnemyCap());
     }
 
     _getEliteInterval(minutes) {
@@ -477,19 +500,21 @@ export class EnemyManager {
     _selectEnemyType(minutes) {
         // Weighted spawn table - later enemies replace earlier ones gradually
         const table = {
-            goblin:       10,
-            antSoldier:   minutes >= 1.5 ? 8 : 0,
-            orc:          minutes >= 1   ? 6 : 0,
-            iceBear:      minutes >= 2   ? 7 : 0,
-            stoneGolem:   minutes >= 5   ? 5 : 0,
-            darkMage:     minutes >= 5   ? 6 : 0,
-            ironKnight:   minutes >= 8   ? 5 : 0,
-            demonWarrior: minutes >= 10  ? 4 : 0,
+            goblin:         10,
+            steelFangLycan: minutes >= 0.75 ? 7 : 0,
+            antSoldier:     minutes >= 1.5 ? 8 : 0,
+            orc:            minutes >= 1   ? 6 : 0,
+            iceBear:        minutes >= 2   ? 7 : 0,
+            iceElf:         minutes >= 4   ? 6 : 0,
+            stoneGolem:     minutes >= 5   ? 5 : 0,
+            darkMage:       minutes >= 5   ? 6 : 0,
+            ironKnight:     minutes >= 8   ? 5 : 0,
+            demonWarrior:   minutes >= 10  ? 4 : 0,
         };
 
         // Reduce early enemy weight in late game
         if (minutes >= 8) table.goblin = 4;
-        if (minutes >= 12) { table.goblin = 2; table.antSoldier = 4; }
+        if (minutes >= 12) { table.goblin = 2; table.steelFangLycan = 4; table.antSoldier = 4; }
 
         const entries = Object.entries(table).filter(([, w]) => w > 0);
         const totalWeight = entries.reduce((sum, [, w]) => sum + w, 0);
@@ -574,13 +599,34 @@ export class EnemyManager {
         return enemy;
     }
 
+    _countActiveElites() {
+        const children = this.pool ? this.pool.getChildren() : null;
+        if (!children) return 0;
+        let elites = 0;
+        for (let i = 0; i < children.length; i++) {
+            const e = children[i];
+            if (e && e.active && e.isElite) elites++;
+        }
+        return elites;
+    }
+
+    _shouldEnableEliteGlow() {
+        if (this.scene && this.scene._lowQuality) return false;
+        const activeCount = this._lastActiveCount || 0;
+        if (activeCount > 120) return false;
+        return this._countActiveElites() < 2;
+    }
+
     _spawnElite(minutes) {
         // Pick a strong enemy type for elite
         const elitePool = [];
+        if (minutes >= 2) elitePool.push('steelFangLycan');
         if (minutes >= 3) elitePool.push('orc', 'iceBear');
+        if (minutes >= 4) elitePool.push('iceElf');
         if (minutes >= 5) elitePool.push('stoneGolem');
         if (minutes >= 8) elitePool.push('ironKnight');
         if (minutes >= 10) elitePool.push('demonWarrior');
+        if (elitePool.length === 0) return;
 
         const typeKey = Phaser.Utils.Array.GetRandom(elitePool);
         SpriteFactory.ensureEnemyTexture(this.scene, typeKey);
@@ -593,15 +639,17 @@ export class EnemyManager {
         this._activeEnemiesDirtyFrame = -1;
         enemy.isElite = true;
 
-        // Elite visual: larger size + red tint + glow + name label
+        // Elite visual: larger size + red tint + conditional glow + name label
         enemy.setScale(enemy.scaleX * 1.5, enemy.scaleY * 1.5);
         enemy._restScaleX = enemy.scaleX;
         enemy._restScaleY = enemy.scaleY;
         enemy.setTint(0xff6644);
-        try {
-            enemy.enableFilters();
-            enemy._eliteGlow = enemy.filters.internal.addGlow(0xff4400, 4, 0, 1, false, 6, 6);
-        } catch (e) { /* filters not available */ }
+        if (this._shouldEnableEliteGlow()) {
+            try {
+                enemy.enableFilters();
+                enemy._eliteGlow = enemy.filters.internal.addGlow(0xff4400, 4, 0, 1, false, 6, 6);
+            } catch (e) { /* filters not available */ }
+        }
 
         const name = ENEMY_TYPES[typeKey].name;
         const label = this.scene.add.text(enemy.x, enemy.y - 30, `★ ${name}`, {
@@ -657,10 +705,12 @@ export class EnemyManager {
         enemy._restScaleX = enemy.scaleX;
         enemy._restScaleY = enemy.scaleY;
         enemy.setTint(0xff6644);
-        try {
-            enemy.enableFilters();
-            enemy._eliteGlow = enemy.filters.internal.addGlow(0xff4400, 4, 0, 1, false, 6, 6);
-        } catch (e) { /* filters not available */ }
+        if (this._shouldEnableEliteGlow()) {
+            try {
+                enemy.enableFilters();
+                enemy._eliteGlow = enemy.filters.internal.addGlow(0xff4400, 4, 0, 1, false, 6, 6);
+            } catch (e) { /* filters not available */ }
+        }
 
         const name = ENEMY_TYPES[enemy.enemyType].name;
         const label = this.scene.add.text(enemy.x, enemy.y - 30, `ELITE ${name}`, {

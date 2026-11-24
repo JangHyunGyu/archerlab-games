@@ -85,6 +85,8 @@ const PNG_PRIMARY_ASSET_PATTERNS = [
     // builder converts these PNG sources into the paired runtime PNG/WebP
     // frame set below each character's motion directory.
     /^player\/motion_v2_sources\//i,
+    /^enemies\/motion_sources\//i,
+    /^bosses\/motion_sources\//i,
 ];
 
 function isPngPrimaryAsset(relPng) {

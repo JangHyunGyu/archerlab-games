@@ -149,12 +149,14 @@ export class ShadowDagger extends WeaponBase {
                 });
             }
 
+            const explosionRadiusSq = explosionRadius * explosionRadius;
             for (const enemy of this.player.getAllEnemies()) {
                 if (!enemy || !enemy.active) continue;
                 const enemyKey = getTargetKey(enemy);
                 if (enemyKey === sourceKey) continue;
-                const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
-                if (dist > explosionRadius) continue;
+                const edx = enemy.x - x;
+                const edy = enemy.y - y;
+                if (edx * edx + edy * edy > explosionRadiusSq) continue;
                 this.applyDamage(enemy, Math.floor(dmg * explosionDamageMult), x, y);
                 applySecondaryEffect(enemy, Math.floor(slowDuration * 0.7));
             }
@@ -184,8 +186,9 @@ export class ShadowDagger extends WeaponBase {
                 closestY = prevY + dy * t;
             }
 
-            const dist = Phaser.Math.Distance.Between(closestX, closestY, currentTarget.x, currentTarget.y);
-            if (dist >= hitRadius) return false;
+            const cdx = currentTarget.x - closestX;
+            const cdy = currentTarget.y - closestY;
+            if (cdx * cdx + cdy * cdy >= hitRadius * hitRadius) return false;
 
             piercedTargets.add(targetKey);
 

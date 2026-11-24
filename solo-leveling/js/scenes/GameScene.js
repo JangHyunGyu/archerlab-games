@@ -314,6 +314,7 @@ export class GameScene extends Phaser.Scene {
         const onFileComplete = (key) => {
             if (this._deferredStopped) return;
             if (key.startsWith('ai_enemy_') || key.startsWith('ai_boss_')
+                || key.startsWith('atlas_enemies_') || key.startsWith('atlas_boss_')
                 || key.startsWith('asset_shadow_') || key === 'asset_arise_rune') {
                 this._deferredUpgradeQueue.push(key);
                 this._scheduleDeferredUpgrade();
@@ -756,12 +757,14 @@ export class GameScene extends Phaser.Scene {
         if ((((__oc30 = this.statusWindow) === null || __oc30 === void 0 ? void 0 : __oc30.isOpen))) return;
         if ((((__oc31 = this.shadowArmyManager) === null || __oc31 === void 0 ? void 0 : __oc31.isPerformingArise))) return;
 
-        // Auto quality adjustment based on FPS
+        // Auto quality adjustment based on FPS and active horde density
         this._fpsCheckTimer = (this._fpsCheckTimer || 0) + delta;
-        if (this._fpsCheckTimer > 3000) {
+        if (this._fpsCheckTimer > 2000) {
             this._fpsCheckTimer = 0;
             const fps = this.game.loop.actualFps;
-            if (fps < 25 && !this._lowQuality) {
+            const activeEnemies = this.enemyManager && this.enemyManager.getActiveEnemies
+                ? this.enemyManager.getActiveEnemies().length : 0;
+            if (!this._lowQuality && (fps < 38 || (activeEnemies > 140 && fps < 45))) {
                 this._lowQuality = true;
                 // Disable heavy filters
                 try {
@@ -786,7 +789,7 @@ export class GameScene extends Phaser.Scene {
         this.weaponManager.update(time, delta);
 
         // Update XP orbs
-        this.xpOrbPool.update(this.player);
+        this.xpOrbPool.update(this.player, delta);
 
         // Update items
         this.itemDropManager.update(this.player, delta);
@@ -794,7 +797,9 @@ export class GameScene extends Phaser.Scene {
         // Update shadow army
         this.shadowArmyManager.update(time, delta);
 
-        // Update damage texts (pooled, no tween)
+        // Update pooled enemy VFX, projectiles, and damage texts (0 tweens/timers)
+        Enemy.updateFrameVfx(this, delta);
+        Enemy.updateProjectiles(this, delta);
         Enemy.updateDmgTexts(this, delta);
 
         // Update bosses
@@ -916,6 +921,7 @@ export class GameScene extends Phaser.Scene {
     _onPlayerHitEnemy(player, enemy) {
         if (!enemy.active || !player.active) return;
         if (enemy.isBoss) return;
+        if (enemy.triggerMeleeAttack) enemy.triggerMeleeAttack();
         player.takeDamage(enemy.attack);
     }
 

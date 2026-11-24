@@ -209,6 +209,11 @@ export const ENEMY_TYPES = {
         hp: 90, attack: 8, speed: 85, xp: 5,
         color: 0x4a7a3a, size: 32,
     },
+    steelFangLycan: {
+        name: '강철 이빨 라이칸',
+        hp: 155, attack: 13, speed: 106, xp: 10,
+        color: 0x5c7388, size: 38,
+    },
     antSoldier: {
         name: '개미 병사',
         hp: 75, attack: 9, speed: 98, xp: 6,
@@ -225,7 +230,12 @@ export const ENEMY_TYPES = {
         hp: 400, attack: 15, speed: 55, xp: 12,
         color: 0xaaccee, size: 48,
     },
-    // --- 후반 적 (5분~) ---
+    // --- 후반 적 (4~5분~) ---
+    iceElf: {
+        name: '아이스 엘프',
+        hp: 580, attack: 24, speed: 82, xp: 34,
+        color: 0x64b5f6, size: 46,
+    },
     stoneGolem: {
         name: '스톤 골렘',
         hp: 900, attack: 22, speed: 55, xp: 45,

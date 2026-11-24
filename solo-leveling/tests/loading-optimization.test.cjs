@@ -84,6 +84,7 @@ function walkJs(dir, out = []) {
         assert.ok(coreKeys.has(`atlas_motion_${charDef.assetKey}`), `${id} core uses motion atlas`);
         assert.ok(coreKeys.has('atlas_vfx_combat_hit'), `${id} core includes shared combat hit/crit atlas`);
         assert.ok(coreKeys.has('atlas_vfx_combat_death'), `${id} core includes shared combat death atlas`);
+        assert.ok(coreKeys.has('atlas_enemies_early'), `${id} core includes early enemy motion atlas`);
         if (id === 'flameMage') {
             assert.ok(coreKeys.has('atlas_vfx_flame_burn'), 'flameMage core uses burn atlas');
         }
@@ -140,9 +141,13 @@ function walkJs(dir, out = []) {
                 assert.ok(deferredKeys.has(`char_skill_${cfg.effectKey}_0`), `${id} deferred covers skill ${wk} frames`);
             }
         }
-        for (const enemyKey of ['orc', 'iceBear', 'stoneGolem', 'darkMage', 'ironKnight', 'demonWarrior']) {
+        for (const enemyKey of ['steelFangLycan', 'orc', 'iceBear', 'iceElf', 'stoneGolem', 'darkMage', 'ironKnight', 'demonWarrior']) {
             assert.ok(deferredKeys.has(`ai_enemy_${enemyKey}`), `${id} deferred covers enemy ${enemyKey}`);
         }
+        assert.ok(deferredKeys.has('atlas_enemies_late'), `${id} deferred covers late enemy motion atlas`);
+        assert.ok(deferredKeys.has('atlas_boss_igris'), `${id} deferred covers igris motion atlas`);
+        assert.ok(deferredKeys.has('atlas_boss_tusk'), `${id} deferred covers tusk motion atlas`);
+        assert.ok(deferredKeys.has('atlas_boss_beru'), `${id} deferred covers beru motion atlas`);
         for (const bossKey of ['igris', 'tusk', 'beru']) {
             assert.ok(deferredKeys.has(`ai_boss_${bossKey}`), `${id} deferred covers boss ${bossKey}`);
         }
@@ -198,6 +203,22 @@ function walkJs(dir, out = []) {
             name: 'vfx_sanctuary_hit',
             mustHave: Array.from({ length: 16 }, (_, i) => `effect_sanctuary_hit_${i}`),
         },
+        {
+            name: 'enemies_early',
+            mustHave: ['goblin', 'steelFangLycan', 'antSoldier', 'orc', 'iceBear'].flatMap(k =>
+                [0, 1, 2, 3].flatMap(f => [`${k}_walk_${f}`, `${k}_attack_${f}`])
+            ),
+        },
+        {
+            name: 'enemies_late',
+            mustHave: ['iceElf', 'stoneGolem', 'darkMage', 'ironKnight', 'demonWarrior'].flatMap(k =>
+                [0, 1, 2, 3].flatMap(f => [`${k}_walk_${f}`, `${k}_attack_${f}`])
+            ),
+        },
+        ...['igris', 'tusk', 'beru'].map(k => ({
+            name: `boss_${k}`,
+            mustHave: [0, 1, 2, 3].flatMap(f => [`${k}_walk_${f}`, `${k}_attack_${f}`]),
+        })),
     ];
     for (const spec of requiredAtlases) {
         const webpPath = path.join(root, 'assets', 'atlases', `${spec.name}.webp`);

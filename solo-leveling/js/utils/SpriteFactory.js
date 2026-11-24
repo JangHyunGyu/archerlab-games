@@ -1,7 +1,39 @@
 import { COLORS, ENEMY_TYPES, BOSS_TYPES, PASSIVES, WEAPONS } from './Constants.js';
 import { getCharacter, getCharacterWeaponKeys, getStoredCharacterId } from './Characters.js';
 
+const ENEMY_ATLAS_BY_TYPE = {
+    goblin: 'atlas_enemies_early',
+    steelFangLycan: 'atlas_enemies_early',
+    antSoldier: 'atlas_enemies_early',
+    orc: 'atlas_enemies_early',
+    iceBear: 'atlas_enemies_early',
+    iceElf: 'atlas_enemies_late',
+    stoneGolem: 'atlas_enemies_late',
+    darkMage: 'atlas_enemies_late',
+    ironKnight: 'atlas_enemies_late',
+    demonWarrior: 'atlas_enemies_late',
+};
+
+const BOSS_ATLAS_BY_KEY = {
+    igris: 'atlas_boss_igris',
+    tusk: 'atlas_boss_tusk',
+    beru: 'atlas_boss_beru',
+};
+
 export class SpriteFactory {
+    static getEnemyAtlasKey(scene, typeKey) {
+        const atlasKey = ENEMY_ATLAS_BY_TYPE[typeKey];
+        if (!atlasKey || !scene || !scene.textures || !scene.textures.exists(atlasKey)) return null;
+        const tex = scene.textures.get(atlasKey);
+        return tex && tex.has(typeKey + '_walk_0') ? atlasKey : null;
+    }
+
+    static getBossAtlasKey(scene, bossKey) {
+        const atlasKey = BOSS_ATLAS_BY_KEY[bossKey];
+        if (!atlasKey || !scene || !scene.textures || !scene.textures.exists(atlasKey)) return null;
+        const tex = scene.textures.get(atlasKey);
+        return tex && tex.has(bossKey + '_walk_0') ? atlasKey : null;
+    }
     // --- Color helpers ---
     static _darken(color, amt = 0x1a) {
         const r = Math.max(0, ((color >> 16) & 0xff) - amt);
@@ -236,16 +268,44 @@ export class SpriteFactory {
 
     static upgradeLoadedTexture(scene, assetKey) {
         if (!scene || !scene.textures || !assetKey) return false;
+        if (assetKey.startsWith('atlas_enemies_')) {
+            const children = scene.enemyManager && scene.enemyManager.pool && scene.enemyManager.pool.getChildren
+                ? scene.enemyManager.pool.getChildren() : null;
+            if (children) {
+                for (let i = 0; i < children.length; i++) {
+                    const e = children[i];
+                    if (e && e.active && ENEMY_ATLAS_BY_TYPE[e.enemyType] === assetKey) {
+                        if (e.applyAtlasTexture) e.applyAtlasTexture();
+                        else e.setTexture(assetKey, e.enemyType + '_walk_0');
+                    }
+                }
+            }
+            return true;
+        }
+        if (assetKey.startsWith('atlas_boss_')) {
+            const bosses = scene.activeBosses || [];
+            for (let i = 0; i < bosses.length; i++) {
+                const b = bosses[i];
+                if (b && b.active && BOSS_ATLAS_BY_KEY[b.bossKey] === assetKey) {
+                    if (b.applyAtlasTexture) b.applyAtlasTexture();
+                    else b.setTexture(assetKey, b.bossKey + '_walk_0');
+                }
+            }
+            return true;
+        }
         if (assetKey.startsWith('ai_enemy_')) {
             const enemyKey = assetKey.slice('ai_enemy_'.length);
             if (!this.ensureEnemyTexture(scene, enemyKey)) return false;
+            const hasAtlas = !!this.getEnemyAtlasKey(scene, enemyKey);
             const children = scene.enemyManager && scene.enemyManager.pool && scene.enemyManager.pool.getChildren
                 ? scene.enemyManager.pool.getChildren() : null;
             if (children) {
                 for (let i = 0; i < children.length; i++) {
                     const e = children[i];
                     if (e && e.active && e.enemyType === enemyKey) {
-                        e.setTexture('enemy_' + enemyKey + '_' + (e.animFrame || 0));
+                        if (e._atlasKey) continue;
+                        if (hasAtlas && e.applyAtlasTexture) e.applyAtlasTexture();
+                        else e.setTexture('enemy_' + enemyKey + '_' + (e.animFrame || 0));
                     }
                 }
             }
@@ -254,11 +314,14 @@ export class SpriteFactory {
         if (assetKey.startsWith('ai_boss_')) {
             const bossKey = assetKey.slice('ai_boss_'.length);
             if (!this.ensureBossTexture(scene, bossKey)) return false;
+            const hasAtlas = !!this.getBossAtlasKey(scene, bossKey);
             const bosses = scene.activeBosses || [];
             for (let i = 0; i < bosses.length; i++) {
                 const b = bosses[i];
                 if (b && b.active && b.bossKey === bossKey) {
-                    b.setTexture('boss_' + bossKey + '_' + (b.animFrame || 0));
+                    if (b._atlasKey) continue;
+                    if (hasAtlas && b.applyAtlasTexture) b.applyAtlasTexture();
+                    else b.setTexture('boss_' + bossKey + '_' + (b.animFrame || 0));
                 }
             }
             return true;
@@ -1127,6 +1190,28 @@ export class SpriteFactory {
             g.fillRect(s + s*0.5, s - s*0.1 + wobble + wobble * 1.3, 2, 10);
             g.fillStyle(0x665544);
             g.fillRect(s + s*0.5 - 1, s + 4 + wobble + wobble * 1.3, 4, 3);
+        };
+
+            case 'steelFangLycan': return (g, s, frame) => {
+            const wobble = Math.sin(frame * Math.PI / 2) * 1.5;
+            const c = ENEMY_TYPES.steelFangLycan.color;
+            this._outlinedRect(g, s * 0.2, s * 0.45 + wobble, s * 1.55, s * 0.95, 0x771a22, 0x2a1018, 6);
+            this._outlinedCircle(g, s * 1.45, s * 0.6 + wobble, s * 0.36, 0x8b202a, 0x2a1018);
+            this._glowEyes(g, s * 1.4, s * 0.52 + wobble, s * 1.62, s * 0.52 + wobble, 0xffd044, 2.5);
+            g.fillStyle(0xd8e4f0);
+            g.fillTriangle(s * 1.35, s * 0.72 + wobble, s * 1.48, s * 0.96 + wobble, s * 1.58, s * 0.72 + wobble);
+            g.fillStyle(c, 0.85);
+            g.fillCircle(s * 0.8, s * 0.65 + wobble, s * 0.28);
+        };
+
+            case 'iceElf': return (g, s, frame) => {
+            const wobble = Math.sin(frame * Math.PI / 2) * 1.2;
+            const c = ENEMY_TYPES.iceElf.color;
+            this._outlinedRect(g, s * 0.45, s * 0.45 + wobble, s * 1.1, s * 1.25, 0x1d2842, 0x0e1424, 5);
+            this._outlinedCircle(g, s, s * 0.35 + wobble, s * 0.36, 0xd8e6f8, 0x557799);
+            this._glowEyes(g, s * 0.86, s * 0.35 + wobble, s * 1.14, s * 0.35 + wobble, c, 2.5);
+            g.fillStyle(0x99ddff, 0.9);
+            g.fillRect(s * 1.45, s * 0.2 + wobble, 4, s * 1.1);
         };
 
             case 'orc': return (g, s, frame) => {

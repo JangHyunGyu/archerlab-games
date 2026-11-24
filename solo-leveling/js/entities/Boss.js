@@ -3,6 +3,12 @@ import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v2'
 
 const DEFAULT_BOSS_SPECIAL_COOLDOWN = { phase1: 6400, phase2: 5000 };
 const BOSS_SPECIAL_RETRY_DELAY = 700;
+const BOSS_MOTION_CONFIG = {
+    igris: { walkFrameMs: 185, attackDurationMs: 560, leanAmp: 0.04, lungeLean: 0.14 },
+    tusk:  { walkFrameMs: 220, attackDurationMs: 660, leanAmp: 0.032, lungeLean: 0.12 },
+    beru:  { walkFrameMs: 145, attackDurationMs: 480, leanAmp: 0.048, lungeLean: 0.16 },
+};
+const DEFAULT_BOSS_MOTION = { walkFrameMs: 180, attackDurationMs: 560, leanAmp: 0.04, lungeLean: 0.14 };
 
 export class Boss extends Phaser.Physics.Arcade.Sprite {
     static _sceneIsActive(scene) { var __oc0, __oc1, __oc2, __oc3;
@@ -208,8 +214,13 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
     constructor(scene, x, y, bossKey, difficultyMult = 1, hp = null, atkMult = 1) {
         const config = BOSS_TYPES[bossKey];
+        const initAtlas = SpriteFactory.getBossAtlasKey(scene, bossKey);
         SpriteFactory.ensureBossTexture(scene, bossKey);
-        super(scene, x, y, 'boss_' + bossKey + '_0');
+        if (initAtlas) {
+            super(scene, x, y, initAtlas, bossKey + '_walk_0');
+        } else {
+            super(scene, x, y, 'boss_' + bossKey + '_0');
+        }
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
@@ -230,16 +241,27 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.speed = config.speed * (1 + (difficultyMult - 1) * 0.3);
         this.xpValue = Math.floor(config.xp * (1 + (difficultyMult - 1) * 0.3));
 
-        // Set body size
-        this.body.setSize(config.size * 1.4, config.size * 1.4);
+        this._atlasKey = initAtlas;
+        this._motionConfig = BOSS_MOTION_CONFIG[bossKey] || DEFAULT_BOSS_MOTION;
+        this._animState = 'walk';
+        this._renderedAnimState = 'walk';
+        this._animClock = 0;
+        this._attackElapsed = 0;
+        this._attackDurationMs = this._motionConfig.attackDurationMs;
+
+        // Set display size, resting scale cache, and scale-invariant body size
         this.setDisplaySize(config.size * 2, config.size * 2);
+        this._restScaleX = this.scaleX;
+        this._restScaleY = this.scaleY;
+        this.body.setSize(this.width * 0.7, this.height * 0.7, true);
+        if (this.body.updateFromGameObject) this.body.updateFromGameObject();
 
         // State
         this.attackCooldown = 0;
         this.specialTimer = 0;
         this.phase = 1; // Boss phases
 
-        // Idle animation (4 frames)
+        // Idle/walk animation (4 frames + 4 attack frames)
         this.animFrame = 0;
         this.animTimer = 0;
 
@@ -286,6 +308,37 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
         // Entrance effect
         this._entranceEffect();
+    }
+
+    applyAtlasTexture() {
+        if (!this.scene || !this.bossKey || !this.config) return false;
+        const atlasKey = SpriteFactory.getBossAtlasKey(this.scene, this.bossKey);
+        const s = this.config.size;
+        const state = this._animState || 'walk';
+        const frame = this.animFrame || 0;
+        if (atlasKey) {
+            this._atlasKey = atlasKey;
+            this.setTexture(atlasKey, this.bossKey + '_' + state + '_' + frame);
+            this.setDisplaySize(s * 2, s * 2);
+            this._restScaleX = this.scaleX;
+            this._restScaleY = this.scaleY;
+            this.setScale(this._restScaleX, this._restScaleY);
+            if (this.body) {
+                this.body.setSize(this.width * 0.7, this.height * 0.7, true);
+                if (this.body.updateFromGameObject) this.body.updateFromGameObject();
+            }
+            this._renderedAnimState = state;
+            return true;
+        }
+        this._atlasKey = null;
+        return false;
+    }
+
+    _startAttackMotion(durationMs) {
+        const motionCfg = this._motionConfig || DEFAULT_BOSS_MOTION;
+        this._animState = 'attack';
+        this._attackElapsed = 0;
+        this._attackDurationMs = durationMs || motionCfg.attackDurationMs;
     }
 
     _entranceEffect() {
@@ -359,14 +412,6 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     update(time, delta, playerX, playerY) {
         if (!this.active) return;
 
-        // Idle animation (4 frames)
-        this.animTimer += delta;
-        if (this.animTimer > 250) {
-            this.animTimer = 0;
-            this.animFrame = (this.animFrame + 1) % 4;
-            this.setTexture('boss_' + this.bossKey + '_' + this.animFrame);
-        }
-
         // Move toward player
         const angle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);
         const dist = Phaser.Math.Distance.Between(this.x, this.y, playerX, playerY);
@@ -380,7 +425,87 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             this.body.setVelocity(0, 0);
         }
 
-        this.setFlipX(playerX < this.x);
+        const movingLeft = playerX < this.x;
+        this.setFlipX(movingLeft);
+
+        // 4 walk + 4 attack keyframe state machine
+        const motionCfg = this._motionConfig || DEFAULT_BOSS_MOTION;
+        const atkDur = this._attackDurationMs || motionCfg.attackDurationMs;
+        let nextFrame = 0;
+        if (this._animState === 'attack') {
+            this._attackElapsed += delta;
+            if (this._attackElapsed >= atkDur) {
+                this._animState = 'walk';
+                this._attackElapsed = 0;
+                this._animClock += delta;
+                nextFrame = Math.floor(this._animClock / motionCfg.walkFrameMs) & 3;
+            } else {
+                nextFrame = Math.min(3, Math.floor((this._attackElapsed / atkDur) * 4));
+            }
+        } else {
+            this._animClock += delta;
+            nextFrame = Math.floor(this._animClock / motionCfg.walkFrameMs) & 3;
+        }
+
+        if (this.animFrame !== nextFrame || this._renderedAnimState !== this._animState) {
+            this.animFrame = nextFrame;
+            this._renderedAnimState = this._animState;
+            if (this._atlasKey) {
+                this.setFrame(this.bossKey + '_' + this._animState + '_' + nextFrame);
+            } else {
+                const fallbackKey = 'boss_' + this.bossKey + '_' + nextFrame;
+                if (this.scene.textures && this.scene.textures.exists(fallbackKey)) {
+                    this.setTexture(fallbackKey);
+                }
+            }
+        }
+
+        // Option 1 procedural squash/stretch + stride lean / attack lunge interpolation
+        const restX = this._restScaleX !== undefined ? this._restScaleX : this.scaleX;
+        const restY = this._restScaleY !== undefined ? this._restScaleY : this.scaleY;
+        if (this.scene && this.scene._lowQuality) {
+            if (this.scaleX !== restX || this.scaleY !== restY || this.rotation !== 0) {
+                this.setScale(restX, restY);
+                if (this.rotation !== 0) this.setRotation(0);
+            }
+        } else {
+            const dirSign = movingLeft ? -1 : 1;
+            let sx = 1;
+            let sy = 1;
+            let rot = 0;
+            if (this._animState === 'attack') {
+                const p = Math.min(1, this._attackElapsed / atkDur);
+                if (p < 0.25) {
+                    const t = p * 4;
+                    sx = 1 + 0.06 * t;
+                    sy = 1 - 0.07 * t;
+                    rot = -dirSign * motionCfg.lungeLean * 0.6 * t;
+                } else if (p < 0.55) {
+                    const t = (p - 0.25) / 0.30;
+                    sx = 1.06 + 0.05 * t;
+                    sy = 0.93 - 0.03 * t;
+                    rot = dirSign * motionCfg.lungeLean * (-0.6 + 1.6 * t);
+                } else if (p < 0.78) {
+                    const t = (p - 0.55) / 0.23;
+                    sx = 1.11 - 0.04 * t;
+                    sy = 0.90 + 0.04 * t;
+                    rot = dirSign * motionCfg.lungeLean * (1.0 - 0.55 * t);
+                } else {
+                    const t = (p - 0.78) / 0.22;
+                    sx = 1.07 - 0.07 * t;
+                    sy = 0.94 + 0.06 * t;
+                    rot = dirSign * motionCfg.lungeLean * 0.45 * (1 - t);
+                }
+            } else {
+                const phase = (this._animClock / (motionCfg.walkFrameMs * 2)) * Math.PI;
+                const pulse = Math.sin(phase);
+                sx = 1 + pulse * 0.028;
+                sy = 1 - pulse * 0.028;
+                rot = dirSign * Math.sin(phase * 0.5) * motionCfg.leanAmp;
+            }
+            this.setScale(restX * sx, restY * sy);
+            this.setRotation(rot);
+        }
 
         // Update HP bar
         this._drawHpBar();
@@ -503,6 +628,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         const visualScale = range / 250;
 
         if (scene.soundManager) scene.soundManager.play('bossCharge');
+        this._startAttackMotion(560);
 
         const warnIcon = Boss._addImageVfx(scene, 'telegraph_warning_reticle', slashX, slashY, {
             depth: 4,
@@ -556,21 +682,32 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             if (!this.active || !Boss._sceneIsActive(scene)) return;
 
             if (scene.soundManager) scene.soundManager.play('bossSlash');
+            this._startAttackMotion(480);
 
-            const slash = Boss._addBossVfx(scene, 'igris_slash_impact', slashX, slashY, {
-                depth: 8,
-                alpha: 0.96,
+            const usedSlashVfx = Boss._playFrameVfx(scene, 'effect_boss_igris_slash', slashX, slashY, {
+                depth: 9,
+                alpha: 0.98,
                 rotation: angle,
-                scale: 0.82 * visualScale,
+                scale: 0.95 * visualScale,
+                frameMs: 52,
+                blendMode: Phaser.BlendModes.ADD,
             });
-            if (slash) {
-                Boss._tweenDestroy(scene, slash, {
-                    alpha: 0,
-                    scaleX: slash.scaleX * 1.26,
-                    scaleY: slash.scaleY * 1.26,
-                    duration: 360,
-                    ease: 'Quad.Out',
+            if (!usedSlashVfx) {
+                const slash = Boss._addBossVfx(scene, 'igris_slash_impact', slashX, slashY, {
+                    depth: 8,
+                    alpha: 0.96,
+                    rotation: angle,
+                    scale: 0.82 * visualScale,
                 });
+                if (slash) {
+                    Boss._tweenDestroy(scene, slash, {
+                        alpha: 0,
+                        scaleX: slash.scaleX * 1.26,
+                        scaleY: slash.scaleY * 1.26,
+                        duration: 360,
+                        ease: 'Quad.Out',
+                    });
+                }
             }
 
             // Damage player if in cone
@@ -599,6 +736,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         const radius = 200;
 
         if (scene.soundManager) scene.soundManager.play('bossCharge');
+        this._startAttackMotion(560);
 
         const warnIcon = Boss._addImageVfx(scene, 'telegraph_warning_reticle', slamX, slamY, {
             depth: 4,
@@ -653,6 +791,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             if (!this.active || !Boss._sceneIsActive(scene)) return;
 
             if (scene.soundManager) scene.soundManager.play('groundSlam');
+            this._startAttackMotion(660);
 
             const crackDecal = Boss._addImageVfx(scene, 'telegraph_ground_crack', slamX, slamY, {
                 depth: 6,
@@ -670,19 +809,28 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 });
             }
 
-            const shockwave = Boss._addBossVfx(scene, 'tusk_shockwave', slamX, slamY, {
-                depth: 9,
-                alpha: 0.95,
-                scale: radius / 150,
+            const usedSlamVfx = Boss._playFrameVfx(scene, 'effect_boss_tusk_slam', slamX, slamY, {
+                depth: 10,
+                alpha: 0.98,
+                scale: radius / 115,
+                frameMs: 65,
+                blendMode: Phaser.BlendModes.ADD,
             });
-            if (shockwave) {
-                Boss._tweenDestroy(scene, shockwave, {
-                    alpha: 0,
-                    scaleX: shockwave.scaleX * 1.38,
-                    scaleY: shockwave.scaleY * 1.38,
-                    duration: 520,
-                    ease: 'Cubic.Out',
+            if (!usedSlamVfx) {
+                const shockwave = Boss._addBossVfx(scene, 'tusk_shockwave', slamX, slamY, {
+                    depth: 9,
+                    alpha: 0.95,
+                    scale: radius / 150,
                 });
+                if (shockwave) {
+                    Boss._tweenDestroy(scene, shockwave, {
+                        alpha: 0,
+                        scaleX: shockwave.scaleX * 1.38,
+                        scaleY: shockwave.scaleY * 1.38,
+                        duration: 520,
+                        ease: 'Cubic.Out',
+                    });
+                }
             }
 
             const dust = Boss._addBossVfx(scene, 'tusk_dust_cloud', slamX, slamY, {
@@ -746,16 +894,20 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         const attackDamage = Math.floor(this.attack * 0.7);
 
         if (scene.soundManager) scene.soundManager.play('acidShot');
+        this._startAttackMotion(480);
+
+        const useAcidAsset = scene.textures.exists('effect_boss_beru_acid_0');
+        const acidTexKey = useAcidAsset ? 'effect_boss_beru_acid_0' : 'boss_vfx_beru_acid_projectile';
 
         for (let i = 0; i < spreadCount; i++) {
             const offset = (i - (spreadCount - 1) / 2) * spreadAngle;
             const angle = baseAngle + offset;
 
-            if (!scene.textures.exists('boss_vfx_beru_acid_projectile')) continue;
-            const proj = scene.add.sprite(this.x, this.y, 'boss_vfx_beru_acid_projectile')
+            if (!scene.textures.exists(acidTexKey)) continue;
+            const proj = scene.add.sprite(this.x, this.y, acidTexKey)
                 .setDepth(8)
                 .setRotation(angle)
-                .setScale(0.2)
+                .setScale(useAcidAsset ? 0.36 : 0.2)
                 .setBlendMode(Phaser.BlendModes.ADD);
             scene.physics.add.existing(proj, false);
             proj.body.setAllowGravity(false);
@@ -765,7 +917,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 Math.max(0, (proj.width - bodyRadius * 2) * 0.5),
                 Math.max(0, (proj.height - bodyRadius * 2) * 0.5)
             );
-            const frameTimer = null;
+            const frameTimer = useAcidAsset
+                ? Boss._animateFrameSprite(scene, proj, 'effect_boss_beru_acid', 55)
+                : null;
 
             const speed = 280;
             proj.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
@@ -801,19 +955,28 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                     if (!proj.active || hitResolved) return;
                     hitResolved = true;
                     if (scene.soundManager) scene.soundManager.play('acidHit');
-                    const splash = Boss._addBossVfx(scene, 'beru_acid_hit', proj.x, proj.y, {
+                    const usedHitVfx = Boss._playFrameVfx(scene, 'effect_boss_beru_acid', proj.x, proj.y, {
                         depth: 9,
                         alpha: 0.92,
-                        scale: 0.42,
+                        scale: 0.55,
+                        frameMs: 45,
+                        blendMode: Phaser.BlendModes.ADD,
                     });
-                    if (splash) {
-                        Boss._tweenDestroy(scene, splash, {
-                            alpha: 0,
-                            scaleX: splash.scaleX * 1.34,
-                            scaleY: splash.scaleY * 1.34,
-                            duration: 420,
-                            ease: 'Quad.Out',
+                    if (!usedHitVfx) {
+                        const splash = Boss._addBossVfx(scene, 'beru_acid_hit', proj.x, proj.y, {
+                            depth: 9,
+                            alpha: 0.92,
+                            scale: 0.42,
                         });
+                        if (splash) {
+                            Boss._tweenDestroy(scene, splash, {
+                                alpha: 0,
+                                scaleX: splash.scaleX * 1.34,
+                                scaleY: splash.scaleY * 1.34,
+                                duration: 420,
+                                ease: 'Quad.Out',
+                            });
+                        }
                     }
                     this._spawnAcidPuddle(proj.x, proj.y);
                     player.takeDamage(attackDamage);

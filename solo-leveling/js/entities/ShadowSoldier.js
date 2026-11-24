@@ -96,17 +96,21 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         // Guard mode: find enemy closest to SOLDIER within guard radius of player
         // Each soldier targets its own closest enemy → natural aggro distribution
         const guardRadius = 400;
+        const guardRadiusSq = guardRadius * guardRadius;
         const leashDist = 350;
         let target = null;
-        let bestDistToSelf = Infinity;
+        let bestDistSq = Infinity;
 
         for (const enemy of enemies) {
             if (!enemy.active) continue;
-            const distToPlayer = Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y);
-            if (distToPlayer > guardRadius) continue;
-            const distToSelf = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
-            if (distToSelf < bestDistToSelf) {
-                bestDistToSelf = distToSelf;
+            const pdx = enemy.x - player.x;
+            const pdy = enemy.y - player.y;
+            if (pdx * pdx + pdy * pdy > guardRadiusSq) continue;
+            const sdx = enemy.x - this.x;
+            const sdy = enemy.y - this.y;
+            const distSq = sdx * sdx + sdy * sdy;
+            if (distSq < bestDistSq) {
+                bestDistSq = distSq;
                 target = enemy;
             }
         }
@@ -260,10 +264,12 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
 
         // Damage all enemies in range
         const enemies = this._getAttackTargets();
+        const radiusSq = radius * radius;
         for (const enemy of enemies) {
             if (!enemy.active) continue;
-            const dist = Phaser.Math.Distance.Between(target.x, target.y, enemy.x, enemy.y);
-            if (dist < radius) {
+            const dx = enemy.x - target.x;
+            const dy = enemy.y - target.y;
+            if (dx * dx + dy * dy < radiusSq) {
                 enemy.takeDamage(Math.floor(this.damage * 0.85), target.x, target.y);
             }
         }
@@ -323,8 +329,9 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
                         closestX = prevX + dx * t;
                         closestY = prevY + dy * t;
                     }
-                    const dist = Phaser.Math.Distance.Between(closestX, closestY, enemy.x, enemy.y);
-                    if (dist < hitRadius) {
+                    const cdx = enemy.x - closestX;
+                    const cdy = enemy.y - closestY;
+                    if (cdx * cdx + cdy * cdy < hitRadius * hitRadius) {
                         pierced.add(key);
                         if (enemy.isBoss) {
                             enemy.takeDamage(dmg);

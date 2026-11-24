@@ -1,4 +1,5 @@
 import { COLORS } from '../utils/Constants.js';
+import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v2';
 
 const COMBAT_VFX_ATLAS_BY_PREFIX = {
     effect_monster_hit: 'atlas_vfx_combat_hit',
@@ -8,8 +9,53 @@ const COMBAT_VFX_ATLAS_BY_PREFIX = {
     effect_sanctuary_hit: 'atlas_vfx_sanctuary_hit',
 };
 
+const ENEMY_MOTION_CONFIG = {
+    goblin:         { walkFrameMs: 140, attackDurationMs: 340, leanAmp: 0.045, lungeLean: 0.14 },
+    steelFangLycan: { walkFrameMs: 130, attackDurationMs: 320, leanAmp: 0.055, lungeLean: 0.16 },
+    antSoldier:     { walkFrameMs: 135, attackDurationMs: 340, leanAmp: 0.045, lungeLean: 0.14 },
+    orc:            { walkFrameMs: 175, attackDurationMs: 440, leanAmp: 0.040, lungeLean: 0.12 },
+    iceBear:        { walkFrameMs: 185, attackDurationMs: 460, leanAmp: 0.038, lungeLean: 0.12 },
+    iceElf:         { walkFrameMs: 145, attackDurationMs: 360, leanAmp: 0.045, lungeLean: 0.14 },
+    stoneGolem:     { walkFrameMs: 220, attackDurationMs: 540, leanAmp: 0.030, lungeLean: 0.10 },
+    darkMage:       { walkFrameMs: 175, attackDurationMs: 460, leanAmp: 0.035, lungeLean: 0.11 },
+    ironKnight:     { walkFrameMs: 195, attackDurationMs: 480, leanAmp: 0.035, lungeLean: 0.12 },
+    demonWarrior:   { walkFrameMs: 185, attackDurationMs: 460, leanAmp: 0.042, lungeLean: 0.14 },
+};
+const DEFAULT_ENEMY_MOTION = { walkFrameMs: 165, attackDurationMs: 420, leanAmp: 0.04, lungeLean: 0.12 };
+
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
-    // Shared particle emitter pool for death effects (class-level)
+    static _beginFrame(scene, activeCount = 0) {
+        const gameLoop = scene && scene.game ? scene.game.loop : null;
+        const frameNo = gameLoop ? (gameLoop.frame || 0) : 0;
+        const fps = gameLoop && gameLoop.actualFps ? gameLoop.actualFps : 60;
+        const cam = scene && scene.cameras ? scene.cameras.main : null;
+        const view = cam && cam.worldView ? cam.worldView : null;
+        let viewLeft = -Infinity;
+        let viewRight = Infinity;
+        let viewTop = -Infinity;
+        let viewBottom = Infinity;
+        if (view) {
+            viewLeft = view.x;
+            viewRight = view.right;
+            viewTop = view.y;
+            viewBottom = view.bottom;
+        } else if (cam) {
+            viewLeft = cam.scrollX;
+            viewRight = cam.scrollX + cam.width;
+            viewTop = cam.scrollY;
+            viewBottom = cam.scrollY + cam.height;
+        }
+        Enemy._frameState = {
+            frameNo,
+            fps,
+            activeCount,
+            lowQuality: !!(scene && scene._lowQuality),
+            viewLeft,
+            viewRight,
+            viewTop,
+            viewBottom,
+        };
+    }
     
     
     
@@ -98,8 +144,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         return true;
     }
 
-    static _isNearCamera(scene, x, y, padding = 64) { var __oc29;
-        const cam = (((__oc29 = scene === null || scene === void 0 ? void 0 : scene.cameras) === null || __oc29 === void 0 ? void 0 : __oc29.main));
+    static _isNearCamera(scene, x, y, padding = 64) {
+        const fs = Enemy._frameState;
+        const gameLoop = scene && scene.game ? scene.game.loop : null;
+        const frameNo = gameLoop ? (gameLoop.frame || 0) : 0;
+        if (fs && fs.frameNo === frameNo && fs.viewLeft > -Infinity) {
+            return x >= fs.viewLeft - padding &&
+                x <= fs.viewRight + padding &&
+                y >= fs.viewTop - padding &&
+                y <= fs.viewBottom + padding;
+        }
+        const cam = scene && scene.cameras ? scene.cameras.main : null;
         if (!cam) return true;
         const view = cam.worldView;
         if (view) {
@@ -224,11 +279,37 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         for (const text of Enemy._dmgTextPool) {
             Enemy._disposeTransientObject(text, scene);
         }
+        for (const item of Enemy._activeFrameVfx) {
+            if (item && item.sprite) Enemy._disposeTransientObject(item.sprite, scene);
+        }
+        for (const spr of Enemy._vfxSpritePool) {
+            Enemy._disposeTransientObject(spr, scene);
+        }
+        for (const proj of Enemy._activeProjectiles) {
+            if (proj && proj.sprite) Enemy._disposeTransientObject(proj.sprite, scene);
+        }
+        for (const spr of Enemy._projSpritePool) {
+            Enemy._disposeTransientObject(spr, scene);
+        }
+        for (const tr of Enemy._activeProjTrails) {
+            if (tr && tr.sprite) Enemy._disposeTransientObject(tr.sprite, scene);
+        }
+        for (const trSpr of Enemy._projTrailPool) {
+            Enemy._disposeTransientObject(trSpr, scene);
+        }
 
         Enemy._deathEmitterPool = [];
         Enemy._deathSparkPool = [];
         Enemy._activeTexts = [];
         Enemy._dmgTextPool = [];
+        Enemy._activeFrameVfx = [];
+        Enemy._vfxSpritePool = [];
+        Enemy._activeProjectiles = [];
+        Enemy._projSpritePool = [];
+        Enemy._activeProjTrails = [];
+        Enemy._projTrailPool = [];
+        Enemy._activeDecals = 0;
+        Enemy._frameState = null;
         Enemy._vfxBudgetFrame = -1;
         Enemy._vfxBudgetUsed = 0;
         Enemy._hitReactBudgetFrame = -1;
@@ -237,13 +318,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         Enemy._dmgTextBudgetUsed = 0;
     }
 
-    static _playFrameVfx(scene, prefix, x, y, opts = {}) { var __oc33;
-        const textures = ((__oc33 = scene === null || scene === void 0 ? void 0 : scene.textures) ? __oc33 : null);
-        if (!textures) return false;
+    static _playFrameVfx(scene, prefix, x, y, opts = {}) {
+        const textures = scene && scene.textures ? scene.textures : null;
+        if (!textures || !scene.add) return false;
         const atlasKey = COMBAT_VFX_ATLAS_BY_PREFIX[prefix];
         const atlasTex = atlasKey && textures.exists(atlasKey) ? textures.get(atlasKey) : null;
         const useAtlas = !!(atlasTex && atlasTex.has(`${prefix}_0`));
         if (!useAtlas && !textures.exists(`${prefix}_0`)) return false;
+
+        if (Enemy._activeFrameVfx.length >= 48) return true;
 
         const {
             scale = 1,
@@ -257,71 +340,188 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const lastFrame = Math.max(0, frameCount - 1);
 
         try {
-            const sprite = (useAtlas
-                ? scene.add.sprite(x, y, atlasKey, `${prefix}_0`)
-                : scene.add.sprite(x, y, `${prefix}_0`))
-                .setOrigin(0.5)
+            let sprite = Enemy._vfxSpritePool.pop();
+            if (sprite && sprite.scene === scene) {
+                if (useAtlas) sprite.setTexture(atlasKey, `${prefix}_0`);
+                else sprite.setTexture(`${prefix}_0`);
+                sprite.setPosition(x, y);
+            } else {
+                if (sprite) Enemy._disposeTransientObject(sprite, scene);
+                sprite = useAtlas
+                    ? scene.add.sprite(x, y, atlasKey, `${prefix}_0`)
+                    : scene.add.sprite(x, y, `${prefix}_0`);
+            }
+            sprite.setOrigin(0.5)
                 .setDepth(depth)
                 .setAlpha(alpha)
                 .setScale(scale)
                 .setRotation(rotation)
-                .setBlendMode(blendMode);
+                .setBlendMode(blendMode)
+                .setTint(0xffffff)
+                .setVisible(true)
+                .setActive(true);
 
-            let frame = 0;
-            const timer = scene.time.addEvent({
-                delay: frameMs,
-                repeat: lastFrame,
-                callback: () => {
-                    frame += 1;
-                    if (!sprite.scene || frame > lastFrame) {
-                        if (sprite.scene) sprite.destroy();
-                        return;
-                    }
-                    const nextKey = `${prefix}_${frame}`;
-                    if (useAtlas) {
-                        if (atlasTex.has(nextKey)) sprite.setFrame(nextKey);
-                    } else if (textures.exists(nextKey)) {
-                        sprite.setTexture(nextKey);
-                    }
-                    if (frame >= lastFrame) {
-                        scene.tweens.add({
-                            targets: sprite,
-                            alpha: 0,
-                            duration: frameMs,
-                            onComplete: () => sprite.destroy(),
-                        });
-                    }
-                },
+            Enemy._activeFrameVfx.push({
+                sprite,
+                atlasKey: useAtlas ? atlasKey : null,
+                prefix,
+                frame: 0,
+                lastFrame,
+                frameMs: Math.max(12, frameMs),
+                elapsed: 0,
+                fadeElapsed: -1,
+                baseAlpha: alpha,
             });
-            sprite.once('destroy', () => timer.destroy());
             return true;
         } catch (e) {
             return false;
         }
     }
 
-    static _animateFrameSprite(scene, sprite, prefix, frameMs = 55, frameCount = 6) { var __oc34;
-        if (!(((__oc34 = scene === null || scene === void 0 ? void 0 : scene.textures) === null || __oc34 === void 0 ? void 0 : __oc34.exists(`${prefix}_0`))) || !((sprite === null || sprite === void 0 ? void 0 : sprite.scene))) return null;
+    static updateFrameVfx(scene, delta) {
+        const active = Enemy._activeFrameVfx;
+        const pool = Enemy._vfxSpritePool;
+        for (let i = active.length - 1; i >= 0; i--) {
+            const vfx = active[i];
+            const spr = vfx ? vfx.sprite : null;
+            if (!spr || !spr.scene || spr.scene !== scene) {
+                active.splice(i, 1);
+                continue;
+            }
+            if (vfx.fadeElapsed >= 0) {
+                vfx.fadeElapsed += delta;
+                if (vfx.fadeElapsed >= vfx.frameMs) {
+                    spr.setVisible(false).setActive(false);
+                    active.splice(i, 1);
+                    if (pool.length < 48) pool.push(spr);
+                    else spr.destroy();
+                } else {
+                    spr.alpha = vfx.baseAlpha * (1 - vfx.fadeElapsed / vfx.frameMs);
+                }
+                continue;
+            }
+            vfx.elapsed += delta;
+            while (vfx.elapsed >= vfx.frameMs && vfx.fadeElapsed < 0) {
+                vfx.elapsed -= vfx.frameMs;
+                vfx.frame += 1;
+                const frameIdx = Math.min(vfx.frame, vfx.lastFrame);
+                const nextKey = `${vfx.prefix}_${frameIdx}`;
+                if (vfx.atlasKey) spr.setFrame(nextKey);
+                else if (scene.textures && scene.textures.exists(nextKey)) spr.setTexture(nextKey);
+                if (vfx.frame >= vfx.lastFrame) {
+                    vfx.fadeElapsed = 0;
+                }
+            }
+        }
+    }
 
-        let frame = 0;
-        return scene.time.addEvent({
-            delay: frameMs,
-            loop: true,
-            callback: () => {
-                if (!sprite.scene) return;
-                frame = (frame + 1) % frameCount;
-                sprite.setTexture(`${prefix}_${frame}`);
-            },
-        });
+    static updateProjectiles(scene, delta) {
+        const player = scene ? scene.player : null;
+        const dtSec = delta * 0.001;
+        const hasHurtbox = !!(player && player.getHurtboxCenter);
+        const target = hasHurtbox ? player.getHurtboxCenter() : player;
+        const pWidth = player && player.body ? player.body.width : 38;
+        const pHeight = player && player.body ? player.body.height : 56;
+        const playerRadius = Math.max(pWidth || 38, pHeight || 56) * 0.5;
+
+        const trails = Enemy._activeProjTrails;
+        const trailPool = Enemy._projTrailPool;
+        for (let i = trails.length - 1; i >= 0; i--) {
+            const tr = trails[i];
+            const tSpr = tr ? tr.sprite : null;
+            if (!tSpr || !tSpr.scene || tSpr.scene !== scene) {
+                trails.splice(i, 1);
+                continue;
+            }
+            tr.elapsed += delta;
+            if (tr.elapsed >= 240) {
+                tSpr.setVisible(false).setActive(false);
+                trails.splice(i, 1);
+                if (trailPool.length < 48) trailPool.push(tSpr);
+                else tSpr.destroy();
+            } else {
+                const k = 1 - tr.elapsed / 240;
+                tSpr.alpha = tr.baseAlpha * k;
+                tSpr.setScale(0.2 + 0.8 * k);
+            }
+        }
+
+        const projs = Enemy._activeProjectiles;
+        const projPool = Enemy._projSpritePool;
+        for (let i = projs.length - 1; i >= 0; i--) {
+            const p = projs[i];
+            const spr = p ? p.sprite : null;
+            if (!spr || !spr.scene || spr.scene !== scene) {
+                projs.splice(i, 1);
+                continue;
+            }
+            p.lifeMs += delta;
+            if (p.lifeMs >= p.maxLifeMs) {
+                spr.setVisible(false).setActive(false);
+                projs.splice(i, 1);
+                if (projPool.length < 24) projPool.push(spr);
+                else spr.destroy();
+                continue;
+            }
+
+            spr.x += p.vx * dtSec;
+            spr.y += p.vy * dtSec;
+            if (p.useEffectAsset) {
+                p.frameElapsed += delta;
+                if (p.frameElapsed >= 58) {
+                    p.frameElapsed -= 58;
+                    p.frame = (p.frame + 1) % 6;
+                    const texKey = `effect_dark_mage_orb_${p.frame}`;
+                    if (scene.textures && scene.textures.exists(texKey)) {
+                        spr.setTexture(texKey);
+                    }
+                }
+            } else {
+                spr.rotation += delta * 0.008;
+            }
+
+            p.trailClock += delta;
+            if (p.trailClock >= 85 && trails.length < 36 && Enemy._isNearCamera(scene, spr.x, spr.y, 48)) {
+                p.trailClock = 0;
+                let tSpr = trailPool.pop();
+                if (tSpr && tSpr.scene === scene) {
+                    tSpr.setPosition(spr.x, spr.y).setVisible(true).setActive(true).setScale(1).setAlpha(p.trailAlpha);
+                } else {
+                    if (tSpr) Enemy._disposeTransientObject(tSpr, scene);
+                    tSpr = scene.add.circle(spr.x, spr.y, p.useEffectAsset ? 5 : 4, 0x9b35ff, p.trailAlpha).setDepth(7);
+                }
+                trails.push({ sprite: tSpr, elapsed: 0, baseAlpha: p.trailAlpha });
+            }
+
+            if (player && player.active && !player.isDead && target) {
+                const dx = target.x - spr.x;
+                const dy = target.y - spr.y;
+                const hitDist = playerRadius + p.hitRadius;
+                if (dx * dx + dy * dy <= hitDist * hitDist) {
+                    player.takeDamage(p.damage);
+                    spr.setVisible(false).setActive(false);
+                    projs.splice(i, 1);
+                    if (projPool.length < 24) projPool.push(spr);
+                    else spr.destroy();
+                }
+            }
+        }
     }
 
     constructor(scene, x, y) {
-        super(scene, x, y, 'enemy_goblin_0');
+        const initAtlas = SpriteFactory.getEnemyAtlasKey(scene, 'goblin');
+        if (initAtlas) {
+            super(scene, x, y, initAtlas, 'goblin_walk_0');
+        } else {
+            super(scene, x, y, 'enemy_goblin_0');
+        }
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
         this.setDepth(5);
         this.enemyType = null;
+        this._typeSize = 32;
+        this._atlasKey = initAtlas;
         this.hp = 0;
         this.maxHp = 0;
         this.attack = 0;
@@ -329,6 +529,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.xpValue = 0;
         this.animFrame = 0;
         this.animTimer = 0;
+        this._animState = 'walk';
+        this._renderedAnimState = 'walk';
+        this._animClock = 0;
+        this._attackElapsed = 0;
+        this._attackDamageDealt = false;
+        this._motionConfig = DEFAULT_ENEMY_MOTION;
+        this._hitFlashTimer = 0;
+        this._hitFlashStage = 0;
+        this._hitFlashColor = 0xff2233;
+        this._hitSquashTimer = 0;
         this.knockbackTimer = 0;
         this.slowMultiplier = 1;
         this.slowDuration = 0;
@@ -338,8 +548,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this._lastHitEffect = null;
         this._lastDmgTextTime = 0;
         this._lastHitReactTime = 0;
-        this._hitFlashTimerA = null;
-        this._hitFlashTimerB = null;
 
         // Shadow aura below sprite — purple halo that ties retro tiles to shadow theme
         // Reuses particle_glow texture for cheap additive blending
@@ -353,7 +561,42 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         } catch (_) { this._aura = null; }
     }
 
-    spawn(typeKey, typeData, difficultyMult, x, y, statProfile = null) { var __oc35, __oc36, __oc37, __oc38;
+    applyAtlasTexture() {
+        if (!this.scene || !this.enemyType) return false;
+        const atlasKey = SpriteFactory.getEnemyAtlasKey(this.scene, this.enemyType);
+        const s = this._typeSize || 32;
+        const state = this._animState || 'walk';
+        const frame = this.animFrame || 0;
+        const multX = this.isElite ? 1.5 : 1;
+        if (atlasKey) {
+            this._atlasKey = atlasKey;
+            this.setTexture(atlasKey, this.enemyType + '_' + state + '_' + frame);
+            this.setDisplaySize(s * 2, s * 2);
+            this._restScaleX = this.scaleX * multX;
+            this._restScaleY = this.scaleY * multX;
+            this.setScale(this._restScaleX, this._restScaleY);
+            if (this.body) {
+                this.body.setSize(this.width * 0.6, this.height * 0.6, true);
+                if (this.body.updateFromGameObject) this.body.updateFromGameObject();
+            }
+            this._renderedAnimState = state;
+            return true;
+        }
+        this._atlasKey = null;
+        return false;
+    }
+
+    triggerMeleeAttack() {
+        if (!this.active || this.enemyType === 'darkMage' || this._animState === 'attack') return false;
+        const motionCfg = this._motionConfig || DEFAULT_ENEMY_MOTION;
+        this.meleeCooldown = Math.max(560, motionCfg.attackDurationMs + 160);
+        this._animState = 'attack';
+        this._attackElapsed = 0;
+        this._attackDamageDealt = false;
+        return true;
+    }
+
+    spawn(typeKey, typeData, difficultyMult, x, y, statProfile = null) {
         // Reset any monkey-patched methods from elite spawns
         this.update = Enemy.prototype.update;
         this.die = Enemy.prototype.die;
@@ -366,16 +609,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this._eliteGlow = null;
         this._originalUpdate = null;
         this._originalDie = null;
-        if (this._hitFlashTimerA) {
-            this._hitFlashTimerA.remove(false);
-            this._hitFlashTimerA = null;
-        }
-        if (this._hitFlashTimerB) {
-            this._hitFlashTimerB.remove(false);
-            this._hitFlashTimerB = null;
-        }
 
         this.enemyType = typeKey;
+        this._typeSize = typeData.size;
+        this._motionConfig = ENEMY_MOTION_CONFIG[typeKey] || DEFAULT_ENEMY_MOTION;
         Enemy._nextSpawnInstanceId = (Enemy._nextSpawnInstanceId || 0) + 1;
         this.spawnInstanceId = Enemy._nextSpawnInstanceId;
         this.setPosition(x, y);
@@ -383,12 +620,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setVisible(true);
         this.body.enable = true;
         this.setScale(1, 1);
+        this.setRotation(0);
 
         // Apply difficulty scaling (fewer enemies → each one is tougher)
-        const hpScale = (((__oc35 = statProfile === null || statProfile === void 0 ? void 0 : statProfile.hp) !== null && __oc35 !== void 0 ? __oc35 : difficultyMult));
-        const attackScale = (((__oc36 = statProfile === null || statProfile === void 0 ? void 0 : statProfile.attack) !== null && __oc36 !== void 0 ? __oc36 : (1 + (difficultyMult - 1) * 0.5)));
-        const speedScale = (((__oc37 = statProfile === null || statProfile === void 0 ? void 0 : statProfile.speed) !== null && __oc37 !== void 0 ? __oc37 : (1 + (difficultyMult - 1) * 0.15)));
-        const xpScale = (((__oc38 = statProfile === null || statProfile === void 0 ? void 0 : statProfile.xp) !== null && __oc38 !== void 0 ? __oc38 : (1 + (difficultyMult - 1) * 0.5)));
+        const hpScale = (statProfile && statProfile.hp !== undefined && statProfile.hp !== null)
+            ? statProfile.hp : difficultyMult;
+        const attackScale = (statProfile && statProfile.attack !== undefined && statProfile.attack !== null)
+            ? statProfile.attack : (1 + (difficultyMult - 1) * 0.5);
+        const speedScale = (statProfile && statProfile.speed !== undefined && statProfile.speed !== null)
+            ? statProfile.speed : (1 + (difficultyMult - 1) * 0.15);
+        const xpScale = (statProfile && statProfile.xp !== undefined && statProfile.xp !== null)
+            ? statProfile.xp : (1 + (difficultyMult - 1) * 0.5);
 
         // Apply time pressure scaling: durability rises hardest, speed rises gently.
         this.maxHp = Math.floor(typeData.hp * hpScale);
@@ -397,21 +639,30 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.speed = typeData.speed * speedScale;
         this.xpValue = Math.floor(typeData.xp * xpScale);
 
-        // Set texture and size
-        this.setTexture('enemy_' + typeKey + '_0');
         const s = typeData.size;
-        this.body.setSize(s * 1.2, s * 1.2);
-        this.setDisplaySize(s * 2, s * 2);
-        // Cache resting scale AFTER setDisplaySize so squash-and-stretch doesn't drift
-        this._restScaleX = this.scaleX;
-        this._restScaleY = this.scaleY;
-        if (this._squashRestoreTimer) {
-            this._squashRestoreTimer.remove(false);
-            this._squashRestoreTimer = null;
-        }
-
         this.animFrame = 0;
         this.animTimer = 0;
+        this._animState = 'walk';
+        this._renderedAnimState = 'walk';
+        this._animClock = (this.spawnInstanceId * 97) % 1000;
+        this._attackElapsed = 0;
+        this._attackDamageDealt = false;
+        this._hitFlashTimer = 0;
+        this._hitFlashStage = 0;
+        this._hitSquashTimer = 0;
+
+        // Set atlas texture if loaded, otherwise static/procedural fallback
+        if (!this.applyAtlasTexture()) {
+            this.setTexture('enemy_' + typeKey + '_0');
+            this.setDisplaySize(s * 2, s * 2);
+            this._restScaleX = this.scaleX;
+            this._restScaleY = this.scaleY;
+            if (this.body) {
+                this.body.setSize(this.width * 0.6, this.height * 0.6, true);
+                if (this.body.updateFromGameObject) this.body.updateFromGameObject();
+            }
+        }
+
         this.knockbackTimer = 0;
         this.slowMultiplier = 1;
         this.slowDuration = 0;
@@ -420,19 +671,20 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this._lastHitReactTime = 0;
         this.rangedCooldown = 0;
         this.meleeCooldown = 0;
-        this._meleeRange = s * 2 + 30; // 몹 크기 기반 근접 공격 사거리
+        this._meleeRange = s * 2 + 30;
         this.setAlpha(1);
         this.setTint(0xffffff);
 
-        // Activate shadow aura (sized to match enemy)
+        // Activate shadow aura (culled automatically under high density or offscreen)
         if (this._aura) {
-            // particle_glow is 16x16 → scale so aura diameter = enemy size * 2.6
+            const fs = Enemy._frameState;
+            const showAura = (!fs || (!fs.lowQuality && fs.activeCount <= 110));
             const auraScale = (s * 2.6) / 16;
             this._aura
                 .setPosition(x, y + s * 0.35)
                 .setScale(auraScale, auraScale * 0.55)
                 .setAlpha(0.35)
-                .setVisible(true)
+                .setVisible(showAura)
                 .setActive(true);
         }
     }
@@ -440,10 +692,40 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     update(time, delta, playerX, playerY) {
         if (!this.active) return;
 
-        // Sync shadow aura with enemy position (slight y-offset so it sits near feet)
+        const fs = Enemy._frameState;
+        const activeCount = fs ? fs.activeCount : 0;
+        const lowQuality = fs ? fs.lowQuality : !!(this.scene && this.scene._lowQuality);
+        const frameNo = fs ? fs.frameNo : 0;
+        const nearCam = Enemy._isNearCamera(this.scene, this.x, this.y, 96);
+
+        // Sync shadow aura or hide under heavy load / offscreen to save additive fill-rate
         if (this._aura && this._aura.active) {
-            this._aura.x = this.x;
-            this._aura.y = this.y + (this.displayHeight * 0.25);
+            const showAura = nearCam && (!lowQuality) && (activeCount <= 110 || this.isElite);
+            if (showAura) {
+                this._aura.x = this.x;
+                this._aura.y = this.y + (this.displayHeight * 0.25);
+                if (!this._aura.visible) this._aura.setVisible(true);
+            } else if (this._aura.visible) {
+                this._aura.setVisible(false);
+            }
+        }
+
+        // Scalar hit flash progression (0 timers)
+        if (this._hitFlashTimer > 0) {
+            this._hitFlashTimer -= delta;
+            if (this._hitFlashTimer <= 0) {
+                this._hitFlashTimer = 0;
+                this._hitFlashStage = 0;
+                const baseTint = this.slowDuration > 0 ? 0x8888ff : (this.isElite ? 0xff6644 : 0xffffff);
+                this.setTint(baseTint);
+            } else if (this._hitFlashStage === 1 && this._hitFlashTimer <= 75) {
+                this._hitFlashStage = 2;
+                this.setTint(this._hitFlashColor);
+            }
+        }
+        if (this._hitSquashTimer > 0) {
+            this._hitSquashTimer -= delta;
+            if (this._hitSquashTimer < 0) this._hitSquashTimer = 0;
         }
 
         // Knockback
@@ -457,164 +739,227 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.slowDuration -= delta;
             if (this.slowDuration <= 0) {
                 this.slowMultiplier = 1;
-                if (!this.isElite) this.setTint(0xffffff);
+                if (this._hitFlashTimer <= 0) {
+                    this.setTint(this.isElite ? 0xff6644 : 0xffffff);
+                }
             }
         }
 
-        const angle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);
-        const dist = Phaser.Math.Distance.Between(this.x, this.y, playerX, playerY);
+        const dx = playerX - this.x;
+        const dy = playerY - this.y;
+        const distSq = dx * dx + dy * dy;
 
-        // Dark Mage: ranged attacker - stops at distance and shoots
+        // Far-offscreen velocity throttle: skip half of velocity recalculations & all anims
+        if (distSq > 810000 && ((frameNo + this.spawnInstanceId) & 1) !== 0) {
+            if (this.rangedCooldown > 0) this.rangedCooldown -= delta;
+            if (this.meleeCooldown > 0) this.meleeCooldown -= delta;
+            return;
+        }
+
+        const invDist = distSq > 0.0001 ? 1 / Math.sqrt(distSq) : 0;
+        const ux = dx * invDist;
+        const uy = dy * invDist;
+        const motionCfg = this._motionConfig || DEFAULT_ENEMY_MOTION;
+        const atkDur = motionCfg.attackDurationMs;
+
+        // Dark Mage: ranged attacker - stops at distance, plays cast animation, and fires at peak frame
         if (this.enemyType === 'darkMage') {
-            const attackRange = 250;
-            if (dist > attackRange) {
+            const attackRangeSq = 62500; // 250^2
+            if (this._animState === 'attack') {
+                this.body.setVelocity(0, 0);
+                this._attackElapsed += delta;
+                const progress = this._attackElapsed / atkDur;
+                if (!this._attackDamageDealt && progress >= 0.5) {
+                    this._attackDamageDealt = true;
+                    this._fireProjectile(playerX, playerY);
+                }
+                if (this._attackElapsed >= atkDur) {
+                    this._animState = 'walk';
+                    this._attackElapsed = 0;
+                }
+            } else if (distSq > attackRangeSq) {
                 const speed = this.speed * this.slowMultiplier;
-                this.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+                this.body.setVelocity(ux * speed, uy * speed);
             } else {
                 this.body.setVelocity(0, 0);
                 this.rangedCooldown -= delta;
                 if (this.rangedCooldown <= 0) {
                     this.rangedCooldown = 2000;
-                    this._fireProjectile(playerX, playerY);
+                    this._animState = 'attack';
+                    this._attackElapsed = 0;
+                    this._attackDamageDealt = false;
                 }
             }
         } else {
-            // Normal melee: move toward player
+            // Normal melee: chase player, trigger attack motion near melee reach
             const speed = this.speed * this.slowMultiplier;
-            this.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
-
-            // 근접 공격 (사거리 내일 때 쿨다운 기반)
             if (this.meleeCooldown > 0) this.meleeCooldown -= delta;
-            if (dist < this._meleeRange && this.meleeCooldown <= 0) {
-                this.meleeCooldown = 560;
-                const player = this.scene.player;
-                if (player && !player.isDead) {
-                    player.takeDamage(this.attack);
+
+            const meleeRange = this._meleeRange;
+            const meleeRangeSq = meleeRange * meleeRange;
+
+            if (this._animState === 'attack') {
+                const lungeSpeed = speed * 0.92;
+                this.body.setVelocity(ux * lungeSpeed, uy * lungeSpeed);
+                this._attackElapsed += delta;
+                if (this._attackElapsed >= atkDur) {
+                    this._animState = 'walk';
+                    this._attackElapsed = 0;
+                }
+            } else {
+                this.body.setVelocity(ux * speed, uy * speed);
+                if (distSq < meleeRangeSq && this.meleeCooldown <= 0) {
+                    this.meleeCooldown = Math.max(560, atkDur + 160);
+                    this._animState = 'attack';
+                    this._attackElapsed = 0;
+                    this._attackDamageDealt = false;
                 }
             }
         }
 
-        // Face movement/target direction. The refreshed goblin source faces right;
-        // the other generated enemy sources face left, so their flip baseline differs.
-        const movingLeft = playerX < this.x;
-        const sourceFacesRight = this.enemyType === 'goblin';
-        this.setFlipX(sourceFacesRight ? movingLeft : !movingLeft);
+        // All 10 regenerated enemies and 3 bosses face right in source sheets
+        const movingLeft = dx < 0;
+        this.setFlipX(movingLeft);
 
-        // Smooth 4-frame animation (skip for offscreen enemies to save texture swaps)
-        if (dist < 800) {
-            this.animTimer += delta;
-            if (this.animTimer > 200) {
-                this.animTimer = 0;
-                this.animFrame = (this.animFrame + 1) % 4;
-                this.setTexture('enemy_' + this.enemyType + '_' + this.animFrame);
+        // Skip frame swaps & procedural interpolation when offscreen
+        if (!nearCam && distSq > 640000) return;
+
+        // 1) Resolve discrete keyframe (walk 0..3 or attack 0..3)
+        let nextFrame = 0;
+        if (this._animState === 'attack') {
+            nextFrame = Math.min(3, Math.floor((this._attackElapsed / atkDur) * 4));
+        } else {
+            this._animClock += delta;
+            nextFrame = Math.floor(this._animClock / motionCfg.walkFrameMs) & 3;
+        }
+
+        if (this.animFrame !== nextFrame || this._renderedAnimState !== this._animState) {
+            this.animFrame = nextFrame;
+            this._renderedAnimState = this._animState;
+            if (this._atlasKey) {
+                this.setFrame(this.enemyType + '_' + this._animState + '_' + nextFrame);
+            } else {
+                const fallbackKey = 'enemy_' + this.enemyType + '_' + nextFrame;
+                if (this.scene.textures && this.scene.textures.exists(fallbackKey)) {
+                    this.setTexture(fallbackKey);
+                }
             }
         }
+
+        // 2) Option 1 procedural interpolation (squash/stretch + stride lean / attack lunge)
+        const restX = this._restScaleX !== undefined ? this._restScaleX : this.scaleX;
+        const restY = this._restScaleY !== undefined ? this._restScaleY : this.scaleY;
+        const hitSquashActive = this._hitSquashTimer > 0;
+        if (lowQuality || !nearCam) {
+            if (hitSquashActive) {
+                this.setScale(restX * 1.15, restY * 0.88);
+            } else if (this.scaleX !== restX || this.scaleY !== restY || this.rotation !== 0) {
+                this.setScale(restX, restY);
+                if (this.rotation !== 0) this.setRotation(0);
+            }
+            return;
+        }
+
+        const dirSign = movingLeft ? -1 : 1;
+        let sx = 1;
+        let sy = 1;
+        let rot = 0;
+
+        if (this._animState === 'attack') {
+            const p = Math.min(1, this._attackElapsed / atkDur);
+            if (p < 0.25) {
+                const t = p * 4;
+                sx = 1 + 0.06 * t;
+                sy = 1 - 0.07 * t;
+                rot = -dirSign * motionCfg.lungeLean * 0.6 * t;
+            } else if (p < 0.55) {
+                const t = (p - 0.25) / 0.30;
+                sx = 1.06 + 0.05 * t;
+                sy = 0.93 - 0.03 * t;
+                rot = dirSign * motionCfg.lungeLean * (-0.6 + 1.6 * t);
+            } else if (p < 0.78) {
+                const t = (p - 0.55) / 0.23;
+                sx = 1.11 - 0.04 * t;
+                sy = 0.90 + 0.04 * t;
+                rot = dirSign * motionCfg.lungeLean * (1.0 - 0.55 * t);
+            } else {
+                const t = (p - 0.78) / 0.22;
+                sx = 1.07 - 0.07 * t;
+                sy = 0.94 + 0.06 * t;
+                rot = dirSign * motionCfg.lungeLean * 0.45 * (1 - t);
+            }
+        } else {
+            const phase = (this._animClock / (motionCfg.walkFrameMs * 2)) * Math.PI;
+            const pulse = Math.sin(phase);
+            sx = 1 + pulse * 0.032;
+            sy = 1 - pulse * 0.032;
+            rot = dirSign * Math.sin(phase * 0.5) * motionCfg.leanAmp;
+        }
+
+        if (hitSquashActive) {
+            sx *= 1.15;
+            sy *= 0.88;
+        }
+        this.setScale(restX * sx, restY * sy);
+        this.setRotation(rot);
     }
 
-    _fireProjectile(targetX, targetY) { var __oc39, __oc40, __oc41, __oc42;
-        const playerTarget = (((__oc40 = (__oc39 = this.scene.player) === null || __oc39 === void 0 ? void 0 : __oc39.getHurtboxCenter) === null || __oc40 === void 0 ? void 0 : __oc40.call(__oc39)));
-        const aimX = (((__oc41 = playerTarget === null || playerTarget === void 0 ? void 0 : playerTarget.x) !== null && __oc41 !== void 0 ? __oc41 : targetX));
-        const aimY = (((__oc42 = playerTarget === null || playerTarget === void 0 ? void 0 : playerTarget.y) !== null && __oc42 !== void 0 ? __oc42 : targetY));
-        const angle = Phaser.Math.Angle.Between(this.x, this.y, aimX, aimY);
+    _fireProjectile(targetX, targetY) {
+        if (!this.scene || !this.scene.add) return;
+        const player = this.scene.player;
+        const playerTarget = player && player.getHurtboxCenter ? player.getHurtboxCenter() : null;
+        const aimX = playerTarget && playerTarget.x !== undefined ? playerTarget.x : targetX;
+        const aimY = playerTarget && playerTarget.y !== undefined ? playerTarget.y : targetY;
+        const dx = aimX - this.x;
+        const dy = aimY - this.y;
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+        const ux = dx / len;
+        const uy = dy / len;
+        const angle = Math.atan2(uy, ux);
 
-        // Brief cast animation (mage glows purple)
+        // Brief purple cast tint via scalar flash timer (no delayedCall)
+        this._hitFlashTimer = 150;
+        this._hitFlashStage = 2;
+        this._hitFlashColor = 0xb044ff;
         this.setTint(0xb044ff);
-        this.scene.time.delayedCall(150, () => {
-            if (this.active) this.setTint(0xffffff);
-        });
 
-        const useEffectAsset = this.scene.textures.exists('effect_dark_mage_orb_0');
-        const proj = this.scene.add.sprite(this.x, this.y, useEffectAsset ? 'effect_dark_mage_orb_0' : 'proj_darkMage')
-            .setDepth(8)
+        if (Enemy._activeProjectiles.length >= 24) return;
+
+        const useEffectAsset = !!(this.scene.textures && this.scene.textures.exists('effect_dark_mage_orb_0'));
+        const texKey = useEffectAsset ? 'effect_dark_mage_orb_0' : 'proj_darkMage';
+        let proj = Enemy._projSpritePool.pop();
+        if (proj && proj.scene === this.scene) {
+            proj.setTexture(texKey).setPosition(this.x, this.y);
+        } else {
+            if (proj) Enemy._disposeTransientObject(proj, this.scene);
+            proj = this.scene.add.sprite(this.x, this.y, texKey);
+        }
+        proj.setDepth(8)
             .setRotation(useEffectAsset ? angle : 0)
             .setScale(useEffectAsset ? 0.25 : 1.4)
-            .setBlendMode(useEffectAsset ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
-        this.scene.physics.add.existing(proj, false);
-        proj.body.setAllowGravity(false);
-        const bodyRadius = useEffectAsset ? 12 : 8;
-        proj.body.setCircle(bodyRadius);
-        proj.body.setOffset(
-            Math.max(0, (proj.width - bodyRadius * 2) * 0.5),
-            Math.max(0, (proj.height - bodyRadius * 2) * 0.5)
-        );
-        const frameTimer = useEffectAsset
-            ? Enemy._animateFrameSprite(this.scene, proj, 'effect_dark_mage_orb', 58)
-            : null;
+            .setBlendMode(useEffectAsset ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL)
+            .setAlpha(1)
+            .setVisible(true)
+            .setActive(true);
 
-        // Slow enough to dodge (150 speed)
         const speed = 150;
-        proj.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
-
-        // Purple danger trail, bounded to projectile lifetime.
-        const trailEvent = this.scene.time.addEvent({
-            delay: 60, repeat: 58, // 58 * 60ms ≈ 3480ms (slightly under auto-destroy)
-            callback: () => {
-                if (!proj.active || !this.scene) return;
-                const trail = this.scene.add.circle(proj.x, proj.y, useEffectAsset ? 5 : 4, 0x9b35ff, useEffectAsset ? 0.32 : 0.5).setDepth(7);
-                this.scene.tweens.add({
-                    targets: trail, alpha: 0, scale: 0.2,
-                    duration: 250, onComplete: () => trail.destroy(),
-                });
-            },
+        Enemy._activeProjectiles.push({
+            sprite: proj,
+            vx: ux * speed,
+            vy: uy * speed,
+            lifeMs: 0,
+            maxLifeMs: 3500,
+            damage: this.attack,
+            useEffectAsset,
+            frame: 0,
+            frameElapsed: 0,
+            trailClock: 0,
+            trailAlpha: useEffectAsset ? 0.32 : 0.5,
+            hitRadius: useEffectAsset ? 18 : 12,
         });
-
-        // Collision with player
-        const player = this.scene.player;
-        let collider = null;
-        let hitPoll = null;
-        let hitResolved = false;
-        const hitPlayer = () => {
-            if (!proj.active || hitResolved) return;
-            hitResolved = true;
-            player.takeDamage(this.attack);
-            proj.destroy();
-        };
-        if (player) {
-            collider = this.scene.physics.add.overlap(proj, player, hitPlayer);
-            hitPoll = this.scene.time.addEvent({
-                delay: 16,
-                loop: true,
-                callback: () => { var __oc43, __oc44, __oc45;
-                    if (!proj.active || !player.active || player.isDead) return;
-                    const target = (((__oc43 = player.getHurtboxCenter) === null || __oc43 === void 0 ? void 0 : __oc43.call(player))) || player;
-                    const playerRadius = Math.max((((__oc44 = player.body) === null || __oc44 === void 0 ? void 0 : __oc44.width)) || 38, (((__oc45 = player.body) === null || __oc45 === void 0 ? void 0 : __oc45.height)) || 56) * 0.5;
-                    const dist = Phaser.Math.Distance.Between(proj.x, proj.y, target.x, target.y);
-                    if (dist <= playerRadius + (useEffectAsset ? 18 : 12)) hitPlayer();
-                },
-            });
-        }
-
-        // Auto-destroy after 3.5 seconds (only destroys if still alive)
-        const autoDestroyTimer = this.scene.time.delayedCall(3500, () => {
-            if (proj.active) proj.destroy();
-        });
-
-        // Centralized cleanup: fires on destroy() from any path (hit, timeout, scene shutdown)
-        proj.once('destroy', () => { var __oc46, __oc47, __oc48;
-            if (frameTimer) frameTimer.destroy();
-            if (trailEvent) trailEvent.destroy();
-            if (hitPoll) hitPoll.destroy();
-            if (autoDestroyTimer) autoDestroyTimer.destroy();
-            if (collider && (((__oc47 = (__oc46 = this.scene) === null || __oc46 === void 0 ? void 0 : __oc46.physics) === null || __oc47 === void 0 ? void 0 : __oc47.world))) {
-                this.scene.physics.world.removeCollider(collider);
-            }
-            if ((((__oc48 = this.scene) === null || __oc48 === void 0 ? void 0 : __oc48.tweens))) this.scene.tweens.killTweensOf(proj);
-        });
-
-        if (!useEffectAsset) {
-            // Spin + pulsing glow for visibility
-            this.scene.tweens.add({
-                targets: proj,
-                rotation: proj.rotation + Math.PI * 6,
-                scaleX: { from: 1.4, to: 1.0 },
-                scaleY: { from: 1.4, to: 1.0 },
-                duration: 3500,
-                yoyo: true,
-            });
-        }
     }
 
-    takeDamage(amount, knockbackX, knockbackY, hitEffect = null) { var __oc49, __oc50, __oc51, __oc52, __oc53, __oc54;
+    takeDamage(amount, knockbackX, knockbackY, hitEffect = null) {
         this.hp -= amount;
         this._lastHitEffect = hitEffect || null;
 
@@ -622,55 +967,26 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const isBurn = hitEffect === 'burn';
         const isSanctuary = hitEffect === 'sanctuary';
         if (isCrit && this.scene.soundManager) this.scene.soundManager.play('critHit');
-        const restoreTint = this.isElite ? 0xff6644 : 0xffffff;
         const isOnCamera = Enemy._isNearCamera(this.scene, this.x, this.y, 96);
-        const now = (((__oc51 = (__oc50 = (__oc49 = this.scene) === null || __oc49 === void 0 ? void 0 : __oc49.time) === null || __oc50 === void 0 ? void 0 : __oc50.now) !== null && __oc51 !== void 0 ? __oc51 : 0));
+        const now = this.scene && this.scene.time ? this.scene.time.now : 0;
         const canPlayHitReact = isOnCamera &&
             (isCrit || !this._lastHitReactTime || now - this._lastHitReactTime >= 55) &&
             Enemy._consumeHitReactBudget(this.scene, isCrit);
 
         if (canPlayHitReact) {
             this._lastHitReactTime = now;
-
-        // Impact feel: white pre-flash → red flash → restore
-        // (staged tint = "light flashes off metal then blood" feel)
-        if (this._hitFlashTimerA) {
-            this._hitFlashTimerA.remove(false);
-            this._hitFlashTimerA = null;
-        }
-        if (this._hitFlashTimerB) {
-            this._hitFlashTimerB.remove(false);
-            this._hitFlashTimerB = null;
-        }
-        this.setTint(0xffffff);
-        this._hitFlashTimerA = this.scene.time.delayedCall(35, () => {
-            this._hitFlashTimerA = null;
-            if (this.active) this.setTint(isBurn ? 0xff7a22 : (isSanctuary ? 0x66f2b0 : 0xff2233));
-        });
-        this._hitFlashTimerB = this.scene.time.delayedCall(110, () => {
-            this._hitFlashTimerB = null;
-            if (this.active) {
-                // Slow tint takes priority over idle tint
-                this.setTint(this.slowDuration > 0 ? 0x8888ff : restoreTint);
-            }
-        });
-
-        // Squash-and-stretch for hit punch — always based on resting scale (prevents drift under rapid hits)
-        const restX = (((__oc52 = this._restScaleX) !== null && __oc52 !== void 0 ? __oc52 : this.scaleX));
-        const restY = (((__oc53 = this._restScaleY) !== null && __oc53 !== void 0 ? __oc53 : this.scaleY));
-        if (this._squashRestoreTimer) {
-            this._squashRestoreTimer.remove(false);
-            this._squashRestoreTimer = null;
-        }
-        this.setScale(restX * 1.15, restY * 0.88);
-        this._squashRestoreTimer = this.scene.time.delayedCall(70, () => {
-            this._squashRestoreTimer = null;
-            if (this.active) this.setScale(restX, restY);
-        });
+            this.setTint(0xffffff);
+            this._hitFlashTimer = 110;
+            this._hitFlashStage = 1;
+            this._hitFlashColor = isBurn ? 0xff7a22 : (isSanctuary ? 0x66f2b0 : 0xff2233);
+            this._hitSquashTimer = 70;
+            const restX = this._restScaleX !== undefined ? this._restScaleX : this.scaleX;
+            const restY = this._restScaleY !== undefined ? this._restScaleY : this.scaleY;
+            this.setScale(restX * 1.15, restY * 0.88);
         }
 
         // Crit: stronger kick — screen shake + white ring burst at hit location
-        if (isOnCamera && isCrit && (((__oc54 = this.scene.cameras) === null || __oc54 === void 0 ? void 0 : __oc54.main)) && Enemy._consumeVfxBudget(this.scene, 2)) {
+        if (isOnCamera && isCrit && this.scene.cameras && this.scene.cameras.main && Enemy._consumeVfxBudget(this.scene, 2)) {
             this.scene.cameras.main.shake(90, 0.004);
             try {
                 const ring = this.scene.add.image(this.x, this.y, 'particle_ring')
@@ -691,10 +1007,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         this._spawnHitEffect(isCrit, hitEffect);
 
-        // Knockback
+        // Knockback (unit vector without trig)
         if (knockbackX !== undefined) {
-            const angle = Phaser.Math.Angle.Between(knockbackX, knockbackY, this.x, this.y);
-            this.body.setVelocity(Math.cos(angle) * 200, Math.sin(angle) * 200);
+            const kx = this.x - knockbackX;
+            const ky = this.y - knockbackY;
+            const kDist = Math.sqrt(kx * kx + ky * ky);
+            if (kDist > 0.001) {
+                const invK = 200 / kDist;
+                this.body.setVelocity(kx * invK, ky * invK);
+            } else {
+                this.body.setVelocity(200, 0);
+            }
             this.knockbackTimer = 150;
         }
 
@@ -1145,9 +1468,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 sparks.explode(Phaser.Math.Clamp(count, isElite ? 10 : 4, isElite ? 48 : 28));
             }
 
-            // Flying gore chunks (bigger, irregular)
-            const chunkScale = constrained ? (isElite ? 0.6 : 0.35) : 1;
-            const chunkCount = Math.max(constrained ? 2 : 4, Math.round((usedDeathAsset ? (isElite ? 15 : 9) : (isElite ? 12 : 7)) * chunkScale * profile.particleMult));
+            // Flying gore chunks (skip/cap when frame VFX + pooled emitters already play under density)
+            const activeCount = Enemy._frameState ? Enemy._frameState.activeCount : 0;
+            const rawChunks = Math.max(constrained ? 1 : 2, Math.round((isElite ? 6 : 3) * (constrained ? 0.5 : 1) * profile.particleMult));
+            const chunkCount = (usedDeathAsset && (constrained || activeCount > 70) && !isElite)
+                ? 0 : Math.min(isElite ? 6 : 3, rawChunks);
             for (let i = 0; i < chunkCount; i++) {
                 const a = Math.random() * Math.PI * 2;
                 const s = (42 + Math.random() * 88) * profile.speedMult;
@@ -1166,15 +1491,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 });
             }
 
-            // Persistent blood pool on ground (elite = bigger)
-            if (!constrained || isElite) {
+            // Persistent blood pool on ground (bounded by Enemy._activeDecals <= 16)
+            if ((!constrained || isElite) && Enemy._activeDecals < Enemy.MAX_ACTIVE_DECALS) {
+                Enemy._activeDecals++;
                 const bloodPool = this.scene.add.ellipse(this.x, this.y + 6, profile.groundW, profile.groundH, 0x2a0006, 0.75).setDepth(3);
                 this.scene.tweens.add({
                     targets: bloodPool,
                     scaleX: 1.8, scaleY: 1.8,
                     alpha: 0,
                     duration: constrained ? 1200 : 2200,
-                    onComplete: () => bloodPool.destroy(),
+                    onComplete: () => {
+                        Enemy._activeDecals = Math.max(0, Enemy._activeDecals - 1);
+                        bloodPool.destroy();
+                    },
                 });
             }
 
@@ -1247,7 +1576,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             }
         );
 
-        const emberCount = Math.max(constrained ? 3 : 6, Math.round((isElite ? 18 : 11) * profile.particleMult * (constrained ? (isElite ? 0.55 : 0.35) : 1)));
+        const activeCount = Enemy._frameState ? Enemy._frameState.activeCount : 0;
+        const emberCount = (!constrained && activeCount <= 70)
+            ? Math.min(isElite ? 6 : 3, Math.max(1, Math.round((isElite ? 6 : 3) * profile.particleMult)))
+            : (isElite ? 3 : 0);
         for (let i = 0; i < emberCount; i++) {
             const a = Math.random() * Math.PI * 2;
             const s = (36 + Math.random() * (isElite ? 122 : 82)) * profile.speedMult;
@@ -1267,7 +1599,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             });
         }
 
-        if (!constrained || isElite) {
+        if ((!constrained || isElite) && Enemy._activeDecals < Enemy.MAX_ACTIVE_DECALS) {
+            Enemy._activeDecals++;
             const scorch = this.scene.add.ellipse(
                 this.x,
                 this.y + 7,
@@ -1283,25 +1616,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 alpha: 0,
                 duration: constrained ? 900 : 1500,
                 ease: 'Quad.easeOut',
-                onComplete: () => scorch.destroy(),
+                onComplete: () => {
+                    Enemy._activeDecals = Math.max(0, Enemy._activeDecals - 1);
+                    scorch.destroy();
+                },
             });
         }
     }
 
-    destroy(fromScene) { var __oc59;
-        if (this._hitFlashTimerA) {
-            this._hitFlashTimerA.remove(false);
-            this._hitFlashTimerA = null;
-        }
-        if (this._hitFlashTimerB) {
-            this._hitFlashTimerB.remove(false);
-            this._hitFlashTimerB = null;
-        }
-        if (this._squashRestoreTimer) {
-            this._squashRestoreTimer.remove(false);
-            this._squashRestoreTimer = null;
-        }
-        if ((((__oc59 = this.scene) === null || __oc59 === void 0 ? void 0 : __oc59.tweens))) {
+    destroy(fromScene) {
+        if (this.scene && this.scene.tweens) {
             this.scene.tweens.killTweensOf(this);
             if (this._aura) this.scene.tweens.killTweensOf(this._aura);
             if (this._eliteLabel) this.scene.tweens.killTweensOf(this._eliteLabel);
@@ -1390,6 +1714,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 Enemy._deathEmitterPool = [];
 Enemy._deathSparkPool = [];
 Enemy.MAX_POOLED_EMITTERS = 8;
+Enemy._vfxSpritePool = [];
+Enemy._activeFrameVfx = [];
+Enemy._projSpritePool = [];
+Enemy._activeProjectiles = [];
+Enemy._projTrailPool = [];
+Enemy._activeProjTrails = [];
+Enemy._activeDecals = 0;
+Enemy.MAX_ACTIVE_DECALS = 16;
+Enemy._frameState = null;
 Enemy._vfxBudgetFrame = -1;
 Enemy._vfxBudgetUsed = 0;
 Enemy.MAX_VFX_BUDGET_PER_FRAME = 12;

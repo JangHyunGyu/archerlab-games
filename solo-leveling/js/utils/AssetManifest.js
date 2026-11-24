@@ -87,7 +87,10 @@ const ENV_KEYS = ['cracked_pillar', 'rune_stone', 'shadow_portal', 'hanging_chai
 const SHADOW_KEYS = ['melee', 'tank', 'ranged'];
 const ARISE_KEYS = ['arise_rune', 'arise_smoke', 'arise_hand'];
 const SHADOW_SOLDIER_VFX_KEYS = ['soldier_slash', 'soldier_slam', 'soldier_spit', 'soldier_trail'];
-const ENEMY_KEYS = ['goblin', 'antSoldier', 'orc', 'iceBear', 'stoneGolem', 'darkMage', 'ironKnight', 'demonWarrior'];
+const ENEMY_KEYS = [
+    'goblin', 'steelFangLycan', 'antSoldier', 'orc', 'iceBear',
+    'iceElf', 'stoneGolem', 'darkMage', 'ironKnight', 'demonWarrior',
+];
 const BOSS_KEYS = ['igris', 'tusk', 'beru'];
 const BASE_EFFECT_KEYS = ['shadow_dagger', 'shadow_slash', 'ruler_authority', 'dragon_fear'];
 const COMBAT_EFFECT_KEYS = ['basic_stab', 'flame_burn', 'monster_hit', 'monster_crit', 'monster_death', 'sanctuary_hit'];
@@ -136,8 +139,8 @@ const PLAYER_MOTION_NAMES = [
 export const CHARACTER_VISUAL_ASSET_VERSION = '20261120-opt-v2';
 export const CHARACTER_MOTION_ASSET_VERSION = '20261119-native-rgba-motion-v7';
 export const CHARACTER_COMBAT_VFX_ASSET_VERSION = '20261120-opt-v2';
-export const ASSET_ATLAS_VERSION = '20261120-atlas-v1';
-export const RUNTIME_WEBP_VERSION = '20261120-opt-v2';
+export const ASSET_ATLAS_VERSION = '20261124-enemies-v1';
+export const RUNTIME_WEBP_VERSION = '20261124-enemies-v1';
 export const CHARACTER_COMBAT_VFX_FRAME_COUNT = 6;
 
 const uiAsset = (key) => ({
@@ -289,6 +292,27 @@ export function getCharacterMotionAtlasAsset(characterId = getStoredCharacterId(
     };
 }
 
+export function getEnemyAtlasAsset(tier = 'early') {
+    const safeTier = tier === 'late' ? 'late' : 'early';
+    return {
+        type: 'atlas',
+        key: `atlas_enemies_${safeTier}`,
+        path: `assets/atlases/enemies_${safeTier}.webp`,
+        atlasURL: `assets/atlases/enemies_${safeTier}.json`,
+        cacheVersion: ASSET_ATLAS_VERSION,
+    };
+}
+
+export function getBossAtlasAsset(bossKey) {
+    return {
+        type: 'atlas',
+        key: `atlas_boss_${bossKey}`,
+        path: `assets/atlases/boss_${bossKey}.webp`,
+        atlasURL: `assets/atlases/boss_${bossKey}.json`,
+        cacheVersion: ASSET_ATLAS_VERSION,
+    };
+}
+
 export function getSharedCombatVfxAtlasAssets() {
     return [
         {
@@ -398,7 +422,9 @@ export function getSharedGameplayCoreAssetList(options = {}) {
         ...ITEM_KEYS.map(key => ({ key: `item_${key}`, path: `assets/items/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
         ...ENV_KEYS.map(key => ({ key: `env_${key}`, path: `assets/environment/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
         ...['goblin', 'antSoldier'].map(key => ({ key: `ai_enemy_${key}`, path: `assets/enemies/source/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
-        ...(useAtlases ? getSharedCombatVfxAtlasAssets() : buildCombatEffectAssets(['monster_hit', 'monster_crit', 'monster_death'])),
+        ...(useAtlases
+            ? [...getSharedCombatVfxAtlasAssets(), getEnemyAtlasAsset('early')]
+            : buildCombatEffectAssets(['monster_hit', 'monster_crit', 'monster_death'])),
     ];
     if (includeFloor) {
         list.push({ key: 'ai_dungeon_floor', path: 'assets/background/bg_dungeon_floor.png', cacheVersion: RUNTIME_WEBP_VERSION });
@@ -463,8 +489,9 @@ export function getCharacterStarterAssetList(characterId = getStoredCharacterId(
     return dedupeAssets(list);
 }
 
-function getResumeExtraAssetList(characterId, savedData) {
+function getResumeExtraAssetList(characterId, savedData, options = {}) {
     if (!savedData) return [];
+    const useAtlases = options.useAtlases !== false;
     const list = [];
     const savedPlayer = savedData.player || {};
     const savedLevel = Math.max(1, Number(savedPlayer.level) || 1);
@@ -494,13 +521,21 @@ function getResumeExtraAssetList(characterId, savedData) {
         const e = activeEnemies[i];
         if (e && e.typeKey && ENEMY_TYPES[e.typeKey]) enemySet.add(e.typeKey);
     }
+    if (savedTimeMin >= 0.75) enemySet.add('steelFangLycan');
     if (savedTimeMin >= 1) enemySet.add('orc');
     if (savedTimeMin >= 2) enemySet.add('iceBear');
+    if (savedTimeMin >= 4) enemySet.add('iceElf');
     if (savedTimeMin >= 5) { enemySet.add('stoneGolem'); enemySet.add('darkMage'); }
     if (savedTimeMin >= 8) enemySet.add('ironKnight');
     if (savedTimeMin >= 10) enemySet.add('demonWarrior');
     for (const enemyKey of enemySet) {
         list.push({ key: `ai_enemy_${enemyKey}`, path: `assets/enemies/source/${enemyKey}.png`, cacheVersion: RUNTIME_WEBP_VERSION });
+    }
+    if (useAtlases && (
+        enemySet.has('iceElf') || enemySet.has('stoneGolem') || enemySet.has('darkMage')
+        || enemySet.has('ironKnight') || enemySet.has('demonWarrior')
+    )) {
+        list.push(getEnemyAtlasAsset('late'));
     }
     if (enemySet.has('darkMage')) {
         list.push(...buildEnemyBossEffectAssets(['dark_mage_orb']));
@@ -530,6 +565,9 @@ function getResumeExtraAssetList(characterId, savedData) {
         };
         for (const bossKey of bossSet) {
             list.push({ key: `ai_boss_${bossKey}`, path: `assets/bosses/source/${bossKey}.png`, cacheVersion: RUNTIME_WEBP_VERSION });
+            if (useAtlases) {
+                list.push(getBossAtlasAsset(bossKey));
+            }
             if (bossAttackMap[bossKey]) {
                 list.push(...buildEnemyBossEffectAssets(bossAttackMap[bossKey]));
             }
@@ -555,7 +593,7 @@ export function getGameplayCoreAssetList(characterId = getStoredCharacterId(), o
         ...getMenuCoreAssetList(character.id),
         ...getSharedGameplayCoreAssetList(options),
         ...getCharacterStarterAssetList(character.id, options),
-        ...getResumeExtraAssetList(character.id, options.savedData),
+        ...getResumeExtraAssetList(character.id, options.savedData, options),
     ];
     return dedupeAssets(list);
 }
@@ -563,6 +601,7 @@ export function getGameplayCoreAssetList(characterId = getStoredCharacterId(), o
 // 전투 시작 후 백그라운드로 순차 스트리밍할 지연 에셋 배치 목록
 export function getGameplayDeferredBatches(characterId = getStoredCharacterId(), options = {}) {
     const character = getCharacter(characterId);
+    const useAtlases = options.useAtlases !== false;
     const coreKeys = new Set(getGameplayCoreAssetList(character.id, options).map(a => a.key));
     const weaponKeys = getCharacterWeaponKeys(character.id);
     const earlySkills = [];
@@ -592,6 +631,7 @@ export function getGameplayDeferredBatches(characterId = getStoredCharacterId(),
         {
             id: 'enemies_mid_and_skills_late',
             assets: [
+                { key: 'ai_enemy_steelFangLycan', path: 'assets/enemies/source/steelFangLycan.png', cacheVersion: RUNTIME_WEBP_VERSION },
                 { key: 'ai_enemy_orc', path: 'assets/enemies/source/orc.png', cacheVersion: RUNTIME_WEBP_VERSION },
                 { key: 'ai_enemy_iceBear', path: 'assets/enemies/source/iceBear.png', cacheVersion: RUNTIME_WEBP_VERSION },
                 ...lateSkills,
@@ -601,6 +641,7 @@ export function getGameplayDeferredBatches(characterId = getStoredCharacterId(),
             id: 'boss_igris_and_system',
             assets: [
                 { key: 'ai_boss_igris', path: 'assets/bosses/source/igris.png', cacheVersion: RUNTIME_WEBP_VERSION },
+                ...(useAtlases ? [getBossAtlasAsset('igris')] : []),
                 ...TELEGRAPH_KEYS.map(key => ({ key: `telegraph_${key}`, path: `assets/effects/telegraphs/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
                 ...BOSS_SUPPORT_KEYS.map(key => ({ key: `boss_vfx_${key}`, path: `assets/effects/boss_support/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
                 ...buildEnemyBossEffectAssets(['boss_igris_slash', 'boss_death_igris', 'boss_death_burst']),
@@ -611,10 +652,13 @@ export function getGameplayDeferredBatches(characterId = getStoredCharacterId(),
         {
             id: 'enemies_late_and_boss_tusk',
             assets: [
+                { key: 'ai_enemy_iceElf', path: 'assets/enemies/source/iceElf.png', cacheVersion: RUNTIME_WEBP_VERSION },
                 { key: 'ai_enemy_stoneGolem', path: 'assets/enemies/source/stoneGolem.png', cacheVersion: RUNTIME_WEBP_VERSION },
                 { key: 'ai_enemy_darkMage', path: 'assets/enemies/source/darkMage.png', cacheVersion: RUNTIME_WEBP_VERSION },
+                ...(useAtlases ? [getEnemyAtlasAsset('late')] : []),
                 ...buildEnemyBossEffectAssets(['dark_mage_orb']),
                 { key: 'ai_boss_tusk', path: 'assets/bosses/source/tusk.png', cacheVersion: RUNTIME_WEBP_VERSION },
+                ...(useAtlases ? [getBossAtlasAsset('tusk')] : []),
                 ...buildEnemyBossEffectAssets(['boss_tusk_slam', 'boss_death_tusk']),
             ],
         },
@@ -624,6 +668,7 @@ export function getGameplayDeferredBatches(characterId = getStoredCharacterId(),
                 { key: 'ai_enemy_ironKnight', path: 'assets/enemies/source/ironKnight.png', cacheVersion: RUNTIME_WEBP_VERSION },
                 { key: 'ai_enemy_demonWarrior', path: 'assets/enemies/source/demonWarrior.png', cacheVersion: RUNTIME_WEBP_VERSION },
                 { key: 'ai_boss_beru', path: 'assets/bosses/source/beru.png', cacheVersion: RUNTIME_WEBP_VERSION },
+                ...(useAtlases ? [getBossAtlasAsset('beru')] : []),
                 ...buildEnemyBossEffectAssets(['boss_beru_acid', 'boss_death_beru']),
             ],
         },
