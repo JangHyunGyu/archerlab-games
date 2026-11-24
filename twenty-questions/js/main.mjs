@@ -1,6 +1,6 @@
-import { messages, translation } from './i18n.mjs?v=20261124-v13';
-import { request, requestId, storage, reportException } from './api.mjs?v=20261124-v13';
-import { GameAudio } from './audio.mjs?v=20261124-v13';
+import { messages, translation } from './i18n.mjs?v=20261124-v14';
+import { request, requestId, storage, reportException } from './api.mjs?v=20261124-v14';
+import { GameAudio } from './audio.mjs?v=20261124-v14';
 
 const locale = document.documentElement.lang === 'en' ? 'en' : 'ko';
 const t = translation(locale);
@@ -36,6 +36,7 @@ let sortState = { key: 'similarity', dir: 'desc' };
 let nearestWords = [];
 let nearestKey = null;
 let rankingRequestSeq = 0;
+let rankingSort = 'wins';
 let rolloverInFlight = false;
 let rolloverRoundId = null;
 let rolloverRetryAt = 0;
@@ -1082,28 +1083,48 @@ function openDialog(id) {
     $(id).showModal();
 }
 
-async function showRanking() {
+function syncRankingSortUI(sort) {
+    for (const btn of document.querySelectorAll('[data-ranking-sort]')) {
+        const active = btn.dataset.rankingSort === sort;
+        btn.classList.toggle('is-active', active);
+        btn.setAttribute('aria-pressed', String(active));
+    }
+    if ($('ranking-rule')) {
+        $('ranking-rule').textContent = t(sort === 'time' ? 'ranking_rule_time' : 'ranking_rule_wins');
+    }
+}
+
+async function showRanking(nextSort) {
+    if (nextSort === 'wins' || nextSort === 'time') rankingSort = nextSort;
     if (!$('ranking-dialog').open) openDialog('ranking-dialog');
     if ($('ranking-title')) $('ranking-title').textContent = t('ranking');
+    syncRankingSortUI(rankingSort);
     const seq = ++rankingRequestSeq;
+    const activeSort = rankingSort;
     $('leaderboard').textContent = t('loading');
     $('own-rank').textContent = '';
     try {
-        const data = await request('leaderboard');
+        const data = await request('leaderboard?sort=' + activeSort);
         if (seq !== rankingRequestSeq) return;
+        const resolvedSort = data.sort === 'time' ? 'time' : 'wins';
+        rankingSort = resolvedSort;
+        syncRankingSortUI(resolvedSort);
         if (data.entries && data.entries.length) {
             const table = document.createElement('table');
             const head = document.createElement('thead');
             const row = document.createElement('tr');
-            for (const key of ['rank_col', 'explorer_col', 'time_col']) {
+            const activeCol = resolvedSort === 'time' ? 'time_col' : 'solved_col';
+            for (const key of ['rank_col', 'explorer_col', 'solved_col', 'time_col']) {
                 const th = document.createElement('th');
                 th.scope = 'col';
+                if (key === activeCol) th.className = 'is-active-col';
                 th.textContent = t(key);
                 row.append(th);
             }
             head.append(row);
             table.append(head);
             const body = document.createElement('tbody');
+            const activeIdx = resolvedSort === 'time' ? 3 : 2;
             for (const entry of data.entries) {
                 const tr = document.createElement('tr');
                 if (entry.own) tr.className = 'own';
@@ -1111,13 +1132,15 @@ async function showRanking() {
                 const cells = [
                     String(entry.rank),
                     displaySolverName(entry),
+                    t('solved_unit', { count: entry.wins || 0 }),
                     formatRecordTime(solvedMs),
                 ];
-                for (const value of cells) {
+                cells.forEach((value, idx) => {
                     const td = document.createElement('td');
+                    if (idx === activeIdx) td.className = 'is-active-col';
                     td.textContent = value;
                     tr.append(td);
-                }
+                });
                 body.append(tr);
             }
             table.append(body);
@@ -1136,7 +1159,7 @@ async function showRanking() {
         }
         if (data.mine) {
             const mineMs = (data.mine.solvedMs !== undefined && data.mine.solvedMs !== null) ? data.mine.solvedMs : data.mine.bestTimeMs;
-            $('own-rank').textContent = `${t('your_record')} · #${data.mine.rank} · ${formatRecordTime(mineMs)}`;
+            $('own-rank').textContent = `${t('your_record')} · #${data.mine.rank} · ${t('own_solved', { count: data.mine.wins || 0 })} · ${formatRecordTime(mineMs)}`;
         } else {
             $('own-rank').textContent = '';
         }
@@ -1238,6 +1261,14 @@ $('open-ranking-result').addEventListener('click', () => showRanking());
 $('nearest-filter').addEventListener('input', event => renderNearestRows(event.target.value));
 $('share-result').addEventListener('click', copyShare);
 $('ranking-open').addEventListener('click', () => showRanking());
+for (const btn of document.querySelectorAll('[data-ranking-sort]')) {
+    btn.addEventListener('click', () => {
+        const nextSort = btn.dataset.rankingSort;
+        if (nextSort === rankingSort) return;
+        audio.play('click');
+        showRanking(nextSort);
+    });
+}
 $('guide-open').addEventListener('click', showGuide);
 $('settings-open').addEventListener('click', () => openDialog('settings-dialog'));
 

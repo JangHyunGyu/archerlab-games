@@ -45,11 +45,11 @@ for (const locale of ['ko', 'en']) {
   <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': ['VideoGame', 'WebApplication'], name: t.title, description: `${t.intro} ${t.rules}`, url, image: 'https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png', inLanguage: locale, applicationCategory: 'GameApplication', operatingSystem: 'Any', gamePlatform: ['Web Browser', 'Mobile Browser'], playMode: 'SinglePlayer', isAccessibleForFree: true, dateModified: '2026-11-20', author: { '@type': 'Organization', name: 'ArcherLab', url: 'https://archerlab.dev' } })}</script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261124-v13">
+  <link rel="stylesheet" href="css/style.css?v=20261124-v14">
   <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
   <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
   <script src="../shared/browser-check.js?v=20261005-env-guard-v1"></script>
-  <script type="module" src="js/main.mjs?v=20261124-v13"></script>
+  <script type="module" src="js/main.mjs?v=20261124-v14"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 </head>
 <body data-no-fullscreen data-screen="title">
@@ -226,7 +226,11 @@ for (const locale of ['ko', 'en']) {
   <dialog id="ranking-dialog" class="game-dialog crafted-frame" aria-labelledby="ranking-title">
     <button class="dialog-close icon-button" data-close aria-label="${text('close')}">✕</button>
     <h2 id="ranking-title">${text('ranking')}</h2>
-    <p class="dialog-intro">${text('ranking_rule')}</p>
+    <div class="ranking-sort-toggle" role="group" aria-label="${text('ranking_sort_label')}">
+      <button type="button" id="ranking-sort-wins" class="ranking-sort-btn is-active" data-ranking-sort="wins" aria-pressed="true">${text('ranking_sort_wins')}</button>
+      <button type="button" id="ranking-sort-time" class="ranking-sort-btn" data-ranking-sort="time" aria-pressed="false">${text('ranking_sort_time')}</button>
+    </div>
+    <p id="ranking-rule" class="dialog-intro">${text('ranking_rule_wins')}</p>
     <div id="leaderboard" class="leaderboard"></div>
     <p id="own-rank" class="own-rank"></p>
   </dialog>

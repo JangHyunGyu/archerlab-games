@@ -13,8 +13,8 @@
 | `rule_1_desc` | 정답과 가장 가까운 단어 1,000개에 들면 정확한 순위와 거리 게이지가 켜져요. | Whenever your guess lands among the 1,000 closest words, you see its exact rank and warmth bar. |
 | `rule_2_title` | 6시간마다 새 문제 · 카운트다운 | 6-Hour Sync · Countdown |
 | `rule_2_desc` | 00·06·12·18시 정각마다 전원이 같은 새 단어로 초기화되고 남은 시간이 거꾸로 흘러요. | Resets for everyone every 6 hours (00:00, 06:00, 12:00, 18:00 KST / 15:00, 21:00, 03:00, 09:00 UTC) with a live 06:00:00 countdown. |
-| `rule_3_title` | 포기 없이 도전 · 최단 시간 랭킹 | No Give-Up · Fastest Ranking |
-| `rule_3_desc` | 직전 라운드 정답은 정각 이후에 공개되고 회차 시작 시각 기준으로 가장 빠르게 맞힌 기록이 랭킹에 올라요. | Previous answers unlock after each cutoff, and the fastest clear times from round open enter the ranking. |
+| `rule_3_title` | 포기 없이 도전 · 통합 랭킹 | No Give-Up · Unified Ranking |
+| `rule_3_desc` | 직전 라운드 정답은 정각 이후에 공개되고 누적 정답 수와 최단 시간 기준으로 랭킹을 볼 수 있어요. | Previous answers unlock after each cutoff, and rankings can be viewed by total rounds solved or fastest clear time. |
 | `example_heading` | 예시로 3초 만에 이해하기 | Understand in 3 Seconds |
 | `example_target` | 정답이 ‘커피’라면? | If the secret is "coffee" |
 | `example_note` | 같은 문맥에서 자주 쓰이는 단어일수록 점수가 높아져요. 첫 단어로 감을 잡고 빠르게 좁혀 보세요. | Words used in shared real-world contexts score higher. Cast wide starter words, then narrow down fast. |
@@ -107,16 +107,24 @@
 | `nearest_word_col` | 단어 | Word |
 | `nearest_filter` | 단어 검색... | Filter words... |
 | `nearest_empty` | 찾는 단어가 없어요. | No matching words. |
-| `ranking_rule` | 회차 시작 시각(00·06·12·18시 KST)부터 정답을 맞힐 때까지의 경과 시간으로 순위를 매겨요. 같은 이름으로 등록하면 더 높은 순위 기록만 남아요. | Ranked by elapsed time from round open (00/06/12/18 KST · 15/21/03/09 UTC) to solve. Submitting the same name keeps only your highest-ranked record. |
+| `ranking_sort_label` | 랭킹 정렬 기준 | Ranking sort order |
+| `ranking_sort_wins` | 최다 정답 | Most Solved |
+| `ranking_sort_time` | 최단 시간 | Fastest Time |
+| `ranking_rule` | 정답을 맞힌 고유 회차 수가 많을수록 순위가 높아요. 정답 수가 같으면 회차 시작 시각(00·06·12·18시 KST) 기준 최단 경과 시간 순으로 정해져요. | Ranked by total unique rounds solved, with fastest elapsed time from round open (00/06/12/18 KST · 15/21/03/09 UTC) breaking ties. |
+| `ranking_rule_wins` | 정답을 맞힌 고유 회차 수가 많을수록 순위가 높아요. 정답 수가 같으면 회차 시작 시각(00·06·12·18시 KST) 기준 최단 경과 시간 순으로 정해져요. | Ranked by total unique rounds solved, with fastest elapsed time from round open (00/06/12/18 KST · 15/21/03/09 UTC) breaking ties. |
+| `ranking_rule_time` | 회차 시작 시각(00·06·12·18시 KST) 기준 최단 경과 시간 순으로 순위가 정해지며 누적 정답 회차도 함께 표시돼요. 같은 이름은 기록이 통합돼요. | Ranked by fastest elapsed time from round open (00/06/12/18 KST · 15/21/03/09 UTC), with total unique rounds solved shown alongside. Same names merge records. |
 | `no_records` | 아직 등록된 랭커가 없어요. | No ranked solvers yet. |
 | `no_records_desc` | 정답을 맞히고 첫 번째 랭커가 되어 보세요. | Solve the word to claim #1 on the leaderboard. |
 | `rank_col` | 순위 | Rank |
 | `explorer_col` | 이름 | Player |
-| `time_col` | 클리어 시간 | Clear Time |
+| `solved_col` | 정답 | Solved |
+| `time_col` | 최단 시간 | Best Time |
+| `solved_unit` | {count}회 | {count} |
+| `own_solved` | 정답 {count}회 | {count} solved |
 | `your_record` | 내 순위 | Your Rank |
 | `name_label` | 표시 이름 | Display Name |
 | `name_placeholder` | 2~16자 이름 | 2–16 characters |
-| `name_help` | 한글·영문·숫자 2~16자 (같은 이름은 최고 순위만 유지) | 2–16 characters (same name keeps highest rank) |
+| `name_help` | 한글·영문·숫자 2~16자 (같은 이름은 기록 통합) | 2–16 characters (same name merges records) |
 | `result_name_prompt` | 정답자·랭킹에 남길 이름을 입력해 주세요 | Leave your name for the solver badge & Ranking |
 | `result_name_saved_hint` | 현재 표시 이름 (언제든 변경 가능) | Current display name (editable anytime) |
 | `result_name_submit` | 이름 등록 | Save Name |
@@ -130,7 +138,7 @@
 | `faq_q1` | 시맨틀은 어떻게 푸나요? | How do I play Semantle? |
 | `faq_a1` | 단어를 입력하면 정답과의 의미 유사도(-100 ~ +100점)를 알려줘요. 점수가 높고 상위 1,000위 안에 드는 단어를 따라 좁혀 가면 정답에 닿을 수 있어요. | Every guess returns a semantic similarity score (-100 to +100). If your guess is among the 1,000 closest words to the secret, its exact rank also appears. |
 | `faq_q2` | 문제는 언제 바뀌고 시간은 어떻게 계산되나요? | When do rounds reset and how is time measured? |
-| `faq_a2` | 한국시간 00시·06시·12시·18시 정각마다 모든 플레이어가 같은 새 단어로 시작하고 이전 추측 기록은 초기화돼요. 랭킹은 정각에 문제가 열린 뒤 정답을 맞힐 때까지 걸린 경과 시간으로 순위를 매기며 같은 이름으로 등록하면 더 높은 순위 기록만 남아요. | Every 6 hours (00:00, 06:00, 12:00, 18:00 KST / 15:00, 21:00, 03:00, 09:00 UTC), everyone resets to the same new word and guess history clears. The single ranking measures elapsed time from round open to solve (2+ guesses), and submitting the same name keeps only your highest-ranked record. |
+| `faq_a2` | 한국시간 00시·06시·12시·18시 정각마다 모든 플레이어가 같은 새 단어로 시작하고 이전 추측 기록은 초기화돼요. 랭킹은 최다 정답 순과 정각 기준 최단 시간 순으로 전환해 볼 수 있으며 같은 이름으로 등록하면 고유 회차 기록이 합쳐지고 가장 빠른 시간이 남아요. | Every 6 hours (00:00, 06:00, 12:00, 18:00 KST / 15:00, 21:00, 03:00, 09:00 UTC), everyone resets to the same new word and guess history clears. You can toggle the unified ranking between Most Solved and Fastest Time from round open (2+ guesses). Submitting the same name merges unique solved rounds and keeps your fastest time. |
 | `faq_q3` | 어떤 단어가 정답이 되나요? 왜 반대말도 점수가 높나요? | Why can antonyms score high? |
 | `faq_a3` | 정답은 한국어 빈도 어휘 중 2글자 이상 기본형(명사·동사·형용사·부사)에서 뽑힙니다. ‘사랑’과 ‘증오’처럼 반대되는 말이라도 같은 문맥에 자주 나오면 유사도가 높을 수 있고, ‘밤’처럼 뜻이 여러 개인 단어는 자주 쓰이는 문맥 쪽 점수가 높게 나와요. | Similarity reflects how often words appear in related contexts, so opposites used in the same situations (like "love" and "hate") can both score high. |
 | `faq_q4` | 포기하기는 없나요? 이전 문제 정답은 어디서 보나요? | Can I give up? Where do I check previous answers? |

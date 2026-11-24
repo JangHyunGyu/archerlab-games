@@ -50,11 +50,11 @@
 }
     </script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261124-v13">
+  <link rel="stylesheet" href="css/style.css?v=20261124-v14">
   <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
   <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
   <script src="../shared/browser-check.js?v=20261005-env-guard-v1"></script>
-  <script type="module" src="js/main.mjs?v=20261124-v13"></script>
+  <script type="module" src="js/main.mjs?v=20261124-v14"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 
     <meta name="twitter:title" content="Semantle | English Word Similarity Puzzle - ArcherLab">
@@ -88,7 +88,7 @@
         <div class="rule-strip" aria-label="Everyone shares the same secret word every 6 hours (00:00, 06:00, 12:00, 18:00 KST / 15:00, 21:00, 03:00, 09:00 UTC), resetting automatically at cutoff.">
           <span class="rule-token">Top-1,000 Proximity Ranks</span>
           <span class="rule-token">6-Hour Sync · Countdown</span>
-          <span class="rule-token">No Give-Up · Fastest Ranking</span>
+          <span class="rule-token">No Give-Up · Unified Ranking</span>
         </div>
         <div class="hero-actions">
           <button id="start" class="primary-btn"><span>Play Now</span><span class="btn-arrow" aria-hidden="true">▶</span></button>
@@ -241,7 +241,11 @@
   <dialog id="ranking-dialog" class="game-dialog crafted-frame" aria-labelledby="ranking-title">
     <button class="dialog-close icon-button" data-close aria-label="Close">✕</button>
     <h2 id="ranking-title">Ranking</h2>
-    <p class="dialog-intro">Ranked by elapsed time from round open (00/06/12/18 KST · 15/21/03/09 UTC) to solve. Submitting the same name keeps only your highest-ranked record.</p>
+    <div class="ranking-sort-toggle" role="group" aria-label="Ranking sort order">
+      <button type="button" id="ranking-sort-wins" class="ranking-sort-btn is-active" data-ranking-sort="wins" aria-pressed="true">Most Solved</button>
+      <button type="button" id="ranking-sort-time" class="ranking-sort-btn" data-ranking-sort="time" aria-pressed="false">Fastest Time</button>
+    </div>
+    <p id="ranking-rule" class="dialog-intro">Ranked by total unique rounds solved, with fastest elapsed time from round open (00/06/12/18 KST · 15/21/03/09 UTC) breaking ties.</p>
     <div id="leaderboard" class="leaderboard"></div>
     <p id="own-rank" class="own-rank"></p>
   </dialog>
@@ -276,7 +280,7 @@
     <p class="dialog-intro">How It Works</p>
     <div class="faq-list">
       <div class="faq-item"><h3>How do I play Semantle?</h3><p>Every guess returns a semantic similarity score (-100 to +100). If your guess is among the 1,000 closest words to the secret, its exact rank also appears.</p></div>
-      <div class="faq-item"><h3>When do rounds reset and how is time measured?</h3><p>Every 6 hours (00:00, 06:00, 12:00, 18:00 KST / 15:00, 21:00, 03:00, 09:00 UTC), everyone resets to the same new word and guess history clears. The single ranking measures elapsed time from round open to solve (2+ guesses), and submitting the same name keeps only your highest-ranked record.</p></div>
+      <div class="faq-item"><h3>When do rounds reset and how is time measured?</h3><p>Every 6 hours (00:00, 06:00, 12:00, 18:00 KST / 15:00, 21:00, 03:00, 09:00 UTC), everyone resets to the same new word and guess history clears. You can toggle the unified ranking between Most Solved and Fastest Time from round open (2+ guesses). Submitting the same name merges unique solved rounds and keeps your fastest time.</p></div>
       <div class="faq-item"><h3>Why can antonyms score high?</h3><p>Similarity reflects how often words appear in related contexts, so opposites used in the same situations (like &quot;love&quot; and &quot;hate&quot;) can both score high.</p></div>
       <div class="faq-item"><h3>Can I give up? Where do I check previous answers?</h3><p>There is no give-up during a live round so everyone competes fairly. As soon as the 6-hour countdown finishes, the previous round’s answer and Top 1,000 words unlock at the top bar and lobby.</p></div>
     </div>

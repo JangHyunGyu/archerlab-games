@@ -736,28 +736,43 @@ async function performExplore(db, env, player, ipHash, game, body, currentRound,
     };
 }
 
-// 단일 통합 랭킹 조회 (회차 시작 기준 최단 경과 시간 순, 동일 이름은 최고 순위만 유지)
-export async function leaderboard(db, playerId, lang = 'ko') {
-    const cte = `WITH ranked_players AS (
-        SELECT id, name, name_key, sync_best_time_ms, sync_best_at,
-            CASE WHEN name_key IS NOT NULL THEN 'n:' || name_key ELSE 'p:' || id END AS dedup_key
-        FROM sm_players
-        WHERE lang = ? AND sync_best_time_ms IS NOT NULL
+// 단일 통합 랭킹 조회 (sort='wins': 고유 정답 회차 순, sort='time': 최단 경과 시간 순, 동일 이름 기록 통합)
+export async function leaderboard(db, playerId, lang = 'ko', rawSort = 'wins') {
+    const sort = rawSort === 'time' ? 'time' : 'wins';
+    const orderExpr = sort === 'time'
+        ? 'best_time_ms ASC, wins DESC, best_solved_at ASC, player_id ASC'
+        : 'wins DESC, best_time_ms ASC, best_solved_at ASC, player_id ASC';
+    const cte = `WITH ranked_wins AS (
+        SELECT g.player_id, g.round_id, p.name, p.name_key, g.solved_ms, g.solved_at,
+            CASE WHEN p.name_key IS NOT NULL THEN 'n:' || p.name_key ELSE 'p:' || g.player_id END AS dedup_key
+        FROM sm_games g
+        JOIN sm_players p ON p.id = g.player_id
+        WHERE g.lang = ? AND g.status = 'won' AND g.ranked = 1 AND g.round_id IS NOT NULL
     ),
-    per_name AS (
-        SELECT id, name, name_key, sync_best_time_ms, sync_best_at, dedup_key,
+    per_round AS (
+        SELECT player_id, round_id, name, name_key, solved_ms, solved_at, dedup_key,
+            ROW_NUMBER() OVER (
+                PARTITION BY dedup_key, round_id
+                ORDER BY solved_ms ASC, solved_at ASC, player_id ASC
+            ) AS round_pick,
+            MAX(CASE WHEN player_id = ? THEN 1 ELSE 0 END) OVER (PARTITION BY dedup_key) AS is_own
+        FROM ranked_wins
+    ),
+    dedup_rounds AS (
+        SELECT player_id, name, name_key, solved_ms AS best_time_ms, solved_at AS best_solved_at, dedup_key, is_own,
+            COUNT(*) OVER (PARTITION BY dedup_key) AS wins,
             ROW_NUMBER() OVER (
                 PARTITION BY dedup_key
-                ORDER BY sync_best_time_ms ASC, sync_best_at ASC, id ASC
-            ) AS name_rank,
-            MAX(CASE WHEN id = ? THEN 1 ELSE 0 END) OVER (PARTITION BY dedup_key) AS is_own
-        FROM ranked_players
+                ORDER BY solved_ms ASC, solved_at ASC, player_id ASC
+            ) AS best_pick
+        FROM per_round
+        WHERE round_pick = 1
     ),
     ordered AS (
-        SELECT id, name, name_key, sync_best_time_ms, sync_best_at, is_own,
-            ROW_NUMBER() OVER (ORDER BY sync_best_time_ms ASC, sync_best_at ASC, id ASC) AS rank
-        FROM per_name
-        WHERE name_rank = 1
+        SELECT player_id, name, name_key, wins, best_time_ms, best_solved_at, is_own,
+            ROW_NUMBER() OVER (ORDER BY ${orderExpr}) AS rank
+        FROM dedup_rounds
+        WHERE best_pick = 1
     )`;
     const queries = [
         db.prepare(`${cte} SELECT * FROM ordered LIMIT 50`).bind(lang, playerId || ''),
@@ -771,13 +786,15 @@ export async function leaderboard(db, playerId, lang = 'ko') {
         rank: row.rank,
         name: row.name,
         hasCustomName: Boolean(row.name_key),
-        solvedMs: row.sync_best_time_ms,
-        bestTimeMs: row.sync_best_time_ms,
+        wins: Number(row.wins || 0),
+        solvedMs: row.best_time_ms,
+        bestTimeMs: row.best_time_ms,
         own: Boolean(row.is_own),
     }) : null;
     return {
         entries: (topRes?.results || []).map(visible),
         mine: visible(mine),
+        sort,
         lang,
         ruleset: rulesetFor(lang),
     };
@@ -795,7 +812,7 @@ export async function handleRoomRequest(request, env, runtime = null) {
 
         if (request.method === 'GET' && path === 'leaderboard') {
             await runtime?.flushBatch?.();
-            return response(await leaderboard(env.DB, id, lang));
+            return response(await leaderboard(env.DB, id, lang, url.searchParams.get('sort')));
         }
 
         if (!dataReady(env)) throw fault('service_unavailable', 503);

@@ -1204,6 +1204,37 @@ body.keyboard-open .game-screen {
 .game-dialog h2 { margin: 0 46px 8px 0; font-size: 22px; font-weight: 800; color: var(--gold-bright); }
 .dialog-intro { margin: 0 0 14px; font-size: 13px; color: var(--text-muted); word-break: keep-all; }
 
+.ranking-sort-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 2px 0 12px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(7, 20, 30, 0.78);
+  border: 1px solid var(--line);
+}
+.ranking-sort-btn {
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  transition: background-color 0.14s, color 0.14s, border-color 0.14s;
+}
+.ranking-sort-btn.is-active {
+  background: rgba(213, 166, 84, 0.22);
+  border-color: var(--line-strong);
+  color: var(--gold-bright);
+}
+.ranking-sort-btn:hover:not(.is-active) {
+  color: var(--text);
+  background: rgba(181, 195, 200, 0.08);
+}
+
 .leaderboard-empty {
   margin: 4px 0 2px;
   padding: 28px 18px;
@@ -1236,8 +1267,12 @@ body.keyboard-open .game-screen {
   color: var(--text-muted);
   border-bottom: 1px solid var(--line);
 }
-.leaderboard th:nth-child(1), .leaderboard td:nth-child(1) { width: 56px; }
-.leaderboard th:nth-child(3), .leaderboard td:nth-child(3) { text-align: right; white-space: nowrap; }
+.leaderboard th:nth-child(1), .leaderboard td:nth-child(1) { width: 44px; }
+.leaderboard th:nth-child(2), .leaderboard td:nth-child(2) { overflow-wrap: anywhere; }
+.leaderboard th:nth-child(3), .leaderboard td:nth-child(3) { width: 56px; text-align: right; white-space: nowrap; }
+.leaderboard th:nth-child(4), .leaderboard td:nth-child(4) { text-align: right; white-space: nowrap; }
+.leaderboard th.is-active-col { color: var(--gold-bright); }
+.leaderboard td.is-active-col { color: var(--gold-bright); font-weight: 700; }
 .leaderboard td, .nearest-table td { padding: 10px 6px; border-bottom: 1px solid var(--line-soft); font-variant-numeric: tabular-nums; }
 .leaderboard tr.own { background: rgba(213, 166, 84, 0.16); color: var(--gold-bright); font-weight: 700; }
 .own-rank { margin: 12px 0 0; font-size: 13px; color: var(--gold-bright); font-weight: 700; }
@@ -1441,6 +1476,7 @@ body.keyboard-open .game-screen {
   .guesses-table th:nth-child(3) { width: 64px; }
   .rank-badge, .rank-outside { font-size: 11px; }
   .ledger-panel { height: clamp(210px, calc(100dvh - 385px), 440px); }
+  .leaderboard th, .leaderboard td { padding-left: 4px; padding-right: 4px; }
   body[data-screen='game'] .site-footer { padding: 6px max(12px, env(safe-area-inset-right, 0px)) max(10px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); font-size: 11px; }
   .result-stats { grid-template-columns: repeat(2, 1fr); }
   .keyboard-open .site-header,

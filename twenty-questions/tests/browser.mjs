@@ -82,7 +82,7 @@ try {
 
     // Verify Semantle title screen, zero SVG usage, no give-up/ranking-tabs/name-form/per-round arrows, single api.mjs version, countdown & previous answer display
     await page.goto(origin + '/twenty-questions/', { waitUntil: 'networkidle' });
-    assert.ok(apiMjsRequests.length === 1 && apiMjsRequests[0].endsWith('/twenty-questions/js/api.mjs?v=20261124-v13'), `Expected single versioned api.mjs request, got ${JSON.stringify(apiMjsRequests)}`);
+    assert.ok(apiMjsRequests.length === 1 && apiMjsRequests[0].endsWith('/twenty-questions/js/api.mjs?v=20261124-v14'), `Expected single versioned api.mjs request, got ${JSON.stringify(apiMjsRequests)}`);
     assert.equal(await page.locator('svg').count(), 0, 'Zero SVG elements expected');
     assert.equal(await page.locator('#give-up, #give-up-dialog, #next-game, #resume, #name-form, .ranking-tab, #ranking-prev, #ranking-next').count(), 0);
     await page.locator('#ranking-open').click();
@@ -261,10 +261,17 @@ try {
     await page.locator('#open-ranking-result').click();
     await page.locator('#ranking-dialog').waitFor({ state: 'visible' });
     await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === 'Ranking' && Boolean(document.querySelector('.leaderboard tbody tr')));
-    assert.deepEqual(await page.locator('#leaderboard thead th').allTextContents(), ['Rank', 'Player', 'Clear Time']);
+    assert.equal(await page.locator('#ranking-sort-wins').getAttribute('aria-pressed'), 'true');
+    assert.equal(await page.locator('#ranking-sort-time').getAttribute('aria-pressed'), 'false');
+    assert.deepEqual(await page.locator('#leaderboard thead th').allTextContents(), ['Rank', 'Player', 'Solved', 'Best Time']);
     assert.equal((await page.locator('#leaderboard tbody tr').count()), 1);
     assert.ok((await page.locator('#leaderboard tbody tr:first-child').textContent()).includes('EnChamp'));
-    assert.match(await page.locator('#own-rank').textContent(), /^Your Rank · #1 · \d{2}:\d{2}\.\d{2}$/);
+    assert.match(await page.locator('#own-rank').textContent(), /^Your Rank · #1 · 1 solved · \d{2}:\d{2}\.\d{2}$/);
+    await page.locator('#ranking-sort-time').click();
+    await page.waitForFunction(() => document.querySelector('#ranking-sort-time')?.getAttribute('aria-pressed') === 'true' && Boolean(document.querySelector('.leaderboard tbody tr')));
+    assert.equal(await page.locator('#ranking-sort-wins').getAttribute('aria-pressed'), 'false');
+    await page.locator('#ranking-sort-wins').click();
+    await page.waitForFunction(() => document.querySelector('#ranking-sort-wins')?.getAttribute('aria-pressed') === 'true');
     await page.locator('#ranking-dialog [data-close]').click();
 
     await page.locator('#home').click();
@@ -337,20 +344,18 @@ try {
     ]);
     await page.waitForFunction(() => Boolean(document.querySelector('#result-name-status')?.textContent.trim()));
 
-    // Open single-page ranking (3 columns without guess count) -> AlphaSolver appears once + StarGazerPro
+    // Open single-page ranking (4 columns with solved count, no guess count) -> AlphaSolver appears once + StarGazerPro
     await page.locator('#open-ranking-result').click();
     await page.locator('#ranking-dialog').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#name-form').count(), 0);
     await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '랭킹');
     await page.locator('.leaderboard tbody tr').first().waitFor();
     await page.waitForFunction(() => document.querySelector('#leaderboard tbody tr:nth-child(2)')?.textContent.includes('StarGazerPro'));
-    assert.deepEqual(await page.locator('#leaderboard thead th').allTextContents(), ['순위', '이름', '클리어 시간']);
+    assert.equal(await page.locator('#ranking-sort-wins').getAttribute('aria-pressed'), 'true');
+    assert.deepEqual(await page.locator('#leaderboard thead th').allTextContents(), ['순위', '이름', '정답', '최단 시간']);
     assert.equal(await page.locator('#leaderboard tbody tr').count(), 2);
-    const lbText = await page.locator('#leaderboard').textContent();
-    assert.doesNotMatch(lbText, /\d+회/);
     const ownText = await page.locator('#own-rank').textContent();
-    assert.match(ownText, /^내 순위 · #2 · \d{2}:\d{2}\.\d{2}$/);
-    assert.doesNotMatch(ownText, /\d+회/);
+    assert.match(ownText, /^내 순위 · #2 · 정답 1회 · \d{2}:\d{2}\.\d{2}$/);
     await page.screenshot({ path: path.join(output, 'ko-ranking-desktop.png') });
     await page.locator('#ranking-dialog [data-close]').click();
     assert.equal(await page.locator('#result-name-input').inputValue(), 'StarGazerPro');
@@ -395,18 +400,63 @@ try {
     await page.waitForFunction(() => document.querySelectorAll('#nearest-body tr').length === 1000);
     await page.locator('#nearest-dialog [data-close]').click();
 
-    // Unified single-page ranking persists across 6-hour rollover
+    // In Round #4: SpeedRunner solves fast (5s, 1 win) while AlphaSolver solves slower (40s -> total 2 wins, 20s best)
+    // Verify 1-A ('최다 정답') vs 1-B ('최단 시간') toggle flips row order accurately
+    const tokenD = 'd'.repeat(64);
+    h.advanceMs(5000);
+    const dStart = await h.start(tokenD);
+    const r4Ans = h.answer(dStart.game.id);
+    const dG1 = (await h.guess(dStart.game, '사람', crypto.randomUUID(), tokenD)).data;
+    await h.guess(dG1.game, r4Ans, crypto.randomUUID(), tokenD);
+    await h.call('profile', { name: 'SpeedRunner' }, 'PATCH', tokenD);
+
+    h.advanceMs(35000);
+    const bR4Start = await h.start(tokenB);
+    const bR4G1 = (await h.guess(bR4Start.game, '사람', crypto.randomUUID(), tokenB)).data;
+    await h.guess(bR4G1.game, r4Ans, crypto.randomUUID(), tokenB);
+
     await page.locator('#ranking-open').click();
     await page.locator('#ranking-dialog').waitFor({ state: 'visible' });
-    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '랭킹' && Boolean(document.querySelector('#leaderboard tbody tr:nth-child(2)')?.textContent.includes('StarGazerPro')));
-    assert.equal(await page.locator('#leaderboard tbody tr').count(), 2);
-    assert.match(await page.locator('#own-rank').textContent(), /^내 순위 · #2 · \d{2}:\d{2}\.\d{2}$/);
+    await page.waitForFunction(() => document.querySelector('#ranking-title')?.textContent === '랭킹' && document.querySelectorAll('#leaderboard tbody tr').length === 3);
+    assert.equal(await page.locator('#ranking-sort-wins').getAttribute('aria-pressed'), 'true');
+    assert.ok((await page.locator('#leaderboard tbody tr:nth-child(1)').textContent()).includes('AlphaSolver'));
+    assert.ok((await page.locator('#leaderboard tbody tr:nth-child(1) td:nth-child(3)').textContent()).includes('2회'));
+    assert.ok((await page.locator('#leaderboard tbody tr:nth-child(2)').textContent()).includes('SpeedRunner'));
+    assert.ok((await page.locator('#leaderboard tbody tr:nth-child(3)').textContent()).includes('StarGazerPro'));
+    assert.match(await page.locator('#own-rank').textContent(), /^내 순위 · #3 · 정답 1회 · \d{2}:\d{2}\.\d{2}$/);
     await page.screenshot({ path: path.join(output, 'ko-ranking-after-rollover.png') });
+
+    await page.locator('#ranking-sort-time').click();
+    await page.waitForFunction(() => document.querySelector('#ranking-sort-time')?.getAttribute('aria-pressed') === 'true' && document.querySelector('#leaderboard tbody tr:nth-child(1)')?.textContent.includes('SpeedRunner'));
+    assert.ok((await page.locator('#leaderboard tbody tr:nth-child(2)').textContent()).includes('AlphaSolver'));
+    assert.ok((await page.locator('#leaderboard tbody tr:nth-child(3)').textContent()).includes('StarGazerPro'));
+    assert.match(await page.locator('#ranking-rule').textContent(), /최단 경과 시간 순/);
+    await page.screenshot({ path: path.join(output, 'ko-ranking-time-mode.png') });
+    await page.locator('#ranking-sort-wins').click();
+    await page.waitForFunction(() => document.querySelector('#ranking-sort-wins')?.getAttribute('aria-pressed') === 'true');
     await page.locator('#ranking-dialog [data-close]').click();
 
     // Responsive check across all mobile & tablet viewports
     for (const [width, height] of [[320, 568], [360, 800], [390, 844], [430, 932], [768, 1024], [844, 390]]) {
         await page.setViewportSize({ width, height });
+        if (width === 320 || width === 390) {
+            await page.locator('#ranking-open').click();
+            await page.locator('#ranking-dialog').waitFor({ state: 'visible' });
+            await page.waitForFunction(() => document.querySelectorAll('#leaderboard tbody tr').length === 3);
+            const lbMetrics = await page.evaluate(() => {
+                const lb = document.getElementById('leaderboard');
+                const btns = ['#ranking-sort-wins', '#ranking-sort-time'].map(s => document.querySelector(s).getBoundingClientRect().toJSON());
+                return { overflow: lb.scrollWidth > lb.clientWidth, btns };
+            });
+            assert.equal(lbMetrics.overflow, false, `${width}x${height}: ranking table overflow`);
+            for (const rect of lbMetrics.btns) {
+                assert.ok(rect.height >= 44, `${width}x${height}: ranking sort btn height ${rect.height}`);
+            }
+            if (width === 390) {
+                await page.screenshot({ path: path.join(output, 'ko-ranking-mobile-390.png') });
+            }
+            await page.locator('#ranking-dialog [data-close]').click();
+        }
         await page.locator('#home').click();
         await page.locator('#title-screen').waitFor({ state: 'visible' });
         if (width === 390 && height === 844) {

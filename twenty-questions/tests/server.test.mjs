@@ -181,25 +181,30 @@ test('Option A round-open ranking, anti-cheat filters, current solver display, a
     await h.call('profile', { name: 'SecondSolver' }, 'PATCH', tokenP2);
 
     const lb = await h.call('leaderboard', null, 'GET', tokenP1);
+    assert.equal(lb.data.sort, 'wins');
     assert.equal(lb.data.entries.length, 2);
     assert.equal(lb.data.entries[0].name, 'FirstSolver');
     assert.equal(lb.data.entries[0].hasCustomName, true);
+    assert.equal(lb.data.entries[0].wins, 1);
     assert.equal(lb.data.entries[0].solvedMs, 15000);
     assert.equal(lb.data.entries[0].bestTimeMs, 15000);
     assert.equal(lb.data.entries[1].name, 'SecondSolver');
     assert.equal(lb.data.entries[1].hasCustomName, true);
+    assert.equal(lb.data.entries[1].wins, 1);
     assert.equal(lb.data.entries[1].solvedMs, 25000);
     assert.equal(lb.data.entries[1].bestTimeMs, 25000);
     assert.equal(lb.data.mine.rank, 1);
+    assert.equal(lb.data.mine.wins, 1);
     assert.equal(lb.data.mine.hasCustomName, true);
     assert.ok(lb.data.entries.every(row => !Object.hasOwn(row, 'id') && !Object.hasOwn(row, 'guesses') && !Object.hasOwn(row, 'turns')));
     assert.ok(!Object.hasOwn(lb.data.mine, 'guesses') && !Object.hasOwn(lb.data.mine, 'turns'));
     assert.ok(p2Win.data.round.solvers.every(row => !Object.hasOwn(row, 'guesses')));
 
-    // Legacy ?round= query params remain gracefully accepted on single-page leaderboard
-    for (const q of ['1', '2', '999']) {
-        const legacyLb = await h.call(`leaderboard?round=${q}`, null, 'GET', tokenP1);
+    // Legacy ?round= and unknown ?sort= query params gracefully fall back to 'wins'
+    for (const q of ['leaderboard?round=1', 'leaderboard?round=999', 'leaderboard?sort=unknown']) {
+        const legacyLb = await h.call(q, null, 'GET', tokenP1);
         assert.equal(legacyLb.status, 200);
+        assert.equal(legacyLb.data.sort, 'wins');
         assert.equal(legacyLb.data.entries.length, 2);
     }
 
@@ -309,15 +314,16 @@ test('Round #1 epoch boundary hides pre-epoch previous answer', async () => {
     h.db.sqlite.close();
 });
 
-test('same-name registration keeps only highest-ranked record and protects ranked won games from cleanup', async () => {
+test('same-name registration merges unique solved rounds, toggles 1-A/1-B order, and protects ranked wins from cleanup', async () => {
     const roundStart = Date.parse('2026-11-21T00:00:00+09:00');
     const h = harness({ secretWords: ['행복', '학교', '사과', '도서관'], initialNow: roundStart + 15000 });
     const tokenFast = '1'.repeat(64);
     const tokenSlow = '2'.repeat(64);
-    const tokenFaster = '3'.repeat(64);
+    const tokenSecondRoundSameName = '3'.repeat(64);
     const tokenUnranked = '4'.repeat(64);
+    const tokenSpeedster = '5'.repeat(64);
 
-    // Player Fast solves in 15s (more guesses), Player Slow solves in 30s (fewer guesses)
+    // Player Fast solves Round #3 in 15s, Player Slow solves same Round #3 in 30s with same name -> counts as 1 unique round
     const fastStart = await h.start(tokenFast);
     const ans = h.answer(fastStart.game.id);
     let g = (await h.guess(fastStart.game, '사람', crypto.randomUUID(), tokenFast)).data.game;
@@ -332,11 +338,17 @@ test('same-name registration keeps only highest-ranked record and protects ranke
     const slowRename = await h.call('profile', { name: 'sharedhero' }, 'PATCH', tokenSlow);
     assert.equal(slowRename.status, 200);
 
-    // Same name (case-insensitive) keeps only the 15s record
-    let lb = (await h.call('leaderboard', null, 'GET', tokenFast)).data;
+    // Same name (case-insensitive) solving the SAME round counts as 1 unique round and keeps 15s
+    let lb = (await h.call('leaderboard?sort=wins', null, 'GET', tokenFast)).data;
     assert.equal(lb.entries.length, 1);
+    assert.equal(lb.entries[0].wins, 1);
     assert.equal(lb.entries[0].solvedMs, 15000);
     assert.equal(lb.entries[0].name, 'SharedHero');
+    // Second device sharing the name in that round also sees own === true & mine
+    const slowView = (await h.call('leaderboard?sort=wins', null, 'GET', tokenSlow)).data;
+    assert.equal(slowView.entries[0].own, true);
+    assert.equal(slowView.mine.rank, 1);
+    assert.equal(slowView.mine.wins, 1);
 
     // Unranked player using the same name gets mine === null and own === false
     const unrankedStart = await h.start(tokenUnranked);
@@ -347,29 +359,60 @@ test('same-name registration keeps only highest-ranked record and protects ranke
     assert.equal(unrankedLb.entries[0].own, false);
     assert.equal(unrankedLb.mine, null);
 
-    // Another device solves faster (10s in Round #4) with same name -> faster record replaces 15s
+    // Another device with same name solves Round #4 (at +20s -> slower than 15s) -> combines to 2 unique rounds, keeps fastest 15s
     const r4Start = roundStart + 6 * 3600 * 1000;
-    h.setNow(r4Start + 10000);
-    const fasterStart = await h.start(tokenFaster);
-    const ans4 = h.answer(fasterStart.game.id);
-    const fasterG1 = (await h.guess(fasterStart.game, '사람', crypto.randomUUID(), tokenFaster)).data.game;
-    await h.guess(fasterG1, ans4, crypto.randomUUID(), tokenFaster);
-    assert.equal((await h.call('profile', { name: 'SharedHero' }, 'PATCH', tokenFaster)).status, 200);
+    h.setNow(r4Start + 20000);
+    const r4SameStart = await h.start(tokenSecondRoundSameName);
+    const ans4 = h.answer(r4SameStart.game.id);
+    const r4SameG1 = (await h.guess(r4SameStart.game, '사람', crypto.randomUUID(), tokenSecondRoundSameName)).data.game;
+    await h.guess(r4SameG1, ans4, crypto.randomUUID(), tokenSecondRoundSameName);
+    assert.equal((await h.call('profile', { name: 'SharedHero' }, 'PATCH', tokenSecondRoundSameName)).status, 200);
 
-    lb = (await h.call('leaderboard', null, 'GET', tokenFaster)).data;
-    assert.equal(lb.entries.length, 1);
-    assert.equal(lb.entries[0].rank, 1);
-    assert.equal(lb.entries[0].solvedMs, 10000);
-    assert.equal(lb.mine.rank, 1);
-    assert.equal(lb.mine.solvedMs, 10000);
+    // Speedster solves ONLY Round #4 very fast (at +5s -> faster than 15s)
+    h.setNow(r4Start + 5000);
+    const speedStart = await h.start(tokenSpeedster);
+    const speedG1 = (await h.guess(speedStart.game, '사람', crypto.randomUUID(), tokenSpeedster)).data.game;
+    await h.guess(speedG1, ans4, crypto.randomUUID(), tokenSpeedster);
+    await h.call('profile', { name: 'Speedster' }, 'PATCH', tokenSpeedster);
+
+    // 1-A (sort=wins): SharedHero (2 unique rounds, 15s) ranks #1 ahead of Speedster (1 round, 5s)
+    const lbWins = (await h.call('leaderboard?sort=wins', null, 'GET', tokenSecondRoundSameName)).data;
+    assert.equal(lbWins.sort, 'wins');
+    assert.equal(lbWins.entries.length, 2);
+    assert.equal(lbWins.entries[0].name, 'SharedHero');
+    assert.equal(lbWins.entries[0].wins, 2);
+    assert.equal(lbWins.entries[0].solvedMs, 15000);
+    assert.equal(lbWins.entries[0].rank, 1);
+    assert.equal(lbWins.entries[1].name, 'Speedster');
+    assert.equal(lbWins.entries[1].wins, 1);
+    assert.equal(lbWins.entries[1].solvedMs, 5000);
+    assert.equal(lbWins.entries[1].rank, 2);
+    assert.equal(lbWins.mine.rank, 1);
+    assert.equal(lbWins.mine.wins, 2);
+    assert.ok(lbWins.entries.every(row => !Object.hasOwn(row, 'guesses') && !Object.hasOwn(row, 'turns')));
+
+    // 1-B (sort=time): Speedster (5s, 1 round) ranks #1 ahead of SharedHero (15s, 2 rounds)
+    const lbTime = (await h.call('leaderboard?sort=time', null, 'GET', tokenSecondRoundSameName)).data;
+    assert.equal(lbTime.sort, 'time');
+    assert.equal(lbTime.entries.length, 2);
+    assert.equal(lbTime.entries[0].name, 'Speedster');
+    assert.equal(lbTime.entries[0].wins, 1);
+    assert.equal(lbTime.entries[0].solvedMs, 5000);
+    assert.equal(lbTime.entries[0].rank, 1);
+    assert.equal(lbTime.entries[1].name, 'SharedHero');
+    assert.equal(lbTime.entries[1].wins, 2);
+    assert.equal(lbTime.entries[1].solvedMs, 15000);
+    assert.equal(lbTime.entries[1].rank, 2);
+    assert.equal(lbTime.mine.rank, 2);
+    assert.equal(lbTime.mine.wins, 2);
 
     // Cleanup older than 30 days removes expired games but retains ranked won games
-    const expiredStart = await h.start('5'.repeat(64));
+    const expiredStart = await h.start('6'.repeat(64));
     h.db.sqlite.prepare("UPDATE sm_games SET status = 'expired', updated_at = ? WHERE id = ?").run(r4Start - 40 * 86400000, expiredStart.game.id);
-    h.db.sqlite.prepare("UPDATE sm_games SET updated_at = ? WHERE id = ?").run(r4Start - 40 * 86400000, fasterStart.game.id);
+    h.db.sqlite.prepare("UPDATE sm_games SET updated_at = ? WHERE id = ?").run(r4Start - 40 * 86400000, r4SameStart.game.id);
     await cleanExpiredRecords(h.db, r4Start + 10000);
     assert.equal(h.row('SELECT COUNT(*) n FROM sm_games WHERE id = ?', expiredStart.game.id).n, 0);
-    assert.equal(h.row('SELECT COUNT(*) n FROM sm_games WHERE id = ?', fasterStart.game.id).n, 1);
+    assert.equal(h.row('SELECT COUNT(*) n FROM sm_games WHERE id = ?', r4SameStart.game.id).n, 1);
 
     h.db.sqlite.close();
 });

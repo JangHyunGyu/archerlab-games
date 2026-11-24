@@ -1,7 +1,7 @@
 import { SCHEMA_TABLES, SCHEMA_INDEXES } from './schema.mjs';
 import { fault } from './core.mjs';
 
-export const SCHEMA_VERSION = 'semantle-20261124-v5';
+export const SCHEMA_VERSION = 'semantle-20261124-v6';
 
 const ready = new WeakMap();
 const rateBucketsByDb = new WeakMap();

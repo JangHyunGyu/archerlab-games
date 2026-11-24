@@ -124,6 +124,7 @@ export const SCHEMA_INDEXES = [
     `CREATE INDEX IF NOT EXISTS sm_leaderboard_lang_time ON sm_players(lang, sync_best_time_ms ASC, sync_best_at ASC, id ASC)`,
     `CREATE INDEX IF NOT EXISTS sm_games_round_won ON sm_games(round_id, status, ranked, solved_ms ASC, guess_count ASC, solved_at ASC)`,
     `CREATE INDEX IF NOT EXISTS sm_games_round_won_time ON sm_games(round_id, status, ranked, solved_ms ASC, solved_at ASC)`,
+    `CREATE INDEX IF NOT EXISTS sm_games_lang_won_ranked ON sm_games(lang, round_id, solved_ms ASC, solved_at ASC) WHERE status = 'won' AND ranked = 1`,
     `CREATE INDEX IF NOT EXISTS sm_guesses_order ON sm_guesses(game_id, guess_no ASC)`,
     `CREATE INDEX IF NOT EXISTS sm_games_player ON sm_games(player_id, created_at DESC)`,
     `CREATE INDEX IF NOT EXISTS sm_logs_created_at ON sm_logs(created_at DESC)`,
