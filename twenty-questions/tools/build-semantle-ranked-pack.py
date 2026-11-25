@@ -37,7 +37,8 @@ ko (kiwipiepy morphological analysis of every v2 word outside the v2 ranked voca
   - frequent words (v2 hot, top ~120k by FastText frequency): a noun or a noun compound of
     known morphemes (at most 3 parts), no particles/endings/plural or approximation suffix,
     no ambiguous particle-like one-syllable tail;
-  - rare words: only a single dictionary noun, excluding likely person names. Rare
+  - rare words: only a single dictionary noun, excluding likely person names and rare names of
+    institutions, facilities and places (school names flooded school-related lists). Rare
     multi-noun compounds are left out: they doubled the share of answer-containing words in
     the Top-100 lists (1.6% -> 3.6%).
   - blocklists for gambling/sexual spam, slurs and pejoratives, and a filter for hotel-booking
@@ -111,6 +112,17 @@ KO_BOOKING_TERMS = {
     "레스토랑", "라운지", "엘리베이터", "화장실", "샤워", "침대", "욕조", "발코니", "전망", "스위트", "트윈", "더블", "싱글",
     "패밀리룸", "디럭스", "스탠다드", "이그제큐티브", "포함", "추가", "할인", "최대", "기간", "전체", "가능", "제공",
 }
+# Rare proper nouns that name an institution, facility or place ('검단고등학교', '반송동'). Kiwi knows thousands of
+# them; added as rare words they flooded the Top-1,000 of secrets such as school or library words.
+KO_RARE_NAME_TAILS = (
+    "학교", "대학", "대학원", "학원", "협회", "학회", "도서관", "박물관", "미술관", "기념관", "체육관", "회관", "경찰서",
+    "소방서", "위원회", "연구원", "연구소", "교육청", "터미널", "운동장", "경기장", "재단", "공원", "공사", "공단", "센터",
+    "의회", "병원", "의원", "교회", "성당", "그룹", "방송", "교통", "시청", "구청", "군청", "도청", "법원", "검찰청",
+    "우체국", "은행", "조합", "신문", "일보", "전자", "건설", "증권", "보험", "파크", "타워", "빌딩", "아파트", "마을",
+    "대교", "터널", "고속도로", "대로", "시장", "호텔", "리조트", "골프장", "저수지", "발전소", "기지", "부대", "사단",
+    "왕후", "옹주", "궁주", "공주", "대군", "왕자", "태자", "부인",
+)
+KO_PLACE_TAILS = set("역동리면읍군시구")  # 간석역, 반송동, 구포리 (rare names of 3+ syllables)
 KO_COMMON_SURNAMES = set("김이박최정강조윤장임한오서신권황안송류전홍고문양손배백허유남심노하곽성차주우구민진나지엄채원천방공현함변염여추소석선설길연위표명기반왕금옥육인맹제모탁국은편용예경봉")
 
 
@@ -146,6 +158,8 @@ def classify_ko(word: str, tokens: Sequence[Tuple[str, str, bool]], frequent: bo
         return "rare_multipart"
     if tags[0] == "NNP" and (len(word) == 2 or (len(word) == 3 and word[0] in KO_COMMON_SURNAMES)):
         return "likely_person_name"  # 준혁, 배정남
+    if tags[0] == "NNP" and (word.endswith(KO_RARE_NAME_TAILS) or (len(word) >= 3 and word[-1] in KO_PLACE_TAILS)):
+        return "rare_institution_or_place"
     return "accepted"
 
 
