@@ -7,7 +7,7 @@ import {
 import { initialize, limit, cleanExpiredRecords } from './database.mjs';
 import {
     dataReady, loadVocab, loadSecretTop1k, scoreGuessWord, preloadVectors, formatSimilarity,
-    CURRENT_PACK, LEGACY_PACK,
+    CURRENT_PACK, LEGACY_PACK, isKnownPack,
 } from './vectors.mjs';
 
 const ID = /^[a-zA-Z0-9_-]{16,100}$/;
@@ -42,9 +42,12 @@ function cacheRound(db, roundId, round) {
 
 const nowMs = env => (typeof env?.NOW_FN === 'function' ? env.NOW_FN() : Date.now());
 
-// 라운드가 생성될 때 기록한 벡터 데이터 팩. 컬럼 추가 전에 만들어진 라운드(NULL)는 v2 팩으로 끝까지 진행
+// 라운드가 생성될 때 기록한 벡터 데이터 팩. 컬럼 추가 전에 만들어진 라운드(NULL)는 v2 팩으로 끝까지 진행하고,
+// 이 코드가 모르는 팩(더 새 버전에서 롤백된 경우)은 라운드 전체를 503으로 막지 않도록 현재 팩으로 처리
 function roundPack(round) {
-    return round?.data_pack || LEGACY_PACK;
+    const pack = round?.data_pack;
+    if (!pack) return LEGACY_PACK;
+    return isKnownPack(pack) ? pack : CURRENT_PACK;
 }
 
 async function findRound(db, roundId) {

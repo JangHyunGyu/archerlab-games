@@ -5,6 +5,7 @@ import {
     dotNormalized,
     toCentipoints,
     clearVectorCache,
+    CURRENT_PACK,
 } from '../../server/twenty-questions/vectors.mjs';
 
 const ENCODER = new TextEncoder();
@@ -81,7 +82,7 @@ function syntheticEnglishWord(index) {
     return `synth${a}${b}${c}`;
 }
 
-function buildPackFiles({ prefix, versionLabel, coreWords, secretWords, syntheticWord, groups, coldForce, metaExtra = {} }) {
+function buildPackFiles({ prefix, versionLabel, coreWords, secretWords, syntheticWord, groups, coldForce, metaExtra = {}, unrankedWords = new Set() }) {
     const wordSet = new Set([...coreWords, ...secretWords]);
     let idx = 0;
     while (wordSet.size < 1030) {
@@ -149,7 +150,7 @@ function buildPackFiles({ prefix, versionLabel, coreWords, secretWords, syntheti
         const sVec = decodedVecs[sIdx];
         const sims = [];
         for (let wIdx = 0; wIdx < words.length; wIdx++) {
-            if (wIdx === sIdx) continue;
+            if (wIdx === sIdx || unrankedWords.has(words[wIdx])) continue;
             sims.push({ wIdx, sim: dotNormalized(sVec, decodedVecs[wIdx]) });
         }
         sims.sort((a, b) => b.sim - a.sim);
@@ -257,7 +258,7 @@ function buildPackFiles({ prefix, versionLabel, coreWords, secretWords, syntheti
         version: versionLabel,
         dims,
         totalVocab: words.length,
-        rankedVocab: words.length,
+        rankedVocab: words.length - unrankedWords.size,
         hotCount: hotWords.length,
         coldCount: coldWords.length,
         secretStride,
@@ -275,9 +276,13 @@ function buildPackFiles({ prefix, versionLabel, coreWords, secretWords, syntheti
     return { files, words, secrets, metaJson, decodedVecs };
 }
 
-// v3 팩(기본)은 추측 가능 어휘 = 순위 어휘. v2 팩은 v2 시절처럼 순위 어휘 밖 단어(KO_V2_ONLY, EN_V2_ONLY)도 추측 가능하다.
+// 현재 팩(기본)은 추측 가능 어휘 = 순위 어휘. v2 팩은 v2 시절을 재현한다:
+// - KO_V2_ONLY/EN_V2_ONLY: 추측은 되지만 순위 후보에서 빠진 단어. 정답과 매우 가까워 1,000위 유사도를 넘는데도 순위가 없다(v2 버그).
+// - KO_V2_RANKED/EN_V2_RANKED: v2 목록에만 있는 단어. 정답과 가장 가까워 v2 목록 1위다.
 export const KO_V2_ONLY = '과학을';
+export const KO_V2_RANKED = '행복감';
 export const EN_V2_ONLY = 'writting';
+export const EN_V2_RANKED = 'schooling';
 
 export function createSemantleStore({
     secretWords = ['행복', '학교', '사과'],
@@ -310,17 +315,19 @@ export function createSemantleStore({
             ['물', [-0.4, -0.4, -0.2]],
             ['에어프라이어', [-0.45, -0.30, -0.15]],
             [KO_V2_ONLY, [0.98, 0.1, 0]],
+            [KO_V2_RANKED, [0.995, 0.02, 0]],
         ]),
     };
     const koPack = buildPackFiles({
         ...koConfig,
-        prefix: 'semantle-ko/v3/',
-        versionLabel: 'semantle-ko-test-v3',
-        metaExtra: { pack: 'v3', guessableEqualsRanked: true },
+        prefix: `semantle-ko/${CURRENT_PACK}/`,
+        versionLabel: `semantle-ko-test-${CURRENT_PACK}`,
+        metaExtra: { pack: CURRENT_PACK, guessableEqualsRanked: true },
     });
     const koLegacyPack = buildPackFiles({
         ...koConfig,
-        coreWords: [...koConfig.coreWords, KO_V2_ONLY],
+        coreWords: [...koConfig.coreWords, KO_V2_ONLY, KO_V2_RANKED],
+        unrankedWords: new Set([KO_V2_ONLY]),
         prefix: 'semantle-ko/v2/',
         versionLabel: 'semantle-ko-test-v2',
     });
@@ -355,17 +362,19 @@ export function createSemantleStore({
             ['water', [-0.4, -0.4, -0.2]],
             ['airfryer', [-0.45, -0.30, -0.15]],
             [EN_V2_ONLY, [0.1, 0.98, 0]],
+            [EN_V2_RANKED, [0.02, 0.995, 0]],
         ]),
     };
     const enPack = buildPackFiles({
         ...enConfig,
-        prefix: 'semantle-en/v3/',
-        versionLabel: 'semantle-en-test-v3',
-        metaExtra: { pack: 'v3', guessableEqualsRanked: true },
+        prefix: `semantle-en/${CURRENT_PACK}/`,
+        versionLabel: `semantle-en-test-${CURRENT_PACK}`,
+        metaExtra: { pack: CURRENT_PACK, guessableEqualsRanked: true },
     });
     const enLegacyPack = buildPackFiles({
         ...enConfig,
-        coreWords: [...enConfig.coreWords, EN_V2_ONLY],
+        coreWords: [...enConfig.coreWords, EN_V2_ONLY, EN_V2_RANKED],
+        unrankedWords: new Set([EN_V2_ONLY]),
         prefix: 'semantle-en/v2/',
         versionLabel: 'semantle-en-test-v2',
     });

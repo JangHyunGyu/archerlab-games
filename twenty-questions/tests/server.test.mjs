@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { harness, database, KO_V2_ONLY } from './helpers.mjs';
+import { harness, database, KO_V2_ONLY, KO_V2_RANKED } from './helpers.mjs';
 import { twentyQuestionsRoute, handleRoomRequest } from '../../server/twenty-questions/service.mjs';
+import { CURRENT_PACK } from '../../server/twenty-questions/vectors.mjs';
 import {
     RULESET, roundSlotAt, previousRoundSlot, selectRoundSecretIndex,
     calibrateSim, sanitizePlayerName, nextRecord,
@@ -649,67 +650,142 @@ test('dual ko/en sessions stay strictly isolated while sharing the 6h KST schedu
     h.db.sqlite.close();
 });
 
-test('rounds created before the v3 rollout finish on the v2 pack; new rounds record and use v3', async () => {
-    const h = harness({ secretWords: ['행복'] });
-    const token = 'a'.repeat(64);
-    // Initialize the schema, then plant the current round the way pre-v3 code stored it (data_pack NULL).
-    assert.equal((await h.call('leaderboard', null, 'GET', token)).status, 200);
+// Plants the current round the way pre-v3 code stored it (data_pack NULL), then plays across the boundary.
+async function legacyToCurrentTransition(h, call) {
+    assert.equal((await call('leaderboard')).status, 200); // initializes the schema without creating a round
     const slot = roundSlotAt(h.getNow());
     const [legacyAnswer, top1, top10, top1000] = h.semantleStore.legacy.secrets[0];
     h.db.sqlite.prepare(`INSERT INTO sm_rounds(round_id, lang, round_no, secret_id, answer_word, sim_scale, top1, top10, top1000, started_at, ends_at, created_at)
         VALUES (?, 'ko', ?, 0, ?, 10000, ?, ?, ?, ?, ?, ?)`)
         .run(slot.roundId, slot.roundNo, legacyAnswer, top1, top10, top1000, slot.startedAt, slot.endsAt, h.getNow());
+    const guess = (game, text) => call(`games/${game.id}/guesses`, { text, expectedVersion: game.version, requestId: crypto.randomUUID() });
 
-    // Legacy round: a word outside the v3 vocabulary is still guessable, exactly as before the rollout.
-    const legacyStart = await h.start(token);
-    const legacyGuess = await h.guess(legacyStart.game, KO_V2_ONLY, crypto.randomUUID(), token);
-    assert.equal(legacyGuess.status, 200);
-    assert.equal(legacyGuess.data.event.code, 'guess');
-    assert.equal(legacyGuess.data.event.rank, 1);
+    // Legacy round keeps v2 behaviour, bug included: the unlisted KO_V2_ONLY beats the #1,000 cutoff but has no rank.
+    let legacy = (await call('games', { locale: 'ko', requestId: crypto.randomUUID() })).data.game;
+    const unlisted = await guess(legacy, KO_V2_ONLY);
+    assert.equal(unlisted.data.event.code, 'guess');
+    assert.equal(unlisted.data.event.rank, null);
+    assert.ok(unlisted.data.event.similarity > unlisted.data.game.benchmarks.top1000);
+    legacy = unlisted.data.game;
+    const listed = await guess(legacy, KO_V2_RANKED);
+    assert.equal(listed.data.event.rank, 1);
+    h.advanceMs(11000);
+    const legacyWin = await guess(listed.data.game, legacyAnswer);
+    assert.equal(legacyWin.data.game.status, 'won');
     assert.equal(h.row('SELECT data_pack FROM sm_rounds WHERE round_id = ?', slot.roundId).data_pack, null);
 
-    // Next round is created by v3 code: recorded as v3, and the off-vocabulary word is now rejected.
+    // The next round is created by current code: recorded with the current pack; v2-only words are rejected.
     h.advanceMs(6 * 60 * 60 * 1000);
     const nextSlot = roundSlotAt(h.getNow());
-    const reset = await h.call(`games/${legacyStart.game.id}`, null, 'GET', token);
+    const reset = await call(`games/${legacy.id}`);
     assert.equal(reset.data.event.code, 'round_reset');
-    assert.equal(h.row('SELECT data_pack FROM sm_rounds WHERE round_id = ?', nextSlot.roundId).data_pack, 'v3');
-    const v3Guess = await h.guess(reset.data.game, KO_V2_ONLY, crypto.randomUUID(), token);
-    assert.equal(v3Guess.data.event.code, 'unknown_word');
-    assert.equal(v3Guess.data.game.guessCount, 0);
-    const v3Ranked = await h.guess(reset.data.game, '기쁨', crypto.randomUUID(), token);
-    assert.equal(v3Ranked.data.event.code, 'guess');
-    assert.equal(v3Ranked.data.event.rank, 1);
+    assert.equal(h.row('SELECT data_pack FROM sm_rounds WHERE round_id = ?', nextSlot.roundId).data_pack, CURRENT_PACK);
+    let game = reset.data.game;
+    for (const word of [KO_V2_ONLY, KO_V2_RANKED]) {
+        const rejected = await guess(game, word);
+        assert.equal(rejected.data.event.code, 'unknown_word', word);
+        assert.equal(rejected.data.game.guessCount, 0);
+    }
+    const ranked = await guess(game, '기쁨');
+    assert.equal(ranked.data.event.rank, 1);
+    game = ranked.data.game;
+    h.advanceMs(11000);
+    const win = await guess(game, h.answer(game.id));
+    assert.equal(win.data.game.status, 'won');
 
-    // The previous (legacy) round's Top-1,000 is still served from its own v2 list.
-    const prevNearest = await h.call('rounds/previous/nearest', null, 'GET', token);
+    // Explore after the win scores with the current round's pack.
+    const exploreOff = await call(`games/${game.id}/explore`, { text: KO_V2_ONLY });
+    assert.equal(exploreOff.status, 200);
+    assert.equal(exploreOff.data.code, 'unknown_word');
+    const exploreIn = await call(`games/${game.id}/explore`, { text: '사랑' });
+    assert.equal(exploreIn.status, 200);
+    assert.equal(exploreIn.data.code, 'explored');
+
+    // Lists of the legacy round still come from v2: the previous-round reveal and the won legacy game's Top-1,000.
+    const prevNearest = await call('rounds/previous/nearest');
     assert.equal(prevNearest.status, 200);
-    assert.equal(prevNearest.data.words.length, 1000);
-    assert.equal(prevNearest.data.words[0].word, KO_V2_ONLY);
-    assert.ok(!(await h.call(`games/${reset.data.game.id}/explore`, { text: KO_V2_ONLY }, 'POST', token)).data.similarity);
+    assert.equal(prevNearest.data.words[0].word, KO_V2_RANKED);
+    const legacyNearest = await call(`games/${legacy.id}/nearest`);
+    assert.equal(legacyNearest.status, 200);
+    assert.equal(legacyNearest.data.words[0].word, KO_V2_RANKED);
+    const currentNearest = await call(`games/${game.id}/nearest`);
+    assert.equal(currentNearest.data.words.some(item => item.word === KO_V2_RANKED), false);
+}
+
+test('rounds created before the rollout finish on the v2 pack; new rounds record and use the current pack', async () => {
+    const h = harness({ secretWords: ['행복'] });
+    const token = 'a'.repeat(64);
+    await legacyToCurrentTransition(h, (path, body, method = body ? 'POST' : 'GET') => h.call(path, body, method, token));
 });
 
-test('v3 rounds keep rank monotonic in similarity for every guessable word', async () => {
-    const h = harness({ secretWords: ['행복', '학교', '사과'] });
+test('the v2 -> current pack transition also holds through the Durable Object room cache', async () => {
+    const h = harness({ secretWords: ['행복'] });
+    const pending = [];
+    const runtime = {
+        roomCache: { player: null, game: null, guesses: null, roundSummary: null },
+        clearCache: () => Object.assign(runtime.roomCache, { player: null, game: null, guesses: null, roundSummary: null }),
+        deferBatch: statements => pending.push(h.db.batch(statements.map(st => h.db.prepare(st.sql).bind(...st.params)))),
+        flushBatch: async () => { await Promise.all(pending.splice(0)); },
+        waitUntil: promise => { pending.push(Promise.resolve(promise).catch(() => {})); },
+    };
+    await legacyToCurrentTransition(h, async (path, body, method = body ? 'POST' : 'GET') => {
+        const res = await handleRoomRequest(new Request('https://api/twenty-questions/' + path, {
+            method,
+            headers: { Authorization: `Bearer ${'e'.repeat(64)}`, 'Content-Type': 'application/json' },
+            ...(body ? { body: JSON.stringify(body) } : {}),
+        }), h.env, runtime);
+        return { status: res.status, data: await res.json() };
+    });
+    await runtime.flushBatch();
+});
+
+test('current-pack rounds keep rank monotonic in similarity, unlike the planted v2 round', async () => {
+    const play = async (legacy) => {
+        const h = harness({ secretWords: ['행복'] });
+        const token = 'a'.repeat(64);
+        if (legacy) {
+            assert.equal((await h.call('leaderboard', null, 'GET', token)).status, 200);
+            const slot = roundSlotAt(h.getNow());
+            const [answer, top1, top10, top1000] = h.semantleStore.legacy.secrets[0];
+            h.db.sqlite.prepare(`INSERT INTO sm_rounds(round_id, lang, round_no, secret_id, answer_word, sim_scale, top1, top10, top1000, started_at, ends_at, created_at)
+                VALUES (?, 'ko', ?, 0, ?, 10000, ?, ?, ?, ?, ?, ?)`)
+                .run(slot.roundId, slot.roundNo, answer, top1, top10, top1000, slot.startedAt, slot.endsAt, h.getNow());
+        }
+        let game = (await h.start(token)).game;
+        const answer = h.answer(game.id);
+        const words = legacy ? h.semantleStore.legacy.words : h.semantleStore.words;
+        const candidates = [...new Set([KO_V2_ONLY, ...words.filter(w => w !== answer && /^[가-힣]+$/u.test(w)).slice(0, 50)])];
+        const events = [];
+        for (const word of candidates) {
+            const res = await h.guess(game, word, crypto.randomUUID(), token);
+            assert.equal(res.status, 200);
+            game = res.data.game;
+            if (res.data.event.code === 'guess') events.push(res.data.event);
+            h.advanceMs(11000);
+        }
+        const ranked = events.filter(e => e.rank !== null).sort((a, b) => a.rank - b.rank);
+        for (let i = 1; i < ranked.length; i++) assert.ok(ranked[i - 1].similarity >= ranked[i].similarity);
+        const lowest = ranked[ranked.length - 1].similarity;
+        return events.filter(e => e.rank === null && e.similarity > lowest).map(e => e.word);
+    };
+    assert.deepEqual(await play(true), [KO_V2_ONLY], 'the v2 fixture reproduces the old bug');
+    assert.deepEqual(await play(false), [], 'no unlisted guess out-scores a ranked one in the current pack');
+});
+
+test('a round recorded with a pack this code does not know falls back to the current pack', async () => {
+    const h = harness({ secretWords: ['행복'] });
     const token = 'a'.repeat(64);
-    let game = (await h.start(token)).game;
-    const answer = h.answer(game.id);
-    const results = [];
-    const candidates = h.semantleStore.words.filter(w => w !== answer && /^[가-힣]+$/u.test(w)).slice(0, 60);
-    for (const word of candidates) {
-        const res = await h.guess(game, word, crypto.randomUUID(), token);
-        assert.equal(res.status, 200);
-        assert.equal(res.data.event.code, 'guess');
-        game = res.data.game;
-        results.push(res.data.event);
-        h.advanceMs(11000);
-    }
-    const ranked = results.filter(e => e.rank !== null).sort((a, b) => a.rank - b.rank);
-    const unranked = results.filter(e => e.rank === null);
-    assert.ok(ranked.length > 0 && unranked.length > 0);
-    for (let i = 1; i < ranked.length; i++) assert.ok(ranked[i - 1].similarity >= ranked[i].similarity);
-    const lowestRanked = ranked[ranked.length - 1].similarity;
-    for (const e of unranked) assert.ok(e.similarity <= lowestRanked, `${e.word} ${e.similarity} > ${lowestRanked}`);
+    assert.equal((await h.call('leaderboard', null, 'GET', token)).status, 200);
+    const slot = roundSlotAt(h.getNow());
+    const [answer, top1, top10, top1000] = h.semantleStore.secrets[0];
+    h.db.sqlite.prepare(`INSERT INTO sm_rounds(round_id, lang, round_no, secret_id, answer_word, sim_scale, top1, top10, top1000, started_at, ends_at, created_at, data_pack)
+        VALUES (?, 'ko', ?, 0, ?, 10000, ?, ?, ?, ?, ?, ?, 'v99')`)
+        .run(slot.roundId, slot.roundNo, answer, top1, top10, top1000, slot.startedAt, slot.endsAt, h.getNow());
+    const game = await h.start(token);
+    assert.equal(game.game.status, 'active');
+    const res = await h.guess(game.game, '기쁨', crypto.randomUUID(), token);
+    assert.equal(res.status, 200);
+    assert.equal(res.data.event.rank, 1);
 });
 
 test('runtime migration tolerates another isolate adding the same column first', async () => {

@@ -2,14 +2,17 @@ import { fault } from './core.mjs';
 
 // v2: Top-1,000 came from a dictionary subset while every FastText word was guessable, so an
 //     unlisted guess could out-score the #1,000 word yet show "1,000위 밖".
-// v3: guessable vocabulary == ranked vocabulary (tools/build-semantle-v3-pack.py), so rank is
-//     monotonic in similarity. Rounds record their pack in sm_rounds.data_pack; NULL means v2.
+// v3/v4: guessable vocabulary == ranked vocabulary (tools/build-semantle-ranked-pack.py), so rank
+//     is monotonic in similarity. v3 let spam/slurs into the vocabulary and was superseded by v4
+//     before any round used it. Rounds record their pack in sm_rounds.data_pack; NULL means v2.
+//     Keep every pack a recorded round can point at in R2: won games can reopen their Top-1,000.
 const DATA_PREFIXES = {
-    ko: { v2: 'semantle-ko/v2/', v3: 'semantle-ko/v3/' },
-    en: { v2: 'semantle-en/v2/', v3: 'semantle-en/v3/' },
+    ko: { v2: 'semantle-ko/v2/', v3: 'semantle-ko/v3/', v4: 'semantle-ko/v4/' },
+    en: { v2: 'semantle-en/v2/', v3: 'semantle-en/v3/', v4: 'semantle-en/v4/' },
 };
 export const LEGACY_PACK = 'v2';
-export const CURRENT_PACK = 'v3';
+export const CURRENT_PACK = 'v4';
+export const isKnownPack = pack => Object.hasOwn(DATA_PREFIXES.ko, pack);
 const langKey = lang => (lang === 'en' ? 'en' : 'ko');
 
 function prefixFor(lang = 'ko', pack = CURRENT_PACK) {
