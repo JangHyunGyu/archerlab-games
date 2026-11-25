@@ -104,7 +104,7 @@ try {
 
     // Verify Semantle title screen, zero SVG usage, no give-up/ranking-tabs/name-form/per-round arrows, single api.mjs version, countdown & previous answer display
     await page.goto(origin + '/twenty-questions/', { waitUntil: 'networkidle' });
-    assert.ok(apiMjsRequests.length === 1 && apiMjsRequests[0].endsWith('/twenty-questions/js/api.mjs?v=20261124-v15'), `Expected single versioned api.mjs request, got ${JSON.stringify(apiMjsRequests)}`);
+    assert.ok(apiMjsRequests.length === 1 && apiMjsRequests[0].endsWith('/twenty-questions/js/api.mjs?v=20261124-v16'), `Expected single versioned api.mjs request, got ${JSON.stringify(apiMjsRequests)}`);
     assert.equal(await page.locator('svg').count(), 0, 'Zero SVG elements expected');
     assert.equal(await page.locator('#vfx-stage, #vfx-edge-glow, #vfx-sprite-a, #vfx-sprite-b').count(), 4);
     assert.equal(await page.locator('#give-up, #give-up-dialog, #next-game, #resume, #name-form, .ranking-tab, #ranking-prev, #ranking-next').count(), 0);

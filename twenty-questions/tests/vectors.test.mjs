@@ -12,8 +12,10 @@ import {
     lookupWordVector,
     loadSecretTop1k,
     scoreGuessWord,
+    loadHotPack,
+    clearVectorCache,
 } from '../../server/twenty-questions/vectors.mjs';
-import { createSemantleStore } from './helpers.mjs';
+import { createSemantleStore, KO_V2_ONLY, EN_V2_ONLY } from './helpers.mjs';
 
 test('binary search finds sorted Korean words accurately', () => {
     const { words } = createSemantleStore();
@@ -226,4 +228,116 @@ test('local built en-v2 FastText pack resolves hot & cold probes accurately (whe
     const rank1Scored = await scoreGuessWord(env, vocab, 0, rank1Word, null, 'en');
     assert.equal(rank1Scored.rank, 1);
     assert.equal(formatSimilarity(rank1Scored.simCenti), top1k.list[0].similarity);
+});
+
+test('v2 and v3 packs load side by side; only v2 still accepts words outside the ranked vocabulary', async () => {
+    const { store } = createSemantleStore({ secretWords: ['행복'], enSecretWords: ['school'] });
+    const env = { SEMANTLE_STORE: store };
+    const v3 = await loadVocab(env, 'ko');
+    const v2 = await loadVocab(env, 'ko', 'v2');
+    assert.equal(v3.pack, 'v3');
+    assert.equal(v3.guessableEqualsRanked, true);
+    assert.equal(v2.pack, 'v2');
+    assert.equal(v2.guessableEqualsRanked, false);
+    assert.deepEqual(v2.secrets.map(row => row[0]), v3.secrets.map(row => row[0]));
+
+    const legacy = await scoreGuessWord(env, v2, 0, KO_V2_ONLY);
+    assert.equal(legacy.rank, 1);
+    assert.equal(await scoreGuessWord(env, v3, 0, KO_V2_ONLY), null);
+    assert.equal((await scoreGuessWord(env, v3, 0, '기쁨')).rank, 1);
+
+    const enV3 = await loadVocab(env, 'en');
+    const enV2 = await loadVocab(env, 'en', 'v2');
+    assert.equal((await scoreGuessWord(env, enV2, 0, EN_V2_ONLY, null, 'en')).rank, 1);
+    assert.equal(await scoreGuessWord(env, enV3, 0, EN_V2_ONLY, null, 'en'), null);
+    await assert.rejects(loadVocab(env, 'ko', 'v9'), /service_unavailable/);
+});
+
+test('loading one pack\'s hot pack releases the other pack\'s hot pack for the same language', async () => {
+    const { store } = createSemantleStore();
+    const reads = [];
+    const counting = { async get(key, opts) { reads.push(key); return store.get(key, opts); } };
+    const env = { SEMANTLE_STORE: counting };
+    const hotReads = key => reads.filter(k => k === key).length;
+
+    await loadHotPack(env, 'ko', 'v2');
+    await loadHotPack(env, 'ko', 'v2');
+    assert.equal(hotReads('semantle-ko/v2/hot-pack.bin'), 1);
+    await loadHotPack(env, 'en', 'v3');
+    await loadHotPack(env, 'ko', 'v2');
+    assert.equal(hotReads('semantle-ko/v2/hot-pack.bin'), 1, 'another language must not evict ko');
+    await loadHotPack(env, 'ko', 'v3');
+    await loadHotPack(env, 'ko', 'v2');
+    assert.equal(hotReads('semantle-ko/v2/hot-pack.bin'), 2, 'v3 load released the v2 hot pack');
+});
+
+// Real v3 packs built by tools/build-semantle-v3-pack.py. Point SEMANTLE_V3_KO_DIR / SEMANTLE_V3_EN_DIR at the output dirs.
+function diskStore(prefix, dir) {
+    return {
+        async get(key, opts) {
+            if (!key.startsWith(prefix)) return null;
+            const file = `${dir}/${key.slice(prefix.length)}`;
+            if (!fs.existsSync(file)) return null;
+            let bytes;
+            if (opts?.range) {
+                const fd = fs.openSync(file, 'r');
+                bytes = Buffer.alloc(opts.range.length);
+                fs.readSync(fd, bytes, 0, opts.range.length, opts.range.offset);
+                fs.closeSync(fd);
+            } else {
+                bytes = fs.readFileSync(file);
+            }
+            const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+            return { async arrayBuffer() { return copy; }, async json() { return JSON.parse(bytes.toString('utf8')); } };
+        },
+    };
+}
+
+async function assertRealPackMonotonic(lang, dir, { mustAccept, mustReject }) {
+    clearVectorCache();
+    const env = { SEMANTLE_STORE: diskStore(`semantle-${lang}/v3/`, dir) };
+    const vocab = await loadVocab(env, lang);
+    assert.equal(vocab.guessableEqualsRanked, true);
+    assert.equal(vocab.totalVocab, vocab.rankedVocab);
+    const hot = await loadHotPack(env, lang);
+    const hotWords = [];
+    for (let i = 0; i < hot.count; i += 97) {
+        const start = hot.view.getUint32(hot.offsetsBase + i * 4, true);
+        const end = hot.view.getUint32(hot.offsetsBase + (i + 1) * 4, true);
+        hotWords.push(new TextDecoder().decode(hot.bytes.subarray(hot.wordsBase + start, hot.wordsBase + end)));
+    }
+    for (const word of mustAccept) assert.ok(await scoreGuessWord(env, vocab, 0, word, null, lang), `${word} must be guessable`);
+    for (const word of mustReject) assert.equal(await scoreGuessWord(env, vocab, 0, word, null, lang), null, `${word} must be rejected`);
+
+    const step = Math.max(1, Math.floor(vocab.secrets.length / 40));
+    for (let secretId = 0; secretId < vocab.secrets.length; secretId += step) {
+        const top1k = await loadSecretTop1k(env, secretId, vocab, lang);
+        for (let k = 1; k < top1k.list.length; k++) assert.ok(top1k.list[k - 1].similarity >= top1k.list[k].similarity);
+        for (const item of top1k.list.filter((_, k) => k % 50 === 0)) {
+            const scored = await scoreGuessWord(env, vocab, secretId, item.word, null, lang);
+            assert.equal(scored.rank, item.rank);
+        }
+        for (const word of hotWords) {
+            if (word === vocab.secrets[secretId][0]) continue;
+            const scored = await scoreGuessWord(env, vocab, secretId, word, null, lang);
+            assert.ok(scored, `${word} is in the hot pack, so it must score`);
+            if (scored.rank === null) {
+                assert.ok(scored.simCenti <= top1k.lastSimCenti, `${lang} secret #${secretId}: unlisted guess beats #1000`);
+            }
+        }
+    }
+}
+
+test('real ko v3 pack: rank is monotonic in similarity and inflected forms are rejected (when present)', { skip: !process.env.SEMANTLE_V3_KO_DIR }, async () => {
+    await assertRealPackMonotonic('ko', process.env.SEMANTLE_V3_KO_DIR, {
+        mustAccept: ['지구과학', '과학탐구', '과학', '드라이기', '아메리카노', '떡볶이', '삼겹살', '유튜브', '사람', '학교', '행복'],
+        mustReject: ['과학을', '과학인', '학교에서', '먹었다'],
+    });
+});
+
+test('real en v3 pack: rank is monotonic in similarity and typos are rejected (when present)', { skip: !process.env.SEMANTLE_V3_EN_DIR }, async () => {
+    await assertRealPackMonotonic('en', process.env.SEMANTLE_V3_EN_DIR, {
+        mustAccept: ['science', 'smartphones', 'coffee', 'happy'],
+        mustReject: ['writting', 'neccessary'],
+    });
 });

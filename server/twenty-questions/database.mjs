@@ -1,7 +1,7 @@
 import { SCHEMA_TABLES, SCHEMA_INDEXES } from './schema.mjs';
 import { fault } from './core.mjs';
 
-export const SCHEMA_VERSION = 'semantle-20261124-v6';
+export const SCHEMA_VERSION = 'semantle-20261125-v7';
 
 const ready = new WeakMap();
 const rateBucketsByDb = new WeakMap();
@@ -20,13 +20,15 @@ function bucketsFor(db) {
 async function ensureColumns(db, table, additions) {
     const info = await db.prepare(`PRAGMA table_info(${table})`).all();
     const existing = new Set((info?.results || []).map(row => row.name));
-    const statements = [];
     for (const [column, definition] of additions) {
-        if (!existing.has(column)) {
-            statements.push(db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`));
+        if (existing.has(column)) continue;
+        try {
+            await db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
+        } catch (error) {
+            // 배포 직후 여러 아이솔레이트가 동시에 마이그레이션하면 다른 쪽이 컬럼을 먼저 추가했을 수 있다
+            if (!/duplicate column/i.test(String(error?.message || error))) throw error;
         }
     }
-    if (statements.length) await db.batch(statements);
 }
 
 // D1 시맨틀 테이블·컬럼·인덱스를 안전하게 초기화 및 마이그레이션 (이미 최신 버전이면 1회 조회로 즉시 통과)
@@ -39,6 +41,7 @@ export async function initialize(db) {
             await db.batch(SCHEMA_TABLES.map(sql => db.prepare(sql)));
             await ensureColumns(db, 'sm_rounds', [
                 ['lang', "TEXT NOT NULL DEFAULT 'ko'"],
+                ['data_pack', 'TEXT'],
             ]);
             await ensureColumns(db, 'sm_players', [
                 ['lang', "TEXT NOT NULL DEFAULT 'ko'"],

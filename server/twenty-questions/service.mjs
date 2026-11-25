@@ -5,7 +5,10 @@ import {
     deriveSimScale, calibrateSim, nextRecord, fault, fingerprint, publicProfile,
 } from './core.mjs';
 import { initialize, limit, cleanExpiredRecords } from './database.mjs';
-import { dataReady, loadVocab, loadSecretTop1k, scoreGuessWord, preloadVectors, formatSimilarity } from './vectors.mjs';
+import {
+    dataReady, loadVocab, loadSecretTop1k, scoreGuessWord, preloadVectors, formatSimilarity,
+    CURRENT_PACK, LEGACY_PACK,
+} from './vectors.mjs';
 
 const ID = /^[a-zA-Z0-9_-]{16,100}$/;
 const TOKEN = /^[a-f0-9]{64}$/;
@@ -38,6 +41,21 @@ function cacheRound(db, roundId, round) {
 }
 
 const nowMs = env => (typeof env?.NOW_FN === 'function' ? env.NOW_FN() : Date.now());
+
+// 라운드가 생성될 때 기록한 벡터 데이터 팩. 컬럼 추가 전에 만들어진 라운드(NULL)는 v2 팩으로 끝까지 진행
+function roundPack(round) {
+    return round?.data_pack || LEGACY_PACK;
+}
+
+async function findRound(db, roundId) {
+    if (!roundId) return null;
+    let round = getRoundCache(db)?.get(roundId) || null;
+    if (!round) {
+        round = await db.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(roundId).first();
+        if (round) cacheRound(db, roundId, round);
+    }
+    return round;
+}
 
 export async function identity(request, lang = 'ko') {
     const token = request.headers.get('Authorization')?.replace(/^Bearer /, '') || '';
@@ -181,7 +199,7 @@ async function hydrateGuesses(db, game, runtime) {
     return rows.results || [];
 }
 
-async function ensureRoundForSlot(db, env, slot, vocab, lang = 'ko') {
+async function ensureRoundForSlot(db, env, slot, lang = 'ko') {
     const roundId = dbRoundIdFor(lang, slot.roundId);
     const cachedRound = getRoundCache(db)?.get(roundId);
     if (cachedRound) return cachedRound;
@@ -191,6 +209,8 @@ async function ensureRoundForSlot(db, env, slot, vocab, lang = 'ko') {
         return round;
     }
 
+    // 새 라운드는 항상 현재 팩으로 생성한다. v2·v3 팩의 정답 목록과 순서가 같아서 슬롯별 정답은 바뀌지 않는다.
+    const vocab = await loadVocab(env, lang, CURRENT_PACK);
     const baseSalt = env?.SEMANTLE_ROUND_SALT || 'archerlab-semantle-sync-k9v1';
     const salt = lang === 'en' ? `${baseSalt}:en` : baseSalt;
     const secretId = await selectRoundSecretIndex(slot.slotIndex, vocab.secrets.length, salt);
@@ -202,9 +222,9 @@ async function ensureRoundForSlot(db, env, slot, vocab, lang = 'ko') {
     const now = nowMs(env);
 
     await db.prepare(`INSERT OR IGNORE INTO sm_rounds(
-        round_id, lang, round_no, secret_id, answer_word, sim_scale, top1, top10, top1000, started_at, ends_at, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-        .bind(roundId, lang, slot.roundNo, secretId, answerWord, simScale, top1, top10, top1000, slot.startedAt, slot.endsAt, now)
+        round_id, lang, round_no, secret_id, answer_word, sim_scale, top1, top10, top1000, started_at, ends_at, created_at, data_pack
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .bind(roundId, lang, slot.roundNo, secretId, answerWord, simScale, top1, top10, top1000, slot.startedAt, slot.endsAt, now, CURRENT_PACK)
         .run();
 
     round = await db.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(roundId).first();
@@ -256,7 +276,7 @@ async function loadRoundSummary(db, env, currentRound, vocab, lang, runtime, { f
             if (prevRound) cacheRound(db, prevRoundId, prevRound);
         }
         if (!prevRound && vocab.secrets.length > 1) {
-            prevRound = await ensureRoundForSlot(db, env, prevSlot, vocab, lang);
+            prevRound = await ensureRoundForSlot(db, env, prevSlot, lang);
         }
         if (prevRound && prevRound.ends_at <= now) {
             previous = {
@@ -372,7 +392,7 @@ async function joinCurrentRound(db, env, player, currentRound, lang, runtime, re
                 active_game: existing.status === 'active' ? existing.id : null,
             };
         }
-        runtime?.waitUntil?.(preloadVectors(env, existing.secret_id, existing.answer_word, lang));
+        runtime?.waitUntil?.(preloadVectors(env, existing.secret_id, existing.answer_word, lang, roundPack(currentRound)));
         return existing;
     }
 
@@ -427,7 +447,7 @@ async function joinCurrentRound(db, env, player, currentRound, lang, runtime, re
         runtime.roomCache.guesses = [];
     }
 
-    runtime?.waitUntil?.(preloadVectors(env, currentRound.secret_id, currentRound.answer_word, lang));
+    runtime?.waitUntil?.(preloadVectors(env, currentRound.secret_id, currentRound.answer_word, lang, roundPack(currentRound)));
     if (nextGamesPlayed % 15 === 0) {
         const prune = cleanExpiredRecords(db, now).catch(() => {});
         runtime?.waitUntil ? runtime.waitUntil(prune) : void prune;
@@ -724,7 +744,7 @@ async function performExplore(db, env, player, ipHash, game, body, currentRound,
     await enforceDualLimit(db, env, 'explore', player.id, ipHash, 60000, 120, 180);
 
     if (!isValidWord(word, lang)) return { code: 'unknown_word', word };
-    const vocab = await loadVocab(env, lang);
+    const vocab = await loadVocab(env, lang, roundPack(currentRound));
     const scored = await scoreGuessWord(env, vocab, game.secret_id, word, game.answer_word, lang);
     if (!scored) return { code: 'unknown_word', word };
     const simCenti = calibrateSim(scored.simCenti, game.sim_scale, scored.exact);
@@ -816,30 +836,27 @@ export async function handleRoomRequest(request, env, runtime = null) {
         }
 
         if (!dataReady(env)) throw fault('service_unavailable', 503);
-        const vocab = await loadVocab(env, lang);
         const now = nowMs(env);
         const currentSlot = roundSlotAt(now);
-        const currentRound = await ensureRoundForSlot(env.DB, env, currentSlot, vocab, lang);
+        const currentRound = await ensureRoundForSlot(env.DB, env, currentSlot, lang);
+        const vocab = await loadVocab(env, lang, roundPack(currentRound));
 
         if (request.method === 'GET' && path === 'rounds/previous/nearest') {
             if (currentSlot.roundNo <= 1) throw fault('not_found', 404);
             const prevSlot = previousRoundSlot(currentSlot);
             if (prevSlot.endsAt > now) throw fault('forbidden', 403);
             const prevRoundId = dbRoundIdFor(lang, prevSlot.roundId);
-            let prevRound = getRoundCache(env.DB)?.get(prevRoundId) || null;
-            if (!prevRound) {
-                prevRound = await env.DB.prepare('SELECT * FROM sm_rounds WHERE round_id = ?').bind(prevRoundId).first();
-                if (prevRound) cacheRound(env.DB, prevRoundId, prevRound);
-            }
+            let prevRound = await findRound(env.DB, prevRoundId);
             if (!prevRound) {
                 if (currentSlot.roundNo <= 1 || vocab.secrets.length <= 1) throw fault('not_found', 404);
-                prevRound = await ensureRoundForSlot(env.DB, env, prevSlot, vocab, lang);
+                prevRound = await ensureRoundForSlot(env.DB, env, prevSlot, lang);
             }
             if (!prevRound || prevRound.ends_at > now) throw fault('forbidden', 403);
-            const effectiveSecretId = (prevRound.answer_word && vocab.secretWordToId?.has(prevRound.answer_word))
-                ? vocab.secretWordToId.get(prevRound.answer_word)
+            const prevVocab = await loadVocab(env, lang, roundPack(prevRound));
+            const effectiveSecretId = (prevRound.answer_word && prevVocab.secretWordToId?.has(prevRound.answer_word))
+                ? prevVocab.secretWordToId.get(prevRound.answer_word)
                 : prevRound.secret_id;
-            const top1k = await loadSecretTop1k(env, effectiveSecretId, vocab, lang);
+            const top1k = await loadSecretTop1k(env, effectiveSecretId, prevVocab, lang);
             return response({
                 roundId: prevRound.round_id.replace(/^en:/, ''),
                 roundNo: prevRound.round_no,
@@ -862,7 +879,7 @@ export async function handleRoomRequest(request, env, runtime = null) {
             if (!game && player.active_game) {
                 await expireStalePlayerGame(env.DB, env, player, player.active_game, currentRound.round_id, runtime);
             }
-            runtime?.waitUntil?.(preloadVectors(env, currentRound.secret_id, currentRound.answer_word, lang));
+            runtime?.waitUntil?.(preloadVectors(env, currentRound.secret_id, currentRound.answer_word, lang, roundPack(currentRound)));
             return response(await stateFor(env.DB, env, player, game, currentRound, vocab, lang, runtime, null, { forceFresh: true }));
         }
 
@@ -903,16 +920,18 @@ export async function handleRoomRequest(request, env, runtime = null) {
                     previousAnswer: roundSummary.previous?.answer ?? null,
                 }, { forceFresh: true }));
             }
-            runtime?.waitUntil?.(preloadVectors(env, game.secret_id, game.answer_word, lang));
+            runtime?.waitUntil?.(preloadVectors(env, game.secret_id, game.answer_word, lang, roundPack(currentRound)));
             return response(await stateFor(env.DB, env, player, game, currentRound, vocab, lang, runtime, null, { forceFresh: true }));
         }
 
         if (request.method === 'GET' && match[2] === 'nearest') {
             if (game.status !== 'won') throw fault('forbidden', 403);
-            const effectiveSecretId = (game.answer_word && vocab.secretWordToId?.has(game.answer_word))
-                ? vocab.secretWordToId.get(game.answer_word)
+            const gameRound = game.round_id === currentRound.round_id ? currentRound : await findRound(env.DB, game.round_id);
+            const gameVocab = await loadVocab(env, lang, roundPack(gameRound));
+            const effectiveSecretId = (game.answer_word && gameVocab.secretWordToId?.has(game.answer_word))
+                ? gameVocab.secretWordToId.get(game.answer_word)
                 : game.secret_id;
-            const top1k = await loadSecretTop1k(env, effectiveSecretId, vocab, lang);
+            const top1k = await loadSecretTop1k(env, effectiveSecretId, gameVocab, lang);
             return response({
                 answer: game.answer_word,
                 benchmarks: {
@@ -977,8 +996,10 @@ export async function twentyQuestionsRoute(request, env, ctx = null) {
                         },
                     });
                 } else {
-                    const vocab = await loadVocab(env, lang);
-                    ctx?.waitUntil?.(preloadVectors(env, null, null, lang));
+                    const round = await findRound(env.DB, dbRoundIdFor(lang, slot.roundId));
+                    const pack = round ? roundPack(round) : CURRENT_PACK;
+                    const vocab = await loadVocab(env, lang, pack);
+                    ctx?.waitUntil?.(preloadVectors(env, null, null, lang, pack));
                     result = response({
                         ready: true,
                         lang,

@@ -12,7 +12,8 @@ export const SCHEMA_TABLES = [
         top1000 INTEGER NOT NULL,
         started_at INTEGER NOT NULL,
         ends_at INTEGER NOT NULL,
-        created_at INTEGER NOT NULL
+        created_at INTEGER NOT NULL,
+        data_pack TEXT
     )`,
     `CREATE TABLE IF NOT EXISTS sm_players (
         id TEXT PRIMARY KEY,

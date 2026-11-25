@@ -81,7 +81,7 @@ function syntheticEnglishWord(index) {
     return `synth${a}${b}${c}`;
 }
 
-function buildPackFiles({ prefix, versionLabel, coreWords, secretWords, syntheticWord, groups, coldForce }) {
+function buildPackFiles({ prefix, versionLabel, coreWords, secretWords, syntheticWord, groups, coldForce, metaExtra = {} }) {
     const wordSet = new Set([...coreWords, ...secretWords]);
     let idx = 0;
     while (wordSet.size < 1030) {
@@ -262,6 +262,7 @@ function buildPackFiles({ prefix, versionLabel, coreWords, secretWords, syntheti
         coldCount: coldWords.length,
         secretStride,
         secrets,
+        ...metaExtra,
     });
     const files = {
         [`${prefix}secrets-meta.json`]: ENCODER.encode(metaJson),
@@ -274,13 +275,15 @@ function buildPackFiles({ prefix, versionLabel, coreWords, secretWords, syntheti
     return { files, words, secrets, metaJson, decodedVecs };
 }
 
+// v3 팩(기본)은 추측 가능 어휘 = 순위 어휘. v2 팩은 v2 시절처럼 순위 어휘 밖 단어(KO_V2_ONLY, EN_V2_ONLY)도 추측 가능하다.
+export const KO_V2_ONLY = '과학을';
+export const EN_V2_ONLY = 'writting';
+
 export function createSemantleStore({
     secretWords = ['행복', '학교', '사과'],
     enSecretWords = ['happy', 'school', 'apple'],
 } = {}) {
-    const koPack = buildPackFiles({
-        prefix: 'semantle-ko/v2/',
-        versionLabel: 'semantle-ko-test-v2',
+    const koConfig = {
         coreWords: [
             '사람', '사랑', '학교', '시간', '사과', '과일', '도서관', '행복', '기쁨',
             '물', '집', '바다', '하늘', '고양이', '강아지', '컴퓨터', '나무', '책', '친구', '밤',
@@ -306,12 +309,23 @@ export function createSemantleStore({
             ['드라이기', [-0.35, -0.35, -0.25]],
             ['물', [-0.4, -0.4, -0.2]],
             ['에어프라이어', [-0.45, -0.30, -0.15]],
+            [KO_V2_ONLY, [0.98, 0.1, 0]],
         ]),
+    };
+    const koPack = buildPackFiles({
+        ...koConfig,
+        prefix: 'semantle-ko/v3/',
+        versionLabel: 'semantle-ko-test-v3',
+        metaExtra: { pack: 'v3', guessableEqualsRanked: true },
+    });
+    const koLegacyPack = buildPackFiles({
+        ...koConfig,
+        coreWords: [...koConfig.coreWords, KO_V2_ONLY],
+        prefix: 'semantle-ko/v2/',
+        versionLabel: 'semantle-ko-test-v2',
     });
 
-    const enPack = buildPackFiles({
-        prefix: 'semantle-en/v2/',
-        versionLabel: 'semantle-en-test-v2',
+    const enConfig = {
         coreWords: [
             'person', 'love', 'school', 'time', 'apple', 'fruit', 'library', 'happy', 'joy',
             'water', 'home', 'ocean', 'sky', 'cat', 'dog', 'computer', 'tree', 'book', 'friend', 'night',
@@ -340,10 +354,23 @@ export function createSemantleStore({
             ['dryer', [-0.35, -0.35, -0.25]],
             ['water', [-0.4, -0.4, -0.2]],
             ['airfryer', [-0.45, -0.30, -0.15]],
+            [EN_V2_ONLY, [0.1, 0.98, 0]],
         ]),
+    };
+    const enPack = buildPackFiles({
+        ...enConfig,
+        prefix: 'semantle-en/v3/',
+        versionLabel: 'semantle-en-test-v3',
+        metaExtra: { pack: 'v3', guessableEqualsRanked: true },
+    });
+    const enLegacyPack = buildPackFiles({
+        ...enConfig,
+        coreWords: [...enConfig.coreWords, EN_V2_ONLY],
+        prefix: 'semantle-en/v2/',
+        versionLabel: 'semantle-en-test-v2',
     });
 
-    const files = { ...koPack.files, ...enPack.files };
+    const files = { ...koPack.files, ...koLegacyPack.files, ...enPack.files, ...enLegacyPack.files };
     const rangeCalls = [];
     const store = {
         rangeCalls,
@@ -371,6 +398,11 @@ export function createSemantleStore({
         secrets: koPack.secrets,
         metaJson: koPack.metaJson,
         decodedVecs: koPack.decodedVecs,
+        legacy: {
+            words: koLegacyPack.words,
+            secrets: koLegacyPack.secrets,
+            decodedVecs: koLegacyPack.decodedVecs,
+        },
         en: {
             words: enPack.words,
             secrets: enPack.secrets,
