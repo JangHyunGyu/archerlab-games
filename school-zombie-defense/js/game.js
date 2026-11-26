@@ -71,15 +71,15 @@
   const imageAsset = (path) => {
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
-  const ZOMBIE_ASSET_VERSION = "20261124-zombies-native-v1";
+  const ZOMBIE_ASSET_VERSION = "20261126-zombies-native-v2";
   const CHARACTER_ASSET_VERSION = "20261123-defenders-8f-v3";
   const CHARACTER_CONTINUITY_ASSET_VERSION = "20261123-defender-continuity-8f-v3";
   const FIREBOMB_RECOVERY_ASSET_VERSION = "20261123-firebomb-recovery-8f-v3";
   const CROSSBOW_ASSET_VERSION = "20261123-crossbow-8f-v3";
   const CROSSBOW_AUDIO_VERSION = "20260719-freesound-crossbow-firing-v1";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
-  const COMBAT_EFFECT_ASSET_VERSION = "20261124-combat-fx-v3";
-  const COMBAT_PROP_ASSET_VERSION = "20260712-combat-props-v2";
+  const COMBAT_EFFECT_ASSET_VERSION = "20261126-combat-fx-v4";
+  const COMBAT_PROP_ASSET_VERSION = "20261126-combat-props-v3";
   const ALLIED_WEAPON_ASSET_VERSION = "20260912-allied-weapons-v1";
   const versionedImageAsset = (path, version) => {
     const resolvedPath = imageAsset(path);
@@ -444,23 +444,23 @@
   );
   // Alpha-weighted final-frame centers and opaque bounds, normalized to each 512px death frame.
   const ZOMBIE_DEATH_FINAL_FRAME_BOUNDS = {
-    "zombie-death-athlete-sheet": { x: -0.0186, y: 0.332, width: 0.7051, height: 0.2383 },
+    "zombie-death-athlete-sheet": { x: -0.0175, y: 0.3338, width: 0.6504, height: 0.2383 },
     "zombie-death-bloom-sheet": { x: -0.0336, y: 0.0624, width: 0.9062, height: 0.2656 },
     "zombie-death-brute-sheet": { x: -0.0152, y: -0.0022, width: 0.5859, height: 0.3145 },
     "zombie-death-charger-sheet": { x: -0.0609, y: 0.3567, width: 0.7734, height: 0.2324 },
     "zombie-death-cheer-sheet": { x: -0.0488, y: 0.3436, width: 0.707, height: 0.2559 },
-    "zombie-death-crawler-sheet": { x: -0.0205, y: 0.0669, width: 0.8184, height: 0.4668 },
+    "zombie-death-crawler-sheet": { x: 0.0054, y: 0.0572, width: 0.7402, height: 0.4688 },
     "zombie-death-diva-sheet": { x: -0.0365, y: 0.3571, width: 0.6055, height: 0.1719 },
     "zombie-death-elite-sheet": { x: -0.0215, y: 0.0016, width: 0.7891, height: 0.3438 },
     "zombie-death-guard-sheet": { x: -0.0163, y: 0.0768, width: 0.6914, height: 0.1992 },
     "zombie-death-janitor-sheet": { x: -0.0444, y: 0.0609, width: 0.7402, height: 0.2363 },
     "zombie-death-kendo-sheet": { x: -0.0205, y: 0.0756, width: 0.6777, height: 0.1992 },
-    "zombie-death-normal-variant-1-sheet": { x: 0.0444, y: 0.2937, width: 0.7617, height: 0.2539 },
-    "zombie-death-normal-variant-2-sheet": { x: 0.019, y: 0.2912, width: 0.7188, height: 0.2812 },
-    "zombie-death-normal-variant-3-sheet": { x: 0.0435, y: 0.3308, width: 0.7129, height: 0.1914 },
-    "zombie-death-normal-variant-4-sheet": { x: 0.0248, y: 0.2632, width: 0.7246, height: 0.2402 },
+    "zombie-death-normal-variant-1-sheet": { x: 0.049, y: 0.3356, width: 0.9727, height: 0.3281 },
+    "zombie-death-normal-variant-2-sheet": { x: 0.0371, y: 0.2971, width: 0.9727, height: 0.4102 },
+    "zombie-death-normal-variant-3-sheet": { x: 0.0783, y: 0.3514, width: 0.9727, height: 0.2988 },
+    "zombie-death-normal-variant-4-sheet": { x: 0.0166, y: 0.3326, width: 0.9707, height: 0.3281 },
     "zombie-death-nurse-sheet": { x: -0.0564, y: 0.3367, width: 0.8574, height: 0.2559 },
-    "zombie-death-runner-sheet": { x: -0.0488, y: 0.3196, width: 0.791, height: 0.2734 },
+    "zombie-death-runner-sheet": { x: -0.0406, y: 0.3181, width: 0.7559, height: 0.2734 },
     "zombie-death-screamer-sheet": { x: -0.0498, y: 0.0653, width: 0.7402, height: 0.2148 },
     "zombie-death-spider-sheet": { x: 0.0025, y: 0.0582, width: 0.8574, height: 0.459 },
     "zombie-death-student-1-sheet": { x: -0.0706, y: 0.0445, width: 0.9707, height: 0.3535 },
@@ -473,19 +473,19 @@
     // Match the first visible death pose to the alpha-bounded size of the walk cycle.
     // Repaint imports bake original pose corrections into the pixels; these
     // factors restore their anatomical size from the padded atlas cells.
-    normal: { deathSize: 1.35 },
+    normal: { deathSize: 0.85 },
     student: { deathSize: 1.01 },
-    runner: { deathSize: 1 },
+    runner: { deathSize: 1.02 },
     brute: { deathSize: 1.18 },
     volatile: { deathSize: 0.99 },
     elite: { deathSize: 1.05 },
     teacher: { deathSize: 1.3 },
     nurse: { deathSize: 0.96 },
     diva: { deathSize: 1.42 },
-    athlete: { deathSize: 1.35 },
+    athlete: { deathSize: 1.32 },
     janitor: { deathSize: 1.5 },
     guard: { deathSize: 1.5 },
-    crawler: { deathSize: 1 },
+    crawler: { deathSize: 0.95 },
     screamer: { deathSize: 1.1 },
     spider: { deathSize: 1 },
     bloom: { deathSize: 1.13 },
@@ -841,13 +841,13 @@
     brute: { id: "brute", hpScale: 4.1, speedScale: 0.72, sizeScale: 1.24, attackScale: 1.45, hitRadiusScale: 1.22, knockbackScale: 0.42, animRate: 4.9, reward: 2 },
     volatile: { id: "volatile", hpScale: 1.05, speedScale: 1.08, sizeScale: 1.02, attackScale: 1.06, hitRadiusScale: 1, knockbackScale: 0.72, animRate: 7.4, reward: 2, deathExplosion: true },
     teacher: { id: "teacher", hpScale: 1.28, speedScale: 0.92, sizeScale: 1.03, attackScale: 1.18, hitRadiusScale: 1.04, knockbackScale: 0.82, animRate: 6.2, reward: 2 },
-    nurse: { id: "nurse", hpScale: 0.82, speedScale: 1.32, sizeScale: 0.9, attackScale: 0.88, hitRadiusScale: 0.88, knockbackScale: 1.08, animRate: 8.2, reward: 1 },
-    diva: { id: "diva", hpScale: 1.12, speedScale: 1.08, sizeScale: 1.07, attackScale: 1.04, hitRadiusScale: 0.94, knockbackScale: 0.9, animRate: 6.4, reward: 1 },
+    nurse: { id: "nurse", hpScale: 0.82, speedScale: 1.32, sizeScale: 0.9, attackScale: 0.88, hitRadiusScale: 0.88, knockbackScale: 1.08, animRate: 8.2, reward: 1, healAuraInterval: 4.2, healAuraRadius: 150, healAuraRatio: 0.14 },
+    diva: { id: "diva", hpScale: 1.12, speedScale: 1.08, sizeScale: 1.07, attackScale: 1.04, hitRadiusScale: 0.94, knockbackScale: 0.9, animRate: 6.4, reward: 1, tauntAura: true, tauntRadius: 210 },
     athlete: { id: "athlete", hpScale: 0.68, speedScale: 1.88, sizeScale: 0.86, attackScale: 0.82, hitRadiusScale: 0.9, knockbackScale: 1.2, animRate: 10.2, reward: 1 },
     janitor: { id: "janitor", hpScale: 2.55, speedScale: 0.8, sizeScale: 1.14, attackScale: 1.26, hitRadiusScale: 1.14, knockbackScale: 0.55, animRate: 5.4, reward: 2 },
-    guard: { id: "guard", hpScale: 3.25, speedScale: 0.68, sizeScale: 1.12, attackScale: 1.18, hitRadiusScale: 1.12, knockbackScale: 0.48, animRate: 4.8, reward: 2 },
+    guard: { id: "guard", hpScale: 3.25, speedScale: 0.68, sizeScale: 1.12, attackScale: 1.18, hitRadiusScale: 1.12, knockbackScale: 0.48, animRate: 4.8, reward: 2, armorReduction: 0.34 },
     crawler: { id: "crawler", hpScale: 0.9, speedScale: 1.38, sizeScale: 0.68, attackScale: 0.72, hitRadiusScale: 0.68, knockbackScale: 0.95, animRate: 8.8, reward: 1 },
-    screamer: { id: "screamer", hpScale: 0.92, speedScale: 1.42, sizeScale: 0.95, attackScale: 0.98, hitRadiusScale: 0.92, knockbackScale: 1.04, animRate: 8.6, reward: 2 },
+    screamer: { id: "screamer", hpScale: 0.92, speedScale: 1.42, sizeScale: 0.95, attackScale: 0.98, hitRadiusScale: 0.92, knockbackScale: 1.04, animRate: 8.6, reward: 2, hasteRoarInterval: 5.5, hasteRoarRadius: 185, hasteDuration: 2.6, hasteSpeedScale: 1.38 },
     spider: { id: "spider", hpScale: 0.78, speedScale: 1.64, sizeScale: 0.72, attackScale: 0.78, hitRadiusScale: 0.76, knockbackScale: 1.08, animRate: 9.8, reward: 1 },
     bloom: { id: "bloom", hpScale: 1.48, speedScale: 0.88, sizeScale: 1.02, attackScale: 1.12, hitRadiusScale: 1, knockbackScale: 0.7, animRate: 6.1, reward: 2, deathExplosion: true },
     charger: {
@@ -867,8 +867,8 @@
       surgeCooldownMax: 5.2,
       surgeMinBarricadeDistance: 120
     },
-    kendo: { id: "kendo", hpScale: 1.55, speedScale: 1.06, sizeScale: 1.04, attackScale: 1.24, hitRadiusScale: 1.02, knockbackScale: 0.72, animRate: 6.6, reward: 2 },
-    cheer: { id: "cheer", hpScale: 0.84, speedScale: 1.48, sizeScale: 0.92, attackScale: 0.92, hitRadiusScale: 0.9, knockbackScale: 1.1, animRate: 8.8, reward: 1 },
+    kendo: { id: "kendo", hpScale: 1.55, speedScale: 1.06, sizeScale: 1.04, attackScale: 1.24, hitRadiusScale: 1.02, knockbackScale: 0.72, animRate: 6.6, reward: 2, parryCharges: 2, parryCooldown: 1.6 },
+    cheer: { id: "cheer", hpScale: 0.84, speedScale: 1.48, sizeScale: 0.92, attackScale: 0.92, hitRadiusScale: 0.9, knockbackScale: 1.1, animRate: 8.8, reward: 1, hasteRoarInterval: 4.8, hasteRoarRadius: 165, hasteDuration: 2.2, hasteSpeedScale: 1.32 },
     elite: { id: "elite", hpScale: 1.5, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 0.5, animRate: 5.2, reward: 4 }
   };
   const ZOMBIE_TEXTURE_TYPES = [
@@ -994,6 +994,13 @@
     }
     return ZOMBIE_TYPE_CONFIGS.normal;
   }
+  const STAGE_BOSS_CONFIGS = {
+    1: { type: "brute", nameKey: "boss.brute", hpMultiplier: 4.8, scale: 1.28, speedScale: 0.78, attackScale: 1.35, accent: 0xff6b47, escorts: ["runner", "normal"] },
+    2: { type: "diva", nameKey: "boss.diva", hpMultiplier: 5.4, scale: 1.28, speedScale: 0.88, attackScale: 1.25, accent: 0xff4fa7, escorts: ["cheer", "nurse"] },
+    3: { type: "guard", nameKey: "boss.guard", hpMultiplier: 6.2, scale: 1.28, speedScale: 0.74, attackScale: 1.35, accent: 0x6dd5ff, escorts: ["kendo", "charger"] },
+    4: { type: "elite", nameKey: "boss.elite", hpMultiplier: 7.2, scale: 1.28, speedScale: 0.84, attackScale: 1.4, accent: 0xffd15c, escorts: ["spider", "bloom"] }
+  };
+  const isBossWave = (level) => level > 0 && level % 4 === 0;
   const SKILL_ACCENTS = {
     pierce: 0xbef6ff,
     barrel: 0xffc768,
@@ -2688,6 +2695,10 @@
       this.levelNeed = STARTING_LEVEL_NEED;
       this.spawnTimer = STARTING_SPAWN_TIMER;
       this.spawnBurst = 1;
+      this.activeBoss = null;
+      this.bossSpawnedForLevel = 0;
+      this.bossDefeatedForLevel = 0;
+      this.bossEscortSummonedForLevel = 0;
       this.maxCoreHp = 3000;
       this.coreHp = this.maxCoreHp;
       this.coins = 0;
@@ -3540,7 +3551,44 @@
         strokeThickness: 3
       }).setOrigin(0.5).setDepth(316);
 
+      this.createBossHud();
       this.createStatusPanel();
+    }
+
+    createBossHud() {
+      const y = 132;
+      const barWidth = 312;
+      const panel = this.add.rectangle(270, y, 360, 26, 0x16090b, 0.9)
+        .setStrokeStyle(1, 0xff6b47, 0.72)
+        .setDepth(315)
+        .setVisible(false);
+      const barBack = this.add.rectangle(270, y + 7, barWidth, 5, 0x060304, 0.92)
+        .setOrigin(0.5)
+        .setDepth(316)
+        .setVisible(false);
+      const barFill = this.add.rectangle(270 - barWidth / 2, y + 7, barWidth, 5, 0xff6b47, 1)
+        .setOrigin(0, 0.5)
+        .setDepth(317)
+        .setVisible(false);
+      const tag = this.add.text(98, y - 5, SchoolI18n.t("boss.hudTag"), {
+        resolution: 2, fontFamily: "Arial, sans-serif",
+        fontSize: 9,
+        fontStyle: "900",
+        color: "#ff9d80"
+      }).setOrigin(0, 0.5).setDepth(317).setVisible(false);
+      const name = this.add.text(134, y - 5, "", {
+        resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 11,
+        fontStyle: "900",
+        color: "#eee6d2"
+      }).setOrigin(0, 0.5).setDepth(317).setVisible(false);
+      const hpText = this.add.text(442, y - 5, "", {
+        resolution: 2, fontFamily: "Arial, sans-serif",
+        fontSize: 10,
+        fontStyle: "900",
+        color: "#ffd9c2"
+      }).setOrigin(1, 0.5).setDepth(317).setVisible(false);
+      this.ui.bossHud = { panel, barBack, barFill, tag, name, hpText, barWidth };
     }
 
     createHomeButton() {
@@ -4063,10 +4111,12 @@
       }
       this.zombies.forEach((zombie) => {
         this.clearWeakMark(zombie);
+        this.clearBossAura(zombie);
         this.destroyGameObject(zombie);
       });
       this.bullets.forEach((bullet) => this.destroyBullet(bullet));
       this.zombies = [];
+      this.activeBoss = null;
       this.bullets = [];
       if (this.zombieGridActiveCells) {
         while (this.zombieGridActiveCells.length > 0) {
@@ -6734,6 +6784,10 @@
       this.levelNeed = STARTING_LEVEL_NEED;
       this.spawnTimer = STARTING_SPAWN_TIMER;
       this.spawnBurst = 1;
+      this.activeBoss = null;
+      this.bossSpawnedForLevel = 0;
+      this.bossDefeatedForLevel = 0;
+      this.bossEscortSummonedForLevel = 0;
       this.maxCoreHp = 3000;
       this.coreHp = this.maxCoreHp;
       this.coins = 0;
@@ -7115,6 +7169,13 @@
     }
 
     updateSpawning(dt) {
+      if (
+        isBossWave(this.level)
+        && this.bossSpawnedForLevel !== this.level
+        && this.killsInLevel >= Math.max(2, Math.floor(this.levelNeed * 0.45))
+      ) {
+        this.spawnStageBoss();
+      }
       this.spawnTimer -= dt;
       if (this.spawnTimer > 0) {
         return;
@@ -7130,16 +7191,23 @@
       this.spawnZombie(0);
     }
 
-    spawnZombie(delay) {
+    // 좀비 1기 생성 -> 일반 스폰 또는 보스·호위 스폰 옵션 반영 -> 생성된 객체 반환
+    spawnZombie(delay, overrideConfig = null) {
       this.scheduleRunDelay(delay * 1000 / this.speedMultiplier, () => {
-        const eliteRoll = this.level >= 6 && Math.random() < Math.min(0.045 + this.level * 0.0055, 0.16);
-        const x = rand(this.getZombieLaneMinX(), this.getZombieLaneMaxX());
-        const y = rand(-65, 46);
-        const typeConfig = pickZombieType(this.level, eliteRoll);
+        const isBoss = Boolean(overrideConfig && overrideConfig.isBoss);
+        const eliteRoll = Boolean(overrideConfig && Object.prototype.hasOwnProperty.call(overrideConfig, "elite"))
+          ? Boolean(overrideConfig.elite)
+          : (!isBoss && this.level >= 6 && Math.random() < Math.min(0.045 + this.level * 0.0055, 0.16));
+        const x = Number.isFinite(overrideConfig && overrideConfig.x)
+          ? this.clampZombieLaneX(overrideConfig.x)
+          : rand(this.getZombieLaneMinX(), this.getZombieLaneMaxX());
+        const y = Number.isFinite(overrideConfig && overrideConfig.y) ? overrideConfig.y : rand(-65, 46);
+        const typeConfig = (overrideConfig && overrideConfig.typeConfig) || pickZombieType(this.level, eliteRoll);
         const variant = ZOMBIE_MULTI_VARIANT_WALK_TYPES.has(typeConfig.id) ? Math.floor(rand(0, 4)) : 0;
         const frame = Math.floor(rand(0, 4));
         const baseDisplayHeight = eliteRoll ? ZOMBIE_ELITE_DISPLAY_HEIGHT : ZOMBIE_BASE_DISPLAY_HEIGHT;
-        const displayHeight = Math.round(baseDisplayHeight * typeConfig.sizeScale);
+        const scaleFactor = (overrideConfig && overrideConfig.scale) || 1;
+        const displayHeight = Math.round(baseDisplayHeight * typeConfig.sizeScale * scaleFactor);
         const displayWidth = displayHeight;
         const levelCurve = Math.pow(this.level, ZOMBIE_LEVEL_HP_EXPONENT);
         const lateLevelBonus = Math.max(0, this.level - 10);
@@ -7149,7 +7217,8 @@
           + levelCurve * (eliteRoll ? ZOMBIE_ELITE_LEVEL_HP_GAIN : ZOMBIE_NORMAL_LEVEL_HP_GAIN)
           + lateLevelBonus * (eliteRoll ? ZOMBIE_ELITE_LATE_HP_GAIN : ZOMBIE_NORMAL_LATE_HP_GAIN)
           + rand(-6, 12);
-        const hp = Math.round(baseHp * ZOMBIE_HP_MULTIPLIER * typeConfig.hpScale * earlyHpScale);
+        const hpMultiplier = (overrideConfig && overrideConfig.hpMultiplier) || 1;
+        const hp = Math.round(baseHp * ZOMBIE_HP_MULTIPLIER * typeConfig.hpScale * earlyHpScale * hpMultiplier);
         const textureBase = `zombie-walk-${typeConfig.id}`;
         const zombie = this.add.image(x, y, `${textureBase}-${variant}-${frame}`)
           .setOrigin(0.5, 0.56)
@@ -7158,9 +7227,9 @@
           .setDepth(60);
         zombie.hp = hp;
         zombie.maxHp = hp;
-        zombie.speed = (rand(30, 40) + (eliteRoll ? -6 : 0)) * typeConfig.speedScale;
-        zombie.hitRadius = (eliteRoll ? 42 : 32) * typeConfig.hitRadiusScale;
-        zombie.attack = (eliteRoll ? 40 : 18) * typeConfig.attackScale;
+        zombie.speed = (rand(30, 40) + (eliteRoll ? -6 : 0)) * typeConfig.speedScale * ((overrideConfig && overrideConfig.speedScale) || 1);
+        zombie.hitRadius = (eliteRoll ? 42 : 32) * typeConfig.hitRadiusScale * scaleFactor;
+        zombie.attack = (eliteRoll ? 40 : 18) * typeConfig.attackScale * ((overrideConfig && overrideConfig.attackScale) || 1);
         zombie.attackTimer = rand(0.2, 0.7);
         zombie.slowTimer = 0;
         zombie.stunTimer = 0;
@@ -7185,13 +7254,13 @@
         zombie.textureBase = textureBase;
         zombie.baseTint = 0;
         zombie.animRate = typeConfig.animRate;
-        zombie.knockbackScale = typeConfig.knockbackScale;
+        zombie.knockbackScale = isBoss ? Math.min(0.28, typeConfig.knockbackScale) : typeConfig.knockbackScale;
         zombie.hitFlashTimer = 0;
         zombie._lastDepth = 60;
         zombie._gridQueryStamp = 0;
         zombie.crowdSeed = rand(-1, 1) || 0.5;
         zombie.crowdOrder = this.zombieSpawnSerial = (this.zombieSpawnSerial || 0) + 1;
-        zombie.reward = typeConfig.reward;
+        zombie.reward = clamp(Math.floor(Number((overrideConfig && overrideConfig.reward) || typeConfig.reward) || 1), 1, 4);
         zombie.deathExplosion = Boolean(typeConfig.deathExplosion);
         zombie.surgeSpeedScale = typeConfig.surgeSpeedScale || 1;
         zombie.surgeDuration = typeConfig.surgeDuration || 0;
@@ -7203,8 +7272,95 @@
         zombie.surgeTimer = typeConfig.surgeSpeedScale
           ? rand(typeConfig.surgeCooldownMin, typeConfig.surgeCooldownMax)
           : 0;
+        // 좀비 고유 기믹 및 스테이지 보스 상태 초기화
+        zombie.healAuraInterval = typeConfig.healAuraInterval || 0;
+        zombie.healAuraTimer = zombie.healAuraInterval ? rand(1.4, zombie.healAuraInterval) : 0;
+        zombie.healAuraRadius = typeConfig.healAuraRadius || 0;
+        zombie.healAuraRatio = typeConfig.healAuraRatio || 0;
+        zombie.hasteRoarInterval = typeConfig.hasteRoarInterval || 0;
+        zombie.hasteRoarTimer = zombie.hasteRoarInterval ? rand(1.6, zombie.hasteRoarInterval) : 0;
+        zombie.hasteRoarRadius = typeConfig.hasteRoarRadius || 0;
+        zombie.hasteDuration = typeConfig.hasteDuration || 0;
+        zombie.hasteSpeedScale = typeConfig.hasteSpeedScale || 1;
+        zombie.hasteTimer = 0;
+        zombie.hasteBonusScale = 1;
+        zombie.armorReduction = typeConfig.armorReduction || 0;
+        zombie.parryCharges = typeConfig.parryCharges || 0;
+        zombie.parryCooldown = typeConfig.parryCooldown || 0;
+        zombie.parryCooldownTimer = 0;
+        zombie.tauntAura = Boolean(typeConfig.tauntAura);
+        zombie.tauntRadius = typeConfig.tauntRadius || 0;
+        zombie.isBoss = isBoss;
+        zombie.bossConfig = (overrideConfig && overrideConfig.bossConfig) || null;
+        zombie.bossName = zombie.bossConfig ? SchoolI18n.t(zombie.bossConfig.nameKey) : "";
+        zombie.bossAura = null;
+        if (isBoss && zombie.bossConfig) {
+          const foot = this.getZombieFootPoint(zombie);
+          zombie.bossAura = this.trackTransient(
+            this.add.ellipse(foot.x, foot.y + 4, Math.max(76, displayWidth * 0.54), 26, zombie.bossConfig.accent, 0.22)
+              .setStrokeStyle(2.5, zombie.bossConfig.accent, 0.85)
+              .setDepth(ZOMBIE_BODY_DEPTH_BASE - 1)
+          );
+          this.activeBoss = zombie;
+          this.updateBossHud();
+        }
         this.zombies.push(zombie);
       });
+    }
+
+    // 스테이지 보스 출현 -> 해당 스테이지 설정으로 중앙 레인 소환 및 경고 배너 출력
+    spawnStageBoss() {
+      if (this.mode !== "playing" || this.bossSpawnedForLevel === this.level) {
+        return;
+      }
+      this.bossSpawnedForLevel = this.level;
+      const stageIndex = clamp(Math.floor((this.level - 1) / 4) + 1, 1, 4);
+      const bossConfig = STAGE_BOSS_CONFIGS[stageIndex] || STAGE_BOSS_CONFIGS[4];
+      const typeConfig = ZOMBIE_TYPE_CONFIGS[bossConfig.type] || ZOMBIE_TYPE_CONFIGS.brute;
+      this.spawnZombie(0, {
+        isBoss: true,
+        elite: bossConfig.type === "elite",
+        typeConfig,
+        bossConfig,
+        hpMultiplier: bossConfig.hpMultiplier,
+        scale: bossConfig.scale,
+        speedScale: bossConfig.speedScale,
+        attackScale: bossConfig.attackScale,
+        reward: 4,
+        x: rand(220, 320),
+        y: -36
+      });
+      this.playSfx("death_elite", 0.95);
+      this.shakeCamera(160, 0.005);
+      this.showToast(SchoolI18n.t("boss.warning", { name: SchoolI18n.t(bossConfig.nameKey) }), bossConfig.accent || COLORS.red);
+      this.updateBossHud();
+    }
+
+    // 보스 호위 좀비 소환 -> 체력 50% 이하 진입 시 좌우 레인에 증원 2기 투입
+    spawnBossEscorts(boss) {
+      if (!boss || !boss.bossConfig || this.bossEscortSummonedForLevel === this.level) {
+        return;
+      }
+      this.bossEscortSummonedForLevel = this.level;
+      const escorts = Array.isArray(boss.bossConfig.escorts) ? boss.bossConfig.escorts : ["runner", "normal"];
+      escorts.forEach((typeId, idx) => {
+        const typeConfig = ZOMBIE_TYPE_CONFIGS[typeId] || ZOMBIE_TYPE_CONFIGS.normal;
+        const offsetX = idx === 0 ? -74 : 74;
+        this.spawnZombie(0.15 * idx, {
+          typeConfig,
+          x: this.clampZombieLaneX(boss.x + offsetX),
+          y: Math.min(boss.y - 18, -12),
+          elite: false
+        });
+      });
+      this.showToast(SchoolI18n.t("boss.escort"), boss.bossConfig.accent || COLORS.gold);
+    }
+
+    clearBossAura(zombie) {
+      if (zombie && zombie.bossAura) {
+        this.destroyTransientObject(zombie.bossAura, false);
+        zombie.bossAura = null;
+      }
     }
 
     updateDefenders(dt) {
@@ -7577,7 +7733,9 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
 
     findTarget(preferX, radius, ignoredTargets = null, minY = -Infinity) {
       let best = null;
+      let bestScoreY = -Infinity;
       let bestXBias = Infinity;
+      const autoEngageTop = ((this.bounds && this.bounds.autoEngageTop)) || 120;
       this.zombies.forEach((zombie) => {
         if (!zombie.active || zombie.hp <= 0) {
           return;
@@ -7592,8 +7750,12 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
         if (radius !== 999 && xBias > radius) {
           return;
         }
-        if (!best || zombie.y > best.y + 8 || (Math.abs(zombie.y - best.y) <= 8 && xBias < bestXBias)) {
+        // 디바 도발 오라 작동 시 사격 우선순위를 앞으로 끌어옴
+        const tauntBonus = zombie.tauntAura && zombie.y >= autoEngageTop ? 46 : 0;
+        const scoreY = zombie.y + tauntBonus;
+        if (!best || scoreY > bestScoreY + 8 || (Math.abs(scoreY - bestScoreY) <= 8 && xBias < bestXBias)) {
           best = zombie;
+          bestScoreY = scoreY;
           bestXBias = xBias;
         }
       });
@@ -9427,7 +9589,28 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       const crit = Math.random() < critChance;
       const marked = zombie.weakMarkTimer > 0 && zombie.weakMarkBonus > 0;
       const markMultiplier = marked ? 1 + zombie.weakMarkBonus : 1;
-      const damage = Math.round(amount * markMultiplier * (crit ? critMultiplier : 1));
+      let damage = Math.round(amount * markMultiplier * (crit ? critMultiplier : 1));
+      let parried = false;
+      if (
+        zombie.parryCharges > 0
+        && (zombie.parryCooldownTimer || 0) <= 0
+        && hitType !== "projectile-rocket"
+        && hitType !== "explosion"
+        && hitType !== "projectile-firebomb"
+      ) {
+        zombie.parryCharges -= 1;
+        zombie.parryCooldownTimer = zombie.parryCooldown || 1.6;
+        damage = Math.max(1, Math.round(damage * 0.15));
+        parried = true;
+      } else if (
+        zombie.armorReduction > 0
+        && !crit
+        && hitType !== "projectile-sniper"
+        && hitType !== "explosion"
+        && hitType !== "projectile-rocket"
+      ) {
+        damage = Math.max(1, Math.round(damage * (1 - zombie.armorReduction)));
+      }
       if (options.showHitEffect !== false) {
         this.createZombieHitEffect(zombie, hitType, crit, impactPoint);
       }
@@ -9441,11 +9624,13 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
         "projectile-shock": null,
         "projectile-nail": "nailgun_hit"
       };
-      const hitSfx = crit
-        ? "crit"
-        : Object.prototype.hasOwnProperty.call(hitSfxMap, hitType)
-          ? hitSfxMap[hitType]
-          : "hit";
+      const hitSfx = parried
+        ? "shield_block"
+        : crit
+          ? "crit"
+          : Object.prototype.hasOwnProperty.call(hitSfxMap, hitType)
+            ? hitSfxMap[hitType]
+            : "hit";
       if (hitSfx && !(hitType === "projectile-firebomb" && options.showHitEffect === false)) {
         const hitIntensity = crit
           ? 1.15
@@ -9456,6 +9641,7 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       }
       const suppressKnockback =
         options.applyKnockback === false ||
+        parried ||
         hitType === "projectile-shock" ||
         hitType === "projectile-firebomb";
       const knockback = suppressKnockback
@@ -9471,8 +9657,16 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
         this.requestHitStop(0.045);
       }
       zombie.hitFlashTimer = 0.07;
-      zombie.setTint(crit ? 0xfff2a5 : 0xff7777);
-      this.showDamageText(zombie.x + rand(-8, 8), zombie.y - rand(8, 24), damage, crit, marked);
+      zombie.setTint(parried ? 0xbef6ff : crit ? 0xfff2a5 : 0xff7777);
+      this.showDamageText(zombie.x + rand(-8, 8), zombie.y - rand(8, 24), parried ? `${SchoolI18n.t("gimmick.parry")} ${damage}` : damage, crit, marked || parried);
+      if (
+        zombie.isBoss
+        && zombie.hp > 0
+        && zombie.hp <= zombie.maxHp * 0.5
+        && this.bossEscortSummonedForLevel !== this.level
+      ) {
+        this.spawnBossEscorts(zombie);
+      }
       if (zombie.hp <= 0) {
         this.killZombie(zombie, knockback);
       }
@@ -9488,11 +9682,13 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       zombie.lastKnockback = null;
       zombie.hp = 0;
       this.clearWeakMark(zombie);
+      this.clearBossAura(zombie);
       this.clearEmbeddedArrowsForZombie(zombie);
-      this.playSfx(zombie.elite ? "death_elite" : "death", 1);
-      if (zombie.elite || zombie.type === "brute" || zombie.type === "charger") {
+      this.playSfx(zombie.elite || zombie.isBoss ? "death_elite" : "death", 1);
+      if (zombie.elite || zombie.isBoss || zombie.type === "brute" || zombie.type === "charger") {
         this.shakeCamera(90, 0.0045);
       }
+      const wasBoss = Boolean(zombie.isBoss);
       const shouldExplode = zombie.deathExplosion;
       const zombieIdx = this.zombies.indexOf(zombie);
       if (zombieIdx !== -1) {
@@ -9508,9 +9704,25 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       if (shouldExplode && this.mode === "playing") {
         this.createExplosion(x, y, 74, this.damage * 1.05, 0.35);
       }
+      if (wasBoss) {
+        this.activeBoss = null;
+        this.bossDefeatedForLevel = this.level;
+        const heal = Math.round(this.maxCoreHp * 0.14);
+        this.coreHp = clamp(this.coreHp + heal, 0, this.maxCoreHp);
+        if (this.mode === "playing") {
+          this.showToast(SchoolI18n.t("boss.defeated", { heal }), COLORS.green);
+        }
+        this.updateBossHud();
+      }
 
       if (this.killsInLevel >= this.levelNeed) {
-        this.openSkillChoice();
+        if (isBossWave(this.level) && this.bossDefeatedForLevel !== this.level) {
+          if (this.bossSpawnedForLevel !== this.level) {
+            this.spawnStageBoss();
+          }
+        } else {
+          this.openSkillChoice();
+        }
       }
     }
 
@@ -10075,6 +10287,97 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       return 1;
     }
 
+    // 좀비별 고유 기믹(치유·가속 포효·패리 쿨타임·보스 오라) 갱신
+    updateZombieGimmicks(zombie, dt) {
+      if (zombie.parryCooldownTimer > 0) {
+        zombie.parryCooldownTimer = Math.max(0, zombie.parryCooldownTimer - dt);
+      }
+      if (zombie.hasteTimer > 0) {
+        zombie.hasteTimer = Math.max(0, zombie.hasteTimer - dt);
+        if (zombie.hasteTimer <= 0) {
+          zombie.hasteBonusScale = 1;
+        }
+      }
+      if (zombie.bossAura && zombie.bossAura.active) {
+        const foot = this.getZombieFootPoint(zombie);
+        zombie.bossAura.setPosition(foot.x, foot.y + 4);
+        zombie.bossAura.setAlpha(0.18 + Math.sin((this.elapsed || 0) * 6.5) * 0.08);
+      }
+      if (zombie.stunTimer > 0) {
+        return;
+      }
+      // 간호사 좀비: 주기적으로 주변 아군 좀비 회복
+      if (zombie.healAuraInterval > 0) {
+        zombie.healAuraTimer -= dt;
+        if (zombie.healAuraTimer <= 0) {
+          zombie.healAuraTimer = zombie.healAuraInterval;
+          const radiusSq = zombie.healAuraRadius * zombie.healAuraRadius;
+          let healedCount = 0;
+          for (let j = 0; j < this.zombies.length && healedCount < 6; j += 1) {
+            const ally = this.zombies[j];
+            if (!ally || !ally.active || ally.hp <= 0 || ally.hp >= ally.maxHp) {
+              continue;
+            }
+            const dx = ally.x - zombie.x;
+            const dy = ally.y - zombie.y;
+            if (dx * dx + dy * dy <= radiusSq) {
+              ally.hp = Math.min(ally.maxHp, ally.hp + Math.max(8, Math.round(ally.maxHp * zombie.healAuraRatio)));
+              healedCount += 1;
+            }
+          }
+          if (healedCount > 0) {
+            const ring = this.trackTransient(
+              this.add.circle(zombie.x, zombie.y + 18, 20, 0x4dff9e, 0.14)
+                .setStrokeStyle(2, 0x7effba, 0.85)
+                .setDepth((zombie.depth || ZOMBIE_BODY_DEPTH_BASE) - 0.3)
+            );
+            this.tweens.add({
+              targets: ring,
+              scale: Math.max(2.2, zombie.healAuraRadius / 34),
+              alpha: 0,
+              duration: 420,
+              ease: "Cubic.easeOut",
+              onComplete: () => this.destroyTransientObject(ring, false)
+            });
+          }
+        }
+      }
+      // 스크리머·치어리더 좀비: 주변 좀비 이동·애니메이션 가속
+      if (zombie.hasteRoarInterval > 0) {
+        zombie.hasteRoarTimer -= dt;
+        if (zombie.hasteRoarTimer <= 0) {
+          zombie.hasteRoarTimer = zombie.hasteRoarInterval;
+          const radiusSq = zombie.hasteRoarRadius * zombie.hasteRoarRadius;
+          const roarColor = zombie.type === "cheer" ? 0xff77c8 : 0xff6e4a;
+          for (let j = 0; j < this.zombies.length; j += 1) {
+            const ally = this.zombies[j];
+            if (!ally || !ally.active || ally.hp <= 0) {
+              continue;
+            }
+            const dx = ally.x - zombie.x;
+            const dy = ally.y - zombie.y;
+            if (dx * dx + dy * dy <= radiusSq) {
+              ally.hasteTimer = Math.max(ally.hasteTimer || 0, zombie.hasteDuration || 2.4);
+              ally.hasteBonusScale = Math.max(ally.hasteBonusScale || 1, zombie.hasteSpeedScale || 1.32);
+            }
+          }
+          const roar = this.trackTransient(
+            this.add.circle(zombie.x, zombie.y + 12, 22, roarColor, 0.14)
+              .setStrokeStyle(2.5, roarColor, 0.88)
+              .setDepth((zombie.depth || ZOMBIE_BODY_DEPTH_BASE) - 0.3)
+          );
+          this.tweens.add({
+            targets: roar,
+            scale: Math.max(2.4, zombie.hasteRoarRadius / 36),
+            alpha: 0,
+            duration: 460,
+            ease: "Cubic.easeOut",
+            onComplete: () => this.destroyTransientObject(roar, false)
+          });
+        }
+      }
+    }
+
     updateZombies(dt) {
       for (let i = this.zombies.length - 1; i >= 0; i -= 1) {
         if (i >= this.zombies.length) {
@@ -10086,23 +10389,26 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
         const zombie = this.zombies[i];
         if (!zombie || !zombie.active) {
           this.clearWeakMark(zombie);
+          this.clearBossAura(zombie);
           this.zombies.splice(i, 1);
           continue;
         }
         this.updateWeakMark(zombie, dt);
+        this.updateZombieGimmicks(zombie, dt);
         this.applyBarbedWireToZombie(zombie, dt);
         this.updateFireBurn(zombie, dt);
         if (!zombie.active) {
           continue;
         }
         const wasStunned = zombie.stunTimer > 0;
-        zombie.wobble += dt * (wasStunned ? 13.5 : 4.2);
+        const hasteScale = zombie.hasteTimer > 0 ? (zombie.hasteBonusScale || 1.32) : 1;
+        zombie.wobble += dt * (wasStunned ? 13.5 : 4.2 * hasteScale);
         const surgeAnimationScale = zombie.surgeState === "surge"
           ? 1.55
           : zombie.surgeState === "charge" ? 0.55 : 1;
         zombie.animTimer += dt * (wasStunned
           ? Math.max(15, (zombie.animRate || 6.8) * 2.35)
-          : (zombie.animRate || (zombie.elite ? 5.2 : 6.8)) * surgeAnimationScale);
+          : (zombie.animRate || (zombie.elite ? 5.2 : 6.8)) * surgeAnimationScale * hasteScale);
         const nextFrame = Math.floor(zombie.animTimer) % 4;
         if (nextFrame !== zombie.animFrame) {
           zombie.animFrame = nextFrame;
@@ -10158,7 +10464,8 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
 
         this.separateZombieFromCrowd(zombie, dt);
 
-        const slowFactor = zombie.slowTimer > 0 ? 0.34 : 1;
+        const hasteMoveScale = zombie.hasteTimer > 0 ? (zombie.hasteBonusScale || 1.32) : 1;
+        const slowFactor = (zombie.slowTimer > 0 ? 0.34 : 1) * hasteMoveScale;
         const attackLine = this.getZombieBarricadeContactY(zombie);
         const frontBlocker = this.getZombieFrontBlocker(zombie);
         const surgeMovementScale = this.updateZombieSurge(zombie, dt, attackLine, frontBlocker);
@@ -11812,8 +12119,37 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       this.shopResetNoticeObjects = null;
     }
 
+    updateBossHud() {
+      const bossHud = ((this.ui && this.ui.bossHud));
+      if (!bossHud) {
+        return;
+      }
+      const boss = this.activeBoss;
+      const show = Boolean(boss && boss.active && boss.hp > 0 && this.mode === "playing");
+      if (!show) {
+        if (bossHud.panel.visible) {
+          bossHud.panel.setVisible(false);
+          bossHud.barBack.setVisible(false);
+          bossHud.barFill.setVisible(false);
+          bossHud.tag.setVisible(false);
+          bossHud.name.setVisible(false);
+          bossHud.hpText.setVisible(false);
+        }
+        return;
+      }
+      const ratio = clamp(boss.hp / Math.max(1, boss.maxHp), 0, 1);
+      const accent = (boss.bossConfig && boss.bossConfig.accent) || 0xff6b47;
+      bossHud.panel.setStrokeStyle(1, accent, 0.78).setVisible(true);
+      bossHud.barBack.setVisible(true);
+      bossHud.barFill.setFillStyle(accent, 1).setSize(Math.max(2, bossHud.barWidth * ratio), 5).setVisible(true);
+      bossHud.tag.setVisible(true);
+      bossHud.name.setText(boss.bossName || SchoolI18n.t("boss.hudTag")).setVisible(true);
+      bossHud.hpText.setText(`${Math.max(0, Math.round(boss.hp))} / ${Math.round(boss.maxHp)}`).setVisible(true);
+    }
+
     updateHud() {
       const cache = this._hudCache || (this._hudCache = {});
+      this.updateBossHud();
       const timerText = formatRunClock(this.elapsed);
       if (cache.timer !== timerText) {
         cache.timer = timerText;

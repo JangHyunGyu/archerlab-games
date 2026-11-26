@@ -300,8 +300,8 @@ assert.deepEqual(
   [...expectedDeathTextures].sort(),
   "all 22 shipped final death frames must have measured alpha bounds"
 );
-assert.equal(finalFrameBounds.get("zombie-death-normal-variant-1-sheet").y, 0.2937);
-assert.equal(finalFrameBounds.get("zombie-death-normal-variant-3-sheet").y, 0.3308);
+assert.equal(finalFrameBounds.get("zombie-death-normal-variant-1-sheet").y, 0.3356);
+assert.equal(finalFrameBounds.get("zombie-death-normal-variant-3-sheet").y, 0.3514);
 for (const [texture, bounds] of finalFrameBounds) {
   assert.ok(Math.abs(bounds.x) < 0.5 && Math.abs(bounds.y) < 0.5, `${texture} alpha center left its frame`);
   assert.ok(bounds.width > 0 && bounds.width <= 1, `${texture} alpha width is invalid`);

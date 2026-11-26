@@ -5,7 +5,10 @@
   // must not be stretched to the standing height; preserve its anatomy instead.
   const frameScales = {
     // Male repaint atlases already contain the reviewed pose corrections.
-    runner: [1, 1, 1, 1.02, 1.05, 1.10, 1.12, 1.12],
+    normal: [0.89, 0.88, 0.88, 0.85, 0.84, 0.84, 0.9, 1, 1.05, 1.04, 1.05, 1.05],
+    runner: [1, 1, 1, 1.04, 1.15, 1.14, 1.08, 1.16],
+    athlete: [1, 1, 0.96, 0.96, 0.96, 1.06, 1.06, 1.14],
+    crawler: [1, 1, 0.98, 0.88, 0.98, 0.94, 0.98, 1],
     charger: [1, 1, 0.98, 0.98, 1.08, 1.04, 1.2, 1.14],
     student: [1, 0.88, 1.04, 1.03],
     brute: [0.95, 1, 1.06, 1.18],
