@@ -2462,70 +2462,111 @@ async function bankSchoolZombieRunCoins(db, body) {
     }));
 }
 
-async function initDB(db) {
-    await db.prepare(`CREATE TABLE IF NOT EXISTS ranking_delivery_receipts (
-        request_id TEXT PRIMARY KEY, session_id TEXT NOT NULL, payload_hash TEXT NOT NULL,
-        response_json TEXT NOT NULL, created_at TEXT DEFAULT (datetime('now'))
-    )`).run();
-    await db.prepare(`CREATE TABLE IF NOT EXISTS ranking_submissions (
-        session_id TEXT PRIMARY KEY, game_id TEXT NOT NULL, player_name TEXT NOT NULL,
-        score INTEGER NOT NULL, extra_data TEXT, created_at TEXT DEFAULT (datetime('now'))
-    )`).run();
+const initializedDbs = new WeakMap();
+const rankingsCacheByDb = new WeakMap();
+const RANKINGS_CACHE_TTL_MS = 10000;
+const RANKINGS_STALE_MAX_MS = 10 * 60 * 1000;
 
-    await db.prepare(`
-        CREATE TABLE IF NOT EXISTS rankings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            game_id TEXT NOT NULL,
-            player_name TEXT NOT NULL,
-            score INTEGER NOT NULL,
-            extra_data TEXT,
-            created_at TEXT DEFAULT (datetime('now'))
-        )
-    `).run();
-    await db.prepare(`
-        CREATE INDEX IF NOT EXISTS idx_rankings_game_score ON rankings(game_id, score DESC)
-    `).run();
-    await db.prepare(`
-        CREATE TABLE IF NOT EXISTS ranking_sessions (
-            session_id TEXT PRIMARY KEY,
-            game_id TEXT NOT NULL,
-            score INTEGER NOT NULL DEFAULT 0,
-            event_count INTEGER NOT NULL DEFAULT 0,
-            started_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL,
-            submitted_at INTEGER
-        )
-    `).run();
-    await db.prepare(`
-        CREATE INDEX IF NOT EXISTS idx_ranking_sessions_game_updated ON ranking_sessions(game_id, updated_at)
-    `).run();
-    const rankingSessionColumns = await db.prepare('PRAGMA table_info(ranking_sessions)').all().catch(() => null);
-    const hasStateJson = rankingSessionColumns?.results?.some((column) => column.name === 'state_json');
-    if (!hasStateJson) {
-        await db.prepare('ALTER TABLE ranking_sessions ADD COLUMN state_json TEXT').run().catch(() => null);
+function isTransientD1Error(err) {
+    const msg = String(err?.message || err || '');
+    return /D1_ERROR|overloaded|CPU time limit|reset|temporarily unavailable|internal error|network|timeout|SQLITE_BUSY|DB offline/i.test(msg);
+}
+
+async function runWithD1Retry(fn) {
+    try {
+        return await fn();
+    } catch (err) {
+        if (!isTransientD1Error(err)) throw err;
+        if (typeof setTimeout === 'function') {
+            await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+        return fn();
     }
-    await db.prepare(`
-        CREATE TABLE IF NOT EXISTS school_zombie_profiles (
-            profile_id TEXT PRIMARY KEY,
-            secret_hash TEXT NOT NULL,
-            coins INTEGER NOT NULL DEFAULT 0,
-            upgrades TEXT NOT NULL,
-            created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL
-        )
-    `).run();
-    await db.prepare(`
-        CREATE TABLE IF NOT EXISTS school_zombie_coin_claims (
-            session_id TEXT PRIMARY KEY,
-            profile_id TEXT NOT NULL,
-            coins INTEGER NOT NULL DEFAULT 0,
-            cleared_stage INTEGER NOT NULL DEFAULT 0,
-            created_at INTEGER NOT NULL
-        )
-    `).run();
-    await db.prepare(`
-        CREATE INDEX IF NOT EXISTS idx_school_zombie_coin_claims_profile ON school_zombie_coin_claims(profile_id, created_at)
-    `).run();
+}
+
+function getRankingsCache(db) {
+    if (!db || typeof db !== 'object') return null;
+    let map = rankingsCacheByDb.get(db);
+    if (!map) {
+        map = new Map();
+        rankingsCacheByDb.set(db, map);
+    }
+    return map;
+}
+
+function invalidateRankingsCache(db, gameId = null) {
+    const map = rankingsCacheByDb.get(db);
+    if (!map) return;
+    if (!gameId) {
+        map.clear();
+        return;
+    }
+    const prefix = `${gameId}:`;
+    for (const key of map.keys()) {
+        if (key.startsWith(prefix)) map.delete(key);
+    }
+}
+
+async function initDB(db) {
+    if (!db) throw new Error('D1 DB binding is unavailable');
+    if (initializedDbs.has(db)) return initializedDbs.get(db);
+    const pending = (async () => {
+        await db.batch([
+            db.prepare(`CREATE TABLE IF NOT EXISTS ranking_delivery_receipts (
+                request_id TEXT PRIMARY KEY, session_id TEXT NOT NULL, payload_hash TEXT NOT NULL,
+                response_json TEXT NOT NULL, created_at TEXT DEFAULT (datetime('now'))
+            )`),
+            db.prepare(`CREATE TABLE IF NOT EXISTS ranking_submissions (
+                session_id TEXT PRIMARY KEY, game_id TEXT NOT NULL, player_name TEXT NOT NULL,
+                score INTEGER NOT NULL, extra_data TEXT, created_at TEXT DEFAULT (datetime('now'))
+            )`),
+            db.prepare(`CREATE TABLE IF NOT EXISTS rankings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                game_id TEXT NOT NULL,
+                player_name TEXT NOT NULL,
+                score INTEGER NOT NULL,
+                extra_data TEXT,
+                created_at TEXT DEFAULT (datetime('now'))
+            )`),
+            db.prepare(`CREATE INDEX IF NOT EXISTS idx_rankings_game_score ON rankings(game_id, score DESC)`),
+            db.prepare(`CREATE TABLE IF NOT EXISTS ranking_sessions (
+                session_id TEXT PRIMARY KEY,
+                game_id TEXT NOT NULL,
+                score INTEGER NOT NULL DEFAULT 0,
+                event_count INTEGER NOT NULL DEFAULT 0,
+                started_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                submitted_at INTEGER
+            )`),
+            db.prepare(`CREATE INDEX IF NOT EXISTS idx_ranking_sessions_game_updated ON ranking_sessions(game_id, updated_at)`),
+            db.prepare(`CREATE TABLE IF NOT EXISTS school_zombie_profiles (
+                profile_id TEXT PRIMARY KEY,
+                secret_hash TEXT NOT NULL,
+                coins INTEGER NOT NULL DEFAULT 0,
+                upgrades TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            )`),
+            db.prepare(`CREATE TABLE IF NOT EXISTS school_zombie_coin_claims (
+                session_id TEXT PRIMARY KEY,
+                profile_id TEXT NOT NULL,
+                coins INTEGER NOT NULL DEFAULT 0,
+                cleared_stage INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL
+            )`),
+            db.prepare(`CREATE INDEX IF NOT EXISTS idx_school_zombie_coin_claims_profile ON school_zombie_coin_claims(profile_id, created_at)`),
+        ]);
+        const rankingSessionColumns = await db.prepare('PRAGMA table_info(ranking_sessions)').all().catch(() => null);
+        const hasStateJson = rankingSessionColumns?.results?.some((column) => column.name === 'state_json');
+        if (!hasStateJson) {
+            await db.prepare('ALTER TABLE ranking_sessions ADD COLUMN state_json TEXT').run().catch(() => null);
+        }
+    })().catch((error) => {
+        initializedDbs.delete(db);
+        throw error;
+    });
+    initializedDbs.set(db, pending);
+    return pending;
 }
 
 async function submitRanking(db, body) {
@@ -2605,6 +2646,7 @@ async function submitRanking(db, body) {
     // Keep every verified run. GET /rankings selects each name's best score.
     await db.prepare('INSERT INTO rankings (game_id, player_name, score, extra_data) VALUES (?, ?, ?, ?)')
         .bind(game_id, name, scoreForInsert, extraStr).run();
+    invalidateRankingsCache(db, game_id);
     const saveResult = { saved_score: scoreForInsert };
     const savedScore = Number(saveResult?.saved_score ?? scoreForInsert);
     if (verifiedSessionId) {
@@ -2674,60 +2716,85 @@ export default {
                     return jsonResponse({ error: 'game_id is required' }, 400);
                 }
                 const limit = clampLimit(url.searchParams.get('limit'));
+                const cache = getRankingsCache(env.DB);
+                const cacheKey = `${gameId}:${limit}`;
+                const cached = cache?.get(cacheKey) || null;
+                const now = Date.now();
+                if (cached && now >= cached.at && (now - cached.at) < RANKINGS_CACHE_TTL_MS) {
+                    return jsonResponse(cached.payload);
+                }
 
-                const result = gameId === SCHOOL_ZOMBIE_GAME_ID
-                    ? await env.DB.prepare(`
-                        SELECT player_name, score, extra_data, created_at
-                        FROM (
-                            SELECT
-                                player_name,
-                                score,
-                                extra_data,
-                                created_at,
-                                id,
-                                ${SCHOOL_ZOMBIE_KILLS_SQL} AS sort_kills,
-                                ROW_NUMBER() OVER (
-                                    PARTITION BY LOWER(TRIM(player_name))
-                                    ORDER BY score DESC, ${SCHOOL_ZOMBIE_KILLS_SQL} DESC, created_at ASC, id ASC
-                                ) AS name_rank
-                            FROM rankings
-                            WHERE game_id = ?
-                        )
-                        WHERE name_rank = 1
-                        ORDER BY score DESC, sort_kills DESC, created_at ASC, id ASC
-                        LIMIT ?
-                    `).bind(gameId, limit).all()
-                    : await env.DB.prepare(`
-                        SELECT player_name, score, extra_data, created_at
-                        FROM (
-                            SELECT
-                                player_name,
-                                score,
-                                extra_data,
-                                created_at,
-                                id,
-                                ROW_NUMBER() OVER (
-                                    PARTITION BY LOWER(TRIM(player_name))
-                                    ORDER BY score DESC, created_at ASC, id ASC
-                                ) AS name_rank
-                            FROM rankings
-                            WHERE game_id = ?
-                        )
-                        WHERE name_rank = 1
-                        ORDER BY score DESC, created_at ASC, id ASC
-                        LIMIT ?
-                    `).bind(gameId, limit).all();
+                try {
+                    const result = await runWithD1Retry(() => (gameId === SCHOOL_ZOMBIE_GAME_ID
+                        ? env.DB.prepare(`
+                            SELECT player_name, score, extra_data, created_at
+                            FROM (
+                                SELECT
+                                    player_name,
+                                    score,
+                                    extra_data,
+                                    created_at,
+                                    id,
+                                    ${SCHOOL_ZOMBIE_KILLS_SQL} AS sort_kills,
+                                    ROW_NUMBER() OVER (
+                                        PARTITION BY LOWER(TRIM(player_name))
+                                        ORDER BY score DESC, ${SCHOOL_ZOMBIE_KILLS_SQL} DESC, created_at ASC, id ASC
+                                    ) AS name_rank
+                                FROM rankings
+                                WHERE game_id = ?
+                            )
+                            WHERE name_rank = 1
+                            ORDER BY score DESC, sort_kills DESC, created_at ASC, id ASC
+                            LIMIT ?
+                        `).bind(gameId, limit).all()
+                        : env.DB.prepare(`
+                            SELECT player_name, score, extra_data, created_at
+                            FROM (
+                                SELECT
+                                    player_name,
+                                    score,
+                                    extra_data,
+                                    created_at,
+                                    id,
+                                    ROW_NUMBER() OVER (
+                                        PARTITION BY LOWER(TRIM(player_name))
+                                        ORDER BY score DESC, created_at ASC, id ASC
+                                    ) AS name_rank
+                                FROM rankings
+                                WHERE game_id = ?
+                            )
+                            WHERE name_rank = 1
+                            ORDER BY score DESC, created_at ASC, id ASC
+                            LIMIT ?
+                        `).bind(gameId, limit).all()));
 
-                return jsonResponse({
-                    game_id: gameId,
-                    rankings: result.results.map((row, i) => ({
-                        rank: i + 1,
-                        player_name: row.player_name,
-                        score: row.score,
-                        extra_data: row.extra_data ? parseExtraData(row.extra_data) : null,
-                        created_at: row.created_at,
-                    })),
-                });
+                    const payload = {
+                        game_id: gameId,
+                        rankings: result.results.map((row, i) => ({
+                            rank: i + 1,
+                            player_name: row.player_name,
+                            score: row.score,
+                            extra_data: row.extra_data ? parseExtraData(row.extra_data) : null,
+                            created_at: row.created_at,
+                        })),
+                    };
+                    if (cache) {
+                        if (cache.has(cacheKey)) cache.delete(cacheKey);
+                        else if (cache.size >= 120) cache.delete(cache.keys().next().value);
+                        cache.set(cacheKey, { at: Date.now(), payload });
+                    }
+                    return jsonResponse(payload);
+                } catch (err) {
+                    if (cached && (Date.now() - cached.at) <= RANKINGS_STALE_MAX_MS) {
+                        console.error(JSON.stringify({
+                            event: 'rankings_stale_fallback',
+                            game_id: gameId,
+                            error: String(err?.message || err).slice(0, 200),
+                        }));
+                        return jsonResponse(cached.payload);
+                    }
+                    throw err;
+                }
             }
 
             // POST /rankings  { game_id, player_name, score, extra_data? }
@@ -2793,4 +2860,4 @@ export default {
     },
 };
 
-export { initDB, createScoreSession, recordScoreEvents, submitRanking, getProtectedGameKind, jsonResponse, bankSchoolZombieRunCoins };
+export { initDB, createScoreSession, recordScoreEvents, submitRanking, invalidateRankingsCache, getProtectedGameKind, jsonResponse, bankSchoolZombieRunCoins };

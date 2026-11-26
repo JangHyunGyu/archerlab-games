@@ -317,3 +317,64 @@ test('delivery reports code exceptions to D1 but keeps network failures silent; 
   await c.ranking.flush();
   assert.equal(e.db.sql.prepare('SELECT score FROM rankings').get().score, 100, 'queued record still delivers');
 });
+
+test('GET /rankings and /water-sort/challenge retry transient 503/network errors and honor caller abort', async () => {
+  const calls = [];
+  let mode = 'recover';
+  const net = {
+    async fetch(url, options) {
+      calls.push(String(url));
+      if (mode === 'recover') {
+        if (calls.length === 1) throw new TypeError('Failed to fetch');
+        if (calls.length === 2) return new Response(JSON.stringify({ error: 'unavailable' }), { status: 503 });
+        return new Response(JSON.stringify({ rankings: [{ rank: 1, player_name: 'OK', score: 10 }] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      if (mode === 'watersort-recover') {
+        if (calls.length === 4) return new Response(JSON.stringify({ error: 'unavailable' }), { status: 503 });
+        return new Response(JSON.stringify({ rows: [{ id: '1', nickname: 'Aqua', cleared: 5, score: 5000 }] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      if (options?.signal) {
+        await new Promise((_, reject) => options.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError'))));
+      }
+      throw new TypeError('Failed to fetch');
+    },
+  };
+  const fastTimers = {
+    setTimeout(cb) { const id = setImmediate(cb); return id; },
+    clearTimeout(id) { clearImmediate(id); },
+  };
+  const timers = new Map();
+  let next = 0;
+  const ctx = {
+    fetch: net.fetch.bind(net), localStorage: browserStorage(), Request, Response, URL, AbortController, DOMException, console,
+    navigator: { onLine: true }, location: { href: 'https://game.archerlab.dev/blockpang/' },
+    setTimeout(cb) { const id = ++next; timers.set(id, fastTimers.setTimeout(cb)); return id; },
+    clearTimeout(id) { const real = timers.get(id); if (real) fastTimers.clearTimeout(real); timers.delete(id); },
+  };
+  ctx.window = ctx; ctx.globalThis = ctx;
+  vm.runInNewContext(source, ctx);
+
+  const r1 = await ctx.fetch(`${API}/rankings?game_id=blockpang&limit=20`);
+  assert.equal(r1.status, 200);
+  assert.equal((await r1.json()).rankings[0].player_name, 'OK');
+  assert.equal(calls.length, 3);
+
+  mode = 'watersort-recover';
+  const r2 = await ctx.fetch(`${API}/water-sort/challenge`);
+  assert.equal(r2.status, 200);
+  assert.equal((await r2.json()).rows[0].nickname, 'Aqua');
+  assert.equal(calls.length, 5);
+
+  mode = 'abort';
+  const ac = new AbortController();
+  const pending = ctx.fetch(`${API}/rankings?game_id=blockpang&limit=20`, { signal: ac.signal });
+  ac.abort();
+  await assert.rejects(pending, { name: 'AbortError' });
+  assert.equal(calls.length, 6, 'caller abort stops retries immediately');
+});

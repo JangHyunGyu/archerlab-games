@@ -2,7 +2,7 @@ import { waterSortRoute } from './water-sort-src/worker/route.ts';
 import { cleanupStaleRuns } from './water-sort-src/worker/cleanup.ts';
 import { twentyQuestionsRoute, handleRoomRequest } from './server/twenty-questions/service.mjs';
 import { DurableObject } from 'cloudflare:workers';
-import api, { initDB, createScoreSession, recordScoreEvents, submitRanking, getProtectedGameKind, jsonResponse, bankSchoolZombieRunCoins } from './game-api-worker.js';
+import api, { initDB, createScoreSession, recordScoreEvents, submitRanking, invalidateRankingsCache, getProtectedGameKind, jsonResponse, bankSchoolZombieRunCoins } from './game-api-worker.js';
 
 const BANK_RUN_PATH = '/school-zombie/profile/bank-run';
 const PATHS = new Set(['/score-sessions', '/score-events', '/rankings', BANK_RUN_PATH]);
@@ -81,6 +81,7 @@ export async function executeRankingCommand(db, command, sessionId, requestMeta 
         VALUES (?, ?, ?, ?)`)
         .bind(command.id, sessionId, command.hash, JSON.stringify(data)));
     await db.batch(writes);
+    if (command.path === '/rankings') invalidateRankingsCache(db, body.game_id);
     return { status: 200, data };
 }
 

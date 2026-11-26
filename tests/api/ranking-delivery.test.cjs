@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const { fixture, server } = require('../helpers/ranking-delivery.cjs');
+const { fixture, server, d1, storage } = require('../helpers/ranking-delivery.cjs');
 
 test('D1 outage: server keeps the run and submits it from an alarm after the browser is gone', async () => {
   const f = fixture(); f.db.offline = true;
@@ -319,4 +319,48 @@ test('zombie profile: each wallet mutation has a strictly increasing revision, i
   assert.ok(bank.profile_revision < purchase.profile_revision);
   assert.ok(purchase.profile_revision < refund.profile_revision);
   assert.equal(refund.coins, purchase.coins + refund.refund);
+});
+
+test('GET /rankings caches briefly, invalidates on submit, and serves stale cache during transient D1 outage', async () => {
+  const f = fixture('lumen-shift');
+  await f.accept([f.command('/score-sessions'), f.event(), f.ranking(100, 'Alpha')]);
+
+  const read = async () => {
+    const res = await server.api.fetch(new Request('https://api/rankings?game_id=lumen-shift&limit=20'), { DB: f.db });
+    assert.equal(res.status, 200);
+    return res.json();
+  };
+
+  const first = await read();
+  assert.equal(first.rankings.length, 1);
+  assert.equal(first.rankings[0].player_name, 'Alpha');
+
+  // Within the short cache window, an out-of-band DB insert is served from memory without another D1 scan.
+  f.db.sql.prepare("INSERT INTO rankings (game_id, player_name, score) VALUES ('lumen-shift', 'OutOfBand', 999)").run();
+  const cached = await read();
+  assert.equal(cached.rankings[0].player_name, 'Alpha');
+
+  // An authoritative submission through RankingDelivery invalidates the Worker rankings cache immediately.
+  const session2 = crypto.randomUUID();
+  const mailbox2 = new server.RankingDelivery({ storage: storage() }, { DB: f.db });
+  const c2 = (path, body = {}) => ({ id: crypto.randomUUID(), path, body: { game_id: 'lumen-shift', ...(path !== '/score-sessions' ? { session_id: session2 } : {}), ...body }, after: null });
+  await mailbox2.accept(session2, 'lumen-shift', [c2('/score-sessions')], {});
+  await mailbox2.accept(session2, 'lumen-shift', [c2('/score-events', { events: [{ type: 'clear', lines: 2, level: 1, combo: 1, delta: 300 }] })], {});
+  await mailbox2.accept(session2, 'lumen-shift', [c2('/rankings', { player_name: 'Beta', score: 300 })], {});
+
+  const refreshed = await read();
+  assert.equal(refreshed.rankings[0].player_name, 'OutOfBand');
+  assert.ok(refreshed.rankings.some((row) => row.player_name === 'Beta' && row.score === 300));
+
+  // If D1 fails after the fresh cache TTL expires, stale cached rankings still return 200 instead of failing.
+  const origNow = Date.now;
+  Date.now = () => origNow() + 20_000;
+  f.db.offline = true;
+  try {
+    const stale = await read();
+    assert.equal(stale.rankings[0].player_name, 'OutOfBand');
+  } finally {
+    f.db.offline = false;
+    Date.now = origNow;
+  }
 });

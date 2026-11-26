@@ -38,36 +38,56 @@ export const pageLang = document.documentElement.lang === 'en' ? 'en' : 'ko';
 const local = ['localhost', '127.0.0.1'].includes(location.hostname);
 const apiBase = local ? ((((__oc3 = document.querySelector('meta[name="local-api"]')) === null || __oc3 === void 0 ? void 0 : __oc3.content)) || 'http://127.0.0.1:8787') : 'https://game-api.yama5993.workers.dev';
 
+const GET_RETRY_DELAYS_MS = [350, 900];
+
 export async function request(path, body, method = body ? 'POST' : 'GET') {
     if (navigator.onLine === false) throw Object.assign(new Error('offline'), { code: 'offline' });
     const targetPath = pageLang === 'en' ? `${path}${path.indexOf('?') >= 0 ? '&' : '?'}lang=en` : path;
-    let result;
-    const controller = typeof AbortController === 'function' ? new AbortController() : null;
-    const timeoutId = controller ? setTimeout(() => controller.abort(), 15000) : null;
-    try {
-        result = await fetch(`${apiBase}/twenty-questions/${targetPath}`, {
-            method,
-            headers: {
-                Authorization: `Bearer ${token}`,
-                ...(body ? { 'Content-Type': 'application/json' } : {}),
-            },
-            ...(body ? { body: JSON.stringify(body) } : {}),
-            ...(controller ? { signal: controller.signal } : {}),
-            cache: 'no-store',
-        });
-    } catch (_err) {
-        throw Object.assign(new Error('network_error'), { code: 'network_error' });
-    } finally {
-        if (timeoutId !== null) clearTimeout(timeoutId);
+    const isRead = String(method || 'GET').toUpperCase() === 'GET';
+    const maxAttempts = isRead ? (1 + GET_RETRY_DELAYS_MS.length) : 1;
+    const timeoutMs = isRead ? 9000 : 15000;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        let result;
+        const controller = typeof AbortController === 'function' ? new AbortController() : null;
+        const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+        try {
+            result = await fetch(`${apiBase}/twenty-questions/${targetPath}`, {
+                method,
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    ...(body ? { 'Content-Type': 'application/json' } : {}),
+                },
+                ...(body ? { body: JSON.stringify(body) } : {}),
+                ...(controller ? { signal: controller.signal } : {}),
+                cache: 'no-store',
+            });
+        } catch (_err) {
+            if (isRead && attempt < maxAttempts - 1 && navigator.onLine !== false) {
+                await new Promise(resolve => setTimeout(resolve, GET_RETRY_DELAYS_MS[attempt]));
+                continue;
+            }
+            throw Object.assign(new Error('network_error'), { code: 'network_error' });
+        } finally {
+            if (timeoutId !== null) clearTimeout(timeoutId);
+        }
+        if (isRead && (result.status === 429 || (result.status >= 500 && result.status <= 599)) && attempt < maxAttempts - 1 && navigator.onLine !== false) {
+            if (result.body && typeof result.body.cancel === 'function') {
+                result.body.cancel().catch(() => {});
+            }
+            await new Promise(resolve => setTimeout(resolve, GET_RETRY_DELAYS_MS[attempt]));
+            continue;
+        }
+        const data = await result.json().catch(() => ({ error: 'network_error' }));
+        if (!result.ok) {
+            throw Object.assign(new Error(data.error || 'network_error'), {
+                code: data.error || 'network_error',
+                status: result.status,
+            });
+        }
+        return data;
     }
-    const data = await result.json().catch(() => ({ error: 'network_error' }));
-    if (!result.ok) {
-        throw Object.assign(new Error(data.error || 'network_error'), {
-            code: data.error || 'network_error',
-            status: result.status,
-        });
-    }
-    return data;
+    throw Object.assign(new Error('network_error'), { code: 'network_error' });
 }
 
 export const requestId = () => (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c => (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)));

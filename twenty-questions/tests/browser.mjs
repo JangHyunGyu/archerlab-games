@@ -104,7 +104,7 @@ try {
 
     // Verify Semantle title screen, zero SVG usage, no give-up/ranking-tabs/name-form/per-round arrows, single api.mjs version, countdown & previous answer display
     await page.goto(origin + '/twenty-questions/', { waitUntil: 'networkidle' });
-    assert.ok(apiMjsRequests.length === 1 && apiMjsRequests[0].endsWith('/twenty-questions/js/api.mjs?v=20261126-v18'), `Expected single versioned api.mjs request, got ${JSON.stringify(apiMjsRequests)}`);
+    assert.ok(apiMjsRequests.length === 1 && apiMjsRequests[0].endsWith('/twenty-questions/js/api.mjs?v=20261126-v19'), `Expected single versioned api.mjs request, got ${JSON.stringify(apiMjsRequests)}`);
     assert.equal(await page.locator('svg').count(), 0, 'Zero SVG elements expected');
     assert.equal(await page.locator('#vfx-stage, #vfx-edge-glow, #vfx-sprite-a, #vfx-sprite-b').count(), 4);
     assert.equal(await page.locator('#give-up, #give-up-dialog, #next-game, #resume, #name-form, .ranking-tab, #ranking-prev, #ranking-next').count(), 0);
@@ -460,10 +460,10 @@ try {
     ].some(name => performance.getEntriesByType('resource').some(r => r.name.includes(name))) || true);
     const lightSkinOk = await page.evaluate(async () => {
         const urls = [
-            'assets/backgrounds/study-light-desktop-1440.webp?v=20261126-v18',
-            'assets/ui/crafted-panel-light-1024.webp?v=20261126-v18',
-            'assets/ui/crafted-btn-light-gold-720.webp?v=20261126-v18',
-            'assets/ui/crafted-btn-light-ivory-720.webp?v=20261126-v18',
+            'assets/backgrounds/study-light-desktop-1440.webp?v=20261126-v19',
+            'assets/ui/crafted-panel-light-1024.webp?v=20261126-v19',
+            'assets/ui/crafted-btn-light-gold-720.webp?v=20261126-v19',
+            'assets/ui/crafted-btn-light-ivory-720.webp?v=20261126-v19',
         ];
         for (const u of urls) {
             const res = await fetch(u);

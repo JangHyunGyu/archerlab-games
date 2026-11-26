@@ -804,3 +804,50 @@ test('runtime migration tolerates another isolate adding the same column first',
     assert.equal(db.sqlite.prepare("SELECT value FROM sm_meta WHERE key = 'schema_version'").get().value, SCHEMA_VERSION);
     assert.ok(db.sqlite.prepare('PRAGMA table_info(sm_rounds)').all().some(row => row.name === 'data_pack'));
 });
+
+test('leaderboard bypasses DO queue, reflects same-device rename across prior wins, and serves stale cache on D1 error', async () => {
+    const h = harness({ secretWords: ['행복', '학교', '사과'] });
+    const token = 'e'.repeat(64);
+    const { game } = await h.start(token);
+    const winRes = await h.guess(game, '행복', crypto.randomUUID(), token);
+    assert.equal(winRes.data.event.code, 'won');
+
+    // Rename from 고독한늑대 -> 고독한여자 on the same device: previous win moves to the new name cleanly.
+    const r1 = await h.call('profile', { name: '고독한늑대' }, 'PATCH', token);
+    assert.equal(r1.status, 200);
+    const envWithoutDo = { DB: h.db, NOW_FN: () => h.getNow(), TWENTY_GAMEPLAY: { idFromName() { throw new Error('DO must not be called for leaderboard'); }, get() { throw new Error('DO must not be called'); } } };
+    const lb1Req = new Request('https://api.test/twenty-questions/leaderboard?sort=wins', { headers: { Authorization: `Bearer ${token}` } });
+    const lb1 = await (await twentyQuestionsRoute(lb1Req, envWithoutDo)).json();
+    assert.equal(lb1.entries[0].name, '고독한늑대');
+    assert.equal(lb1.entries[0].wins, 1);
+
+    const r2 = await h.call('profile', { name: '고독한여자' }, 'PATCH', token);
+    assert.equal(r2.status, 200);
+    const lb2Req = new Request('https://api.test/twenty-questions/leaderboard?sort=wins', { headers: { Authorization: `Bearer ${token}` } });
+    const lb2 = await (await twentyQuestionsRoute(lb2Req, envWithoutDo)).json();
+    assert.equal(lb2.entries.length, 1);
+    assert.equal(lb2.entries[0].name, '고독한여자');
+    assert.equal(lb2.entries[0].wins, 1);
+    assert.equal(lb2.entries[0].own, true);
+
+    // Advance past fresh TTL and simulate D1 outage: stale cache keeps returning 200.
+    h.advanceMs(20_000);
+    const origPrepare = h.db.prepare.bind(h.db);
+    h.db.prepare = (sql) => {
+        const stmt = origPrepare(sql);
+        if (/WITH ranked_wins/.test(sql)) {
+            return { bind: () => ({ all: async () => { throw new Error('D1_ERROR: D1 DB exceeded its CPU time limit and was reset.'); } }) };
+        }
+        return stmt;
+    };
+    try {
+        const lb3Req = new Request('https://api.test/twenty-questions/leaderboard?sort=wins', { headers: { Authorization: `Bearer ${token}` } });
+        const lb3Res = await twentyQuestionsRoute(lb3Req, envWithoutDo);
+        assert.equal(lb3Res.status, 200);
+        const lb3 = await lb3Res.json();
+        assert.equal(lb3.entries[0].name, '고독한여자');
+    } finally {
+        h.db.prepare = origPrepare;
+        h.db.sqlite.close();
+    }
+});

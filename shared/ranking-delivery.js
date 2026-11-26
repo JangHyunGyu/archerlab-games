@@ -375,14 +375,87 @@
     }
     function submit(body) { return durableMutation('/rankings', body, 'submit_'); }
     function bankRun(body) { return durableMutation(BANK_RUN_PATH, body, 'bank_'); }
+    var READ_RETRY_DELAYS_MS = [350, 900];
+    var READ_ATTEMPT_TIMEOUT_MS = 9000;
+    function isRetryableReadStatus(status) {
+        return status === 429 || (status >= 500 && status <= 599);
+    }
+    function makeAbortError() {
+        try { return new DOMException('The operation was aborted.', 'AbortError'); }
+        catch (_) { var e = new Error('The operation was aborted.'); e.name = 'AbortError'; return e; }
+    }
+    function waitRetryDelay(delayMs, callerSignal) {
+        return new Promise(function (resolve, reject) {
+            if (callerSignal && callerSignal.aborted) { reject(makeAbortError()); return; }
+            var timerId = global.setTimeout(function () {
+                if (callerSignal) callerSignal.removeEventListener('abort', onAbort);
+                resolve();
+            }, delayMs);
+            function onAbort() {
+                global.clearTimeout(timerId);
+                reject(makeAbortError());
+            }
+            if (callerSignal) callerSignal.addEventListener('abort', onAbort, { once: true });
+        });
+    }
+    async function fetchRankingReadWithRetry(url, options) {
+        var callerSignal = options && options.signal;
+        if (callerSignal && callerSignal.aborted) throw makeAbortError();
+        var online = !global.navigator || global.navigator.onLine !== false;
+        var maxAttempts = online ? (1 + READ_RETRY_DELAYS_MS.length) : 1;
+        var lastError = null;
+        for (var attempt = 0; attempt < maxAttempts; attempt += 1) {
+            if (callerSignal && callerSignal.aborted) throw makeAbortError();
+            var controller = typeof global.AbortController === 'function' ? new global.AbortController() : null;
+            var timedOut = false;
+            var onCallerAbort = null;
+            var timeoutId = null;
+            if (controller) {
+                if (callerSignal) {
+                    onCallerAbort = function () { controller.abort(); };
+                    callerSignal.addEventListener('abort', onCallerAbort, { once: true });
+                }
+                timeoutId = global.setTimeout(function () { timedOut = true; controller.abort(); }, READ_ATTEMPT_TIMEOUT_MS);
+            }
+            var attemptOptions = Object.assign({}, options || {});
+            if (!attemptOptions.cache) attemptOptions.cache = 'no-store';
+            if (controller) attemptOptions.signal = controller.signal;
+            try {
+                var response = await originalFetch(url, attemptOptions);
+                if (isRetryableReadStatus(response.status) && attempt < maxAttempts - 1) {
+                    if (response.body && typeof response.body.cancel === 'function') {
+                        try { response.body.cancel(); } catch (_) {}
+                    }
+                    await waitRetryDelay(READ_RETRY_DELAYS_MS[attempt], callerSignal);
+                    continue;
+                }
+                return response;
+            } catch (error) {
+                lastError = error;
+                if (callerSignal && callerSignal.aborted) throw makeAbortError();
+                var retryable = timedOut || isTransportFailure(error);
+                if (!retryable || attempt >= maxAttempts - 1) throw error;
+            } finally {
+                if (timeoutId !== null) global.clearTimeout(timeoutId);
+                if (callerSignal && onCallerAbort) callerSignal.removeEventListener('abort', onCallerAbort);
+            }
+            await waitRetryDelay(READ_RETRY_DELAYS_MS[attempt], callerSignal);
+        }
+        throw lastError || transportError('ranking fetch failed');
+    }
     async function deliveryFetch(url, options) { var __oc10;
         var path;
+        var parsed;
         try {
-            var parsed = new URL(typeof url === 'string' ? url : url.url, (((__oc10 = global.location) === null || __oc10 === void 0 ? void 0 : __oc10.href)));
+            parsed = new URL(typeof url === 'string' ? url : url.url, (((__oc10 = global.location) === null || __oc10 === void 0 ? void 0 : __oc10.href)));
             if (parsed.origin !== API) return originalFetch(url, options);
             path = parsed.pathname;
         } catch (_) { return originalFetch(url, options); }
-        if (!options || options.method !== 'POST' || !['/score-sessions', '/score-events', '/rankings', BANK_RUN_PATH].includes(path)) {
+        var method = String((options && options.method) || (typeof url === 'object' && url && url.method) || 'GET').toUpperCase();
+        if (method === 'GET' && (path === '/rankings' || (path === '/water-sort/challenge' && !parsed.searchParams.has('config')))) {
+            return fetchRankingReadWithRetry(url, options);
+        }
+        if (method !== 'POST' || !['/score-sessions', '/score-events', '/rankings', BANK_RUN_PATH].includes(path)) {
             return originalFetch(url, options);
         }
         var body = JSON.parse(options.body);

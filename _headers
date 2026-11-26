@@ -144,3 +144,7 @@ https://:version.archerlab-games.pages.dev/*
 /twenty-questions/assets/*
   Cache-Control: public, max-age=604800, s-maxage=31536000, stale-while-revalidate=86400
   X-Content-Type-Options: nosniff
+
+/shared/ranking-delivery.js
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Content-Type-Options: nosniff

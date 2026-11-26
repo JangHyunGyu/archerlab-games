@@ -5,9 +5,15 @@ import type { RankRow } from '../lib/challenge-rules.ts';
 // (custom domains; it is a no-op on *.workers.dev), from the colo cache. Registration invalidates
 // this isolate immediately; other isolates catch up within the TTL.
 export const LEADERBOARD_TTL_MS = 15_000;
+const LEADERBOARD_STALE_MAX_MS = 10 * 60_000;
 const CACHE_URL = 'https://water-sort.cache.internal/leaderboard';
 let memory: { at: number; rows: RankRow[] } | null = null;
 export function invalidateLeaderboard() { memory = null; }
+
+function isTransientD1Error(err: unknown): boolean {
+  const msg = String(err instanceof Error ? err.message : err || '');
+  return /D1_ERROR|overloaded|CPU time limit|reset|temporarily unavailable|internal error|network|timeout|SQLITE_BUSY|DB offline/i.test(msg);
+}
 
 async function readEdge(): Promise<RankRow[] | null> {
   try {
@@ -37,10 +43,27 @@ async function queryBoard(db: D1Database): Promise<RankRow[]> {
 
 export async function leaderboard(db: D1Database, now = Date.now(), ttlMs = LEADERBOARD_TTL_MS): Promise<RankRow[]> {
   if (memory && now - memory.at < ttlMs && now >= memory.at) return memory.rows;
-  const edge = await readEdge();
-  if (edge) { memory = { at: now, rows: edge }; return edge; }
-  const rows = await queryBoard(db);
-  memory = { at: now, rows };
-  await writeEdge(rows, ttlMs);
-  return rows;
+  if (ttlMs > 0) {
+    const edge = await readEdge();
+    if (edge) { memory = { at: now, rows: edge }; return edge; }
+  }
+  try {
+    let rows: RankRow[];
+    try {
+      rows = await queryBoard(db);
+    } catch (err) {
+      if (!isTransientD1Error(err)) throw err;
+      await new Promise(resolve => setTimeout(resolve, 200));
+      rows = await queryBoard(db);
+    }
+    memory = { at: now, rows };
+    await writeEdge(rows, ttlMs);
+    return rows;
+  } catch (err) {
+    if (memory && now >= memory.at && (now - memory.at) <= LEADERBOARD_STALE_MAX_MS) {
+      console.warn(JSON.stringify({ event: 'water_sort_leaderboard_stale_fallback', error: String(err instanceof Error ? err.message : err).slice(0, 200) }));
+      return memory.rows;
+    }
+    throw err;
+  }
 }

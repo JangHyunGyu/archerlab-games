@@ -1,6 +1,6 @@
-import { messages, translation } from './i18n.mjs?v=20261126-v18';
-import { request, requestId, storage, reportException } from './api.mjs?v=20261126-v18';
-import { GameAudio } from './audio.mjs?v=20261126-v18';
+import { messages, translation } from './i18n.mjs?v=20261126-v19';
+import { request, requestId, storage, reportException } from './api.mjs?v=20261126-v19';
+import { GameAudio } from './audio.mjs?v=20261126-v19';
 
 const locale = document.documentElement.lang === 'en' ? 'en' : 'ko';
 const t = translation(locale);
@@ -37,6 +37,7 @@ let nearestWords = [];
 let nearestKey = null;
 let rankingRequestSeq = 0;
 let rankingSort = 'wins';
+let rankingLoadFailed = false;
 let rolloverInFlight = false;
 let rolloverRoundId = null;
 let rolloverRetryAt = 0;
@@ -59,11 +60,11 @@ const ECLIPSE_FAVICON_DATA_URI = 'data:image/svg+xml,' + encodeURIComponent('<sv
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const isTouchDevice = () => window.matchMedia('(hover: none), (pointer: coarse)').matches || navigator.maxTouchPoints > 0;
 const VFX_SPRITES = {
-    cool: 'assets/ui/vfx-pulse-cyan.webp?v=20261126-v18',
-    warm: 'assets/ui/vfx-sigil-violet.webp?v=20261126-v18',
-    hot: 'assets/ui/vfx-flare-hot.webp?v=20261126-v18',
-    molten: 'assets/ui/vfx-nova-molten.webp?v=20261126-v18',
-    exact: 'assets/ui/vfx-compass-burst-1024.webp?v=20261126-v18',
+    cool: 'assets/ui/vfx-pulse-cyan.webp?v=20261126-v19',
+    warm: 'assets/ui/vfx-sigil-violet.webp?v=20261126-v19',
+    hot: 'assets/ui/vfx-flare-hot.webp?v=20261126-v19',
+    molten: 'assets/ui/vfx-nova-molten.webp?v=20261126-v19',
+    exact: 'assets/ui/vfx-compass-burst-1024.webp?v=20261126-v19',
 };
 const HAPTIC_PATTERNS = {
     unknown: [24, 30, 24],
@@ -1927,11 +1928,13 @@ async function showRanking(nextSort) {
     syncRankingSortUI(rankingSort);
     const seq = ++rankingRequestSeq;
     const activeSort = rankingSort;
+    rankingLoadFailed = false;
     $('leaderboard').textContent = t('loading');
     $('own-rank').textContent = '';
     try {
         const data = await request('leaderboard?sort=' + activeSort);
         if (seq !== rankingRequestSeq) return;
+        rankingLoadFailed = false;
         const resolvedSort = data.sort === 'time' ? 'time' : 'wins';
         rankingSort = resolvedSort;
         syncRankingSortUI(resolvedSort);
@@ -1991,6 +1994,7 @@ async function showRanking(nextSort) {
         }
     } catch (error) {
         if (seq !== rankingRequestSeq) return;
+        rankingLoadFailed = true;
         reportException(error, 'leaderboard');
         $('leaderboard').textContent = t(Object.prototype.hasOwnProperty.call(messages[locale], error.code) ? error.code : 'network_error');
     }
@@ -2098,7 +2102,7 @@ $('ranking-open').addEventListener('click', () => showRanking());
 for (const btn of document.querySelectorAll('[data-ranking-sort]')) {
     btn.addEventListener('click', () => {
         const nextSort = btn.dataset.rankingSort;
-        if (nextSort === rankingSort) return;
+        if (nextSort === rankingSort && !rankingLoadFailed) return;
         audio.play('click');
         showRanking(nextSort);
     });

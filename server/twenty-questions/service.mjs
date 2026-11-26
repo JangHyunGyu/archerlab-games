@@ -13,7 +13,27 @@ import {
 const ID = /^[a-zA-Z0-9_-]{16,100}$/;
 const TOKEN = /^[a-f0-9]{64}$/;
 const ROUND_SUMMARY_TTL_MS = 5000;
+const LEADERBOARD_CACHE_TTL_MS = 10000;
+const LEADERBOARD_STALE_MAX_MS = 10 * 60 * 1000;
+const INVALIDATE_LB_HEADER = 'X-Semantle-Invalidate-Lb';
 const roundCacheByDb = new WeakMap();
+const leaderboardCacheByDb = new WeakMap();
+
+function isTransientSemantleD1Error(err) {
+    const msg = String(err?.message || err || '');
+    return /D1_ERROR|overloaded|CPU time limit|reset|temporarily unavailable|internal error|network|timeout|SQLITE_BUSY/i.test(msg);
+}
+
+export function invalidateLeaderboardCache(db, lang = null) {
+    const cache = leaderboardCacheByDb.get(db);
+    if (!cache) return;
+    if (!lang) {
+        cache.clear();
+        return;
+    }
+    cache.delete(`${lang}:wins`);
+    cache.delete(`${lang}:time`);
+}
 const SECURITY_HEADERS = {
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
@@ -676,6 +696,7 @@ async function performGuess(db, env, player, ipHash, game, body, currentRound, v
         db.prepare(reqSql).bind(...reqParams),
         db.prepare(playerSql).bind(...playerParams),
     ]);
+    if (scored.exact) invalidateLeaderboardCache(db, lang);
 
     if (runtime?.roomCache) {
         runtime.roomCache.game = {
@@ -760,63 +781,112 @@ async function performExplore(db, env, player, ipHash, game, body, currentRound,
 }
 
 // 단일 통합 랭킹 조회 (sort='wins': 고유 정답 회차 순, sort='time': 최단 경과 시간 순, 동일 이름 기록 통합)
-export async function leaderboard(db, playerId, lang = 'ko', rawSort = 'wins') {
+export async function leaderboard(db, playerId, lang = 'ko', rawSort = 'wins', now = Date.now()) {
     const sort = rawSort === 'time' ? 'time' : 'wins';
-    const orderExpr = sort === 'time'
-        ? 'best_time_ms ASC, wins DESC, best_solved_at ASC, player_id ASC'
-        : 'wins DESC, best_time_ms ASC, best_solved_at ASC, player_id ASC';
-    const cte = `WITH ranked_wins AS (
-        SELECT g.player_id, g.round_id, p.name, p.name_key, g.solved_ms, g.solved_at,
-            CASE WHEN p.name_key IS NOT NULL THEN 'n:' || p.name_key ELSE 'p:' || g.player_id END AS dedup_key
-        FROM sm_games g
-        JOIN sm_players p ON p.id = g.player_id
-        WHERE g.lang = ? AND g.status = 'won' AND g.ranked = 1 AND g.round_id IS NOT NULL
-    ),
-    per_round AS (
-        SELECT player_id, round_id, name, name_key, solved_ms, solved_at, dedup_key,
-            ROW_NUMBER() OVER (
-                PARTITION BY dedup_key, round_id
-                ORDER BY solved_ms ASC, solved_at ASC, player_id ASC
-            ) AS round_pick,
-            MAX(CASE WHEN player_id = ? THEN 1 ELSE 0 END) OVER (PARTITION BY dedup_key) AS is_own
-        FROM ranked_wins
-    ),
-    dedup_rounds AS (
-        SELECT player_id, name, name_key, solved_ms AS best_time_ms, solved_at AS best_solved_at, dedup_key, is_own,
-            COUNT(*) OVER (PARTITION BY dedup_key) AS wins,
-            ROW_NUMBER() OVER (
-                PARTITION BY dedup_key
-                ORDER BY solved_ms ASC, solved_at ASC, player_id ASC
-            ) AS best_pick
-        FROM per_round
-        WHERE round_pick = 1
-    ),
-    ordered AS (
-        SELECT player_id, name, name_key, wins, best_time_ms, best_solved_at, is_own,
-            ROW_NUMBER() OVER (ORDER BY ${orderExpr}) AS rank
-        FROM dedup_rounds
-        WHERE best_pick = 1
-    )`;
-    const queries = [
-        db.prepare(`${cte} SELECT * FROM ordered LIMIT 50`).bind(lang, playerId || ''),
-    ];
-    if (playerId) {
-        queries.push(db.prepare(`${cte} SELECT * FROM ordered WHERE is_own = 1 LIMIT 1`).bind(lang, playerId));
+    let cache = leaderboardCacheByDb.get(db);
+    if (!cache) {
+        cache = new Map();
+        leaderboardCacheByDb.set(db, cache);
     }
-    const [topRes, mineRes] = await db.batch(queries);
-    const mine = playerId ? (mineRes?.results?.[0] || null) : null;
-    const visible = row => row ? ({
+    const cacheKey = `${lang}:${sort}`;
+    const cached = cache.get(cacheKey) || null;
+    let rows = null;
+
+    if (cached && now >= cached.at && (now - cached.at) < LEADERBOARD_CACHE_TTL_MS) {
+        rows = cached.rows;
+    } else {
+        const orderExpr = sort === 'time'
+            ? 'best_time_ms ASC, wins DESC, best_solved_at ASC, player_id ASC'
+            : 'wins DESC, best_time_ms ASC, best_solved_at ASC, player_id ASC';
+        const sql = `WITH ranked_wins AS (
+            SELECT g.player_id, g.round_id, p.name, p.name_key, g.solved_ms, g.solved_at,
+                CASE WHEN p.name_key IS NOT NULL THEN 'n:' || p.name_key ELSE 'p:' || g.player_id END AS dedup_key
+            FROM sm_games g
+            JOIN sm_players p ON p.id = g.player_id
+            WHERE g.lang = ? AND g.status = 'won' AND g.ranked = 1 AND g.round_id IS NOT NULL
+        ),
+        members AS (
+            SELECT dedup_key, GROUP_CONCAT(DISTINCT player_id) AS member_ids
+            FROM ranked_wins
+            GROUP BY dedup_key
+        ),
+        per_round AS (
+            SELECT player_id, round_id, name, name_key, solved_ms, solved_at, dedup_key,
+                ROW_NUMBER() OVER (
+                    PARTITION BY dedup_key, round_id
+                    ORDER BY solved_ms ASC, solved_at ASC, player_id ASC
+                ) AS round_pick
+            FROM ranked_wins
+        ),
+        dedup_rounds AS (
+            SELECT player_id, name, name_key, solved_ms AS best_time_ms, solved_at AS best_solved_at, dedup_key,
+                COUNT(*) OVER (PARTITION BY dedup_key) AS wins,
+                ROW_NUMBER() OVER (
+                    PARTITION BY dedup_key
+                    ORDER BY solved_ms ASC, solved_at ASC, player_id ASC
+                ) AS best_pick
+            FROM per_round
+            WHERE round_pick = 1
+        ),
+        ordered AS (
+            SELECT player_id, name, name_key, wins, best_time_ms, best_solved_at, dedup_key,
+                ROW_NUMBER() OVER (ORDER BY ${orderExpr}) AS rank
+            FROM dedup_rounds
+            WHERE best_pick = 1
+        )
+        SELECT o.rank, o.name, o.name_key, o.wins, o.best_time_ms, m.member_ids
+        FROM ordered o
+        JOIN members m ON m.dedup_key = o.dedup_key
+        ORDER BY o.rank ASC`;
+
+        try {
+            let res;
+            try {
+                res = await db.prepare(sql).bind(lang).all();
+            } catch (err) {
+                if (!isTransientSemantleD1Error(err)) throw err;
+                await new Promise(resolve => setTimeout(resolve, 250));
+                res = await db.prepare(sql).bind(lang).all();
+            }
+            rows = (res?.results || []).map(row => ({
+                rank: row.rank,
+                name: row.name,
+                hasCustomName: Boolean(row.name_key),
+                wins: Number(row.wins || 0),
+                solvedMs: row.best_time_ms,
+                bestTimeMs: row.best_time_ms,
+                memberIds: new Set(String(row.member_ids || '').split(',').filter(Boolean)),
+            }));
+            cache.set(cacheKey, { at: now, rows });
+        } catch (err) {
+            if (cached && now >= cached.at && (now - cached.at) <= LEADERBOARD_STALE_MAX_MS) {
+                console.error(JSON.stringify({
+                    event: 'semantle_leaderboard_stale_fallback',
+                    lang,
+                    sort,
+                    error: String(err?.message || err).slice(0, 200),
+                }));
+                rows = cached.rows;
+            } else {
+                throw err;
+            }
+        }
+    }
+
+    const visible = (row, own) => ({
         rank: row.rank,
         name: row.name,
-        hasCustomName: Boolean(row.name_key),
-        wins: Number(row.wins || 0),
-        solvedMs: row.best_time_ms,
-        bestTimeMs: row.best_time_ms,
-        own: Boolean(row.is_own),
-    }) : null;
+        hasCustomName: row.hasCustomName,
+        wins: row.wins,
+        solvedMs: row.solvedMs,
+        bestTimeMs: row.bestTimeMs,
+        own,
+    });
+    const entries = rows.slice(0, 50).map(row => visible(row, Boolean(playerId && row.memberIds.has(playerId))));
+    const mineRow = playerId ? (rows.find(row => row.memberIds.has(playerId)) || null) : null;
     return {
-        entries: (topRes?.results || []).map(visible),
-        mine: visible(mine),
+        entries,
+        mine: mineRow ? visible(mineRow, true) : null,
         sort,
         lang,
         ruleset: rulesetFor(lang),
@@ -835,7 +905,7 @@ export async function handleRoomRequest(request, env, runtime = null) {
 
         if (request.method === 'GET' && path === 'leaderboard') {
             await runtime?.flushBatch?.();
-            return response(await leaderboard(env.DB, id, lang, url.searchParams.get('sort')));
+            return response(await leaderboard(env.DB, id, lang, url.searchParams.get('sort'), nowMs(env)));
         }
 
         if (!dataReady(env)) throw fault('service_unavailable', 503);
@@ -894,6 +964,7 @@ export async function handleRoomRequest(request, env, runtime = null) {
             await runtime?.flushBatch?.();
             const nameKey = name.toLowerCase();
             await env.DB.prepare('UPDATE sm_players SET name = ?, name_key = ? WHERE id = ?').bind(name, nameKey, id).run();
+            invalidateLeaderboardCache(env.DB, lang);
             if (runtime?.roomCache) {
                 if (runtime.roomCache.player) {
                     runtime.roomCache.player = { ...runtime.roomCache.player, name, name_key: nameKey };
@@ -901,7 +972,9 @@ export async function handleRoomRequest(request, env, runtime = null) {
                 runtime.roomCache.roundSummary = null;
             }
             const game = await hydratePlayerRoundGame(env.DB, player, currentRound.round_id, runtime);
-            return response(await stateFor(env.DB, env, player, game, currentRound, vocab, lang, runtime, null, { forceFresh: true }));
+            const res = response(await stateFor(env.DB, env, player, game, currentRound, vocab, lang, runtime, null, { forceFresh: true }));
+            res.headers.set(INVALIDATE_LB_HEADER, '1');
+            return res;
         }
 
         if (request.method === 'POST' && path === 'games') {
@@ -951,7 +1024,10 @@ export async function handleRoomRequest(request, env, runtime = null) {
         }
 
         if (request.method === 'POST' && match[2] === 'guesses') {
-            return response(await performGuess(env.DB, env, player, ipHash, game, await readBody(request), currentRound, vocab, lang, runtime));
+            const payload = await performGuess(env.DB, env, player, ipHash, game, await readBody(request), currentRound, vocab, lang, runtime);
+            const res = response(payload);
+            if (payload?.event?.code === 'won') res.headers.set(INVALIDATE_LB_HEADER, '1');
+            return res;
         }
 
         if (request.method === 'POST' && match[2] === 'explore') {
@@ -960,7 +1036,14 @@ export async function handleRoomRequest(request, env, runtime = null) {
 
         throw fault('not_found', 404);
     } catch (error) {
-        if (!error?.status || error.status >= 500) runtime?.clearCache?.();
+        if (!error?.status || error.status >= 500) {
+            runtime?.clearCache?.();
+            console.error(JSON.stringify({
+                event: 'semantle_room_error',
+                url: request.url,
+                error: String(error?.message || error).slice(0, 300),
+            }));
+        }
         return failure(error);
     }
 }
@@ -980,7 +1063,11 @@ export async function twentyQuestionsRoute(request, env, ctx = null) {
         } else {
             const url = new URL(request.url);
             const lang = parseLang(url.searchParams.get('lang'));
-            if (url.pathname === '/twenty-questions/status' && request.method === 'GET') {
+            if (url.pathname === '/twenty-questions/leaderboard' && request.method === 'GET') {
+                await initialize(env.DB);
+                const playerId = await identity(request, lang);
+                result = response(await leaderboard(env.DB, playerId, lang, url.searchParams.get('sort'), nowMs(env)));
+            } else if (url.pathname === '/twenty-questions/status' && request.method === 'GET') {
                 await initialize(env.DB);
                 const ready = dataReady(env);
                 const now = nowMs(env);
@@ -1022,12 +1109,23 @@ export async function twentyQuestionsRoute(request, env, ctx = null) {
                 const playerId = await identity(request, lang);
                 if (!env.TWENTY_GAMEPLAY) throw fault('service_unavailable', 503);
                 result = await env.TWENTY_GAMEPLAY.get(env.TWENTY_GAMEPLAY.idFromName(playerId)).fetch(request);
+                if (result.headers.get(INVALIDATE_LB_HEADER) === '1') {
+                    invalidateLeaderboardCache(env.DB, lang);
+                }
             }
         }
     } catch (error) {
+        if (!error?.status || error.status >= 500) {
+            console.error(JSON.stringify({
+                event: 'semantle_route_error',
+                url: request.url,
+                error: String(error?.message || error).slice(0, 300),
+            }));
+        }
         result = failure(error);
     }
     const headers = new Headers(result.headers);
+    headers.delete(INVALIDATE_LB_HEADER);
     if (origin) headers.set('Access-Control-Allow-Origin', origin);
     headers.set('Vary', 'Origin');
     headers.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');

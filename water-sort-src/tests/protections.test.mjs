@@ -244,3 +244,42 @@ test('the shorter pour pace does not push a fast queued player into a bot verdic
   assert.equal(pourVerdict(stats), 'ok');
   assert.ok(stats.gaps.every(gap => gap >= FAST_GAP_MS));
 });
+
+test('leaderboard retries transient D1 error and falls back to stale memory rows when D1 stays unavailable', async () => {
+  const h = harness(), now = 1800000000000;
+  try {
+    h.db.database.prepare("INSERT INTO water_sort_runs (id, token, data, nickname, cleared, score, created_at) VALUES ('ws-1', 't', '{\"rules\":2}', 'Splash', 12, 12500, 1)").run();
+    const initial = await leaderboard(h.db, now);
+    assert.deepEqual(initial.map(row => row.nickname), ['Splash']);
+
+    const origPrepare = h.db.prepare.bind(h.db);
+    let boardCalls = 0;
+    h.db.prepare = (sql) => {
+      const stmt = origPrepare(sql);
+      if (/ROW_NUMBER/.test(sql)) {
+        return {
+          ...stmt,
+          async all() {
+            boardCalls += 1;
+            if (boardCalls === 1) throw new Error('D1_ERROR: D1 DB is overloaded.');
+            if (boardCalls === 2) return stmt.all();
+            throw new Error('D1_ERROR: D1 DB exceeded its CPU time limit and was reset.');
+          },
+        };
+      }
+      return stmt;
+    };
+
+    // After fresh TTL, 1 transient D1 error retries and succeeds.
+    const retried = await leaderboard(h.db, now + 20_000);
+    assert.equal(boardCalls, 2);
+    assert.deepEqual(retried.map(row => row.nickname), ['Splash']);
+
+    // Persistent D1 outage after TTL falls back to stale cached rows instead of throwing.
+    const stale = await leaderboard(h.db, now + 40_000);
+    assert.equal(boardCalls, 4);
+    assert.deepEqual(stale.map(row => row.nickname), ['Splash']);
+  } finally {
+    h.db.database.close();
+  }
+});
