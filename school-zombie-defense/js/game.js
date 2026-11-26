@@ -71,7 +71,7 @@
   const imageAsset = (path) => {
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
-  const ZOMBIE_ASSET_VERSION = "20261126-zombies-native-v2";
+  const ZOMBIE_ASSET_VERSION = "20261126-zombies-native-v3";
   const CHARACTER_ASSET_VERSION = "20261123-defenders-8f-v3";
   const CHARACTER_CONTINUITY_ASSET_VERSION = "20261123-defender-continuity-8f-v3";
   const FIREBOMB_RECOVERY_ASSET_VERSION = "20261123-firebomb-recovery-8f-v3";
@@ -430,7 +430,12 @@
     "bloom",
     "charger",
     "kendo",
-    "cheer"
+    "cheer",
+    "volleyball",
+    "plump",
+    "swimmer",
+    "ballet",
+    "librarian"
   ];
   const ZOMBIE_DEATH_TEXTURES = Object.fromEntries(
     ZOMBIE_DEATH_TYPES.map((type) => [
@@ -445,6 +450,7 @@
   // Alpha-weighted final-frame centers and opaque bounds, normalized to each 512px death frame.
   const ZOMBIE_DEATH_FINAL_FRAME_BOUNDS = {
     "zombie-death-athlete-sheet": { x: -0.0175, y: 0.3338, width: 0.6504, height: 0.2383 },
+    "zombie-death-ballet-sheet": { x: -0.0475, y: 0.3283, width: 0.8223, height: 0.2422 },
     "zombie-death-bloom-sheet": { x: -0.0336, y: 0.0624, width: 0.9062, height: 0.2656 },
     "zombie-death-brute-sheet": { x: -0.0152, y: -0.0022, width: 0.5859, height: 0.3145 },
     "zombie-death-charger-sheet": { x: -0.0609, y: 0.3567, width: 0.7734, height: 0.2324 },
@@ -455,19 +461,23 @@
     "zombie-death-guard-sheet": { x: -0.0163, y: 0.0768, width: 0.6914, height: 0.1992 },
     "zombie-death-janitor-sheet": { x: -0.0444, y: 0.0609, width: 0.7402, height: 0.2363 },
     "zombie-death-kendo-sheet": { x: -0.0205, y: 0.0756, width: 0.6777, height: 0.1992 },
+    "zombie-death-librarian-sheet": { x: -0.0446, y: 0.3214, width: 0.7578, height: 0.2539 },
     "zombie-death-normal-variant-1-sheet": { x: 0.049, y: 0.3356, width: 0.9727, height: 0.3281 },
     "zombie-death-normal-variant-2-sheet": { x: 0.0371, y: 0.2971, width: 0.9727, height: 0.4102 },
     "zombie-death-normal-variant-3-sheet": { x: 0.0783, y: 0.3514, width: 0.9727, height: 0.2988 },
     "zombie-death-normal-variant-4-sheet": { x: 0.0166, y: 0.3326, width: 0.9707, height: 0.3281 },
     "zombie-death-nurse-sheet": { x: -0.0564, y: 0.3367, width: 0.8574, height: 0.2559 },
+    "zombie-death-plump-sheet": { x: -0.0582, y: 0.3014, width: 0.9102, height: 0.3242 },
     "zombie-death-runner-sheet": { x: -0.0406, y: 0.3181, width: 0.7559, height: 0.2734 },
     "zombie-death-screamer-sheet": { x: -0.0498, y: 0.0653, width: 0.7402, height: 0.2148 },
     "zombie-death-spider-sheet": { x: 0.0025, y: 0.0582, width: 0.8574, height: 0.459 },
     "zombie-death-student-1-sheet": { x: -0.0706, y: 0.0445, width: 0.9707, height: 0.3535 },
     "zombie-death-student-2-sheet": { x: 0.0726, y: 0.0443, width: 0.9434, height: 0.3594 },
     "zombie-death-student-3-sheet": { x: -0.0875, y: 0.0435, width: 0.959, height: 0.3418 },
+    "zombie-death-swimmer-sheet": { x: -0.059, y: 0.3248, width: 0.7246, height: 0.2656 },
     "zombie-death-teacher-sheet": { x: -0.0386, y: 0.0342, width: 0.7578, height: 0.3027 },
-    "zombie-death-volatile-sheet": { x: -0.0087, y: -0.0064, width: 0.6543, height: 0.3418 }
+    "zombie-death-volatile-sheet": { x: -0.0087, y: -0.0064, width: 0.6543, height: 0.3418 },
+    "zombie-death-volleyball-sheet": { x: -0.0489, y: 0.3344, width: 0.7773, height: 0.2559 }
   };
   const ZOMBIE_DEATH_RENDER_SCALES = {
     // Match the first visible death pose to the alpha-bounded size of the walk cycle.
@@ -482,7 +492,7 @@
     teacher: { deathSize: 1.3 },
     nurse: { deathSize: 0.96 },
     diva: { deathSize: 1.42 },
-    athlete: { deathSize: 1.32 },
+    athlete: { deathSize: 1.29 },
     janitor: { deathSize: 1.5 },
     guard: { deathSize: 1.5 },
     crawler: { deathSize: 0.95 },
@@ -491,7 +501,12 @@
     bloom: { deathSize: 1.13 },
     charger: { deathSize: 1.18 },
     kendo: { deathSize: 1.42 },
-    cheer: { deathSize: 1 }
+    cheer: { deathSize: 1 },
+    volleyball: { deathSize: 0.88 },
+    plump: { deathSize: 0.99 },
+    swimmer: { deathSize: 0.9 },
+    ballet: { deathSize: 1.13 },
+    librarian: { deathSize: 1.13 }
   };
   const ZOMBIE_FOOT_OFFSET_RATIOS = {
     normal: 0.386,
@@ -512,7 +527,12 @@
     bloom: 0.392,
     charger: 0.408,
     kendo: 0.402,
-    cheer: 0.394
+    cheer: 0.394,
+    volleyball: 0.394,
+    plump: 0.402,
+    swimmer: 0.394,
+    ballet: 0.398,
+    librarian: 0.396
   };
   const ZOMBIE_HP_MULTIPLIER = 3;
   const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
@@ -869,6 +889,11 @@
     },
     kendo: { id: "kendo", hpScale: 1.55, speedScale: 1.06, sizeScale: 1.04, attackScale: 1.24, hitRadiusScale: 1.02, knockbackScale: 0.72, animRate: 6.6, reward: 2, parryCharges: 2, parryCooldown: 1.6 },
     cheer: { id: "cheer", hpScale: 0.84, speedScale: 1.48, sizeScale: 0.92, attackScale: 0.92, hitRadiusScale: 0.9, knockbackScale: 1.1, animRate: 8.8, reward: 1, hasteRoarInterval: 4.8, hasteRoarRadius: 165, hasteDuration: 2.2, hasteSpeedScale: 1.32 },
+    volleyball: { id: "volleyball", hpScale: 1.05, speedScale: 1.54, sizeScale: 0.96, attackScale: 1.08, hitRadiusScale: 0.92, knockbackScale: 1.02, animRate: 8.8, reward: 2, surgeSpeedScale: 2.55, surgeDuration: 0.32, surgeChargeDuration: 0.2, surgeCooldownMin: 4.0, surgeCooldownMax: 5.4, surgeMinBarricadeDistance: 120 },
+    plump: { id: "plump", hpScale: 2.75, speedScale: 0.78, sizeScale: 1.16, attackScale: 1.32, hitRadiusScale: 1.14, knockbackScale: 0.52, animRate: 5.4, reward: 2, tauntAura: true, tauntRadius: 195 },
+    swimmer: { id: "swimmer", hpScale: 1.12, speedScale: 1.62, sizeScale: 0.94, attackScale: 0.98, hitRadiusScale: 0.9, knockbackScale: 1.06, animRate: 9.2, reward: 2, slowResist: 0.55 },
+    ballet: { id: "ballet", hpScale: 0.96, speedScale: 1.48, sizeScale: 0.94, attackScale: 1.06, hitRadiusScale: 0.9, knockbackScale: 1.05, animRate: 8.6, reward: 2, parryCharges: 1, parryCooldown: 1.4 },
+    librarian: { id: "librarian", hpScale: 1.34, speedScale: 1.02, sizeScale: 0.98, attackScale: 1.14, hitRadiusScale: 0.94, knockbackScale: 0.88, animRate: 6.4, reward: 2, veilAuraInterval: 5.4, veilAuraRadius: 165, veilDuration: 3.2, veilReduction: 0.25 },
     elite: { id: "elite", hpScale: 1.5, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 0.5, animRate: 5.2, reward: 4 }
   };
   const ZOMBIE_TEXTURE_TYPES = [
@@ -890,7 +915,12 @@
     "bloom",
     "charger",
     "kendo",
-    "cheer"
+    "cheer",
+    "volleyball",
+    "plump",
+    "swimmer",
+    "ballet",
+    "librarian"
   ];
   const ZOMBIE_MULTI_VARIANT_WALK_TYPES = new Set(["normal"]);
 
@@ -949,6 +979,7 @@
     ];
     if (level >= 2) {
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.student, weight: Math.min(34, 12 + level * 1.7) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.volleyball, weight: Math.min(26, 8 + level * 1.3) });
     }
     if (level >= 2) {
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.runner, weight: Math.min(42, 14 + level * 2) });
@@ -956,17 +987,21 @@
     if (level >= 4) {
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.brute, weight: Math.min(28, 8 + (level - 4) * 1.6) });
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.screamer, weight: Math.min(24, 7 + (level - 4) * 1.25) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.ballet, weight: Math.min(24, 7 + (level - 4) * 1.25) });
     }
     if (level >= 3) {
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.nurse, weight: Math.min(28, 8 + level * 1.3) });
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.diva, weight: Math.min(24, 8 + level * 1.1) });
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.athlete, weight: Math.min(32, 9 + level * 1.4) });
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.cheer, weight: Math.min(26, 8 + level * 1.25) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.swimmer, weight: Math.min(26, 8 + level * 1.25) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.plump, weight: Math.min(22, 6 + level * 1.15) });
     }
     if (level >= 5) {
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.teacher, weight: Math.min(26, 7 + (level - 5) * 1.35) });
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.janitor, weight: Math.min(24, 6 + (level - 5) * 1.25) });
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.kendo, weight: Math.min(24, 6 + (level - 5) * 1.25) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.librarian, weight: Math.min(22, 6 + (level - 5) * 1.2) });
     }
     if (level >= 6) {
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.volatile, weight: Math.min(24, 6 + (level - 6) * 1.45) });
@@ -996,9 +1031,9 @@
   }
   const STAGE_BOSS_CONFIGS = {
     1: { type: "brute", nameKey: "boss.brute", hpMultiplier: 4.8, scale: 1.28, speedScale: 0.78, attackScale: 1.35, accent: 0xff6b47, escorts: ["runner", "normal"] },
-    2: { type: "diva", nameKey: "boss.diva", hpMultiplier: 5.4, scale: 1.28, speedScale: 0.88, attackScale: 1.25, accent: 0xff4fa7, escorts: ["cheer", "nurse"] },
-    3: { type: "guard", nameKey: "boss.guard", hpMultiplier: 6.2, scale: 1.28, speedScale: 0.74, attackScale: 1.35, accent: 0x6dd5ff, escorts: ["kendo", "charger"] },
-    4: { type: "elite", nameKey: "boss.elite", hpMultiplier: 7.2, scale: 1.28, speedScale: 0.84, attackScale: 1.4, accent: 0xffd15c, escorts: ["spider", "bloom"] }
+    2: { type: "diva", nameKey: "boss.diva", hpMultiplier: 5.4, scale: 1.28, speedScale: 0.88, attackScale: 1.25, accent: 0xff4fa7, escorts: ["ballet", "swimmer"] },
+    3: { type: "guard", nameKey: "boss.guard", hpMultiplier: 6.2, scale: 1.28, speedScale: 0.74, attackScale: 1.35, accent: 0x6dd5ff, escorts: ["kendo", "librarian"] },
+    4: { type: "elite", nameKey: "boss.elite", hpMultiplier: 7.2, scale: 1.28, speedScale: 0.84, attackScale: 1.4, accent: 0xffd15c, escorts: ["plump", "volleyball"] }
   };
   const isBossWave = (level) => level > 0 && level % 4 === 0;
   const SKILL_ACCENTS = {
@@ -7290,6 +7325,14 @@
         zombie.parryCooldownTimer = 0;
         zombie.tauntAura = Boolean(typeConfig.tauntAura);
         zombie.tauntRadius = typeConfig.tauntRadius || 0;
+        zombie.slowResist = typeConfig.slowResist || 0;
+        zombie.veilAuraInterval = typeConfig.veilAuraInterval || 0;
+        zombie.veilAuraTimer = zombie.veilAuraInterval ? rand(1.8, zombie.veilAuraInterval) : 0;
+        zombie.veilAuraRadius = typeConfig.veilAuraRadius || 0;
+        zombie.veilDuration = typeConfig.veilDuration || 0;
+        zombie.veilReduction = typeConfig.veilReduction || 0;
+        zombie.veilTimer = 0;
+        zombie.veilBonusReduction = 0;
         zombie.isBoss = isBoss;
         zombie.bossConfig = (overrideConfig && overrideConfig.bossConfig) || null;
         zombie.bossName = zombie.bossConfig ? SchoolI18n.t(zombie.bossConfig.nameKey) : "";
@@ -9611,6 +9654,17 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       ) {
         damage = Math.max(1, Math.round(damage * (1 - zombie.armorReduction)));
       }
+      if (
+        !parried
+        && zombie.veilTimer > 0
+        && (zombie.veilBonusReduction || 0) > 0
+        && !crit
+        && hitType !== "projectile-sniper"
+        && hitType !== "explosion"
+        && hitType !== "projectile-rocket"
+      ) {
+        damage = Math.max(1, Math.round(damage * (1 - zombie.veilBonusReduction)));
+      }
       if (options.showHitEffect !== false) {
         this.createZombieHitEffect(zombie, hitType, crit, impactPoint);
       }
@@ -10298,6 +10352,12 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
           zombie.hasteBonusScale = 1;
         }
       }
+      if (zombie.veilTimer > 0) {
+        zombie.veilTimer = Math.max(0, zombie.veilTimer - dt);
+        if (zombie.veilTimer <= 0) {
+          zombie.veilBonusReduction = 0;
+        }
+      }
       if (zombie.bossAura && zombie.bossAura.active) {
         const foot = this.getZombieFootPoint(zombie);
         zombie.bossAura.setPosition(foot.x, foot.y + 4);
@@ -10374,6 +10434,43 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
             ease: "Cubic.easeOut",
             onComplete: () => this.destroyTransientObject(roar, false)
           });
+        }
+      }
+      // 도서부 사서 좀비: 주변 좀비에게 암흑 장막(피해 경감) 부여
+      if (zombie.veilAuraInterval > 0) {
+        zombie.veilAuraTimer -= dt;
+        if (zombie.veilAuraTimer <= 0) {
+          zombie.veilAuraTimer = zombie.veilAuraInterval;
+          const radiusSq = zombie.veilAuraRadius * zombie.veilAuraRadius;
+          let veiledCount = 0;
+          for (let j = 0; j < this.zombies.length && veiledCount < 6; j += 1) {
+            const ally = this.zombies[j];
+            if (!ally || !ally.active || ally.hp <= 0) {
+              continue;
+            }
+            const dx = ally.x - zombie.x;
+            const dy = ally.y - zombie.y;
+            if (dx * dx + dy * dy <= radiusSq) {
+              ally.veilTimer = Math.max(ally.veilTimer || 0, zombie.veilDuration || 3.2);
+              ally.veilBonusReduction = Math.max(ally.veilBonusReduction || 0, zombie.veilReduction || 0.25);
+              veiledCount += 1;
+            }
+          }
+          if (veiledCount > 0) {
+            const veilRing = this.trackTransient(
+              this.add.circle(zombie.x, zombie.y + 14, 22, 0xa866ff, 0.14)
+                .setStrokeStyle(2.5, 0xc799ff, 0.85)
+                .setDepth((zombie.depth || ZOMBIE_BODY_DEPTH_BASE) - 0.3)
+            );
+            this.tweens.add({
+              targets: veilRing,
+              scale: Math.max(2.3, zombie.veilAuraRadius / 35),
+              alpha: 0,
+              duration: 460,
+              ease: "Cubic.easeOut",
+              onComplete: () => this.destroyTransientObject(veilRing, false)
+            });
+          }
         }
       }
     }
@@ -10465,7 +10562,8 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
         this.separateZombieFromCrowd(zombie, dt);
 
         const hasteMoveScale = zombie.hasteTimer > 0 ? (zombie.hasteBonusScale || 1.32) : 1;
-        const slowFactor = (zombie.slowTimer > 0 ? 0.34 : 1) * hasteMoveScale;
+        const slowMultiplier = 1 - 0.66 * (1 - (zombie.slowResist || 0));
+        const slowFactor = (zombie.slowTimer > 0 ? slowMultiplier : 1) * hasteMoveScale;
         const attackLine = this.getZombieBarricadeContactY(zombie);
         const frontBlocker = this.getZombieFrontBlocker(zombie);
         const surgeMovementScale = this.updateZombieSurge(zombie, dt, attackLine, frontBlocker);

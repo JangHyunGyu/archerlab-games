@@ -19,6 +19,11 @@ assert.ok(configs.guard.armorReduction > 0 && configs.guard.armorReduction < 1, 
 assert.ok(configs.kendo.parryCharges >= 1 && configs.kendo.parryCooldown > 0, "kendo must configure parry charges");
 assert.equal(configs.diva.tauntAura, true, "diva must configure taunt aura");
 assert.ok(configs.diva.tauntRadius > 0, "diva must configure positive taunt radius");
+assert.ok(configs.volleyball.surgeSpeedScale > 1, "volleyball must configure spike surge");
+assert.equal(configs.plump.tauntAura, true, "plump must configure taunt aura");
+assert.ok(configs.swimmer.slowResist > 0 && configs.swimmer.slowResist < 1, "swimmer must configure slow resistance");
+assert.ok(configs.ballet.parryCharges >= 1, "ballet must configure parry charges");
+assert.ok(configs.librarian.veilAuraInterval > 0 && configs.librarian.veilReduction > 0, "librarian must configure veil aura");
 
 for (const cfg of Object.values(configs)) {
   assert.ok(cfg.reward >= 1 && cfg.reward <= 4, `${cfg.id} reward must remain clamped in 1..4`);

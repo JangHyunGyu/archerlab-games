@@ -4250,13 +4250,13 @@
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-walk-athlete.png",
-      "bytes": 2754791,
-      "sha256": "8fa8a8398960f8c915ac5a411752ddfe2f0c4056d7cf6e95f3c88cd3699c910a"
+      "bytes": 2331334,
+      "sha256": "e1c03517ee8082e25c52897e54eb41395bcad57cd99a64cc3292ff78aec0605d"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-walk-athlete.webp",
-      "bytes": 635628,
-      "sha256": "139e2d6b99ab2b5461b57b8708ce84b698d7cb48b9904c23174c36aff1beebb7"
+      "bytes": 565332,
+      "sha256": "b57688ddbe9affa987f7711aac0002578c2e2bca172a84bfa32902d3c10ece52"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-walk-bloom.png",
