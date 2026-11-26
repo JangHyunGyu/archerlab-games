@@ -444,7 +444,8 @@ button {
 .game-shell.is-menu-mode .stat-strip,
 .game-shell.is-menu-mode .lumen-meter,
 .game-shell.is-menu-mode .effect-hud,
-.game-shell.is-menu-mode .touch-controls {
+.game-shell.is-menu-mode .touch-controls,
+.game-shell.is-menu-mode .panel-hit-button {
   opacity: 0;
   pointer-events: none;
 }
@@ -1390,7 +1391,7 @@ button {
     top: 22px;
     right: auto;
     left: 24px;
-    width: 330px;
+    width: 348px;
   }
 
   .brand-link {

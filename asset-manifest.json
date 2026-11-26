@@ -1745,8 +1745,8 @@
     },
     {
       "path": "lumen-shift/assets/images/title-screen-desktop-v2.webp",
-      "bytes": 1018846,
-      "sha256": "588e076b48bb4b1fa8b2fd2407481a32ce91020a719c3ba0e765883f7b243754"
+      "bytes": 140938,
+      "sha256": "eab723b1bd4016b152fa52fba76969b38ca054156a28ceb39b619792c4fcf8a9"
     },
     {
       "path": "lumen-shift/assets/images/title-screen-mobile-v2.png",
@@ -1755,8 +1755,8 @@
     },
     {
       "path": "lumen-shift/assets/images/title-screen-mobile-v2.webp",
-      "bytes": 926480,
-      "sha256": "811deb52fccdccab2db253d2676b9df632d90a08f34cd40bcdf21382bd3ce166"
+      "bytes": 128564,
+      "sha256": "560c54ddd8da96dc717d707bd8f0d28b85f27eedd0162d4ce9f714371c33221c"
     },
     {
       "path": "parking-escape/assets/sounds/dragon-studio-car-engine-372477.mp3",

@@ -80,9 +80,9 @@
 }
     </script>
   <link rel="stylesheet" href="../assets/vendor/pretendard/pretendard.css">
-  <link rel="stylesheet" href="css/style.css?v=20261124-lumen-overhaul-v2">
+  <link rel="stylesheet" href="css/style.css?v=20261126-lumen-upgrade-v1">
   <link rel="stylesheet" href="../shared/start-screen-premium.css?v=20260719-premium-v2">
-  <link rel="stylesheet" href="css/premium.css?v=20261124-lumen-overhaul-v2">
+  <link rel="stylesheet" href="css/premium.css?v=20261126-lumen-upgrade-v1">
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -93,7 +93,7 @@
   <script src="../shared/client-error-reporter.js?v=20261006-client-exception-v1&audit=20261016-online-recovery-v2" data-game-id="lumen-shift"></script>
   <script src="../shared/browser-check.js?v=20261005-env-guard-v1"></script>
   <script src="../shared/game-runtime.js?v=20260905-bot-filter-v2&ranking=20261006-client-exception-v1&audit=20261008-runtime-v4" data-game-id="lumen-shift" data-service-worker="sw.js"></script>
-  <link rel="stylesheet" href="css/image-ui.css?v=20261124-lumen-overhaul-v2">
+  <link rel="stylesheet" href="css/image-ui.css?v=20261126-lumen-upgrade-v1">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -133,10 +133,13 @@
     <header class="hud" aria-label="game status">
       <button id="home-button" class="icon-button" type="button" aria-label="menu">⌂</button>
       <div class="hud-main">
-        <span id="stage-name" class="stage-name">Score</span>
+        <span id="stage-name" class="stage-name">Score · ST 01</span>
         <strong id="score-value">0</strong>
       </div>
-      <button id="pause-button" class="icon-button" type="button" aria-label="pause">Ⅱ</button>
+      <div class="hud-actions">
+        <button id="sound-button" class="icon-button" type="button" aria-label="mute audio" aria-pressed="false" title="Mute audio (M)">♪</button>
+        <button id="pause-button" class="icon-button" type="button" aria-label="pause">Ⅱ</button>
+      </div>
     </header>
 
     <section class="stat-strip" aria-label="run statistics">
@@ -155,9 +158,19 @@
       </div>
       <div class="effect-stat">
         <span>LINES</span>
-        <strong><b id="area-lines-value">0</b>/<b id="area-lines-goal">70</b></strong>
+        <strong><b id="area-lines-value">0</b>/<b id="area-lines-goal">14</b></strong>
       </div>
     </section>
+
+    <section class="effect-hud effect-hud-right" aria-label="lumen zone">
+      <button id="zone-button" class="effect-stat zone-button" type="button" aria-label="Activate Lumen Zone (E)" title="Activate Lumen Zone (E)" disabled>
+        <span>ZONE</span>
+        <strong id="zone-value">0%</strong>
+        <span class="zone-gauge" aria-hidden="true"><i id="zone-gauge-fill"></i></span>
+      </button>
+    </section>
+
+    <button id="hold-button" class="panel-hit-button" type="button" aria-label="Hold piece (C)" title="Hold piece (C)"></button>
 
     <div id="event-label" class="event-label" aria-live="polite"></div>
     <div id="zone-veiler" class="zone-veiler" aria-hidden="true"></div>
@@ -198,6 +211,7 @@
           <span id="result-mode">Journey</span>
           <h2 id="result-title">Run Complete</h2>
           <strong id="final-score">0</strong>
+          <div id="result-stats" class="result-stats"></div>
         </div>
         <div class="submit-row">
           <input id="nickname-input" type="text" maxlength="20" autocomplete="nickname" placeholder="Nickname">
@@ -230,6 +244,6 @@
   <script src="../assets/vendor/tone/tone-15.5.25.js"></script>
   <script src="../assets/vendor/gsap/gsap-3.15.0.min.js"></script>
   <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
-  <script type="module" src="js/main.js?v=20260913-concept-ui-v2&ranking=20261004-ranking-audit-v1&i18n=20261002-en-page-v1&input=20261009-repeat-blur-v1&overhaul=20261124-v2"></script>
+  <script type="module" src="js/main.js?v=20260913-concept-ui-v2&ranking=20261004-ranking-audit-v1&i18n=20261002-en-page-v1&input=20261009-repeat-blur-v1&overhaul=20261124-v2&upgrade=20261126-v1"></script>
 </body>
 </html>

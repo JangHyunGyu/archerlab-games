@@ -208,17 +208,65 @@ const MODES = {
 };
 
 const PIECES = {
-  I: { color: 0x68e9ff, matrix: [[1, 1, 1, 1]] },
+  I: { color: 0x68e9ff, matrix: [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]] },
   O: { color: 0xffd36e, matrix: [[1, 1], [1, 1]] },
-  T: { color: 0xbf7bff, matrix: [[0, 1, 0], [1, 1, 1]] },
-  S: { color: 0x7cffb0, matrix: [[0, 1, 1], [1, 1, 0]] },
-  Z: { color: 0xff5d73, matrix: [[1, 1, 0], [0, 1, 1]] },
-  J: { color: 0x5d8cff, matrix: [[1, 0, 0], [1, 1, 1]] },
-  L: { color: 0xffa85d, matrix: [[0, 0, 1], [1, 1, 1]] },
+  T: { color: 0xbf7bff, matrix: [[0, 1, 0], [1, 1, 1], [0, 0, 0]] },
+  S: { color: 0x7cffb0, matrix: [[0, 1, 1], [1, 1, 0], [0, 0, 0]] },
+  Z: { color: 0xff5d73, matrix: [[1, 1, 0], [0, 1, 1], [0, 0, 0]] },
+  J: { color: 0x5d8cff, matrix: [[1, 0, 0], [1, 1, 1], [0, 0, 0]] },
+  L: { color: 0xffa85d, matrix: [[0, 0, 1], [1, 1, 1], [0, 0, 0]] },
 };
 
 const PIECE_KEYS = Object.keys(PIECES);
-const KICKS = [[0, 0], [1, 0], [-1, 0], [2, 0], [-2, 0], [0, -1], [1, -1], [-1, -1]];
+const MAX_LOCK_RESETS = 15;
+const SRS_KICKS_JLSTZ = {
+  "0>1": [[0, 0], [-1, 0], [-1, -1], [0, 2], [-1, 2]],
+  "1>0": [[0, 0], [1, 0], [1, 1], [0, -2], [1, -2]],
+  "1>2": [[0, 0], [1, 0], [1, 1], [0, -2], [1, -2]],
+  "2>1": [[0, 0], [-1, 0], [-1, -1], [0, 2], [-1, 2]],
+  "2>3": [[0, 0], [1, 0], [1, -1], [0, 2], [1, 2]],
+  "3>2": [[0, 0], [-1, 0], [-1, 1], [0, -2], [-1, -2]],
+  "3>0": [[0, 0], [-1, 0], [-1, 1], [0, -2], [-1, -2]],
+  "0>3": [[0, 0], [1, 0], [1, -1], [0, 2], [1, 2]],
+};
+const SRS_KICKS_I = {
+  "0>1": [[0, 0], [-2, 0], [1, 0], [-2, 1], [1, -2]],
+  "1>0": [[0, 0], [2, 0], [-1, 0], [2, -1], [-1, 2]],
+  "1>2": [[0, 0], [-1, 0], [2, 0], [-1, -2], [2, 1]],
+  "2>1": [[0, 0], [1, 0], [-2, 0], [1, 2], [-2, -1]],
+  "2>3": [[0, 0], [2, 0], [-1, 0], [2, -1], [-1, 2]],
+  "3>2": [[0, 0], [-2, 0], [1, 0], [-2, 1], [1, -2]],
+  "3>0": [[0, 0], [1, 0], [-2, 0], [1, 2], [-2, -1]],
+  "0>3": [[0, 0], [-1, 0], [2, 0], [-1, -2], [2, 1]],
+};
+
+function srsKicksFor(type, fromRot, toRot) {
+  const key = `${fromRot}>${toRot}`;
+  if (type === "I") return SRS_KICKS_I[key] || [[0, 0]];
+  return SRS_KICKS_JLSTZ[key] || [[0, 0]];
+}
+
+function trimmedMatrix(matrix) {
+  let minY = matrix.length;
+  let maxY = -1;
+  let minX = matrix[0].length;
+  let maxX = -1;
+  for (let y = 0; y < matrix.length; y += 1) {
+    for (let x = 0; x < matrix[y].length; x += 1) {
+      if (!matrix[y][x]) continue;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+    }
+  }
+  if (maxY < minY || maxX < minX) return matrix;
+  const out = [];
+  for (let y = minY; y <= maxY; y += 1) {
+    out.push(matrix[y].slice(minX, maxX + 1));
+  }
+  return out;
+}
 
 function stageCountForMode(mode) {
   return Math.max(1, Math.floor(Number(((mode === null || mode === void 0 ? void 0 : mode.stageCount)) || STAGES.length)));
@@ -344,19 +392,34 @@ function cssPx(value) {
   return Number.isFinite(number) ? number : 0;
 }
 
+let cachedSafeAreaInsets = null;
+function invalidateSafeAreaInsets() {
+  cachedSafeAreaInsets = null;
+}
+
 function safeAreaInsets() {
+  if (cachedSafeAreaInsets) return cachedSafeAreaInsets;
   if (typeof document === "undefined" || !document.documentElement) return { top: 0, left: 0, right: 0, bottom: 0 };
   const style = getComputedStyle(document.documentElement);
-  return {
+  cachedSafeAreaInsets = {
     top: cssPx(style.getPropertyValue("--safe-top")),
     left: cssPx(style.getPropertyValue("--safe-left")),
     right: cssPx(style.getPropertyValue("--safe-right")),
     bottom: cssPx(style.getPropertyValue("--safe-bottom")),
   };
+  return cachedSafeAreaInsets;
 }
 
 class AudioDirector {
-  constructor() { var __oc2;
+  constructor() { var __oc2, __ocMute;
+    const savedMute = readStorage("muted", "");
+    const sharedDisabled = typeof window !== "undefined"
+      && ((__ocMute = window.ArcherGames) === null || __ocMute === void 0 ? void 0 : __ocMute.audio)
+      && typeof window.ArcherGames.audio.isEnabled === "function"
+      && !window.ArcherGames.audio.isEnabled(true);
+    this.muted = savedMute ? savedMute === "1" : !!sharedDisabled;
+    this.masterGain = null;
+    this.masterBaseGain = 0.62;
     this.ready = false;
     this.started = false;
     this.transportClockActive = false;
@@ -455,10 +518,13 @@ class AudioDirector {
           attack: 0.004,
           release: 0.16,
         }).connect(limiter);
-        master = new Tone.Gain(0.62).connect(compressor);
+        master = new Tone.Gain(this.muted ? 0 : 0.62).connect(compressor);
+        this.masterBaseGain = 0.62;
       } catch (_err) {
-        master = new Tone.Gain(0.58).toDestination();
+        master = new Tone.Gain(this.muted ? 0 : 0.58).toDestination();
+        this.masterBaseGain = 0.58;
       }
+      this.masterGain = master;
       const delay = new Tone.FeedbackDelay("8n", 0.22).connect(master);
       const reverb = new Tone.Reverb({ decay: 3.2, wet: 0.28 }).connect(master);
       const baseGain = new Tone.Gain(0.1).connect(reverb);
@@ -696,6 +762,7 @@ class AudioDirector {
   }
 
   playNative(poolMap, key, volumeDb = 0, delay = 0) {
+    if (this.muted) return false;
     const pool = ((poolMap === null || poolMap === void 0 ? void 0 : poolMap[key]));
     if (!((pool === null || pool === void 0 ? void 0 : pool.length))) return false;
     const indexKey = `nativeIndex_${key}`;
@@ -1091,7 +1158,7 @@ class AudioDirector {
   }
 
   startNativeBackingTrack() {
-    if (!this.nativeBacking) return;
+    if (this.muted || !this.nativeBacking) return;
     if (this.nativeBackingStarted && this.nativeBacking.paused === false) return;
     const handleFailure = (err) => {
       this.nativeBackingStarted = false;
@@ -1156,7 +1223,7 @@ class AudioDirector {
   }
 
   playPlayer(player, volumeDb = 0, delay = 0) {
-    if (!this.ready || !window.Tone || !this.isPlayerLoaded(player)) return false;
+    if (this.muted || !this.ready || !window.Tone || !this.isPlayerLoaded(player)) return false;
     try {
       const time = window.Tone.now() + Math.max(0, delay);
       if (player.state === "started") player.stop(time);
@@ -1173,8 +1240,41 @@ class AudioDirector {
     }
   }
 
+  setMuted(muted, allowResumeBacking = false) { var __ocAudio;
+    this.muted = !!muted;
+    writeStorage("muted", this.muted ? "1" : "0");
+    if (typeof window !== "undefined"
+      && ((__ocAudio = window.ArcherGames) === null || __ocAudio === void 0 ? void 0 : __ocAudio.audio)
+      && typeof window.ArcherGames.audio.setEnabled === "function") {
+      window.ArcherGames.audio.setEnabled(!this.muted);
+    }
+    if (this.masterGain && this.masterGain.gain) {
+      try {
+        this.masterGain.gain.value = this.muted ? 0 : (this.masterBaseGain || 0.62);
+      } catch (_err) {}
+    }
+    if (this.muted) {
+      this.wasBackingPlaying = this.wasBackingPlaying || !!(this.nativeBacking && this.nativeBacking.paused === false);
+      if (this.nativeBacking && this.nativeBacking.paused === false) {
+        try { this.nativeBacking.pause(); } catch (_err) {}
+      }
+      if (this.nativeZoneLoop && this.nativeZoneLoop.paused === false) {
+        this.wasZoneLoopPlaying = true;
+        try { this.nativeZoneLoop.pause(); } catch (_err) {}
+      }
+    } else if (allowResumeBacking) {
+      this.resume(true);
+      if (this.nativeBacking && this.nativeBacking.paused) {
+        this.startNativeBackingTrack();
+      }
+    }
+    return this.muted;
+  }
+
   suspend() {
     this.wasBackingPlaying = !!(this.nativeBacking && this.nativeBacking.paused === false);
+    this.wasZoneLoopPlaying = !!(this.nativeZoneLoop && this.nativeZoneLoop.paused === false)
+      || !!(this.zoneLoopPlayer && this.zoneLoopPlayer.state === "started");
     if (this.nativeBacking && this.nativeBacking.paused === false) {
       try { this.nativeBacking.pause(); } catch (_err) {}
     }
@@ -1188,6 +1288,7 @@ class AudioDirector {
   }
 
   resume(allowBacking = true) {
+    if (this.muted) return;
     try {
       const ctx = window.Tone && window.Tone.context && (window.Tone.context.rawContext || window.Tone.context);
       if (ctx && ctx.state === "suspended" && ctx.resume) ctx.resume().catch(() => {});
@@ -1196,19 +1297,26 @@ class AudioDirector {
       this.wasBackingPlaying = false;
       this.startNativeBackingTrack();
     }
+    if (allowBacking && this.wasZoneLoopPlaying) {
+      this.wasZoneLoopPlaying = false;
+      this.startZoneLoop();
+    }
   }
 
   playSfx(key, volumeDb = 0, delay = 0) { var __oc20;
+    if (this.muted) return false;
     if (this.playNative(this.nativeSfx, key, volumeDb, delay)) return true;
     return this.playPlayer((((__oc20 = this.sfxPlayers) === null || __oc20 === void 0 ? void 0 : __oc20[key])), volumeDb, delay);
   }
 
   playStinger(key, volumeDb = 0, delay = 0) { var __oc21;
+    if (this.muted) return false;
     if (this.playNative(this.nativeStingers, key, volumeDb, delay)) return true;
     return this.playPlayer((((__oc21 = this.stingerPlayers) === null || __oc21 === void 0 ? void 0 : __oc21[key])), volumeDb, delay);
   }
 
   startZoneLoop() { var __oc22, __oc23;
+    if (this.muted) return;
     if (this.nativeZoneLoop) {
       try {
         this.nativeZoneLoop.loop = true;
@@ -1293,7 +1401,8 @@ class AudioDirector {
     const lumenLift = clamp(snapshot.lumen || 0, 0, 1);
     const zoneLift = snapshot.zoneActive ? clamp(0.62 + (snapshot.zoneProgress || 0) * 0.38, 0, 1) : 0;
     const arrangementTarget = clamp((((__oc30 = (__oc29 = snapshot.arrangement) === null || __oc29 === void 0 ? void 0 : __oc29.progress) !== null && __oc30 !== void 0 ? __oc30 : 0)), 0, 1);
-    const arrangement = smoothstep(arrangementTarget);
+    const arrangement = smoothstep(Number.isFinite(arrangementTarget) ? arrangementTarget : 0);
+    if (!Number.isFinite(this.arrangement)) this.arrangement = 0;
     this.arrangement += (arrangement - this.arrangement) * 0.22;
     this.gestureHeat = Math.max(0, this.gestureHeat - 0.045);
     this.backingPulse = Math.max(0, this.backingPulse - 0.05);
@@ -1343,23 +1452,27 @@ class AudioDirector {
 
   rampStem(key, value) { var __oc41, __oc42, __oc43;
     const stem = (((__oc41 = this.stemGains) === null || __oc41 === void 0 ? void 0 : __oc41[key]));
-    if (!stem) return;
+    if (!stem || !Number.isFinite(value)) return;
     try {
       (((__oc43 = (__oc42 = stem.gain).cancelScheduledValues) === null || __oc43 === void 0 ? void 0 : __oc43.call(__oc42, window.Tone.now())));
       stem.gain.rampTo(value, 0.24);
     } catch (_err) {
-      stem.gain.value = value;
+      try {
+        stem.gain.value = value;
+      } catch (_ignore) {}
     }
   }
 
   rampParam(param, value, time = 0.18) { var __oc44;
-    if (!param || !window.Tone) return;
+    if (!param || !window.Tone || !Number.isFinite(value)) return;
     try {
       (((__oc44 = param.cancelScheduledValues) === null || __oc44 === void 0 ? void 0 : __oc44.call(param, window.Tone.now())));
       if (typeof param.rampTo === "function") param.rampTo(value, time);
       else param.value = value;
     } catch (_err) {
-      param.value = value;
+      try {
+        param.value = value;
+      } catch (_ignore) {}
     }
   }
 
@@ -1460,13 +1573,13 @@ class AudioDirector {
   }
 
   drop() {
-    if (!this.ready || !this.synths) return;
     this.gestureHeat = Math.max(this.gestureHeat, 0.78);
     this.eventPulse = Math.max(this.eventPulse, 0.72);
     this.dropPulse = Math.max(this.dropPulse, 1);
     this.backingPulse = Math.max(this.backingPulse, 0.56);
     this.backingDuck = Math.max(this.backingDuck, 0.68);
     this.playSfx("hardDrop", -2);
+    if (this.muted || !this.ready || !this.synths) return;
     try {
       const time = this.nextToneTime("16n");
       this.synths.impact.triggerAttackRelease("C2", "16n", time, 0.34);
@@ -1482,7 +1595,6 @@ class AudioDirector {
   }
 
   clear(lines, combo = 0, zoneActive = false) { var __oc56, __oc57;
-    if (!this.ready || !this.synths) return;
     const chords = {
       1: ["C5", "G5"],
       2: ["C5", "E5", "G5"],
@@ -1501,6 +1613,7 @@ class AudioDirector {
     this.beatPulse = Math.max(this.beatPulse, lines >= 4 ? 1 : 0.72);
     this.backingPulse = Math.max(this.backingPulse, lines >= 4 ? 1 : 0.68);
     this.backingDuck = Math.max(this.backingDuck, lines >= 4 ? 1 : 0.72);
+    if (this.muted || !this.ready || !this.synths) return;
     try {
       const time = this.nextToneTime("16n");
       (((__oc57 = (__oc56 = this.synths.clear).releaseAll) === null || __oc57 === void 0 ? void 0 : __oc57.call(__oc56)));
@@ -1509,6 +1622,7 @@ class AudioDirector {
         const lift = lines >= 4 ? ["C6", "E6", "G6", "C7"] : ["C6", "G6"];
         lift.slice(0, Math.min(lift.length, lines + 1)).forEach((note, index) => {
           setTimeout(() => {
+            if (this.muted) return;
             try {
               this.synths.sparkle.triggerAttackRelease(note, "32n", undefined, lines >= 4 ? 0.062 : 0.04);
             } catch (_err) {
@@ -1536,7 +1650,6 @@ class AudioDirector {
   }
 
   zoneEnd(lines) { var __oc58, __oc59;
-    if (!this.ready || !this.synths) return;
     this.stopZoneLoop();
     this.eventPulse = Math.max(this.eventPulse, lines > 0 ? 1 : 0.42);
     this.clearPulse = Math.max(this.clearPulse, lines > 0 ? 1 : 0.35);
@@ -1548,6 +1661,7 @@ class AudioDirector {
     } else {
       this.playStinger("zoneEndEmpty", -5);
     }
+    if (this.muted || !this.ready || !this.synths) return;
     try {
       const time = this.nextToneTime("8n");
       this.rampStem("zone", 0.04);
@@ -1560,7 +1674,7 @@ class AudioDirector {
   }
 
   note(note, duration, velocity) {
-    if (!this.ready || !this.synths) return;
+    if (this.muted || !this.ready || !this.synths) return;
     try {
       this.synths.pluck.triggerAttackRelease(note, duration, undefined, velocity);
     } catch (_err) {
@@ -1625,6 +1739,11 @@ class FallingBlockCore {
     this.stageOrdinal = 0;
     this.dropTimer = 0;
     this.lockTimer = 0;
+    this.lockResets = 0;
+    this.lowestY = -2;
+    this.lastMoveWasRotate = false;
+    this.backToBack = false;
+    this.lastTSpin = false;
     this.lockDelay = 520;
     this.elapsed = 0;
     this.status = "playing";
@@ -1658,9 +1777,10 @@ class FallingBlockCore {
     return {
       type,
       matrix,
+      rotation: 0,
       color: stagePieceColor(stage, type, def.color),
       x: Math.floor((COLS - matrix[0].length) / 2),
-      y: -1,
+      y: type === "I" ? -1 : 0,
     };
   }
 
@@ -1669,6 +1789,11 @@ class FallingBlockCore {
     while (this.queue.length < VISIBLE_NEXT + 1) this.queue.push(this.nextType());
     this.active = this.makePiece(type);
     this.canHold = true;
+    this.lockTimer = 0;
+    this.dropTimer = 0;
+    this.lockResets = 0;
+    this.lowestY = this.active.y;
+    this.lastMoveWasRotate = false;
     if (this.collides(this.active, 0, 0, this.active.matrix)) {
       if (this.modeKey === "relax") {
         this.grid.splice(0, 5);
@@ -1736,11 +1861,23 @@ class FallingBlockCore {
     return false;
   }
 
+  refreshLockDelay() {
+    if (!this.collides(this.active, 0, 1)) {
+      this.lockTimer = 0;
+      return;
+    }
+    if (this.lockResets < MAX_LOCK_RESETS) {
+      this.lockTimer = 0;
+      this.lockResets += 1;
+    }
+  }
+
   move(dx) { var __oc66, __oc67;
     if (this.status !== "playing") return false;
     if (!this.collides(this.active, dx, 0)) {
       this.active.x += dx;
-      this.lockTimer = Math.max(0, this.lockTimer - 120);
+      this.lastMoveWasRotate = false;
+      this.refreshLockDelay();
       (((__oc67 = (__oc66 = this.callbacks).onMove) === null || __oc67 === void 0 ? void 0 : __oc67.call(__oc66)));
       return true;
     }
@@ -1749,17 +1886,27 @@ class FallingBlockCore {
 
   rotate(dir = 1) { var __oc68, __oc69, __oc70, __oc71;
     if (this.status !== "playing") return false;
+    const step = dir >= 0 ? 1 : -1;
     if (this.active.type === "O") {
       (((__oc69 = (__oc68 = this.callbacks).onRotate) === null || __oc69 === void 0 ? void 0 : __oc69.call(__oc68)));
       return true;
     }
-    const rotated = rotateMatrix(this.active.matrix, dir);
-    for (const [kx, ky] of KICKS) {
+    const fromRot = this.active.rotation || 0;
+    const toRot = (fromRot + step + 4) % 4;
+    const rotated = rotateMatrix(this.active.matrix, step);
+    const kicks = srsKicksFor(this.active.type, fromRot, toRot);
+    for (const [kx, ky] of kicks) {
       if (!this.collides(this.active, kx, ky, rotated)) {
         this.active.matrix = rotated;
+        this.active.rotation = toRot;
         this.active.x += kx;
         this.active.y += ky;
-        this.lockTimer = Math.max(0, this.lockTimer - 160);
+        if (this.active.y > this.lowestY) {
+          this.lowestY = this.active.y;
+          this.lockResets = 0;
+        }
+        this.lastMoveWasRotate = true;
+        this.refreshLockDelay();
         (((__oc71 = (__oc70 = this.callbacks).onRotate) === null || __oc71 === void 0 ? void 0 : __oc71.call(__oc70)));
         return true;
       }
@@ -1771,6 +1918,11 @@ class FallingBlockCore {
     if (this.status !== "playing") return false;
     if (!this.collides(this.active, 0, 1)) {
       this.active.y += 1;
+      if (this.active.y > this.lowestY) {
+        this.lowestY = this.active.y;
+        this.lockResets = 0;
+      }
+      this.lastMoveWasRotate = false;
       this.lockTimer = 0;
       if (manual) (((__oc73 = (__oc72 = this.callbacks).onSoftDrop) === null || __oc73 === void 0 ? void 0 : __oc73.call(__oc72)));
       return true;
@@ -1783,6 +1935,11 @@ class FallingBlockCore {
     if (this.status !== "playing") return false;
     if (!this.collides(this.active, 0, 1)) {
       this.active.y += 1;
+      if (this.active.y > this.lowestY) {
+        this.lowestY = this.active.y;
+        this.lockResets = 0;
+      }
+      this.lastMoveWasRotate = false;
       this.lockTimer = 0;
       return true;
     }
@@ -1796,19 +1953,37 @@ class FallingBlockCore {
       this.active.y += 1;
       distance += 1;
     }
+    if (distance > 0) {
+      this.lastMoveWasRotate = false;
+      if (this.active.y > this.lowestY) this.lowestY = this.active.y;
+    }
     (((__oc75 = (__oc74 = this.callbacks).onHardDrop) === null || __oc75 === void 0 ? void 0 : __oc75.call(__oc74, distance)));
     this.lockTimer = 0;
     this.lock();
   }
 
-  hold() { var __oc76, __oc77;
-    if (this.status !== "playing" || !this.canHold) return false;
+  hold() { var __oc76, __oc77, __ocBreath, __ocBreathCb;
+    if (this.status !== "playing" || !this.canHold || !this.active) return false;
     const current = this.active.type;
     if (this.holdType) {
       const held = this.holdType;
       this.holdType = current;
       this.active = this.makePiece(held);
-      if (this.collides(this.active, 0, 0)) this.finish("Game Over");
+      this.lockTimer = 0;
+      this.dropTimer = 0;
+      this.lockResets = 0;
+      this.lowestY = this.active.y;
+      this.lastMoveWasRotate = false;
+      if (this.collides(this.active, 0, 0)) {
+        if (this.modeKey === "relax") {
+          this.grid.splice(0, 5);
+          while (this.grid.length < ROWS) this.grid.unshift(Array(COLS).fill(null));
+          (((__ocBreathCb = (__ocBreath = this.callbacks).onEvent) === null || __ocBreathCb === void 0 ? void 0 : __ocBreathCb.call(__ocBreath, "BREATH")));
+        } else {
+          this.finish("Game Over");
+          return false;
+        }
+      }
     } else {
       this.holdType = current;
       this.spawn();
@@ -1818,8 +1993,25 @@ class FallingBlockCore {
     return true;
   }
 
+  isTSpin() {
+    if (!this.active || this.active.type !== "T" || !this.lastMoveWasRotate) return false;
+    const cx = this.active.x + 1;
+    const cy = this.active.y + 1;
+    let corners = 0;
+    const checks = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
+    for (let i = 0; i < checks.length; i += 1) {
+      const bx = cx + checks[i][0];
+      const by = cy + checks[i][1];
+      if (bx < 0 || bx >= COLS || by >= ROWS || (by >= 0 && this.grid[by][bx])) {
+        corners += 1;
+      }
+    }
+    return corners >= 3;
+  }
+
   lock() { var __oc78, __oc79;
     if (this.status !== "playing") return;
+    const tSpin = this.isTSpin();
     const lockedCells = [];
     for (let y = 0; y < this.active.matrix.length; y += 1) {
       for (let x = 0; x < this.active.matrix[y].length; x += 1) {
@@ -1835,8 +2027,8 @@ class FallingBlockCore {
         lockedCells.push({ row: by, col: bx, color: cellColor, type: this.active.type });
       }
     }
-    (((__oc79 = (__oc78 = this.callbacks).onLock) === null || __oc79 === void 0 ? void 0 : __oc79.call(__oc78, { cells: lockedCells, type: this.active.type })));
-    const cleared = this.clearLines();
+    (((__oc79 = (__oc78 = this.callbacks).onLock) === null || __oc79 === void 0 ? void 0 : __oc79.call(__oc78, { cells: lockedCells, type: this.active.type, tSpin })));
+    const cleared = this.clearLines(tSpin);
     if (cleared === 0) this.combo = 0;
     this.updateStage();
     if (this.mode.lineGoal && this.lines >= this.mode.lineGoal) {
@@ -1846,7 +2038,7 @@ class FallingBlockCore {
     this.spawn();
   }
 
-  clearLines() { var __oc81, __oc82;
+  clearLines(tSpin = false) { var __oc81, __oc82;
     const rows = [];
     for (let y = 0; y < ROWS; y += 1) {
       if (this.grid[y].every(Boolean)) rows.push(y);
@@ -1866,6 +2058,10 @@ class FallingBlockCore {
     while (this.grid.length < ROWS) this.grid.unshift(Array(COLS).fill(null));
 
     const lineCount = rows.length;
+    const specialClear = lineCount >= 4 || tSpin;
+    const isBackToBack = specialClear && this.backToBack;
+    this.backToBack = specialClear;
+    this.lastTSpin = tSpin;
     this.lines += lineCount;
     const stageWindowAfter = stageWindowForLines(this.lines, this.modeKey, this.mode);
     this.level = Math.max(1, Math.floor(this.lines / 10) + 1);
@@ -1875,7 +2071,7 @@ class FallingBlockCore {
     const delta = SCORE_TABLE[lineCount] * this.level + comboBonus;
     this.score += delta;
     const previousLumen = this.lumen;
-    this.lumen = clamp(this.lumen + lineCount * 0.11 + (lineCount >= 4 ? 0.09 : 0), 0, 1);
+    this.lumen = clamp(this.lumen + lineCount * 0.11 + (lineCount >= 4 ? 0.09 : 0) + (tSpin ? 0.08 : 0), 0, 1);
     const lumenReady = previousLumen < 0.3 && this.lumen >= 0.3;
     if (this.zoneActive) {
       this.zoneLines += lineCount;
@@ -1891,6 +2087,8 @@ class FallingBlockCore {
         score: this.score,
         zoneActive: this.zoneActive,
         lumenReady,
+        tSpin,
+        backToBack: isBackToBack,
         stageCleared: stageWindowAfter.stageOrdinal > stageWindowBefore.stageOrdinal,
         stageWindowBefore,
         stageWindowAfter,
@@ -1976,7 +2174,8 @@ class FallingBlockCore {
     const stageProgress = clamp((visualLiftStage + stageWindow.stageProgress) / Math.max(1, STAGES.length - 1), 0, 1);
     const comboLift = clamp(this.combo / 10, 0, 1);
     const lumenLift = clamp(this.lumen, 0, 1);
-    const zoneLift = this.zoneActive ? clamp(0.55 + this.zoneProgress * 0.45, 0, 1) : 0;
+    const zoneProgress = this.zoneActive ? clamp(1 - this.zoneTimer / Math.max(1, this.zoneDuration), 0, 1) : 0;
+    const zoneLift = this.zoneActive ? clamp(0.55 + zoneProgress * 0.45, 0, 1) : 0;
     const progress = clamp(0.035 + lineProgress * 0.48 + stageProgress * 0.22 + comboLift * 0.12 + lumenLift * 0.12 + zoneLift * 0.22, 0, 1);
     return {
       progress,
@@ -1989,6 +2188,13 @@ class FallingBlockCore {
   snapshot() {
     const arrangement = this.arrangementState();
     const stageWindow = stageWindowForLines(this.lines, this.modeKey, this.mode);
+    let danger = false;
+    for (let y = 0; y < 4 && !danger; y += 1) {
+      if (this.grid[y] && this.grid[y].some(Boolean)) danger = true;
+    }
+    const lockProgress = this.active && this.collides(this.active, 0, 1)
+      ? clamp(this.lockTimer / Math.max(1, this.lockDelay), 0, 1)
+      : 0;
     return {
       modeKey: this.modeKey,
       mode: this.mode,
@@ -1997,11 +2203,16 @@ class FallingBlockCore {
       ghost: this.ghostPiece(),
       queue: this.queue.slice(0, VISIBLE_NEXT),
       holdType: this.holdType,
+      canHold: this.canHold,
+      lockProgress,
+      danger,
       score: this.score,
       lines: this.lines,
       level: this.level,
       combo: this.combo,
       maxCombo: this.maxCombo,
+      backToBack: this.backToBack,
+      lastTSpin: this.lastTSpin,
       stageIndex: this.stageIndex,
       stageOrdinal: this.stageOrdinal,
       stageNumber: stageWindow.stageNumber,
@@ -2012,6 +2223,8 @@ class FallingBlockCore {
       speedLevel: this.speedLevel(),
       lumen: this.lumen,
       zoneActive: this.zoneActive,
+      zoneTimer: this.zoneTimer,
+      zoneDuration: this.zoneDuration,
       zoneProgress: this.zoneActive ? 1 - this.zoneTimer / Math.max(1, this.zoneDuration) : 0,
       zoneLines: this.zoneLines,
       totalZoneLines: this.totalZoneLines,
@@ -2064,6 +2277,10 @@ class PixiView {
     this.stageTitleState = null;
     this.stageTitleBand = null;
     this.stageTitleText = null;
+    this.hudTextLayer = null;
+    this.holdLabelText = null;
+    this.nextLabelText = null;
+    this.zoneBannerText = null;
     this.zonePulse = 0;
     this.beat = 0;
     this.beatHit = 0;
@@ -2126,6 +2343,12 @@ class PixiView {
     this.sparkLayer = this.makeParticleLayer();
     this.glareLayer = new window.PIXI.Graphics();
     this.flashLayer = new window.PIXI.Graphics();
+    this.hudTextLayer = new window.PIXI.Container();
+    this.hudTextLayer.eventMode = "none";
+    this.holdLabelText = this.makePanelText("HOLD", 10);
+    this.nextLabelText = this.makePanelText("NEXT", 10);
+    this.zoneBannerText = this.makePanelText("", 12);
+    this.hudTextLayer.addChild(this.holdLabelText, this.nextLabelText, this.zoneBannerText);
     this.stageTitleLayer = new window.PIXI.Container();
     this.stageTitleLayer.eventMode = "none";
     this.stageTitleBand = new window.PIXI.Graphics();
@@ -2137,7 +2360,7 @@ class PixiView {
     this.setAdditive(this.glow);
     this.setAdditive(this.sparkLayer);
     this.setAdditive(this.glareLayer);
-    this.app.stage.addChild(this.bg, this.bgPlate, this.bloomLayer, this.swarmLayer, this.board, this.blockLayer, this.glow, this.fx, this.sparkLayer, this.glareLayer, this.flashLayer, this.distortionSprite, this.stageTitleLayer);
+    this.app.stage.addChild(this.bg, this.bgPlate, this.bloomLayer, this.swarmLayer, this.board, this.blockLayer, this.hudTextLayer, this.glow, this.fx, this.sparkLayer, this.glareLayer, this.flashLayer, this.distortionSprite, this.stageTitleLayer);
     this.makeParticleTextures();
     this.makeBlockTextures();
     this.makeStageArtTextures();
@@ -2195,6 +2418,27 @@ class PixiView {
     if (!layer) layer = new PIXI.Container();
     layer.eventMode = "none";
     return layer;
+  }
+
+  makePanelText(label, fontSize = 10) { var __ocP0, __ocP1;
+    const PIXI = window.PIXI;
+    const style = {
+      fontFamily: "Pretendard, Arial, sans-serif",
+      fontSize,
+      fontWeight: "800",
+      letterSpacing: 1.6,
+      fill: 0xcfefff,
+    };
+    let text;
+    try {
+      text = new PIXI.Text({ text: label, style });
+    } catch (_err) {
+      text = new PIXI.Text(label, style);
+    }
+    (((__ocP1 = (__ocP0 = text.anchor) === null || __ocP0 === void 0 ? void 0 : __ocP0.set) === null || __ocP1 === void 0 ? void 0 : __ocP1.call(__ocP0, 0.5, 0)));
+    text.eventMode = "none";
+    text.visible = false;
+    return text;
   }
 
   makeStageTitleText() { var __oc96, __oc97;
@@ -3008,7 +3252,16 @@ class PixiView {
         ? { x: Math.min(w - miniW - 8, boardX + actualW + 7), y: boardY + 22, w: miniW, h: miniH + 72 }
         : { x: boardX + actualW - miniW, y: boardY - miniH - 10, w: miniW, h: miniH })
       : { x: boardX + actualW + (h <= 600 ? 16 : 22), y: boardY + 16, w: miniW, h: Math.min(miniH + 132, actualH - 16) };
-    return { w, h, portrait, boardX, boardY, boardW: actualW, boardH: actualH, cell, next };
+    const holdW = portrait
+      ? miniW
+      : (h <= 600 ? Math.min(miniW, Math.max(48, boardX - 168)) : miniW);
+    const holdH = portrait ? miniH : (h <= 600 ? 72 : 96);
+    const hold = portrait
+      ? (portraitSidePanels
+        ? { x: Math.max(8, boardX - miniW - 7), y: boardY + 22, w: miniW, h: miniH }
+        : { x: boardX, y: boardY - miniH - 10, w: miniW, h: miniH })
+      : { x: Math.max(8, boardX - holdW - (h <= 600 ? 12 : 22)), y: boardY + 16, w: holdW, h: holdH };
+    return { w, h, portrait, boardX, boardY, boardW: actualW, boardH: actualH, cell, next, hold };
   }
 
   render(snapshot, dt, beatState = null) {
@@ -3028,13 +3281,13 @@ class PixiView {
       root.scale.set(1);
       root.rotation = 0;
       this.bg.clear().rect(0, 0, layout.w, layout.h).fill({color: 0x050b16});
-      this.drawBoard(layout, snapshot);
+      this.drawBoard(layout, snapshot, dt);
       if (this.stageTitleLayer) this.stageTitleLayer.visible = false;
       return;
     }
     this.applyCamera(layout, beatState, dt);
     this.drawBackground(layout, stage, dt, snapshot, beatState);
-    this.drawBoard(layout, snapshot);
+    this.drawBoard(layout, snapshot, dt);
     this.drawParticles(layout, dt);
     this.drawFlash(layout, dt, beatState, stage);
     this.drawStageTitle(layout, dt);
@@ -3938,7 +4191,7 @@ class PixiView {
     });
   }
 
-  drawBoard(layout, snapshot) {
+  drawBoard(layout, snapshot, dt = 16.67) {
     const g = this.board;
     const stage = snapshot.stage || STAGES[0];
     const shakeX = (Math.random() - 0.5) * this.shake;
@@ -3968,6 +4221,14 @@ class PixiView {
       .fill({ color: 0x01040a, alpha: 0.82 });
     g.rect(bx + 1, by + 1, layout.boardW - 2, layout.boardH - 2)
       .stroke({ color: 0xffffff, alpha: 0.08 + boardEnergy * 0.12, width: 1 });
+
+    if (snapshot.danger && !this.motionPreference.matches) {
+      const dangerPulse = 0.5 + 0.5 * Math.sin(performance.now() * 0.009);
+      g.rect(bx + 1, by + 1, layout.boardW - 2, cell * 4)
+        .fill({ color: 0xff4d6d, alpha: 0.06 + dangerPulse * 0.1 });
+      g.rect(bx + 1, by + 1, layout.boardW - 2, Math.max(2, cell * 0.1))
+        .fill({ color: 0xff5d73, alpha: 0.35 + dangerPulse * 0.45 });
+    }
 
     const scanY = by + ((performance.now() * 0.035) % layout.boardH);
     g.rect(bx + 1, scanY, layout.boardW - 2, 1.4 + boardEnergy * 3)
@@ -4004,24 +4265,38 @@ class PixiView {
       }
     }
 
-    this.drawPiece(g, snapshot.ghost, bx, by, cell, 0.12, true, stage);
+    const lockProgress = snapshot.lockProgress || 0;
+    const activeAlpha = snapshot.zoneActive
+      ? 1
+      : (lockProgress > 0 ? clamp(0.84 + Math.sin(performance.now() * 0.024) * 0.16, 0.72, 1) : 0.98);
+    this.drawPiece(g, snapshot.ghost, bx, by, cell, 0.22, true, stage);
     if (!this.motionPreference.matches) this.drawPieceAura(g, snapshot.active, bx, by, cell, stage, snapshot.zoneActive);
-    this.drawPiece(g, snapshot.active, bx, by, cell, snapshot.zoneActive ? 1 : 0.98, false, stage);
+    this.drawPiece(g, snapshot.active, bx, by, cell, activeAlpha, false, stage);
 
     if (snapshot.zoneActive) {
-      const progressH = layout.boardH * snapshot.zoneProgress;
+      const progressH = layout.boardH * (1 - snapshot.zoneProgress);
       g.rect(bx - 15, by + layout.boardH - progressH, 5, progressH)
-        .fill({ color: 0xffffff, alpha: 0.46 });
-      if (snapshot.zoneLines > 0) {
-        const labelY = by + layout.boardH + 20;
-        this.drawLabelPill(g, bx + layout.boardW / 2 - 58, labelY, 116, 27, `${snapshot.zoneLines} LUMEN`, 0xffffff);
+        .fill({ color: 0xffffff, alpha: 0.72 });
+    }
+    if (this.zoneBannerText) {
+      if (snapshot.zoneActive && snapshot.zoneLines > 0) {
+        const labelW = Math.min(136, Math.max(108, layout.boardW * 0.48));
+        const labelX = bx + layout.boardW / 2 - labelW / 2;
+        const labelY = Math.min(layout.h - 32, by + layout.boardH + 10);
+        this.drawLabelPill(g, labelX, labelY, labelW, 24, `+${snapshot.zoneLines} ZONE`, stage.accent || 0xffffff);
+        this.zoneBannerText.text = `+${snapshot.zoneLines} ZONE`;
+        this.zoneBannerText.position.set(labelX + labelW / 2, labelY + 5);
+        this.zoneBannerText.visible = true;
+      } else {
+        this.zoneBannerText.visible = false;
       }
     }
 
-    this.drawMiniPanel(g, layout.next, "NEXT", snapshot.queue, stage);
+    this.drawMiniPanel(g, layout.hold, "HOLD", snapshot.holdType ? [snapshot.holdType] : [], stage, snapshot.canHold !== false, this.holdLabelText);
+    this.drawMiniPanel(g, layout.next, "NEXT", snapshot.queue, stage, true, this.nextLabelText);
     this.endBlockSprites();
 
-    this.shake = Math.max(0, this.shake - 0.8);
+    this.shake = Math.max(0, this.shake - 0.8 * ((dt || 16.67) / 16.67));
   }
 
   drawPiece(g, piece, bx, by, cell, alpha, ghost, stage = STAGES[0]) {
@@ -4035,13 +4310,13 @@ class PixiView {
         const px = bx + (piece.x + x) * cell;
         const py = by + gy * cell;
         if (ghost) {
-          const inset = cell * 0.16;
+          const inset = cell * 0.14;
           const ghostSize = cell - inset * 2;
           g.roundRect(px + inset, py + inset, ghostSize, ghostSize, Math.max(1.5, cell * 0.06))
-            .fill({ color: 0x02060b, alpha: 0.78 })
-            .stroke({ color: 0x6b8190, alpha: 0.14 + alpha * 0.52, width: Math.max(1, cell * 0.045) });
-          g.roundRect(px + inset * 1.34, py + inset * 1.34, cell - inset * 2.68, cell - inset * 2.68, Math.max(1, cell * 0.04))
-            .stroke({ color, alpha: alpha * 0.32, width: Math.max(0.8, cell * 0.025) });
+            .fill({ color, alpha: 0.14 })
+            .stroke({ color, alpha: 0.56, width: Math.max(1.2, cell * 0.055) });
+          g.roundRect(px + inset * 1.4, py + inset * 1.4, cell - inset * 2.8, cell - inset * 2.8, Math.max(1, cell * 0.04))
+            .stroke({ color: 0xffffff, alpha: alpha * 0.9, width: Math.max(0.8, cell * 0.025) });
         } else {
           this.drawBlock(g, px, py, cell, color, alpha, true);
           const edgeInset = Math.max(1, cell * 0.045);
@@ -4122,29 +4397,39 @@ class PixiView {
     this.showBlockSprite(x, y, size, color, alpha, hot);
   }
 
-  drawMiniPanel(g, panel, label, types, stage) {
-    if (!panel || panel.y < 0) return;
-    g.rect(panel.x, panel.y, panel.w, panel.h)
-      .fill({ color: 0x000000, alpha: 0.16 });
-    g.moveTo(panel.x + 6, panel.y + 8);
-    g.lineTo(panel.x + Math.min(panel.w - 6, 26), panel.y + 8);
-    g.stroke({ color: 0xffffff, alpha: 0.34, width: 1 });
-    g.moveTo(panel.x + 6, panel.y + 12);
-    g.lineTo(panel.x + Math.min(panel.w - 18, 18), panel.y + 12);
-    g.stroke({ color: stage.accent, alpha: 0.2, width: 1 });
+  drawMiniPanel(g, panel, label, types, stage, enabled = true, labelNode = null) {
+    if (!panel || panel.y < 0) {
+      if (labelNode) labelNode.visible = false;
+      return;
+    }
+    g.roundRect(panel.x, panel.y, panel.w, panel.h, 8)
+      .fill({ color: 0x040b16, alpha: 0.62 })
+      .stroke({ color: stage.accent || 0x68e9ff, alpha: enabled ? 0.3 : 0.14, width: 1 });
+    if (labelNode) {
+      labelNode.text = label;
+      labelNode.alpha = enabled ? 0.86 : 0.44;
+      labelNode.position.set(panel.x + panel.w / 2, panel.y + 5);
+      labelNode.visible = true;
+    } else {
+      g.moveTo(panel.x + 6, panel.y + 8);
+      g.lineTo(panel.x + Math.min(panel.w - 6, 26), panel.y + 8);
+      g.stroke({ color: 0xffffff, alpha: 0.34, width: 1 });
+    }
     const max = panel.h > 80 ? Math.min(3, types.length) : Math.min(1, types.length);
+    const pieceAlpha = enabled ? 0.92 : 0.36;
     for (let i = 0; i < max; i += 1) {
       const type = types[i];
       if (!type) continue;
-      const matrix = PIECES[type].matrix;
+      const matrix = trimmedMatrix(PIECES[type].matrix);
       const color = stagePieceColor(stage, type, PIECES[type].color);
-      const scale = Math.min((panel.w - 20) / matrix[0].length, (panel.h / max - 22) / matrix.length, 18);
-      const offsetY = panel.y + 24 + i * ((panel.h - 26) / Math.max(1, max));
+      const slotH = (panel.h - 22) / Math.max(1, max);
+      const scale = Math.min((panel.w - 14) / matrix[0].length, (slotH - 8) / matrix.length, 18);
+      const offsetY = panel.y + 20 + i * slotH + (slotH - matrix.length * scale) / 2;
       const offsetX = panel.x + (panel.w - matrix[0].length * scale) / 2;
       for (let y = 0; y < matrix.length; y += 1) {
         for (let x = 0; x < matrix[y].length; x += 1) {
           if (!matrix[y][x]) continue;
-          this.drawBlock(g, offsetX + x * scale, offsetY + y * scale, scale, color, 0.9, false);
+          this.drawBlock(g, offsetX + x * scale, offsetY + y * scale, scale, color, pieceAlpha, false);
         }
       }
     }
@@ -4157,11 +4442,7 @@ class PixiView {
   }
 
   drawLabelPill(g, x, y, w, h, text, color) {
-    g.roundRect(x, y, w, h, 8).fill({ color: 0x02050d, alpha: 0.78 }).stroke({ color, alpha: 0.48, width: 1 });
-    const marks = Math.min(9, text.length);
-    for (let i = 0; i < marks; i += 1) {
-      g.rect(x + 16 + i * 9, y + h / 2 - 2, 5, 4).fill({ color, alpha: 0.8 });
-    }
+    g.roundRect(x, y, w, h, 8).fill({ color: 0x050e1c, alpha: 0.88 }).stroke({ color, alpha: 0.62, width: 1 });
   }
 
   pieceLock(cells, stage, intense = false) {
@@ -5789,6 +6070,7 @@ class InputController {
     this.dispatch = dispatch;
     this.repeatTimer = 0;
     this.repeatAction = "";
+    this.heldRepeats = [];
     this.pointerStart = null;
     this.listeners = [];
     this.controlDrag = null;
@@ -5808,18 +6090,30 @@ class InputController {
 
   bind() {
     this.on(window, "keydown", (event) => {
+      if (event.ctrlKey || event.metaKey || event.altKey || this.isEditableTarget(event.target)) return;
       const action = this.keyToAction(event);
       if (!action) return;
       event.preventDefault();
       if (this.isRepeatAction(action) && event.repeat) return;
       this.dispatch(action);
-      if (this.isRepeatAction(action)) this.startRepeat(action);
+      if (this.isRepeatAction(action)) {
+        if (!this.heldRepeats.includes(action)) this.heldRepeats.push(action);
+        this.startRepeat(action);
+      }
     }, { passive: false });
 
     this.on(window, "keyup", (event) => {
+      if (this.isEditableTarget(event.target)) return;
       const action = this.keyToAction(event);
       if (!action) return;
-      if (action === this.repeatAction) this.stopRepeat();
+      if (this.isRepeatAction(action)) {
+        this.heldRepeats = this.heldRepeats.filter((item) => item !== action);
+        if (action === this.repeatAction) {
+          const fallback = this.heldRepeats[this.heldRepeats.length - 1];
+          if (fallback) this.startRepeat(fallback);
+          else this.stopRepeat();
+        }
+      }
     }, { passive: true });
 
     // A key released in the browser chrome never delivers keyup, so the hold
@@ -5894,7 +6188,10 @@ class InputController {
       if (this.keyDrag) this.endKeyDrag(event);
     }, { passive: false });
 
-    const keepControlsOnScreen = () => this.reclampControlPosition();
+    const keepControlsOnScreen = () => {
+      invalidateSafeAreaInsets();
+      this.reclampControlPosition();
+    };
     this.on(window, "resize", keepControlsOnScreen, { passive: true });
     this.on(window, "orientationchange", keepControlsOnScreen, { passive: true });
 
@@ -5911,6 +6208,8 @@ class InputController {
       const ady = Math.abs(dy);
       if (ady > 52 && dy > 0 && ady > adx * 1.2) {
         this.dispatch("drop");
+      } else if (ady > 52 && dy < 0 && ady > adx * 1.2) {
+        this.dispatch("hold");
       } else if (adx > 34 && adx > ady * 1.1) {
         const steps = clamp(Math.round(adx / 52), 1, 4);
         for (let i = 0; i < steps; i += 1) this.dispatch(dx > 0 ? "right" : "left");
@@ -5927,17 +6226,26 @@ class InputController {
     this.listeners.push(() => target.removeEventListener(type, handler, options));
   }
 
+  isEditableTarget(target) {
+    if (!target || typeof target !== "object") return false;
+    const tag = String(target.tagName || "").toUpperCase();
+    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || !!target.isContentEditable;
+  }
+
   isRepeatAction(action) {
     return action === "left" || action === "right" || action === "down";
   }
 
   keyToAction(event) {
-    const key = event.key.toLowerCase();
+    const key = String(event.key || "").toLowerCase();
     if (key === "arrowleft" || key === "a") return "left";
     if (key === "arrowright" || key === "d") return "right";
     if (key === "arrowdown" || key === "s") return "down";
     if (key === "arrowup" || key === "w" || key === "x") return "rotate";
     if (key === "z") return "rotate-ccw";
+    if (key === "c" || key === "shift") return "hold";
+    if (key === "e" || key === "q") return "zone";
+    if (key === "m") return "mute";
     if (key === " " || key === "spacebar") return "drop";
     if (key === "enter" || key === "escape" || key === "p") return "pause";
     return "";
@@ -6484,6 +6792,7 @@ class InputController {
       this.repeatTimer = 0;
     }
     this.repeatAction = "";
+    this.heldRepeats = [];
   }
 
   dispose() {
@@ -6510,6 +6819,9 @@ class LumenShiftApp {
     this.rankOnly = false;
     this.lastAudioMixAt = 0;
     this.hardDropLockPending = false;
+    this.runSubmitted = false;
+    this.lastHudLayoutKey = "";
+    this.hudCache = {};
     this.elements = {
       menu: document.getElementById("menu-screen"),
       pause: document.getElementById("pause-screen"),
@@ -6517,6 +6829,7 @@ class LumenShiftApp {
       play: document.getElementById("play-button"),
       rank: document.getElementById("rank-button"),
       home: document.getElementById("home-button"),
+      soundButton: document.getElementById("sound-button"),
       pauseButton: document.getElementById("pause-button"),
       resume: document.getElementById("resume-button"),
       restart: document.getElementById("restart-button"),
@@ -6533,6 +6846,10 @@ class LumenShiftApp {
       speedLv: document.getElementById("speed-lv-value"),
       areaLines: document.getElementById("area-lines-value"),
       areaLinesGoal: document.getElementById("area-lines-goal"),
+      zoneButton: document.getElementById("zone-button"),
+      zoneValue: document.getElementById("zone-value"),
+      zoneGaugeFill: document.getElementById("zone-gauge-fill"),
+      holdButton: document.getElementById("hold-button"),
       time: document.getElementById("time-value"),
       areaScore: document.getElementById("area-score-value"),
       maxRing: document.getElementById("max-ring"),
@@ -6543,6 +6860,7 @@ class LumenShiftApp {
       finalScore: document.getElementById("final-score"),
       resultTitle: document.getElementById("result-title"),
       resultMode: document.getElementById("result-mode"),
+      resultStats: document.getElementById("result-stats"),
       controls: document.getElementById("touch-controls"),
     };
     this.elements.nickname.value = readStorage("nickname", "");
@@ -6555,6 +6873,7 @@ class LumenShiftApp {
   async init() {
     this.bindDom();
     this.applyModeSelection();
+    this.updateMuteButton();
     await this.view.init((dt) => this.frame(dt));
     this.view.render(this.core.snapshot(), 16);
     this.view.present();
@@ -6579,6 +6898,9 @@ class LumenShiftApp {
       this.audio.ui("back");
       this.openMenu();
     });
+    if (this.elements.soundButton) {
+      this.elements.soundButton.addEventListener("click", () => this.toggleMute());
+    }
     this.elements.pauseButton.addEventListener("click", () => this.togglePause());
     this.elements.resume.addEventListener("click", () => this.togglePause(false));
     this.elements.restart.addEventListener("click", () => this.startGame(this.modeKey));
@@ -6587,8 +6909,20 @@ class LumenShiftApp {
       this.audio.ui("back");
       this.openMenu();
     });
+    if (this.elements.holdButton) {
+      this.elements.holdButton.addEventListener("click", () => this.handleAction("hold"));
+    }
+    if (this.elements.zoneButton) {
+      this.elements.zoneButton.addEventListener("click", () => this.handleAction("zone"));
+    }
     this.elements.submit.addEventListener("click", () => this.submitScore());
     this.elements.nickname.addEventListener("change", () => writeStorage("nickname", this.elements.nickname.value.trim()));
+    this.elements.nickname.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !this.elements.submit.disabled) {
+        event.preventDefault();
+        this.submitScore();
+      }
+    });
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
         if (this.core.status === "playing") this.togglePause(true);
@@ -6639,18 +6973,29 @@ class LumenShiftApp {
         this.audio.setStage(index);
         this.view.stageShift(stage);
         const stageNumber = (((__oc201 = stageWindow === null || stageWindow === void 0 ? void 0 : stageWindow.stageNumber) !== null && __oc201 !== void 0 ? __oc201 : index + 1));
-        this.showStageSplash(stageNumber > 1 ? `STAGE ${String(stageNumber).padStart(2, "0")}\n${((stage === null || stage === void 0 ? void 0 : stage.name)) || ""}` : "");
+        if (stageNumber > 1) {
+          const stageLabel = `STAGE ${String(stageNumber).padStart(2, "0")}\n${((stage === null || stage === void 0 ? void 0 : stage.name)) || ""}`;
+          this.view.showStageTitle(stageLabel, stage);
+          this.showStageSplash(stageLabel);
+        }
       },
       onClear: (info) => { var __oc202;
         const stage = STAGES[this.core.stageIndex] || STAGES[0];
         this.audio.clear(info.lines, info.combo, info.zoneActive);
         this.view.lineClear(info.rows, info.lines, stage, info.cells);
+        if (info.lumenReady) {
+          this.audio.playSfx("chargeFull", -4);
+          this.audio.playStinger("zoneReady", -5);
+        } else if (!info.zoneActive && this.core.lumen > 0) {
+          this.audio.playSfx("chargeSmall", -14);
+        }
         if (info.stageCleared) {
           const nextStage = STAGES[(((__oc202 = info.stageWindowAfter) === null || __oc202 === void 0 ? void 0 : __oc202.stageIndex))] || STAGES[0];
           this.view.stageClearTransition(stage, nextStage, info);
         }
-        this.showEvent(this.clearLabel(info.lines, info.combo, info.zoneActive));
-        this.haptic(info.lines >= 4 ? [28, 36, 42] : [14, 20, 10]);
+        const label = this.clearLabel(info.lines, info.combo, info.zoneActive, info.tSpin, info.backToBack);
+        this.showEvent(info.lumenReady && info.lines < 4 && !info.tSpin ? `${label} · ZONE READY` : label);
+        this.haptic(info.lines >= 4 || info.tSpin ? [28, 36, 42] : [14, 20, 10]);
         this.rank.record({
           type: "clear",
           lines: info.lines,
@@ -6698,12 +7043,13 @@ class LumenShiftApp {
   }
 
   frame(dt) {
-    if (this.core.status === "playing") this.core.tick(dt);
+    const safeDt = Math.min(Math.max(Number(dt) || 16.67, 0), 100);
+    if (this.core.status === "playing") this.core.tick(safeDt);
     const snapshot = this.core.snapshot();
-    const beatState = this.audio.getBeatState(snapshot, dt);
+    const beatState = this.audio.getBeatState(snapshot, safeDt);
     // Opaque menus and pause screens do not need a particle scene behind them.
     if (this.core.status === 'playing') {
-      this.view.render(snapshot, dt, beatState);
+      this.view.render(snapshot, safeDt, beatState);
       this.view.present();
     }
     const now = performance.now();
@@ -6712,6 +7058,26 @@ class LumenShiftApp {
       this.lastAudioMixAt = now;
     }
     this.updateHud(snapshot);
+  }
+
+  toggleMute() {
+    const nextMuted = !this.audio.muted;
+    this.audio.setMuted(nextMuted, this.core.status === "playing");
+    this.updateMuteButton();
+    if (!nextMuted) this.audio.ui("click");
+  }
+
+  updateMuteButton() {
+    const button = this.elements.soundButton;
+    if (!button) return;
+    const muted = !!this.audio.muted;
+    button.classList.toggle("is-muted", muted);
+    button.setAttribute("aria-pressed", muted ? "true" : "false");
+    const label = PAGE_LANG === "en"
+      ? (muted ? "Unmute audio (M)" : "Mute audio (M)")
+      : (muted ? "사운드 켜기 (M)" : "사운드 음소거 (M)");
+    button.setAttribute("aria-label", label);
+    button.setAttribute("title", label);
   }
 
   async playUiSound(kind) {
@@ -6728,12 +7094,18 @@ class LumenShiftApp {
     await this.audio.unlock({ startMusic: true });
     this.rank = new RankClient();
     this.hardDropLockPending = false;
+    this.runSubmitted = false;
+    if (this.elements.submit) this.elements.submit.disabled = false;
     if ((((__oc203 = MODES[this.modeKey]) === null || __oc203 === void 0 ? void 0 : __oc203.ranked))) this.rank.start().catch(() => null);
     this.core.callbacks = this.makeCallbacks();
     this.core.reset(this.modeKey);
   }
 
   handleAction(action) {
+    if (action === "mute") {
+      this.toggleMute();
+      return;
+    }
     if (this.elements.menu.classList.contains("is-hidden") === false) {
       if (action === "drop" || action === "rotate" || action === "pause") this.startGame("journey");
       return;
@@ -6751,6 +7123,8 @@ class LumenShiftApp {
     else if (action === "rotate") this.core.rotate(1);
     else if (action === "rotate-ccw") this.core.rotate(-1);
     else if (action === "drop") this.core.hardDrop();
+    else if (action === "hold") this.core.hold();
+    else if (action === "zone") this.core.activateZone();
   }
 
   togglePause(forcePause) {
@@ -6759,6 +7133,7 @@ class LumenShiftApp {
     const status = forcePause === true ? (this.core.status = "paused") : this.core.togglePause();
     this.audio.ui(status === "paused" ? "pause" : "resume");
     if (status === "paused") {
+      this.input.stopRepeat();
       this.audio.suspend();
       this.elements.pause.classList.remove("is-hidden");
     } else if (status === "playing") {
@@ -6768,6 +7143,9 @@ class LumenShiftApp {
   }
 
   openMenu() {
+    this.input.stopRepeat();
+    this.audio.stopZoneLoop();
+    this.audio.suspend();
     this.core.status = "menu";
     this.setMenuShell(true);
     this.setZoneVeil(false, true);
@@ -6784,21 +7162,34 @@ class LumenShiftApp {
     this.elements.resultTitle.textContent = "Ranking";
     this.elements.resultMode.textContent = "LUMEN SHIFT";
     this.elements.finalScore.textContent = "";
+    if (this.elements.resultStats) this.elements.resultStats.innerHTML = "";
     this.elements.submitStatus.textContent = "";
     this.elements.nickname.parentElement.classList.add("is-hidden");
     await this.renderRanks();
   }
 
   openResult(title, snapshot) { var __oc204, __oc205, __oc206;
+    this.input.stopRepeat();
     this.hideAllScreens();
     this.rankOnly = false;
     this.elements.result.classList.remove("is-hidden");
     this.audio.ui("gameOver");
     this.audio.playStinger("gameOver", -4);
     this.elements.nickname.parentElement.classList.toggle("is-hidden", !(((__oc204 = MODES[snapshot.modeKey]) === null || __oc204 === void 0 ? void 0 : __oc204.ranked)) || snapshot.score <= 0);
+    if (this.elements.submit) this.elements.submit.disabled = !!this.runSubmitted;
     this.elements.resultTitle.textContent = title;
     this.elements.resultMode.textContent = (((__oc205 = MODES[snapshot.modeKey]) === null || __oc205 === void 0 ? void 0 : __oc205.label)) || "Journey";
     this.elements.finalScore.textContent = formatScore(snapshot.score);
+    if (this.elements.resultStats) {
+      const stageLabel = `ST ${String(snapshot.stageNumber || 1).padStart(2, "0")}`;
+      const chips = [
+        stageLabel,
+        `${snapshot.lines || 0} LINES`,
+        `${snapshot.maxCombo || 0} COMBO`,
+      ];
+      if (snapshot.totalZoneLines > 0) chips.push(`${snapshot.totalZoneLines} ZONE`);
+      this.elements.resultStats.innerHTML = chips.map((item) => `<span class="result-stat-chip">${this.escape(item)}</span>`).join("");
+    }
     this.elements.submitStatus.textContent = (((__oc206 = MODES[snapshot.modeKey]) === null || __oc206 === void 0 ? void 0 : __oc206.ranked)) ? "" : "Relax records stay local.";
     this.renderRanks().catch(() => null);
   }
@@ -6815,6 +7206,7 @@ class LumenShiftApp {
   }
 
   async submitScore() { var __oc207;
+    if (this.runSubmitted || this.elements.submit.disabled) return;
     const name = this.elements.nickname.value.trim().slice(0, 20) || "Player";
     writeStorage("nickname", name);
     const snapshot = this.core.snapshot();
@@ -6833,6 +7225,7 @@ class LumenShiftApp {
         zone_lines: snapshot.totalZoneLines,
         elapsed_ms: Math.floor(snapshot.elapsed),
       });
+      this.runSubmitted = true;
       this.audio.ui("submit");
       this.elements.submitStatus.textContent = data.pending ? "Record kept. Ranking will sync automatically." : `Rank ${data.rank || "-"} saved.`;
       await this.renderRanks();
@@ -6840,7 +7233,7 @@ class LumenShiftApp {
       this.audio.ui("error");
       this.elements.submitStatus.textContent = err.message || "Submit failed.";
     } finally {
-      this.elements.submit.disabled = false;
+      this.elements.submit.disabled = !!this.runSubmitted;
     }
   }
 
@@ -6886,38 +7279,96 @@ class LumenShiftApp {
         ? clamp(Math.floor(layout.boardX - panelGap - 7), 50, 78)
         : 78;
       const leftX = Math.max(7, Math.round(layout.boardX - panelWidth - panelGap));
-      const rightX = Math.min(window.innerWidth - 84, Math.max(Math.round(layout.boardX + layout.boardW + panelGap), Math.round(layout.boardX + layout.boardW + (layout.portrait ? 16 : 34))));
-      this.root.style.setProperty("--board-x", `${Math.round(layout.boardX)}px`);
-      this.root.style.setProperty("--board-y", `${Math.round(layout.boardY)}px`);
-      this.root.style.setProperty("--board-w", `${Math.round(layout.boardW)}px`);
-      this.root.style.setProperty("--board-h", `${Math.round(layout.boardH)}px`);
-      this.root.style.setProperty("--hud-y", `${hudY}px`);
-      this.root.style.setProperty("--event-label-y", `${eventY}px`);
-      this.root.style.setProperty("--event-label-x", eventHasSideRoom ? `${eventX}px` : "50%");
-      this.root.style.setProperty("--event-label-w", eventHasSideRoom ? `${eventWidth}px` : "min(360px, calc(100vw - 36px))");
-      this.root.style.setProperty("--event-label-transform", eventHasSideRoom ? "none" : "translateX(-50%)");
-      this.root.style.setProperty("--effect-hud-y", `${effectHudY}px`);
-      this.root.style.setProperty("--effect-hud-w", `${panelWidth}px`);
-      this.root.style.setProperty("--effect-hud-left-x", `${leftX}px`);
-      this.root.style.setProperty("--effect-hud-right-x", `${rightX}px`);
+      const rightX = layout.portrait
+        ? Math.min(window.innerWidth - panelWidth - 7, Math.round(layout.boardX + layout.boardW + panelGap))
+        : Math.min(window.innerWidth - panelWidth - 12, Math.round(layout.boardX + layout.boardW + 22));
+      const holdX = layout.hold ? Math.round(layout.hold.x) : -9999;
+      const holdY = layout.hold ? Math.round(layout.hold.y) : -9999;
+      const holdW = layout.hold ? Math.round(layout.hold.w) : 44;
+      const holdH = layout.hold ? Math.round(layout.hold.h) : 44;
+      const layoutKey = `${layout.w}x${layout.h}:${layout.boardX}:${layout.boardY}:${layout.boardW}:${layout.boardH}:${hudY}:${eventY}:${eventX}:${effectHudY}:${panelWidth}:${leftX}:${rightX}:${holdX}:${holdY}:${holdW}:${holdH}`;
+      if (this.lastHudLayoutKey !== layoutKey) {
+        this.lastHudLayoutKey = layoutKey;
+        this.root.style.setProperty("--board-x", `${Math.round(layout.boardX)}px`);
+        this.root.style.setProperty("--board-y", `${Math.round(layout.boardY)}px`);
+        this.root.style.setProperty("--board-w", `${Math.round(layout.boardW)}px`);
+        this.root.style.setProperty("--board-h", `${Math.round(layout.boardH)}px`);
+        this.root.style.setProperty("--hud-y", `${hudY}px`);
+        this.root.style.setProperty("--event-label-y", `${eventY}px`);
+        this.root.style.setProperty("--event-label-x", eventHasSideRoom ? `${eventX}px` : "50%");
+        this.root.style.setProperty("--event-label-w", eventHasSideRoom ? `${eventWidth}px` : "min(360px, calc(100vw - 36px))");
+        this.root.style.setProperty("--event-label-transform", eventHasSideRoom ? "none" : "translateX(-50%)");
+        this.root.style.setProperty("--effect-hud-y", `${effectHudY}px`);
+        this.root.style.setProperty("--effect-hud-w", `${panelWidth}px`);
+        this.root.style.setProperty("--effect-hud-left-x", `${leftX}px`);
+        this.root.style.setProperty("--effect-hud-right-x", `${rightX}px`);
+        this.root.style.setProperty("--hold-x", `${holdX}px`);
+        this.root.style.setProperty("--hold-y", `${holdY}px`);
+        this.root.style.setProperty("--hold-w", `${holdW}px`);
+        this.root.style.setProperty("--hold-h", `${holdH}px`);
+      }
     }
-    const setText = (element, value) => {
-      if (element) element.textContent = value;
+    const setCachedText = (key, element, value) => {
+      if (!element) return;
+      const next = String(value);
+      if (this.hudCache[key] !== next) {
+        this.hudCache[key] = next;
+        element.textContent = next;
+      }
     };
     const mode = snapshot.mode || MODES[snapshot.modeKey] || MODES.journey;
     const areaGoal = (((__oc208 = snapshot.stageLineGoal) !== null && __oc208 !== void 0 ? __oc208 : stageLineGoalForMode(snapshot.modeKey, mode)));
-    setText(this.elements.score, formatScore(snapshot.score));
-    setText(this.elements.lines, snapshot.lines);
-    setText(this.elements.level, snapshot.level);
-    setText(this.elements.combo, snapshot.combo);
-    setText(this.elements.speedLv, snapshot.speedLevel || snapshot.level);
-    setText(this.elements.areaLines, (((__oc209 = snapshot.stageLines) !== null && __oc209 !== void 0 ? __oc209 : snapshot.lines)));
-    setText(this.elements.areaLinesGoal, Number.isFinite(areaGoal) ? areaGoal : STAGE_LINE_GOAL);
-    if (this.elements.time) this.elements.time.textContent = this.formatTime(snapshot.elapsed);
-    if (this.elements.areaScore) this.elements.areaScore.textContent = formatScore(snapshot.score);
-    if (this.elements.maxRing) this.elements.maxRing.classList.toggle("is-ready", snapshot.lumen >= 0.3 || snapshot.zoneActive);
-    if (this.elements.stage) this.elements.stage.textContent = "Score";
-    if (this.elements.lumenFill) this.elements.lumenFill.style.width = `${clamp((((__oc210 = snapshot.stageProgress) !== null && __oc210 !== void 0 ? __oc210 : 0)), 0, 1) * 100}%`;
+    setCachedText("score", this.elements.score, formatScore(snapshot.score));
+    setCachedText("lines", this.elements.lines, snapshot.lines);
+    setCachedText("level", this.elements.level, snapshot.level);
+    setCachedText("combo", this.elements.combo, snapshot.combo);
+    setCachedText("speedLv", this.elements.speedLv, snapshot.speedLevel || snapshot.level);
+    setCachedText("areaLines", this.elements.areaLines, (((__oc209 = snapshot.stageLines) !== null && __oc209 !== void 0 ? __oc209 : snapshot.lines)));
+    setCachedText("areaLinesGoal", this.elements.areaLinesGoal, Number.isFinite(areaGoal) ? areaGoal : STAGE_LINE_GOAL);
+    if (this.elements.time) setCachedText("time", this.elements.time, this.formatTime(snapshot.elapsed));
+    if (this.elements.areaScore) setCachedText("areaScore", this.elements.areaScore, formatScore(snapshot.score));
+    if (this.elements.maxRing) {
+      const ready = snapshot.lumen >= 0.3 || snapshot.zoneActive;
+      if (this.hudCache.maxRing !== ready) {
+        this.hudCache.maxRing = ready;
+        this.elements.maxRing.classList.toggle("is-ready", ready);
+      }
+    }
+    const stageText = `Score · ST ${String(snapshot.stageNumber || 1).padStart(2, "0")}`;
+    setCachedText("stage", this.elements.stage, stageText);
+    const fillWidth = `${(clamp((((__oc210 = snapshot.stageProgress) !== null && __oc210 !== void 0 ? __oc210 : 0)), 0, 1) * 100).toFixed(1)}%`;
+    if (this.elements.lumenFill && this.hudCache.lumenFill !== fillWidth) {
+      this.hudCache.lumenFill = fillWidth;
+      this.elements.lumenFill.style.width = fillWidth;
+    }
+    const zoneReady = !snapshot.zoneActive && snapshot.lumen >= 0.3;
+    const zoneLabel = snapshot.zoneActive
+      ? `${Math.max(0, (snapshot.zoneTimer || 0) / 1000).toFixed(1)}s`
+      : (zoneReady ? "READY" : `${Math.round(clamp(snapshot.lumen || 0, 0, 1) * 100)}%`);
+    setCachedText("zoneValue", this.elements.zoneValue, zoneLabel);
+    const zoneGaugePct = snapshot.zoneActive
+      ? `${(clamp(1 - (snapshot.zoneProgress || 0), 0, 1) * 100).toFixed(1)}%`
+      : `${(clamp(snapshot.lumen || 0, 0, 1) * 100).toFixed(1)}%`;
+    if (this.elements.zoneGaugeFill && this.hudCache.zoneGaugeFill !== zoneGaugePct) {
+      this.hudCache.zoneGaugeFill = zoneGaugePct;
+      this.elements.zoneGaugeFill.style.width = zoneGaugePct;
+    }
+    if (this.elements.zoneButton) {
+      const zoneStateKey = `${zoneReady ? 1 : 0}:${snapshot.zoneActive ? 1 : 0}`;
+      if (this.hudCache.zoneState !== zoneStateKey) {
+        this.hudCache.zoneState = zoneStateKey;
+        this.elements.zoneButton.disabled = !zoneReady;
+        this.elements.zoneButton.classList.toggle("is-ready", zoneReady);
+        this.elements.zoneButton.classList.toggle("is-active", !!snapshot.zoneActive);
+      }
+    }
+    if (this.elements.holdButton) {
+      const holdDisabled = snapshot.canHold === false;
+      if (this.hudCache.holdDisabled !== holdDisabled) {
+        this.hudCache.holdDisabled = holdDisabled;
+        this.elements.holdButton.disabled = holdDisabled;
+      }
+    }
   }
 
   formatTime(ms) {
@@ -6927,8 +7378,10 @@ class LumenShiftApp {
     return `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
   }
 
-  clearLabel(lines, combo, zoneActive) {
-    const base = lines === 4 ? "LUMEN CLEAR" : lines === 3 ? "TRIPLE" : lines === 2 ? "DOUBLE" : "SINGLE";
+  clearLabel(lines, combo, zoneActive, tSpin = false, backToBack = false) {
+    let base = lines === 4 ? "LUMEN CLEAR" : lines === 3 ? "TRIPLE" : lines === 2 ? "DOUBLE" : "SINGLE";
+    if (tSpin) base = lines === 3 ? "T-SPIN TRIPLE" : lines === 2 ? "T-SPIN DOUBLE" : "T-SPIN SINGLE";
+    if (backToBack && (lines >= 4 || tSpin)) base = `B2B ${base}`;
     if (zoneActive) return `${base} +${combo}`;
     if (combo >= 4) return `${base} COMBO ${combo}`;
     return base;
