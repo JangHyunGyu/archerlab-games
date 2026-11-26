@@ -1968,7 +1968,24 @@ body.keyboard-open .game-screen {
 .excel-formula-bar,
 .excel-col-letters,
 .excel-sheet-bar,
-.excel-status-bar {
+.excel-status-bar,
+.notepad-titlebar,
+.notepad-menubar,
+.notepad-status-bar,
+.vsc-titlebar,
+.vsc-activitybar,
+.vsc-sidebar,
+.vsc-tabs,
+.vsc-breadcrumbs,
+.vsc-terminal,
+.vsc-statusbar,
+.ecl-titlebar,
+.ecl-menubar,
+.ecl-toolbar,
+.ecl-explorer,
+.ecl-editor-tabs,
+.ecl-console,
+.ecl-statusbar {
   display: none;
 }
 
@@ -1988,6 +2005,11 @@ body.keyboard-open .game-screen {
   border-radius: 10px;
   background: rgba(7, 20, 30, 0.78);
   border: 1px solid var(--line);
+}
+@media (max-width: 340px) {
+  .mode-selector {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .mode-option-btn {
   min-height: 44px;

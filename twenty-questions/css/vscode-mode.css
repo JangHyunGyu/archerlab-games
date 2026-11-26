@@ -1,0 +1,798 @@
+/* Visual Studio Code Dark+ 에디터 위장 테마 */
+
+:root[data-theme='vscode'] {
+  color-scheme: dark;
+  --bg: #1e1e1e;
+  --bg-input: #3c3c3c;
+  --text: #d4d4d4;
+  --text-muted: #858585;
+  --gold: #569cd6;
+  --gold-bright: #dcdcaa;
+  --cyan: #4fc1ff;
+  --violet: #c586c0;
+  --amber: #ce9178;
+  --molten: #f48771;
+  --coral: #f14c4c;
+  --line: #3c3c3c;
+  --line-soft: #2d2d30;
+  --line-strong: #007fd4;
+  --shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+  --sans: 'D2Coding', 'Consolas', 'Cascadia Code', 'Malgun Gothic', monospace;
+  --display: 'D2Coding', 'Consolas', 'Cascadia Code', 'Malgun Gothic', monospace;
+  --vsc-ui: 'Segoe UI', 'Malgun Gothic', system-ui, sans-serif;
+}
+
+:root[lang='en'][data-theme='vscode'] {
+  --sans: 'Consolas', 'Cascadia Code', 'Courier New', monospace;
+  --display: 'Consolas', 'Cascadia Code', 'Courier New', monospace;
+  --vsc-ui: 'Segoe UI', system-ui, sans-serif;
+}
+
+:root[data-theme='vscode'] html,
+:root[data-theme='vscode'] body {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+:root[data-theme='vscode'] body {
+  min-height: 100dvh;
+}
+
+:root[data-theme='vscode'] *,
+:root[data-theme='vscode'] *::before,
+:root[data-theme='vscode'] *::after {
+  animation: none !important;
+}
+
+:root[data-theme='vscode'] button:focus-visible,
+:root[data-theme='vscode'] a:focus-visible,
+:root[data-theme='vscode'] input:focus-visible {
+  outline: 1px solid #007fd4;
+  outline-offset: 1px;
+}
+
+:root[data-theme='vscode'] .observatory-bg,
+:root[data-theme='vscode'] .vfx-canvas,
+:root[data-theme='vscode'] .vfx-stage,
+:root[data-theme='vscode'] .vfx-burst,
+:root[data-theme='vscode'] .compass-showcase,
+:root[data-theme='vscode'] .timer-emblem,
+:root[data-theme='vscode'] .site-footer,
+:root[data-theme='vscode'] .brand img,
+:root[data-theme='vscode'] .icon-button img,
+:root[data-theme='vscode'] .guess-loading-emblem,
+:root[data-theme='vscode'] .guess-loading-gauge {
+  display: none !important;
+}
+
+:root[data-theme='vscode'] .primary-btn::before,
+:root[data-theme='vscode'] .secondary-btn::before,
+:root[data-theme='vscode'] .ghost-btn::before,
+:root[data-theme='vscode'] .icon-button::before,
+:root[data-theme='vscode'] .starter-chip::before {
+  content: none;
+  display: none;
+}
+
+:root[data-theme='vscode'] .crafted-frame {
+  border: 1px solid #3c3c3c;
+  border-image: none;
+  border-radius: 0;
+  background: #252526;
+  filter: none;
+  box-shadow: none;
+}
+
+/* 데스크톱 VS Code 워크벤치 그리드 */
+:root[data-theme='vscode'] .vsc-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 35px;
+  padding: 0 0 0 max(10px, env(safe-area-inset-left, 0px));
+  background: #181818;
+  border-bottom: 1px solid #2b2b2b;
+  color: #cccccc;
+  font-family: var(--vsc-ui);
+  font-size: 12px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+:root[data-theme='vscode'] .vsc-title-left,
+:root[data-theme='vscode'] .vsc-title-center,
+:root[data-theme='vscode'] .vsc-win-controls {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+:root[data-theme='vscode'] .vsc-title-left { gap: 8px; }
+
+:root[data-theme='vscode'] .vsc-app-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  background: linear-gradient(135deg, #0098ff 0%, #0066b8 100%);
+  color: #ffffff;
+  font-family: var(--sans);
+  font-size: 9.5px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+:root[data-theme='vscode'] .vsc-menubar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+:root[data-theme='vscode'] .vsc-menu-btn {
+  height: 24px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #cccccc;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+:root[data-theme='vscode'] .vsc-menu-btn:hover {
+  background: #2a2d2e;
+  color: #ffffff;
+}
+
+:root[data-theme='vscode'] .vsc-title-center {
+  flex: 1;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 8px;
+}
+
+:root[data-theme='vscode'] .vsc-nav-arrows {
+  display: inline-flex;
+  gap: 6px;
+  color: #858585;
+  font-size: 13px;
+}
+
+:root[data-theme='vscode'] .vsc-command-center {
+  min-width: 220px;
+  max-width: 360px;
+  width: 100%;
+  height: 22px;
+  padding: 0 12px;
+  border: 1px solid #3c3c3c;
+  border-radius: 5px;
+  background: #222222;
+  color: #cccccc;
+  font-size: 11.5px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:root[data-theme='vscode'] .vsc-command-center:hover {
+  background: #2a2d2e;
+  border-color: #555555;
+}
+
+:root[data-theme='vscode'] .vsc-win-controls {
+  height: 100%;
+  flex-shrink: 0;
+}
+
+:root[data-theme='vscode'] .vsc-win-controls span {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 100%;
+  font-size: 11.5px;
+  color: #cccccc;
+}
+
+:root[data-theme='vscode'] .vsc-win-controls span:hover { background: #2a2d2e; }
+:root[data-theme='vscode'] .vsc-win-controls .is-close:hover { background: #c42b1c; color: #ffffff; }
+
+:root[data-theme='vscode'] .vsc-tabs {
+  display: flex;
+  align-items: stretch;
+  height: 35px;
+  background: #181818;
+  border-bottom: 1px solid #2b2b2b;
+  overflow-x: auto;
+  scrollbar-width: none;
+  font-family: var(--vsc-ui);
+}
+
+:root[data-theme='vscode'] .vsc-tabs::-webkit-scrollbar { display: none; }
+
+:root[data-theme='vscode'] .vsc-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 0;
+  border-right: 1px solid #252526;
+  background: #181818;
+  color: #969696;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+:root[data-theme='vscode'] .vsc-tab.is-active {
+  background: #1e1e1e;
+  color: #ffffff;
+  box-shadow: inset 0 1.5px 0 #0078d4;
+}
+
+:root[data-theme='vscode'] .vsc-tab em {
+  font-style: normal;
+  color: #cccccc;
+  margin-left: 4px;
+}
+
+:root[data-theme='vscode'] .vsc-ext {
+  font-style: normal;
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+:root[data-theme='vscode'] .vsc-ext.is-ts { color: #3178c6; }
+:root[data-theme='vscode'] .vsc-ext.is-md { color: #519aba; }
+:root[data-theme='vscode'] .vsc-ext.is-json { color: #cbcb41; }
+
+:root[data-theme='vscode'] .site-header {
+  max-width: none;
+  margin: 0;
+  min-height: 35px;
+  padding: 0 10px;
+  background: #181818;
+  border-bottom: 1px solid #2b2b2b;
+  font-family: var(--vsc-ui);
+}
+
+:root[data-theme='vscode'] .brand {
+  min-height: 44px;
+  padding: 0 6px;
+  color: #cccccc;
+  font-family: var(--vsc-ui);
+  font-size: 12px;
+  font-weight: 500;
+  text-shadow: none;
+}
+
+:root[data-theme='vscode'] .languages a {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 7px;
+  border-radius: 3px;
+  color: #969696;
+  text-shadow: none;
+  font-size: 11.5px;
+}
+
+:root[data-theme='vscode'] .languages a[aria-current] {
+  background: #2a2d2e;
+  border: 1px solid #3c3c3c;
+  color: #ffffff;
+}
+
+:root[data-theme='vscode'] .icon-button {
+  width: auto;
+  min-width: 44px;
+  min-height: 44px;
+  height: auto;
+  padding: 0 8px;
+  border-radius: 3px;
+  background: transparent;
+  color: #cccccc;
+  font-size: 11.5px;
+  font-weight: 500;
+  filter: none;
+}
+
+:root[data-theme='vscode'] .icon-button:hover {
+  background: #2a2d2e;
+  color: #ffffff;
+  filter: none;
+}
+
+:root[data-theme='vscode'] .excel-btn-label { display: inline; white-space: nowrap; }
+
+:root[data-theme='vscode'] .vsc-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 14px;
+  background: #1e1e1e;
+  border-bottom: 1px solid #2b2b2b;
+  color: #969696;
+  font-family: var(--vsc-ui);
+  font-size: 11.5px;
+}
+
+:root[data-theme='vscode'] .vsc-breadcrumbs i { font-style: normal; color: #6e6e6e; }
+:root[data-theme='vscode'] .vsc-bc-sym { color: #4ec9b0; }
+
+/* Activity Bar + Explorer 사이드바 (960px+) */
+@media (min-width: 960px) {
+  :root[data-theme='vscode'] body {
+    display: grid;
+    grid-template-columns: 48px 218px minmax(0, 1fr) auto;
+    grid-template-rows: 35px 35px 22px 1fr auto 22px;
+  }
+  :root[data-theme='vscode'] .vsc-titlebar { grid-column: 1 / -1; grid-row: 1; }
+  :root[data-theme='vscode'] .vsc-activitybar {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    grid-column: 1;
+    grid-row: 2 / span 4;
+    background: #181818;
+    border-right: 1px solid #2b2b2b;
+  }
+  :root[data-theme='vscode'] .vsc-act-top,
+  :root[data-theme='vscode'] .vsc-act-bottom {
+    display: flex;
+    flex-direction: column;
+  }
+  :root[data-theme='vscode'] .vsc-act-btn {
+    position: relative;
+    width: 48px;
+    height: 46px;
+    border: 0;
+    background: transparent;
+    color: #858585;
+    display: grid;
+    place-items: center;
+    font-size: 18px;
+  }
+  :root[data-theme='vscode'] .vsc-act-btn:hover { color: #ffffff; }
+  :root[data-theme='vscode'] .vsc-act-btn.is-active {
+    color: #ffffff;
+    box-shadow: inset 2px 0 0 #0078d4;
+  }
+  :root[data-theme='vscode'] .vsc-act-badge {
+    position: absolute;
+    right: 7px;
+    bottom: 8px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    border-radius: 999px;
+    background: #0078d4;
+    color: #ffffff;
+    font-style: normal;
+    font-size: 9.5px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+  }
+  :root[data-theme='vscode'] .vsc-sidebar {
+    display: flex;
+    flex-direction: column;
+    grid-column: 2;
+    grid-row: 2 / span 4;
+    background: #181818;
+    border-right: 1px solid #2b2b2b;
+    font-family: var(--vsc-ui);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  :root[data-theme='vscode'] .vsc-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 35px;
+    padding: 0 12px;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: #bbbbbb;
+  }
+  :root[data-theme='vscode'] .vsc-tree-section {
+    border-top: 1px solid #252526;
+  }
+  :root[data-theme='vscode'] .vsc-tree-title {
+    padding: 5px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #cccccc;
+  }
+  :root[data-theme='vscode'] .vsc-tree-list {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 8px;
+  }
+  :root[data-theme='vscode'] .vsc-tree-folder {
+    padding: 3px 12px;
+    font-size: 12px;
+    color: #cccccc;
+  }
+  :root[data-theme='vscode'] .vsc-tree-folder.is-indent { padding-left: 22px; }
+  :root[data-theme='vscode'] .vsc-tree-file {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 4px 10px 4px 30px;
+    border: 0;
+    background: transparent;
+    color: #cccccc;
+    font-size: 12px;
+    text-align: left;
+  }
+  :root[data-theme='vscode'] .vsc-tree-file.is-root { padding-left: 16px; }
+  :root[data-theme='vscode'] .vsc-tree-file:hover { background: #2a2d2e; }
+  :root[data-theme='vscode'] .vsc-tree-file.is-active { background: #37373d; color: #ffffff; }
+  :root[data-theme='vscode'] .vsc-tabs { grid-column: 3; grid-row: 2; }
+  :root[data-theme='vscode'] .site-header { grid-column: 4; grid-row: 2; justify-content: flex-end; }
+  :root[data-theme='vscode'] .vsc-breadcrumbs { grid-column: 3 / -1; grid-row: 3; }
+  :root[data-theme='vscode'] main { grid-column: 3 / -1; grid-row: 4; }
+  :root[data-theme='vscode'] .vsc-terminal { grid-column: 3 / -1; grid-row: 5; }
+  :root[data-theme='vscode'] .vsc-statusbar { grid-column: 1 / -1; grid-row: 6; }
+}
+
+/* 에디터 본문 영역 */
+:root[data-theme='vscode'] main {
+  flex: 1;
+  width: 100%;
+  background-color: #1e1e1e;
+  background-image: linear-gradient(to right, #1e1e1e 0 46px, #2b2b2b 46px 47px, transparent 47px);
+}
+
+:root[data-theme='vscode'] .title-screen {
+  max-width: 980px;
+  margin: 0;
+  padding: 18px 24px 24px 62px;
+  gap: 20px;
+  align-items: start;
+}
+
+:root[data-theme='vscode'] .hero-copy { max-width: none; }
+:root[data-theme='vscode'] .eyebrow { color: #6a9955; text-shadow: none; letter-spacing: 0; text-transform: none; }
+:root[data-theme='vscode'] .eyebrow::before { content: '// '; }
+:root[data-theme='vscode'] .eyebrow i { display: none; }
+
+:root[data-theme='vscode'] h1 {
+  margin: 6px 0 8px;
+  font-family: var(--sans);
+  font-size: 26px;
+  font-weight: 700;
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  color: #4ec9b0;
+  filter: none;
+}
+
+:root[data-theme='vscode'] h1::before { content: 'class '; color: #569cd6; }
+:root[data-theme='vscode'] h1::after { content: ' {'; color: #ffd700; }
+
+:root[data-theme='vscode'] .hero-subtitle { color: #ce9178; text-shadow: none; font-size: 13.5px; }
+:root[data-theme='vscode'] .hero-intro { color: #d4d4d4; text-shadow: none; font-size: 13px; }
+:root[data-theme='vscode'] .rule-token {
+  background: #252526;
+  border: 1px solid #3c3c3c;
+  border-radius: 2px;
+  color: #9cdcfe;
+}
+
+:root[data-theme='vscode'] .primary-btn,
+:root[data-theme='vscode'] .secondary-btn,
+:root[data-theme='vscode'] .ghost-btn {
+  border-radius: 2px;
+  font-family: var(--vsc-ui);
+  text-shadow: none;
+  filter: none;
+}
+
+:root[data-theme='vscode'] .primary-btn {
+  min-height: 44px;
+  padding: 8px 18px;
+  background: #0078d4;
+  border: 1px solid #0078d4;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+:root[data-theme='vscode'] .primary-btn:hover { background: #1c8ae0; filter: none; }
+
+:root[data-theme='vscode'] .secondary-btn,
+:root[data-theme='vscode'] .ghost-btn {
+  min-height: 44px;
+  padding: 6px 14px;
+  background: #2d2d30;
+  border: 1px solid #3c3c3c;
+  color: #cccccc;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+:root[data-theme='vscode'] .secondary-btn:hover,
+:root[data-theme='vscode'] .ghost-btn:hover { background: #3e3e42; color: #ffffff; filter: none; }
+:root[data-theme='vscode'] .hero-actions #start { min-height: 44px; padding: 8px 20px; font-size: 13.5px; }
+
+:root[data-theme='vscode'] .hero-stat { border-left-color: #3c3c3c; }
+:root[data-theme='vscode'] .hero-stat span { color: #9cdcfe; text-shadow: none; }
+:root[data-theme='vscode'] .hero-stat strong { font-family: var(--sans); font-size: 17px; color: #b5cea8; text-shadow: none; }
+:root[data-theme='vscode'] .hero-stat.accent strong { color: #4fc1ff; }
+:root[data-theme='vscode'] .prev-round-strip { background: #252526; border-color: #3c3c3c; border-radius: 2px; }
+:root[data-theme='vscode'] .prev-round-meta strong { color: #ce9178; }
+
+:root[data-theme='vscode'] .example-card { padding: 12px; }
+:root[data-theme='vscode'] .example-badge { background: #252526; border-color: #3c3c3c; color: #569cd6; border-radius: 2px; }
+:root[data-theme='vscode'] .example-target { color: #ce9178; }
+:root[data-theme='vscode'] .ex-row { background: #1e1e1e; border-color: #2d2d30; border-radius: 2px; }
+:root[data-theme='vscode'] .ex-row.exact { background: rgba(78, 201, 176, 0.16); border-color: #4ec9b0; color: #4ec9b0; }
+:root[data-theme='vscode'] .ex-row.exact .ex-score,
+:root[data-theme='vscode'] .ex-row.exact .ex-rank { color: #4ec9b0; }
+:root[data-theme='vscode'] .ex-word, :root[data-theme='vscode'] .ex-score { font-family: var(--sans); }
+:root[data-theme='vscode'] .sim-meter { border-radius: 0; height: 4px; }
+:root[data-theme='vscode'] .sim-meter i { border-radius: 0; }
+
+/* 게임 에디터 본문 */
+:root[data-theme='vscode'] .game-screen {
+  max-width: none;
+  margin: 0;
+  padding: 8px 14px 10px 60px;
+  gap: 8px;
+}
+
+:root[data-theme='vscode'] .case-label {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: #9cdcfe;
+  background: #252526;
+  border: 1px solid #3c3c3c;
+  border-radius: 2px;
+}
+
+:root[data-theme='vscode'] .chronometer-console { padding: 8px; gap: 6px; }
+:root[data-theme='vscode'] .hud-primary { gap: 6px; }
+:root[data-theme='vscode'] .hud-card {
+  padding: 5px 8px;
+  border-radius: 2px;
+  background: #1e1e1e;
+  border: 1px solid #333333;
+  text-align: left;
+}
+:root[data-theme='vscode'] .hud-card span { justify-content: flex-start; color: #9cdcfe; font-size: 11px; }
+:root[data-theme='vscode'] .hud-card strong { font-family: var(--sans); font-size: 15px; color: #b5cea8; }
+:root[data-theme='vscode'] .hud-card.timer-card strong { color: #4fc1ff; text-shadow: none; }
+:root[data-theme='vscode'] .hud-card.accent strong { color: #dcdcaa; }
+:root[data-theme='vscode'] .solver-card:hover { background: #2a2d2e; border-color: #0078d4; }
+
+:root[data-theme='vscode'] .benchmark-strip {
+  padding: 4px 8px;
+  border-radius: 2px;
+  background: #1e1e1e;
+  border-color: #333333;
+  color: #858585;
+}
+:root[data-theme='vscode'] .bench-prefix { color: #6a9955; }
+:root[data-theme='vscode'] .bench-chip { background: #252526; border-radius: 2px; }
+:root[data-theme='vscode'] .bench-chip strong { font-family: var(--sans); }
+:root[data-theme='vscode'] .resonance-meta { color: #cccccc; }
+:root[data-theme='vscode'] .resonance-track { border-radius: 0; border-color: #3c3c3c; background: #1e1e1e; height: 5px; padding: 0; }
+:root[data-theme='vscode'] .resonance-fill { border-radius: 0; background: #0078d4; box-shadow: none !important; }
+
+:root[data-theme='vscode'] .composer input {
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 2px;
+  border: 1px solid #3c3c3c;
+  background: #3c3c3c;
+  color: #cccccc;
+  font-family: var(--sans);
+  font-size: 14px;
+  box-shadow: none;
+}
+
+:root[data-theme='vscode'] .composer input:focus { border-color: #007fd4; background: #2d2d30; }
+:root[data-theme='vscode'] .composer .primary-btn { min-height: 44px; min-width: 92px; }
+:root[data-theme='vscode'] .composer-status-slot { height: 26px; }
+:root[data-theme='vscode'] .input-hint { color: #6a9955; text-shadow: none; }
+:root[data-theme='vscode'] .guess-loading-text { color: #4fc1ff; text-shadow: none; }
+:root[data-theme='vscode'] .turn-feedback { border-radius: 2px; background: #252526; border-color: #0078d4; color: #cccccc; }
+:root[data-theme='vscode'] .turn-feedback[data-kind='error'] { background: #38181a; border-color: #f14c4c; color: #f48771; }
+:root[data-theme='vscode'] .turn-feedback[data-kind='warm'] { background: #332a14; border-color: #cca700; color: #dcdcaa; }
+
+:root[data-theme='vscode'] .ledger-panel {
+  height: clamp(240px, calc(100dvh - 390px), 480px);
+  background: #1e1e1e;
+}
+
+:root[data-theme='vscode'] .guesses-table thead th {
+  background: #252526;
+  border-bottom: 1px solid #3c3c3c;
+  color: #9cdcfe;
+}
+:root[data-theme='vscode'] .sort-btn.is-sorted { color: #4fc1ff; }
+:root[data-theme='vscode'] .guesses-table td { padding: 7px 8px; border-bottom-color: #2b2b2b; }
+:root[data-theme='vscode'] .guesses-table td.col-no { font-family: var(--sans); color: #858585; }
+:root[data-theme='vscode'] .guesses-table td.col-sim { font-family: var(--sans); }
+:root[data-theme='vscode'] .guesses-table tr.latest-guess { background: rgba(0, 120, 212, 0.16); }
+:root[data-theme='vscode'] .guesses-table tr.latest-guess .word-text { color: #4fc1ff; }
+:root[data-theme='vscode'] .latest-pill { border-radius: 2px; background: #0078d4; color: #ffffff; }
+:root[data-theme='vscode'] .guesses-table tr.delimiter td { padding: 0; height: 2px; border: 0; background: #0078d4; }
+:root[data-theme='vscode'] .rank-badge.is-exact { border-radius: 2px; background: #4ec9b0; color: #1e1e1e; }
+:root[data-theme='vscode'] .sim-meter { border-radius: 0; height: 4px; background: #333333; }
+:root[data-theme='vscode'] .sim-meter i { border-radius: 0; }
+:root[data-theme='vscode'] .empty-history h2 { color: #4ec9b0; }
+:root[data-theme='vscode'] .starter-chip { min-height: 44px; padding: 6px 14px; background: #2d2d30; border: 1px solid #3c3c3c; border-radius: 2px; color: #ce9178; filter: none; }
+:root[data-theme='vscode'] .starter-chip:hover { background: #37373d; border-color: #0078d4; transform: none; }
+
+:root[data-theme='vscode'] .result-banner { padding: 12px; text-align: left; border-top: 2px solid #4ec9b0; }
+:root[data-theme='vscode'] .result-banner h2 { color: #4ec9b0; font-size: 16px; }
+:root[data-theme='vscode'] .result-answer-line strong { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: #dcdcaa; font-size: 24px; }
+:root[data-theme='vscode'] .result-stats > div,
+:root[data-theme='vscode'] .result-name-form { background: #1e1e1e; border-color: #3c3c3c; border-radius: 2px; }
+:root[data-theme='vscode'] .result-name-label { color: #9cdcfe; }
+:root[data-theme='vscode'] .result-actions { justify-content: flex-start; }
+
+/* 하단 통합 터미널 & 파란 상태 표시줄 */
+:root[data-theme='vscode'] .vsc-terminal {
+  display: flex;
+  flex-direction: column;
+  padding: 3px 14px 4px;
+  background: #181818;
+  border-top: 1px solid #2b2b2b;
+  font-family: var(--vsc-ui);
+}
+
+:root[data-theme='vscode'] .vsc-term-tabs {
+  display: flex;
+  gap: 16px;
+  font-size: 10.5px;
+  color: #858585;
+  margin-bottom: 2px;
+}
+
+:root[data-theme='vscode'] .vsc-term-tabs i {
+  font-style: normal;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #333333;
+  color: #cccccc;
+}
+
+:root[data-theme='vscode'] .vsc-term-tabs .is-active {
+  color: #ffffff;
+  border-bottom: 1px solid #0078d4;
+}
+
+:root[data-theme='vscode'] .vsc-term-line {
+  font-family: var(--sans);
+  font-size: 11.5px;
+  color: #cccccc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:root[data-theme='vscode'] .vsc-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 22px;
+  padding: 0 max(10px, env(safe-area-inset-right, 0px)) max(0px, env(safe-area-inset-bottom, 0px)) 0;
+  background: #007acc;
+  color: #ffffff;
+  font-family: var(--vsc-ui);
+  font-size: 11.5px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+:root[data-theme='vscode'] .vsc-status-left,
+:root[data-theme='vscode'] .vsc-status-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+:root[data-theme='vscode'] .vsc-status-remote {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 22px;
+  background: #16825d;
+  color: #ffffff;
+}
+
+/* 다이얼로그 (VS Code Dark+) */
+:root[data-theme='vscode'] .game-dialog {
+  padding: 16px;
+  background: #252526;
+  border: 1px solid #454545;
+  border-radius: 4px;
+  color: #cccccc;
+  font-family: var(--vsc-ui);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.65);
+}
+
+:root[data-theme='vscode'] .game-dialog::backdrop { background: rgba(0, 0, 0, 0.52); backdrop-filter: none; }
+:root[data-theme='vscode'] .game-dialog h2 { color: #ffffff; font-size: 16px; border-bottom: 1px solid #3c3c3c; padding-bottom: 8px; }
+:root[data-theme='vscode'] .ranking-sort-toggle,
+:root[data-theme='vscode'] .mode-selector { background: #1e1e1e; border: 1px solid #3c3c3c; border-radius: 3px; }
+:root[data-theme='vscode'] .ranking-sort-btn,
+:root[data-theme='vscode'] .mode-option-btn { color: #969696; border-radius: 2px; }
+:root[data-theme='vscode'] .ranking-sort-btn.is-active,
+:root[data-theme='vscode'] .mode-option-btn.is-active { background: #0078d4; border-color: #0078d4; color: #ffffff; }
+:root[data-theme='vscode'] .leaderboard th, :root[data-theme='vscode'] .nearest-table th { border-bottom-color: #3c3c3c; color: #9cdcfe; }
+:root[data-theme='vscode'] .leaderboard td, :root[data-theme='vscode'] .nearest-table td { border-bottom-color: #2d2d30; }
+:root[data-theme='vscode'] .leaderboard tr.own { background: rgba(0, 120, 212, 0.2); color: #4fc1ff; }
+:root[data-theme='vscode'] .own-rank,
+:root[data-theme='vscode'] .leaderboard th.is-active-col,
+:root[data-theme='vscode'] .leaderboard td.is-active-col,
+:root[data-theme='vscode'] .stats-grid strong,
+:root[data-theme='vscode'] .faq-item h3 { color: #4fc1ff; }
+:root[data-theme='vscode'] .stats-grid > div,
+:root[data-theme='vscode'] .faq-item,
+:root[data-theme='vscode'] .leaderboard-empty { background: #1e1e1e; border-color: #3c3c3c; border-radius: 3px; }
+:root[data-theme='vscode'] .nearest-filter { background: #3c3c3c; border-color: #3c3c3c; color: #ffffff; border-radius: 2px; }
+:root[data-theme='vscode'] .setting-row input[type='checkbox'],
+:root[data-theme='vscode'] #sound-volume { accent-color: #0078d4; }
+:root[data-theme='vscode'] .notice { background: #252526; border: 1px solid #0078d4; color: #cccccc; border-radius: 3px; }
+
+/* 2패널 워크벤치 및 모바일 반응형 */
+@media (min-width: 1120px) and (min-height: 640px) {
+  :root[data-theme='vscode'] .game-screen {
+    grid-template-columns: minmax(340px, 0.9fr) minmax(0, 1.1fr);
+    column-gap: 18px;
+  }
+  :root[data-theme='vscode'] .ledger-panel {
+    height: clamp(380px, calc(100dvh - 230px), 740px);
+  }
+}
+
+@media (max-width: 959px) {
+  :root[data-theme='vscode'] .vsc-menubar,
+  :root[data-theme='vscode'] .vsc-nav-arrows,
+  :root[data-theme='vscode'] .vsc-win-controls { display: none; }
+  :root[data-theme='vscode'] main { background-image: none; }
+  :root[data-theme='vscode'] .title-screen,
+  :root[data-theme='vscode'] .game-screen { padding: 10px 12px 14px; }
+}
+
+@media (max-width: 600px) {
+  :root[data-theme='vscode'] .vsc-command-center { min-width: 120px; }
+  :root[data-theme='vscode'] .vsc-tab:nth-child(n+3) { display: none; }
+  :root[data-theme='vscode'] .vsc-status-right span:not(#vsc-status-cursor) { display: none; }
+  :root[data-theme='vscode'] .site-header { padding: 0 6px; gap: 4px; }
+  :root[data-theme='vscode'] .brand { padding: 0 4px; width: auto; }
+  :root[data-theme='vscode'] .brand > span { display: inline; font-size: 11px; }
+  :root[data-theme='vscode'] .languages a { padding: 0 4px; font-size: 11px; white-space: nowrap; }
+  :root[data-theme='vscode'] .icon-button { padding: 0 5px; font-size: 11px; }
+  :root[data-theme='vscode'] .ledger-panel { height: clamp(200px, calc(100dvh - 410px), 420px); }
+  :root[data-theme='vscode'] .keyboard-open .vsc-titlebar,
+  :root[data-theme='vscode'] .keyboard-open .vsc-tabs,
+  :root[data-theme='vscode'] .keyboard-open .vsc-breadcrumbs,
+  :root[data-theme='vscode'] .keyboard-open .vsc-terminal,
+  :root[data-theme='vscode'] .keyboard-open .vsc-statusbar {
+    display: none;
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  :root[data-theme='vscode'] .vsc-titlebar,
+  :root[data-theme='vscode'] .vsc-breadcrumbs,
+  :root[data-theme='vscode'] .vsc-terminal,
+  :root[data-theme='vscode'] .vsc-statusbar {
+    display: none;
+  }
+}

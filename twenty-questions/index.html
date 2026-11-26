@@ -50,13 +50,17 @@
 }
     </script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <script>try{var m=localStorage.getItem('archerlab_semantle_themeMode');if(m!=='dark'&&m!=='light'&&m!=='excel')m=localStorage.getItem('archerlab_semantle_darkMode')==='false'?'light':'dark';document.documentElement.dataset.theme=m;}catch(_e){}</script>
-  <link rel="stylesheet" href="css/style.css?v=20261126-v17">
-  <link rel="stylesheet" href="css/excel-mode.css?v=20261126-v17">
+  <script>try{var m=localStorage.getItem('archerlab_semantle_themeMode');if(m!=='dark'&&m!=='light'&&m!=='excel'&&m!=='notepad'&&m!=='vscode'&&m!=='eclipse')m=localStorage.getItem('archerlab_semantle_darkMode')==='false'?'light':'dark';document.documentElement.dataset.theme=m;}catch(_e){}</script>
+  <link rel="stylesheet" href="css/style.css?v=20261126-v18">
+  <link rel="stylesheet" href="css/light-mode.css?v=20261126-v18">
+  <link rel="stylesheet" href="css/excel-mode.css?v=20261126-v18">
+  <link rel="stylesheet" href="css/notepad-mode.css?v=20261126-v18">
+  <link rel="stylesheet" href="css/vscode-mode.css?v=20261126-v18">
+  <link rel="stylesheet" href="css/eclipse-mode.css?v=20261126-v18">
   <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
   <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
   <script src="../shared/browser-check.js?v=20261005-env-guard-v1"></script>
-  <script type="module" src="js/main.mjs?v=20261126-v17"></script>
+  <script type="module" src="js/main.mjs?v=20261126-v18"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 
     <meta name="twitter:title" content="시맨틀 | 한국어 단어 유사도 추측 게임 - ArcherLab">
@@ -169,8 +173,18 @@
       <div class="excel-rgroup-items">
         <span class="excel-rtool is-pill"><i class="r-ico-cf"></i><span>조건부 서식</span></span>
         <span class="excel-rtool is-pill"><i class="r-ico-tbl"></i><span>표 서식</span></span>
+        <span class="excel-rtool is-pill"><i class="r-ico-cs"></i><span>셀 스타일</span></span>
       </div>
       <span class="excel-rgroup-label">스타일</span>
+    </div>
+    <div class="excel-rgroup">
+      <div class="excel-rgroup-items">
+        <div class="excel-rcol">
+          <span class="excel-rtool-sm">Σ 자동 합계</span>
+          <span class="excel-rtool-sm">⇅ 정렬 및 필터</span>
+        </div>
+      </div>
+      <span class="excel-rgroup-label">편집</span>
     </div>
   </div>
   <div class="excel-formula-bar" id="excel-formula-bar">
@@ -189,6 +203,135 @@
     <span class="excel-col-head is-col-g">G</span>
     <span class="excel-col-head is-col-h">H</span>
     <span class="excel-col-head is-col-i">I</span>
+  </div>
+  <div class="notepad-titlebar" id="notepad-titlebar">
+    <div class="notepad-tabs-wrap">
+      <span class="notepad-app-icon" aria-hidden="true">≡</span>
+      <div class="notepad-tab is-active">
+        <span class="notepad-tab-title" id="notepad-tab-name">업무_회의록_메모.txt</span>
+        <span class="notepad-dirty-dot" id="notepad-dirty-dot" hidden>•</span>
+        <span class="notepad-tab-close" aria-hidden="true">×</span>
+      </div>
+      <span class="notepad-tab-add" aria-hidden="true">＋</span>
+    </div>
+    <div class="notepad-win-controls" aria-hidden="true"><span>─</span><span>□</span><span class="is-close">×</span></div>
+  </div>
+  <div class="notepad-menubar" id="notepad-menubar">
+    <button type="button" class="notepad-menu-item" data-office-action="settings">파일(F)</button>
+    <button type="button" class="notepad-menu-item" data-office-action="focus-input">편집(E)</button>
+    <button type="button" class="notepad-menu-item" data-office-action="ranking">보기(V)</button>
+    <button type="button" class="notepad-menu-item" data-office-action="guide">기록(H)</button>
+  </div>
+  <div class="vsc-titlebar" id="vsc-titlebar">
+    <div class="vsc-title-left">
+      <span class="vsc-app-icon" aria-hidden="true">&lt;/&gt;</span>
+      <div class="vsc-menubar">
+        <button type="button" class="vsc-menu-btn" data-office-action="settings">File</button>
+        <button type="button" class="vsc-menu-btn" data-office-action="focus-input">Edit</button>
+        <button type="button" class="vsc-menu-btn" data-office-action="home">Selection</button>
+        <button type="button" class="vsc-menu-btn" data-office-action="ranking">View</button>
+        <button type="button" class="vsc-menu-btn" data-office-action="focus-input">Go</button>
+        <button type="button" class="vsc-menu-btn" data-office-action="focus-input">Run</button>
+        <button type="button" class="vsc-menu-btn" data-office-action="guide">Terminal</button>
+        <button type="button" class="vsc-menu-btn" data-office-action="guide">Help</button>
+      </div>
+    </div>
+    <div class="vsc-title-center">
+      <span class="vsc-nav-arrows" aria-hidden="true"><span>←</span><span>→</span></span>
+      <button type="button" id="vsc-search-trigger" class="vsc-command-center">semantic-engine</button>
+    </div>
+    <div class="vsc-win-controls" aria-hidden="true"><span>◧</span><span>◫</span><span>◨</span><span>─</span><span>□</span><span class="is-close">×</span></div>
+  </div>
+  <aside class="vsc-activitybar" id="vsc-activitybar" aria-hidden="true">
+    <div class="vsc-act-top">
+      <button type="button" class="vsc-act-btn is-active" data-office-action="home" tabindex="-1"><span class="vsc-act-glyph">❐</span></button>
+      <button type="button" class="vsc-act-btn" data-office-action="focus-input" tabindex="-1"><span class="vsc-act-glyph">⌕</span></button>
+      <button type="button" class="vsc-act-btn" data-office-action="ranking" tabindex="-1"><span class="vsc-act-glyph">⌥</span><i class="vsc-act-badge">2</i></button>
+      <button type="button" class="vsc-act-btn" data-office-action="guide" tabindex="-1"><span class="vsc-act-glyph">▷</span></button>
+      <button type="button" class="vsc-act-btn" data-office-action="guide" tabindex="-1"><span class="vsc-act-glyph">⊞</span></button>
+    </div>
+    <div class="vsc-act-bottom">
+      <button type="button" class="vsc-act-btn" data-office-action="settings" tabindex="-1"><span class="vsc-act-glyph">⚙</span></button>
+    </div>
+  </aside>
+  <aside class="vsc-sidebar" id="vsc-sidebar">
+    <div class="vsc-sidebar-header"><span>EXPLORER</span><span class="vsc-more" aria-hidden="true">···</span></div>
+    <div class="vsc-tree-section is-open">
+      <div class="vsc-tree-title">▾ SEMANTIC-ENGINE</div>
+      <div class="vsc-tree-list">
+        <div class="vsc-tree-folder">▾ src</div>
+        <div class="vsc-tree-folder is-indent">▾ core</div>
+        <button type="button" class="vsc-tree-file is-active" data-office-action="home"><i class="vsc-ext is-ts">TS</i><span>similarity.service.ts</span></button>
+        <button type="button" class="vsc-tree-file" data-office-action="ranking"><i class="vsc-ext is-ts">TS</i><span>ranking.controller.ts</span></button>
+        <button type="button" class="vsc-tree-file" data-office-action="focus-input"><i class="vsc-ext is-ts">TS</i><span>vector.index.ts</span></button>
+        <button type="button" class="vsc-tree-file is-root" data-office-action="guide"><i class="vsc-ext is-md">M↓</i><span>README.md</span></button>
+        <button type="button" class="vsc-tree-file is-root" data-office-action="settings"><i class="vsc-ext is-json">{}</i><span>settings.json</span></button>
+      </div>
+    </div>
+    <div class="vsc-tree-section">
+      <div class="vsc-tree-title">▸ OUTLINE</div>
+    </div>
+    <div class="vsc-tree-section">
+      <div class="vsc-tree-title">▸ TIMELINE</div>
+    </div>
+  </aside>
+  <div class="vsc-tabs" id="vsc-tabs">
+    <button type="button" class="vsc-tab is-active" data-office-action="home"><i class="vsc-ext is-ts">TS</i><span>similarity.service.ts</span><em aria-hidden="true">×</em></button>
+    <button type="button" class="vsc-tab" data-office-action="ranking"><i class="vsc-ext is-ts">TS</i><span>ranking.controller.ts</span></button>
+    <button type="button" class="vsc-tab" data-office-action="settings"><i class="vsc-ext is-json">{}</i><span>settings.json</span></button>
+  </div>
+  <div class="vsc-breadcrumbs" id="vsc-breadcrumbs" aria-hidden="true">
+    <span>src</span><i>›</i><span>core</span><i>›</i><span>similarity.service.ts</span><i>›</i><span class="vsc-bc-sym">SemanticAnalyzer</span>
+  </div>
+  <div class="ecl-titlebar" id="ecl-titlebar">
+    <div class="ecl-title-left">
+      <span class="ecl-app-icon" aria-hidden="true"><i></i></span>
+      <span class="ecl-window-title">workspace-semantle - src/main/java/com/archerlab/SemanticAnalyzer.java - Eclipse IDE</span>
+    </div>
+    <div class="ecl-win-controls" aria-hidden="true"><span>─</span><span>□</span><span class="is-close">×</span></div>
+  </div>
+  <div class="ecl-menubar" id="ecl-menubar">
+    <button type="button" class="ecl-menu-btn" data-office-action="settings">File</button>
+    <button type="button" class="ecl-menu-btn" data-office-action="focus-input">Edit</button>
+    <button type="button" class="ecl-menu-btn" data-office-action="home">Source</button>
+    <button type="button" class="ecl-menu-btn" data-office-action="home">Refactor</button>
+    <button type="button" class="ecl-menu-btn" data-office-action="ranking">Navigate</button>
+    <button type="button" class="ecl-menu-btn" data-office-action="focus-input">Search</button>
+    <button type="button" class="ecl-menu-btn" data-office-action="guide">Project</button>
+    <button type="button" class="ecl-menu-btn" data-office-action="focus-input">Run</button>
+    <button type="button" class="ecl-menu-btn" data-office-action="settings">Window</button>
+    <button type="button" class="ecl-menu-btn" data-office-action="guide">Help</button>
+  </div>
+  <div class="ecl-toolbar" id="ecl-toolbar">
+    <div class="ecl-tool-icons" aria-hidden="true">
+      <span class="ecl-tbtn">📄</span><span class="ecl-tbtn">💾</span><span class="ecl-tsep"></span>
+      <span class="ecl-tbtn is-play">▶</span><span class="ecl-tbtn is-bug">🐞</span><span class="ecl-tbtn">🔨</span><span class="ecl-tsep"></span>
+      <span class="ecl-tbtn">↶</span><span class="ecl-tbtn">↷</span>
+    </div>
+    <div class="ecl-perspectives">
+      <button type="button" class="ecl-persp-btn is-active" data-office-action="home">Java</button>
+      <button type="button" class="ecl-persp-btn" data-office-action="ranking">Debug</button>
+      <button type="button" class="ecl-persp-btn" data-office-action="settings">Preferences</button>
+    </div>
+  </div>
+  <aside class="ecl-explorer" id="ecl-explorer">
+    <div class="ecl-view-tabs"><span class="ecl-view-tab is-active">Package Explorer</span><span class="ecl-view-tab">Hierarchy</span></div>
+    <div class="ecl-tree">
+      <div class="ecl-node">▾ <i class="ecl-ico-proj">J</i> <strong>semantic-core</strong> <em>[main]</em></div>
+      <div class="ecl-node is-l1">▾ <i class="ecl-ico-src">S</i> src/main/java</div>
+      <div class="ecl-node is-l2">▾ <i class="ecl-ico-pkg">⊞</i> com.archerlab.semantic</div>
+      <button type="button" class="ecl-node-btn is-l3 is-active" data-office-action="home"><i class="ecl-ico-java">J</i> SemanticAnalyzer.java</button>
+      <button type="button" class="ecl-node-btn is-l3" data-office-action="ranking"><i class="ecl-ico-java">J</i> RankingService.java</button>
+      <button type="button" class="ecl-node-btn is-l3" data-office-action="guide"><i class="ecl-ico-java">J</i> RoundConfig.java</button>
+      <div class="ecl-node is-l1">▸ <i class="ecl-ico-lib">📚</i> JRE System Library [JavaSE-21]</div>
+      <div class="ecl-node is-l1">▸ <i class="ecl-ico-lib">📚</i> Maven Dependencies</div>
+      <button type="button" class="ecl-node-btn is-l1" data-office-action="settings"><i class="ecl-ico-cfg">⚙</i> application.properties</button>
+    </div>
+  </aside>
+  <div class="ecl-editor-tabs" id="ecl-editor-tabs">
+    <button type="button" class="ecl-etab is-active" data-office-action="home"><i class="ecl-ico-java">J</i> SemanticAnalyzer.java <em aria-hidden="true">×</em></button>
+    <button type="button" class="ecl-etab" data-office-action="ranking"><i class="ecl-ico-java">J</i> RankingService.java</button>
+    <button type="button" class="ecl-etab" data-office-action="settings"><i class="ecl-ico-cfg">⚙</i> application.properties</button>
   </div>
   <main>
     <section id="title-screen" class="title-screen" aria-labelledby="game-title">
@@ -245,7 +388,7 @@
         <span id="case-label" class="case-label"></span>
         <button type="button" id="prev-answer-btn" class="ghost-btn prev-answer-btn" hidden><span id="prev-answer-btn-text"></span></button>
       </div>
-      <div class="chronometer-console crafted-frame">
+      <div class="chronometer-console crafted-frame" data-excel-kpi="요약 지표 (KPI)">
         <div class="hud-primary">
           <div class="hud-card timer-card">
             <span><img class="timer-emblem" src="assets/ui/compass-chronograph-160.webp?v=4" alt="" width="18" height="22" decoding="async">다음 문제까지</span>
@@ -371,6 +514,59 @@
       <span class="excel-status-zoom" aria-hidden="true"><span>−</span><i class="excel-zoom-track"></i><span>+</span><span>100%</span></span>
     </div>
   </div>
+  <div class="notepad-status-bar" id="notepad-status-bar">
+    <div class="notepad-status-left">
+      <span id="notepad-pos">줄 {ln}, 열 {col}</span>
+      <span class="notepad-sep" aria-hidden="true">|</span>
+      <span id="notepad-chars">{count}개 항목</span>
+    </div>
+    <div class="notepad-status-right">
+      <span>100%</span>
+      <span class="notepad-sep" aria-hidden="true">|</span>
+      <span>Windows (CRLF)</span>
+      <span class="notepad-sep" aria-hidden="true">|</span>
+      <span>UTF-8</span>
+    </div>
+  </div>
+  <div class="vsc-terminal" id="vsc-terminal" aria-hidden="true">
+    <div class="vsc-term-tabs">
+      <span>PROBLEMS <i>0</i></span><span>OUTPUT</span><span>DEBUG CONSOLE</span><span class="is-active">TERMINAL</span>
+    </div>
+    <div class="vsc-term-line" id="vsc-terminal-line">PS D:workspacesemantic-engine&gt; npm run analyze -- --watch</div>
+  </div>
+  <div class="vsc-statusbar" id="vsc-statusbar">
+    <div class="vsc-status-left">
+      <span class="vsc-status-remote" aria-hidden="true">⧎</span>
+      <span>⎇ main*</span>
+      <span>⊗ 0 ⚠ 0</span>
+      <span id="vsc-status-state">TypeScript · Ready</span>
+    </div>
+    <div class="vsc-status-right">
+      <span id="vsc-status-cursor">Ln 1, Col 1</span>
+      <span>Spaces: 2</span>
+      <span>UTF-8</span>
+      <span>CRLF</span>
+      <span>{} TypeScript</span>
+      <span>✓ Prettier</span>
+    </div>
+  </div>
+  <div class="ecl-console" id="ecl-console" aria-hidden="true">
+    <div class="ecl-console-tabs">
+      <span>Problems</span><span>Javadoc</span><span>Declaration</span><span class="is-active">Console</span>
+    </div>
+    <div class="ecl-console-body" id="ecl-console-line">[INFO] SemanticAnalyzer (JavaSE-21) - Ready for vector lookup</div>
+  </div>
+  <div class="ecl-statusbar" id="ecl-statusbar">
+    <div class="ecl-status-left">
+      <span id="ecl-status-msg">Ready</span>
+    </div>
+    <div class="ecl-status-right">
+      <span>Writable</span>
+      <span>Smart Insert</span>
+      <span id="ecl-status-pos">1 : 1</span>
+      <span class="ecl-heap" aria-hidden="true">142M of 512M <i class="ecl-heap-bar"></i></span>
+    </div>
+  </div>
   <footer class="site-footer"><a href="../">ArcherLab Games</a></footer>
 
   <dialog id="ranking-dialog" class="game-dialog crafted-frame" aria-labelledby="ranking-title">
@@ -430,6 +626,9 @@
         <button type="button" id="theme-dark" class="mode-option-btn is-active" data-theme-option="dark" aria-pressed="true">다크</button>
         <button type="button" id="theme-light" class="mode-option-btn" data-theme-option="light" aria-pressed="false">라이트</button>
         <button type="button" id="theme-excel" class="mode-option-btn" data-theme-option="excel" aria-pressed="false">엑셀</button>
+        <button type="button" id="theme-notepad" class="mode-option-btn" data-theme-option="notepad" aria-pressed="false">메모장</button>
+        <button type="button" id="theme-vscode" class="mode-option-btn" data-theme-option="vscode" aria-pressed="false">VS Code</button>
+        <button type="button" id="theme-eclipse" class="mode-option-btn" data-theme-option="eclipse" aria-pressed="false">이클립스</button>
       </div>
       <p id="mode-excel-hint" class="setting-hint" hidden>사무실에서도 자연스러운 엑셀 스프레드시트 화면으로 바뀌고 이펙트와 진동이 꺼져요.</p>
     </div>

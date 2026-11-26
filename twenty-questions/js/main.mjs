@@ -1,6 +1,6 @@
-import { messages, translation } from './i18n.mjs?v=20261126-v17';
-import { request, requestId, storage, reportException } from './api.mjs?v=20261126-v17';
-import { GameAudio } from './audio.mjs?v=20261126-v17';
+import { messages, translation } from './i18n.mjs?v=20261126-v18';
+import { request, requestId, storage, reportException } from './api.mjs?v=20261126-v18';
+import { GameAudio } from './audio.mjs?v=20261126-v18';
 
 const locale = document.documentElement.lang === 'en' ? 'en' : 'ko';
 const t = translation(locale);
@@ -52,15 +52,18 @@ const ORIGINAL_FAVICON_HREF = FAVICON_LINK ? FAVICON_LINK.getAttribute('href') :
 const THEME_COLOR_META = document.querySelector('meta[name="theme-color"]');
 const ORIGINAL_THEME_COLOR = THEME_COLOR_META ? THEME_COLOR_META.getAttribute('content') : '#07131a';
 const EXCEL_FAVICON_DATA_URI = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#217346"/><path d="M9 9h5l2 5 2-5h5l-4 7 4 7h-5l-2-5-2 5H9l4-7z" fill="#fff"/></svg>');
+const NOTEPAD_FAVICON_DATA_URI = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect x="4" y="3" width="24" height="26" rx="3" fill="#0067c0"/><rect x="7" y="8" width="18" height="18" rx="1.5" fill="#fff"/><path d="M10 13h12M10 17h12M10 21h8" stroke="#0067c0" stroke-width="2" stroke-linecap="round"/></svg>');
+const VSCODE_FAVICON_DATA_URI = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="5" fill="#1e1e1e"/><path d="M22 5l6 3v16l-6 3L11 17l-5 4-3-2 4-3-4-3 3-2 5 4L22 5zm0 6.5L15.5 16 22 20.5v-9z" fill="#0098ff"/></svg>');
+const ECLIPSE_FAVICON_DATA_URI = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="17" cy="16" r="12" fill="#f7941e"/><circle cx="19" cy="16" r="10.5" fill="#2c2255"/><path d="M9 12h18M8 16h20M9 20h18" stroke="#fff" stroke-width="1.6"/></svg>');
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const isTouchDevice = () => window.matchMedia('(hover: none), (pointer: coarse)').matches || navigator.maxTouchPoints > 0;
 const VFX_SPRITES = {
-    cool: 'assets/ui/vfx-pulse-cyan.webp?v=20261126-v17',
-    warm: 'assets/ui/vfx-sigil-violet.webp?v=20261126-v17',
-    hot: 'assets/ui/vfx-flare-hot.webp?v=20261126-v17',
-    molten: 'assets/ui/vfx-nova-molten.webp?v=20261126-v17',
-    exact: 'assets/ui/vfx-compass-burst-1024.webp?v=20261126-v17',
+    cool: 'assets/ui/vfx-pulse-cyan.webp?v=20261126-v18',
+    warm: 'assets/ui/vfx-sigil-violet.webp?v=20261126-v18',
+    hot: 'assets/ui/vfx-flare-hot.webp?v=20261126-v18',
+    molten: 'assets/ui/vfx-nova-molten.webp?v=20261126-v18',
+    exact: 'assets/ui/vfx-compass-burst-1024.webp?v=20261126-v18',
 };
 const HAPTIC_PATTERNS = {
     unknown: [24, 30, 24],
@@ -83,7 +86,7 @@ let vfxLastTime = 0;
 
 // 게임 화면 진입 시 5종 네이티브 투명 VFX 스프라이트 백그라운드 프리로드
 function preloadVfxSprites() {
-    if (vfxPreloaded || reducedMotion.matches || isExcelMode()) return;
+    if (vfxPreloaded || reducedMotion.matches || isOfficeMode()) return;
     vfxPreloaded = true;
     Object.keys(VFX_SPRITES).forEach(key => {
         const img = new Image();
@@ -350,7 +353,7 @@ function stepVfx(now) {
 }
 
 function spawnBurst(x, y, options) {
-    if (reducedMotion.matches || document.hidden || isExcelMode()) return;
+    if (reducedMotion.matches || document.hidden || isOfficeMode()) return;
     const {
         count = 24,
         colors = ['#57e0ff', '#ffe6a8'],
@@ -485,7 +488,7 @@ function spawnBurst(x, y, options) {
 
 // 정답과의 근접도·오답 상태에 맞춘 기기 햅틱 진동 패턴 실행
 function triggerHaptics(tier) {
-    if (reducedMotion.matches || document.hidden || isExcelMode()) return;
+    if (reducedMotion.matches || document.hidden || isOfficeMode()) return;
     const pattern = HAPTIC_PATTERNS[tier];
     if (!pattern) return;
     try {
@@ -497,7 +500,7 @@ function triggerHaptics(tier) {
 
 // 등급별 UI 진동 트리거 (.ledger-panel은 translateX만 사용해 레이아웃 높이 유지)
 function triggerUiShake(tier) {
-    if (reducedMotion.matches || isExcelMode()) return;
+    if (reducedMotion.matches || isOfficeMode()) return;
     const composer = document.querySelector('.composer');
     const consoleEl = document.querySelector('.chronometer-console');
     const panel = document.querySelector('.ledger-panel');
@@ -548,7 +551,7 @@ function triggerUiShake(tier) {
 
 // 네이티브 투명 VFX 스프라이트·화면 테두리 펄스·최고 기록 갱신 공명 바 이펙트 실행
 function triggerStageEffects(tier, cx, cy, improvedBest) {
-    if (reducedMotion.matches || isExcelMode()) return;
+    if (reducedMotion.matches || isOfficeMode()) return;
     const stage = $('vfx-stage');
     if (stage) {
         stage.dataset.tier = tier;
@@ -631,7 +634,7 @@ function triggerGameVfx(event, game) {
     if (ledgerScroll && ['guess', 'duplicate', 'won'].includes(event.code)) {
         ledgerScroll.scrollTop = 0;
     }
-    if (reducedMotion.matches || isExcelMode()) return;
+    if (reducedMotion.matches || isOfficeMode()) return;
     const tier = resolveGuessTier(event, game);
     const isWon = tier === 'exact' && ((game === null || game === void 0 ? void 0 : game.status)) === 'won';
 
@@ -847,9 +850,12 @@ function triggerGameVfx(event, game) {
 
 try { pendingCommand = JSON.parse(storage.get(langKey('pending')) || 'null'); } catch (_err) { pendingCommand = null; }
 
+const VALID_THEMES = ['dark', 'light', 'excel', 'notepad', 'vscode', 'eclipse'];
+const OFFICE_THEMES = ['excel', 'notepad', 'vscode', 'eclipse'];
+
 function loadInitialThemeMode() {
     const saved = storage.get('themeMode');
-    if (saved === 'dark' || saved === 'light' || saved === 'excel') return saved;
+    if (VALID_THEMES.includes(saved)) return saved;
     return storage.get('darkMode') === 'false' ? 'light' : 'dark';
 }
 
@@ -864,6 +870,10 @@ function isExcelMode() {
     return settings.themeMode === 'excel';
 }
 
+function isOfficeMode() {
+    return OFFICE_THEMES.includes(settings.themeMode);
+}
+
 function formatExcelCellFormula(entry) {
     if (!entry) return t('excel_formula_idle');
     const rankStr = entry.rank === 0
@@ -874,39 +884,40 @@ function formatExcelCellFormula(entry) {
     return `=SIMILARITY("${entry.word}", $TARGET)  // ${entry.similarity.toFixed(2)} (${rankStr})`;
 }
 
-// 엑셀 모드 활성 시 수식 입력줄, 셀 선택, 상태 표시줄 동기화
-function syncExcelChrome() {
+// 업무 위장 모드(엑셀·메모장·VS Code·이클립스) 상·하단 상태 표시줄과 커서 좌표 동기화
+function syncWorkChrome() {
+    const guesses = (state.game && state.game.guesses) ? state.game.guesses : [];
+    const inputEl = $('guess-input');
+    const rawVal = inputEl ? inputEl.value : '';
+    const typed = rawVal.trim();
+
     const nameBox = $('excel-name-box');
     const formulaDisplay = $('excel-formula-display');
     const statusAvg = $('excel-status-avg');
     const statusCount = $('excel-status-count');
     const statusMax = $('excel-status-max');
-    if (!nameBox || !formulaDisplay) return;
-
-    const guesses = (state.game && state.game.guesses) ? state.game.guesses : [];
-    const inputEl = $('guess-input');
-    const typed = inputEl ? inputEl.value.trim() : '';
-
-    if (screen !== 'game') {
-        nameBox.textContent = 'A1';
-        formulaDisplay.textContent = t('excel_workbook_name');
-    } else if (typed) {
-        nameBox.textContent = 'B3';
-        formulaDisplay.textContent = typed;
-    } else if (selectedExcelWord) {
-        const matched = guesses.find(g => g.word === selectedExcelWord);
-        if (matched) {
-            nameBox.textContent = `B${selectedExcelRow || 5}`;
-            formulaDisplay.textContent = formatExcelCellFormula(matched);
+    if (nameBox && formulaDisplay) {
+        if (screen !== 'game') {
+            nameBox.textContent = 'A1';
+            formulaDisplay.textContent = t('excel_workbook_name');
+        } else if (typed) {
+            nameBox.textContent = 'B3';
+            formulaDisplay.textContent = typed;
+        } else if (selectedExcelWord) {
+            const matched = guesses.find(g => g.word === selectedExcelWord);
+            if (matched) {
+                nameBox.textContent = `B${selectedExcelRow || 5}`;
+                formulaDisplay.textContent = formatExcelCellFormula(matched);
+            } else {
+                selectedExcelWord = null;
+                selectedExcelRow = null;
+                nameBox.textContent = 'B3';
+                formulaDisplay.textContent = t('excel_formula_idle');
+            }
         } else {
-            selectedExcelWord = null;
-            selectedExcelRow = null;
             nameBox.textContent = 'B3';
             formulaDisplay.textContent = t('excel_formula_idle');
         }
-    } else {
-        nameBox.textContent = 'B3';
-        formulaDisplay.textContent = t('excel_formula_idle');
     }
 
     if (statusAvg && statusCount && statusMax) {
@@ -927,6 +938,40 @@ function syncExcelChrome() {
             statusMax.textContent = '';
         }
     }
+
+    const ln = screen === 'game' ? (guesses.length + 1) : 1;
+    const col = inputEl && Number.isFinite(inputEl.selectionStart) ? (inputEl.selectionStart + 1) : (rawVal.length + 1);
+
+    const npDirty = $('notepad-dirty-dot');
+    const npPos = $('notepad-pos');
+    const npChars = $('notepad-chars');
+    if (npDirty) npDirty.hidden = !typed;
+    if (npPos) npPos.textContent = t('notepad_status_pos', { ln, col });
+    if (npChars) npChars.textContent = t('notepad_status_items', { count: guesses.length });
+
+    const vscCursor = $('vsc-status-cursor');
+    const vscTermLine = $('vsc-terminal-line');
+    if (vscCursor) vscCursor.textContent = `Ln ${ln}, Col ${col}`;
+    if (vscTermLine && screen === 'game') {
+        if (guesses.length > 0) {
+            const last = guesses.reduce((a, b) => (b.guessNo > a.guessNo ? b : a), guesses[0]);
+            vscTermLine.textContent = `PS D:\\workspace\\semantic-engine> evaluate("${last.word}") => ${last.similarity.toFixed(2)} (rank: ${last.rank === null ? '1000+' : last.rank})`;
+        } else {
+            vscTermLine.textContent = 'PS D:\\workspace\\semantic-engine> npm run analyze -- --watch';
+        }
+    }
+
+    const eclPos = $('ecl-status-pos');
+    const eclConsole = $('ecl-console-line');
+    if (eclPos) eclPos.textContent = `${ln} : ${col}`;
+    if (eclConsole && screen === 'game') {
+        if (guesses.length > 0) {
+            const last = guesses.reduce((a, b) => (b.guessNo > a.guessNo ? b : a), guesses[0]);
+            eclConsole.textContent = `[INFO] SemanticAnalyzer - token="${last.word}" score=${last.similarity.toFixed(2)} rank=${last.rank === null ? '1000+' : last.rank}`;
+        } else {
+            eclConsole.textContent = '[INFO] SemanticAnalyzer (JavaSE-21) - Ready for vector lookup';
+        }
+    }
 }
 
 function applyTheme() {
@@ -937,12 +982,28 @@ function applyTheme() {
         btn.classList.toggle('is-active', active);
         btn.setAttribute('aria-pressed', String(active));
     }
-    if ($('mode-excel-hint')) $('mode-excel-hint').hidden = mode !== 'excel';
 
-    if (mode === 'excel') {
-        document.title = t('excel_doc_title');
-        if (FAVICON_LINK) FAVICON_LINK.setAttribute('href', EXCEL_FAVICON_DATA_URI);
-        if (THEME_COLOR_META) THEME_COLOR_META.setAttribute('content', '#217346');
+    const hintEl = $('mode-excel-hint');
+    if (hintEl) {
+        if (isOfficeMode()) {
+            hintEl.textContent = t(`mode_${mode}_hint`);
+            hintEl.hidden = false;
+        } else {
+            hintEl.hidden = true;
+        }
+    }
+
+    const metaMap = {
+        excel: { title: t('excel_doc_title'), icon: EXCEL_FAVICON_DATA_URI, color: '#217346' },
+        notepad: { title: t('notepad_doc_title'), icon: NOTEPAD_FAVICON_DATA_URI, color: '#f3f3f3' },
+        vscode: { title: t('vsc_doc_title'), icon: VSCODE_FAVICON_DATA_URI, color: '#007acc' },
+        eclipse: { title: t('ecl_doc_title'), icon: ECLIPSE_FAVICON_DATA_URI, color: '#f0f0f0' },
+    };
+
+    if (metaMap[mode]) {
+        document.title = metaMap[mode].title;
+        if (FAVICON_LINK) FAVICON_LINK.setAttribute('href', metaMap[mode].icon);
+        if (THEME_COLOR_META) THEME_COLOR_META.setAttribute('content', metaMap[mode].color);
         clearVfxTimers();
         vfxParticles.length = 0;
         vfxRings.length = 0;
@@ -961,10 +1022,10 @@ function applyTheme() {
         document.title = ORIGINAL_DOC_TITLE;
         if (FAVICON_LINK) FAVICON_LINK.setAttribute('href', ORIGINAL_FAVICON_HREF);
         if (THEME_COLOR_META) {
-            THEME_COLOR_META.setAttribute('content', mode === 'light' ? '#efe7d6' : ORIGINAL_THEME_COLOR);
+            THEME_COLOR_META.setAttribute('content', mode === 'light' ? '#f6efe0' : ORIGINAL_THEME_COLOR);
         }
     }
-    syncExcelChrome();
+    syncWorkChrome();
 }
 applyTheme();
 
@@ -1026,7 +1087,7 @@ function changeScreen(next) {
     if (next === 'game') preloadVfxSprites();
     else clearVfxTimers();
     setSessionView(next);
-    syncExcelChrome();
+    syncWorkChrome();
     if (changed) window.scrollTo({ top: 0, behavior: 'instant' });
     syncKeyboard();
 }
@@ -1036,8 +1097,9 @@ let guessLoadingHideTimer = 0;
 function startGuessLoading() {
     clearTimeout(guessLoadingHideTimer);
     guessLoadingHideTimer = 0;
-    const excelState = $('excel-status-state');
-    if (excelState) excelState.textContent = t('excel_status_calc');
+    if ($('excel-status-state')) $('excel-status-state').textContent = t('excel_status_calc');
+    if ($('vsc-status-state')) $('vsc-status-state').textContent = t('vsc_status_calc');
+    if ($('ecl-status-msg')) $('ecl-status-msg').textContent = t('ecl_status_calc');
     const slot = $('composer-status-slot');
     const gl = $('guess-loading');
     ((slot === null || slot === void 0 ? void 0 : slot.classList.add('is-loading')));
@@ -1051,8 +1113,9 @@ function startGuessLoading() {
 
 function finishGuessLoading(immediate = false) {
     clearTimeout(guessLoadingHideTimer);
-    const excelState = $('excel-status-state');
-    if (excelState) excelState.textContent = t('excel_status_ready');
+    if ($('excel-status-state')) $('excel-status-state').textContent = t('excel_status_ready');
+    if ($('vsc-status-state')) $('vsc-status-state').textContent = t('vsc_status_ready');
+    if ($('ecl-status-msg')) $('ecl-status-msg').textContent = t('ecl_status_ready');
     const slot = $('composer-status-slot');
     const gl = $('guess-loading');
     if (!gl || gl.hidden || immediate) {
@@ -1324,6 +1387,7 @@ function renderGuessesTable(game, isNewGuess = false) {
 
     if (!guesses.length) {
         body.replaceChildren();
+        syncWorkChrome();
         return;
     }
 
@@ -1349,7 +1413,7 @@ function renderGuessesTable(game, isNewGuess = false) {
         fragment.append(buildGuessRow(entry, { excelRow: rowIdx++ }));
     }
     body.replaceChildren(fragment);
-    syncExcelChrome();
+    syncWorkChrome();
 }
 
 function renderResonanceBar(game) {
@@ -1471,7 +1535,7 @@ function render(data, { navigate = true, effects = false } = {}) {
         if ($('guesses-table')) $('guesses-table').hidden = true;
         if ($('empty-history')) $('empty-history').hidden = false;
         if ($('result-banner')) $('result-banner').hidden = true;
-        syncExcelChrome();
+        syncWorkChrome();
         if (screen === 'game' && navigate === false) changeScreen('title');
         syncCountdownLoop();
         return;
@@ -1660,6 +1724,7 @@ async function submitGuess(wordText) {
                 const res = await request(`games/${game.id}/explore`, { text, locale });
                 $('guess-input').value = '';
                 storage.remove(langKey('draft'));
+                syncWorkChrome();
                 if (res.code === 'unknown_word') {
                     audio.play('wrong', { gain: 0.45, duration: 0.2 });
                     triggerGameVfx({ code: 'unknown_word', word: res.word }, { status: 'active', guesses: [] });
@@ -1695,6 +1760,9 @@ async function submitGuess(wordText) {
             storage.remove(langKey('pending'));
 
             if ((((__oc13 = data.event) === null || __oc13 === void 0 ? void 0 : __oc13.code)) === 'unknown_word') {
+                $('guess-input').value = '';
+                storage.remove(langKey('draft'));
+                syncWorkChrome();
                 audio.result(data.event, data.game);
                 triggerGameVfx(data.event, data.game);
                 showTurnFeedback('unknown_word', { word: data.event.word }, 'error');
@@ -1984,8 +2052,10 @@ $('guess-input').addEventListener('input', () => {
         selectedExcelRow = null;
         document.querySelectorAll('#guesses-body tr.is-excel-selected').forEach(tr => tr.classList.remove('is-excel-selected'));
     }
-    syncExcelChrome();
+    syncWorkChrome();
 });
+$('guess-input').addEventListener('keyup', syncWorkChrome);
+$('guess-input').addEventListener('click', syncWorkChrome);
 $('guess-input').addEventListener('compositionstart', () => { composing = true; });
 $('guess-input').addEventListener('compositionend', () => { composing = false; });
 $('guess-input').addEventListener('keydown', event => {
@@ -2068,18 +2138,18 @@ $('share-max').checked = settings.shareMax;
 for (const btn of document.querySelectorAll('[data-theme-option]')) {
     btn.addEventListener('click', () => {
         const nextMode = btn.dataset.themeOption;
-        if (nextMode !== 'dark' && nextMode !== 'light' && nextMode !== 'excel') return;
+        if (!VALID_THEMES.includes(nextMode)) return;
         if (nextMode === settings.themeMode) return;
         settings.themeMode = nextMode;
         storage.set('themeMode', nextMode);
-        if (nextMode !== 'excel') storage.set('darkMode', nextMode === 'dark');
+        if (!OFFICE_THEMES.includes(nextMode)) storage.set('darkMode', nextMode === 'dark');
         audio.unlock();
         audio.play('click');
         applyTheme();
     });
 }
 
-const focusExcelInput = () => {
+const focusWorkInput = () => {
     if (screen === 'game') {
         const inputEl = $('guess-input');
         if (inputEl) inputEl.focus({ preventScroll: true });
@@ -2088,13 +2158,13 @@ const focusExcelInput = () => {
     }
 };
 
-document.querySelectorAll('[data-excel-action]').forEach(el => {
+document.querySelectorAll('[data-excel-action], [data-office-action]').forEach(el => {
     el.addEventListener('click', () => {
-        const actionName = el.dataset.excelAction;
+        const actionName = el.dataset.excelAction || el.dataset.officeAction;
         if (actionName === 'settings') openDialog('settings-dialog');
         else if (actionName === 'ranking') showRanking();
         else if (actionName === 'guide') showGuide();
-        else if (actionName === 'focus-input') focusExcelInput();
+        else if (actionName === 'focus-input') focusWorkInput();
         else if (actionName === 'home' || actionName === 'sheet-main') {
             document.querySelectorAll('dialog[open]').forEach(d => d.close());
             if (screen === 'game' && $('guess-input')) $('guess-input').focus({ preventScroll: true });
@@ -2102,8 +2172,9 @@ document.querySelectorAll('[data-excel-action]').forEach(el => {
     });
 });
 
-if ($('excel-search-trigger')) $('excel-search-trigger').addEventListener('click', focusExcelInput);
-if ($('excel-formula-display')) $('excel-formula-display').addEventListener('click', focusExcelInput);
+if ($('excel-search-trigger')) $('excel-search-trigger').addEventListener('click', focusWorkInput);
+if ($('excel-formula-display')) $('excel-formula-display').addEventListener('click', focusWorkInput);
+if ($('vsc-search-trigger')) $('vsc-search-trigger').addEventListener('click', focusWorkInput);
 if ($('guesses-body')) {
     $('guesses-body').addEventListener('click', event => {
         if (!isExcelMode()) return;
@@ -2113,7 +2184,7 @@ if ($('guesses-body')) {
         tr.classList.add('is-excel-selected');
         selectedExcelWord = tr.dataset.word;
         selectedExcelRow = Number(tr.dataset.excelRow) || 5;
-        syncExcelChrome();
+        syncWorkChrome();
     });
 }
 

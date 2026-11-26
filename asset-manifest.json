@@ -18214,6 +18214,36 @@
       "sha256": "a238a80cd6cb579ca082c3f9d679bfa2b17591cc3ecaf2777822235a2c0de568"
     },
     {
+      "path": "twenty-questions/assets/backgrounds/study-light-desktop-1440.webp",
+      "bytes": 409480,
+      "sha256": "911e6b2efd4bc1dbfa9f745189cded2adec211605c677b618813d3ff561d4541"
+    },
+    {
+      "path": "twenty-questions/assets/backgrounds/study-light-desktop-1920.webp",
+      "bytes": 703644,
+      "sha256": "4fdacbc71f3ae86cb8c9d47cc5c691b70fe30aad7eed50cd36f9c3c7d5550057"
+    },
+    {
+      "path": "twenty-questions/assets/backgrounds/study-light-desktop-960.webp",
+      "bytes": 186498,
+      "sha256": "28773c227d7b15376dbc5183bc14b2765734f96f8770811655ececcdf8796664"
+    },
+    {
+      "path": "twenty-questions/assets/backgrounds/study-light-mobile-1080.webp",
+      "bytes": 525994,
+      "sha256": "67100668146156a70beccfb751c11b1aa453704359687c8b57430ae44ce69047"
+    },
+    {
+      "path": "twenty-questions/assets/backgrounds/study-light-mobile-480.webp",
+      "bytes": 90870,
+      "sha256": "7e5aa45a895600540bfd758985774f628a12f68a3ca9d600ad9435690615aa79"
+    },
+    {
+      "path": "twenty-questions/assets/backgrounds/study-light-mobile-828.webp",
+      "bytes": 307040,
+      "sha256": "2aad76b6cb0c2798a49ab8930d9a263d35f2088b29d3d39842d5438e897615f3"
+    },
+    {
       "path": "twenty-questions/assets/backgrounds/study-mobile-1080.webp",
       "bytes": 370448,
       "sha256": "72686615137ecee7978958ca0fd836fe4d436617448f8cfefb8c5bff5d23448d"
@@ -18269,6 +18299,26 @@
       "sha256": "ac3f590e26156b831f2f04deada8a66f272bd1a244467812b9e72baf830e8022"
     },
     {
+      "path": "twenty-questions/assets/ui/crafted-btn-light-gold-360.webp",
+      "bytes": 10448,
+      "sha256": "15af3c0cf2ebe0061a44cedd4ea96e59a68e815d43596095ff4fba0a2da38e4d"
+    },
+    {
+      "path": "twenty-questions/assets/ui/crafted-btn-light-gold-720.webp",
+      "bytes": 31028,
+      "sha256": "40d84b888a01da2861b0ae0539416bf7a7a555b06be54c71e6462272d7ef8507"
+    },
+    {
+      "path": "twenty-questions/assets/ui/crafted-btn-light-ivory-360.webp",
+      "bytes": 7606,
+      "sha256": "f8c12470c27fbb4479269f7f903162bd81f21afdced7946cf164734e2a479033"
+    },
+    {
+      "path": "twenty-questions/assets/ui/crafted-btn-light-ivory-720.webp",
+      "bytes": 22094,
+      "sha256": "d3b282c2c491e36bab9eb1329c9d3a61d27d259396ef3a856b06e3ab3d618e90"
+    },
+    {
       "path": "twenty-questions/assets/ui/crafted-btn-teal-360.webp",
       "bytes": 11400,
       "sha256": "89c33ac915b14458a4ce3c34ba004993a1e3bf27f7454ddcb07a8bbad635b070"
@@ -18292,6 +18342,16 @@
       "path": "twenty-questions/assets/ui/crafted-panel-512.webp",
       "bytes": 31688,
       "sha256": "e47cebdf1900bd7210862400cef70f8a2fa1a499f24165c7b6900fa1b972eab4"
+    },
+    {
+      "path": "twenty-questions/assets/ui/crafted-panel-light-1024.webp",
+      "bytes": 67604,
+      "sha256": "02f31b2b7e3207788d1380b25b35b45ad053439d38373b263b050106a368f4df"
+    },
+    {
+      "path": "twenty-questions/assets/ui/crafted-panel-light-512.webp",
+      "bytes": 20756,
+      "sha256": "727c38fa30eb5ec9895ba37ed6b68da0001b506dcf00000df17848a911f0b3a7"
     },
     {
       "path": "twenty-questions/assets/ui/crafted-panel.png",

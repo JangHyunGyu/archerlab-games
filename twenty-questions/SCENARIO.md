@@ -150,7 +150,13 @@
 | `mode_dark` | 다크 | Dark |
 | `mode_light` | 라이트 | Light |
 | `mode_excel` | 엑셀 | Excel |
+| `mode_notepad` | 메모장 | Notepad |
+| `mode_vscode` | VS Code | VS Code |
+| `mode_eclipse` | 이클립스 | Eclipse |
 | `mode_excel_hint` | 사무실에서도 자연스러운 엑셀 스프레드시트 화면으로 바뀌고 이펙트와 진동이 꺼져요. | Switches to an office-friendly spreadsheet layout and disables flashy effects and haptics. |
+| `mode_notepad_hint` | 일반 텍스트 메모장 화면으로 바뀌고 화려한 이펙트와 진동이 꺼져요. | Switches to a plain-text Notepad layout and disables flashy effects and haptics. |
+| `mode_vscode_hint` | VS Code 편집기 화면으로 바뀌고 화려한 이펙트와 진동이 꺼져요. | Switches to a VS Code editor layout and disables flashy effects and haptics. |
+| `mode_eclipse_hint` | 이클립스 Java IDE 화면으로 바뀌고 화려한 이펙트와 진동이 꺼져요. | Switches to a classic Eclipse Java IDE layout and disables flashy effects and haptics. |
 | `excel_doc_title` | 2026_Q4_어휘유사도_분석리포트.xlsx - Excel | 2026_Q4_Semantic_Index_Report.xlsx - Excel |
 | `excel_workbook_name` | 2026_Q4_어휘유사도_분석리포트.xlsx | 2026_Q4_Semantic_Index_Report.xlsx |
 | `excel_saved_badge` | 저장됨 | Saved |
@@ -170,6 +176,8 @@
 | `excel_grp_align` | 맞춤 | Alignment |
 | `excel_grp_number` | 표시 형식 | Number |
 | `excel_grp_styles` | 스타일 | Styles |
+| `excel_grp_cells` | 셀 | Cells |
+| `excel_grp_editing` | 편집 | Editing |
 | `excel_paste` | 붙여넣기 | Paste |
 | `excel_cut` | 잘라내기 | Cut |
 | `excel_copy` | 복사 | Copy |
@@ -179,6 +187,10 @@
 | `excel_num_general` | 일반 | General |
 | `excel_cond_format` | 조건부 서식 | Conditional Formatting |
 | `excel_table_format` | 표 서식 | Format as Table |
+| `excel_cell_styles` | 셀 스타일 | Cell Styles |
+| `excel_autosum` | 자동 합계 | AutoSum |
+| `excel_sort_filter` | 정렬 및 필터 | Sort & Filter |
+| `excel_kpi_header` | 요약 지표 (KPI) | Summary KPI |
 | `excel_sheet_main` | 유사도_분석 | Similarity_Data |
 | `excel_sheet_ranking` | 집계_현황 | Summary |
 | `excel_sheet_guide` | 기준_안내 | Reference |
@@ -190,6 +202,24 @@
 | `excel_status_max` | 최대 | Max |
 | `excel_input_cell_tag` | 입력 | IN |
 | `excel_formula_idle` | =INDEX(유사도표, MATCH(B3, 어휘목록, 0)) | =INDEX(SimTable, MATCH(B3, Vocab, 0)) |
+| `notepad_doc_title` | 업무_회의록_메모.txt - 메모장 | meeting_notes.txt - Notepad |
+| `notepad_file_name` | 업무_회의록_메모.txt | meeting_notes.txt |
+| `notepad_menu_file` | 파일(F) | File |
+| `notepad_menu_edit` | 편집(E) | Edit |
+| `notepad_menu_view` | 보기(V) | View |
+| `notepad_menu_log` | 기록(H) | Log |
+| `notepad_status_pos` | 줄 {ln}, 열 {col} | Ln {ln}, Col {col} |
+| `notepad_status_items` | {count}개 항목 | {count} entries |
+| `notepad_status_eol` | Windows (CRLF) | Windows (CRLF) |
+| `notepad_status_enc` | UTF-8 | UTF-8 |
+| `vsc_doc_title` | similarity.service.ts - semantic-engine - Visual Studio Code | similarity.service.ts - semantic-engine - Visual Studio Code |
+| `vsc_search_title` | semantic-engine | semantic-engine |
+| `vsc_status_ready` | TypeScript · Ready | TypeScript · Ready |
+| `vsc_status_calc` | Evaluating vector... | Evaluating vector... |
+| `ecl_doc_title` | SemanticAnalyzer.java - workspace-semantle - Eclipse IDE | SemanticAnalyzer.java - workspace-semantle - Eclipse IDE |
+| `ecl_window_title` | workspace-semantle - src/main/java/com/archerlab/SemanticAnalyzer.java - Eclipse IDE | workspace-semantle - src/main/java/com/archerlab/SemanticAnalyzer.java - Eclipse IDE |
+| `ecl_status_ready` | Ready | Ready |
+| `ecl_status_calc` | Building workspace... | Building workspace... |
 | `share_guesses` | 결과 공유에 추측 횟수 표시 | Include guess count when sharing |
 | `share_time` | 결과 공유에 걸린 시간 표시 | Include clear time when sharing |
 | `share_max` | 결과 공유에 최고 유사도 표시 | Include max similarity when sharing |

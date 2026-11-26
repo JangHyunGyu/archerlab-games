@@ -520,6 +520,47 @@
   border: 1px solid #8a8886;
 }
 
+:root[data-theme='excel'] .r-ico-cs {
+  display: inline-block;
+  width: 18px;
+  height: 12px;
+  background: linear-gradient(90deg, #ffffff 0 33%, #d9e1f2 33% 66%, #e2efda 66% 100%);
+  border: 1px solid #8a8886;
+}
+
+/* 데스크톱: 리본 탭 줄과 유틸리티 헤더를 단일 줄로 통합 */
+@media (min-width: 900px) {
+  :root[data-theme='excel'] body {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: 32px 28px auto auto 24px 1fr 30px 24px;
+  }
+  :root[data-theme='excel'] .excel-titlebar { grid-column: 1 / -1; grid-row: 1; }
+  :root[data-theme='excel'] .excel-ribbon-tabs { grid-column: 1; grid-row: 2; }
+  :root[data-theme='excel'] .site-header {
+    grid-column: 2;
+    grid-row: 2;
+    min-height: 28px;
+    height: 28px;
+    padding: 0 10px 0 6px;
+    border-bottom: 1px solid var(--xl-ribbon-border);
+  }
+  :root[data-theme='excel'] .brand,
+  :root[data-theme='excel'] .languages a,
+  :root[data-theme='excel'] .icon-button {
+    min-height: 24px;
+    height: 24px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  :root[data-theme='excel'] .excel-ribbon-body { grid-column: 1 / -1; grid-row: 3; }
+  :root[data-theme='excel'] .excel-formula-bar { grid-column: 1 / -1; grid-row: 4; }
+  :root[data-theme='excel'] .excel-col-letters { grid-column: 1 / -1; grid-row: 5; }
+  :root[data-theme='excel'] main { grid-column: 1 / -1; grid-row: 6; }
+  :root[data-theme='excel'] .excel-sheet-bar { grid-column: 1 / -1; grid-row: 7; }
+  :root[data-theme='excel'] .excel-status-bar { grid-column: 1 / -1; grid-row: 8; }
+}
+
 :root[data-theme='excel'] .excel-rcombo {
   display: inline-flex;
   align-items: center;
@@ -1085,8 +1126,24 @@
   background: #ffffff;
   color: #1f1f1f;
   font-size: 14px;
-  box-shadow: none;
+  box-shadow: inset -6px -6px 0 -4px #ffffff;
   background-image: linear-gradient(90deg, #f3f2f1 0 var(--xl-col-a), transparent var(--xl-col-a));
+}
+
+:root[data-theme='excel'] .composer #send {
+  position: relative;
+}
+
+:root[data-theme='excel'] .composer #send::after {
+  content: '';
+  position: absolute;
+  left: -4px;
+  bottom: -1px;
+  width: 6px;
+  height: 6px;
+  background: var(--xl-green);
+  border: 1px solid #ffffff;
+  pointer-events: none;
 }
 
 :root[data-theme='excel'] .composer::after {
@@ -1662,7 +1719,7 @@
     max-width: none;
     display: grid;
     grid-template-columns: minmax(0, 1.48fr) minmax(360px, 0.96fr);
-    grid-template-rows: auto auto auto 1fr;
+    grid-template-rows: auto auto 1fr;
     column-gap: 28px;
     row-gap: 0;
     align-content: start;
@@ -1677,25 +1734,44 @@
   }
   :root[data-theme='excel'] .ledger-panel {
     grid-column: 1;
-    grid-row: 3 / span 2;
-    height: clamp(380px, calc(100dvh - 305px), 740px);
+    grid-row: 3;
+    height: clamp(410px, calc(100dvh - 280px), 780px);
     border-right: 1px solid var(--xl-grid);
   }
   :root[data-theme='excel'] .chronometer-console {
     grid-column: 2;
-    grid-row: 2;
-    margin: 10px 14px 0 0;
-    padding: 8px;
+    grid-row: 2 / span 2;
+    align-self: start;
+    margin: 8px 14px 0 0;
+    padding: 0 8px 8px;
     border: 1px solid var(--xl-grid);
   }
   :root[data-theme='excel'] .chronometer-console::before {
-    content: none;
+    content: attr(data-excel-kpi);
+    position: static;
+    display: block;
+    width: auto;
+    margin: 0 -8px 2px;
+    padding: 5px 10px;
+    background: var(--xl-green);
+    border-right: 0;
+    border-bottom: 1px solid var(--xl-green-dark);
+    color: #ffffff;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-align: left;
+  }
+  :root[data-theme='excel'] #game-screen[data-status='active'] #result-wrap {
     display: none;
+  }
+  :root[data-theme='excel'] #game-screen[data-status='won'] .chronometer-console {
+    grid-row: 2;
   }
   :root[data-theme='excel'] #result-wrap {
     grid-column: 2;
     grid-row: 3;
-    margin: 8px 14px 0 0;
+    align-self: start;
+    margin: 8px 14px 10px 0;
   }
   :root[data-theme='excel'] .result-banner {
     padding: 10px 12px;

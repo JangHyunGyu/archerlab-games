@@ -104,7 +104,7 @@ try {
 
     // Verify Semantle title screen, zero SVG usage, no give-up/ranking-tabs/name-form/per-round arrows, single api.mjs version, countdown & previous answer display
     await page.goto(origin + '/twenty-questions/', { waitUntil: 'networkidle' });
-    assert.ok(apiMjsRequests.length === 1 && apiMjsRequests[0].endsWith('/twenty-questions/js/api.mjs?v=20261126-v17'), `Expected single versioned api.mjs request, got ${JSON.stringify(apiMjsRequests)}`);
+    assert.ok(apiMjsRequests.length === 1 && apiMjsRequests[0].endsWith('/twenty-questions/js/api.mjs?v=20261126-v18'), `Expected single versioned api.mjs request, got ${JSON.stringify(apiMjsRequests)}`);
     assert.equal(await page.locator('svg').count(), 0, 'Zero SVG elements expected');
     assert.equal(await page.locator('#vfx-stage, #vfx-edge-glow, #vfx-sprite-a, #vfx-sprite-b').count(), 4);
     assert.equal(await page.locator('#give-up, #give-up-dialog, #next-game, #resume, #name-form, .ranking-tab, #ranking-prev, #ranking-next').count(), 0);
@@ -227,10 +227,17 @@ try {
     await page.locator('button[data-sort="guessNo"]').click();
     assert.equal(await page.locator('button[data-sort="guessNo"]').getAttribute('data-dir'), 'asc');
 
-    // Unknown and duplicate word feedback
+    // Unknown word clears input box (both click submit & Enter submit) and duplicate word feedback
     await page.locator('#guess-input').fill('뷁뷁뷁');
     await page.locator('#send').click();
     await page.locator('#turn-feedback[data-kind="error"]').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#guess-input').inputValue(), '', 'Unknown word click submit must clear #guess-input');
+    assert.equal(await page.locator('#guess-count-display').textContent(), '2');
+
+    await page.locator('#guess-input').fill('없는단어테스트');
+    await page.locator('#guess-input').press('Enter');
+    await page.waitForFunction(() => document.querySelector('#turn-feedback[data-kind="error"]')?.textContent.includes('없는단어테스트'));
+    assert.equal(await page.locator('#guess-input').inputValue(), '', 'Unknown word Enter submit must clear #guess-input');
     assert.equal(await page.locator('#guess-count-display').textContent(), '2');
 
     await page.locator('#guess-input').fill('사람');
@@ -439,9 +446,40 @@ try {
     assert.equal(await page.locator('#stat-best-streak').textContent(), '1');
     await page.locator('#guide-dialog [data-close]').click();
 
+    // Test all 6 modes on won screen + dedicated Light-mode assets + reload persistence across stealth modes
     await page.locator('#settings-open').click();
     await page.locator('#theme-light').click();
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'light');
+    await page.screenshot({ path: path.join(output, 'ko-light-settings-desktop.png') });
+    await page.locator('#settings-dialog [data-close]').click();
+    await page.waitForFunction(() => [
+        'study-light-desktop-1440.webp',
+        'crafted-panel-light-1024.webp',
+        'crafted-btn-light-gold-720.webp',
+        'crafted-btn-light-ivory-720.webp',
+    ].some(name => performance.getEntriesByType('resource').some(r => r.name.includes(name))) || true);
+    const lightSkinOk = await page.evaluate(async () => {
+        const urls = [
+            'assets/backgrounds/study-light-desktop-1440.webp?v=20261126-v18',
+            'assets/ui/crafted-panel-light-1024.webp?v=20261126-v18',
+            'assets/ui/crafted-btn-light-gold-720.webp?v=20261126-v18',
+            'assets/ui/crafted-btn-light-ivory-720.webp?v=20261126-v18',
+        ];
+        for (const u of urls) {
+            const res = await fetch(u);
+            if (!res.ok) return u + ':' + res.status;
+        }
+        return 'ok';
+    });
+    assert.equal(lightSkinOk, 'ok');
+    await page.screenshot({ path: path.join(output, 'ko-light-won-desktop.png'), fullPage: true });
+    await page.locator('#home').click();
+    await page.locator('#title-screen').waitFor({ state: 'visible' });
+    await page.screenshot({ path: path.join(output, 'ko-light-title-desktop.png'), fullPage: true });
+    await page.locator('#start').click();
+    await page.locator('#result-banner').waitFor({ state: 'visible' });
+
+    await page.locator('#settings-open').click();
     await page.locator('#theme-excel').click();
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'excel');
     assert.equal(await page.title(), '2026_Q4_어휘유사도_분석리포트.xlsx - Excel');
@@ -477,6 +515,42 @@ try {
     await page.screenshot({ path: path.join(output, 'ko-excel-ranking-desktop.png') });
     await page.locator('#ranking-dialog [data-close]').click();
 
+    // VS Code & Eclipse won-screen verification + reload persistence
+    await page.locator('#settings-open').click();
+    await page.locator('#theme-vscode').click();
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'vscode');
+    assert.match(await page.title(), /Visual Studio Code/);
+    await page.locator('#settings-dialog [data-close]').click();
+    assert.equal(await page.locator('svg').count(), 0);
+    assert.ok(await page.locator('#vsc-titlebar').isVisible());
+    assert.ok(await page.locator('#vsc-activitybar').isVisible());
+    assert.ok(await page.locator('#vsc-sidebar').isVisible());
+    assert.ok(await page.locator('#vsc-statusbar').isVisible());
+    await page.screenshot({ path: path.join(output, 'ko-vscode-won-desktop.png'), fullPage: true });
+    await page.locator('#home').click();
+    await page.locator('#title-screen').waitFor({ state: 'visible' });
+    await page.screenshot({ path: path.join(output, 'ko-vscode-title-desktop.png'), fullPage: true });
+    await page.locator('#start').click();
+    await page.locator('#result-banner').waitFor({ state: 'visible' });
+
+    await page.locator('#settings-open').click();
+    await page.locator('#theme-eclipse').click();
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'eclipse');
+    assert.match(await page.title(), /Eclipse IDE/);
+    await page.locator('#settings-dialog [data-close]').click();
+    assert.equal(await page.locator('svg').count(), 0);
+    assert.ok(await page.locator('#ecl-titlebar').isVisible());
+    assert.ok(await page.locator('#ecl-menubar').isVisible());
+    assert.ok(await page.locator('#ecl-explorer').isVisible());
+    assert.ok(await page.locator('#ecl-console').isVisible());
+    assert.ok(await page.locator('#ecl-statusbar').isVisible());
+    await page.screenshot({ path: path.join(output, 'ko-eclipse-won-desktop.png'), fullPage: true });
+    await page.locator('#home').click();
+    await page.locator('#title-screen').waitFor({ state: 'visible' });
+    await page.screenshot({ path: path.join(output, 'ko-eclipse-title-desktop.png'), fullPage: true });
+    await page.locator('#start').click();
+    await page.locator('#result-banner').waitFor({ state: 'visible' });
+
     await page.locator('#settings-open').click();
     await page.locator('#theme-dark').click();
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
@@ -510,7 +584,7 @@ try {
     await page.waitForFunction(() => document.querySelectorAll('#nearest-body tr').length === 1000);
     await page.locator('#nearest-dialog [data-close]').click();
 
-    // In Round #4: verify active gameplay in Excel mode (zero VFX/vibration, live formula bar, status bar Average/Count/Max, row selection)
+    // Active gameplay verification for Light, Excel, Notepad, VS Code, Eclipse modes
     await page.locator('#settings-open').click();
     await page.locator('#theme-excel').click();
     await page.locator('#settings-dialog [data-close]').click();
@@ -539,20 +613,98 @@ try {
     assert.match(await page.locator('#excel-formula-display').textContent(), /^=SIMILARITY\(/);
     await page.screenshot({ path: path.join(output, 'ko-excel-game-desktop.png'), fullPage: true });
 
-    // Responsive Excel mode checks across mobile/tablet/landscape + English Excel mode
-    for (const [width, height, shot] of [[320, 568, null], [390, 844, 'ko-excel-game-mobile-390.png'], [768, 1024, 'ko-excel-game-tablet-768.png'], [844, 390, null]]) {
-        await page.setViewportSize({ width, height });
-        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Excel ${width}x${height}: horizontal overflow`);
-        const excelControls = await page.locator('#home,#prev-answer-btn,#current-solver-btn,#send,#ranking-open,#guide-open,#settings-open,.languages a,button[data-sort]').evaluateAll(
-            nodes => nodes.map(n => ({ id: n.id || n.dataset.sort || n.textContent.trim(), rect: n.getBoundingClientRect().toJSON() }))
-        );
-        for (const { id, rect } of excelControls) {
-            if (rect.width === 0 && rect.height === 0) continue;
-            assert.ok(rect.width >= 44 && rect.height >= 44, `Excel ${width}x${height}: ${id} touch target ${rect.width}x${rect.height}`);
-        }
-        if (shot) await page.screenshot({ path: path.join(output, shot), fullPage: true });
-    }
+    // Light mode active gameplay desktop & 390 mobile
+    await page.locator('#settings-open').click();
+    await page.locator('#theme-light').click();
+    await page.locator('#settings-dialog [data-close]').click();
+    await page.screenshot({ path: path.join(output, 'ko-light-game-desktop.png'), fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Light 390x844 overflow');
+    await page.screenshot({ path: path.join(output, 'ko-light-game-mobile-390.png'), fullPage: true });
     await page.setViewportSize({ width: 1440, height: 1000 });
+
+    // Notepad mode active gameplay + reload persistence + responsive
+    await page.locator('#settings-open').click();
+    await page.locator('#theme-notepad').click();
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'notepad');
+    assert.equal(await page.title(), '업무_회의록_메모.txt - 메모장');
+    await page.locator('#settings-dialog [data-close]').click();
+    assert.equal(await page.locator('svg').count(), 0);
+    assert.ok(await page.locator('#notepad-titlebar').isVisible());
+    assert.ok(await page.locator('#notepad-menubar').isVisible());
+    assert.ok(await page.locator('#notepad-status-bar').isVisible());
+    assert.equal(await page.locator('.observatory-bg').isVisible(), false);
+    assert.equal(await page.locator('#notepad-chars').textContent(), '2개 항목');
+    await page.evaluate(() => { window.__vibrateLog = []; });
+    await page.locator('#guess-input').fill('기쁨');
+    assert.equal(await page.locator('#notepad-dirty-dot').isVisible(), true);
+    await page.locator('#send').click();
+    await page.waitForFunction(() => document.querySelector('#guess-count-display')?.textContent === '3');
+    assert.equal(await page.evaluate(() => window.__vibrateLog.length), 0, 'Notepad mode must suppress vibration');
+    assert.equal(await page.locator('#notepad-chars').textContent(), '3개 항목');
+    await page.reload({ waitUntil: 'networkidle' });
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'notepad');
+    await page.screenshot({ path: path.join(output, 'ko-notepad-game-desktop.png'), fullPage: true });
+    await page.locator('#home').click();
+    await page.locator('#title-screen').waitFor({ state: 'visible' });
+    await page.screenshot({ path: path.join(output, 'ko-notepad-title-desktop.png'), fullPage: true });
+    await page.locator('#start').click();
+    await page.locator('#game-screen').waitFor({ state: 'visible' });
+
+    // VS Code & Eclipse active gameplay + Explorer ranking action + reload persistence
+    await page.locator('#settings-open').click();
+    await page.locator('#theme-vscode').click();
+    await page.locator('#settings-dialog [data-close]').click();
+    await page.reload({ waitUntil: 'networkidle' });
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'vscode');
+    assert.equal(await page.locator('#vsc-sidebar').isVisible(), true);
+    await page.screenshot({ path: path.join(output, 'ko-vscode-game-desktop.png'), fullPage: true });
+    await page.locator('#vsc-sidebar [data-office-action="ranking"]').click();
+    await page.locator('#ranking-dialog').waitFor({ state: 'visible' });
+    await page.locator('#ranking-dialog [data-close]').click();
+
+    await page.locator('#settings-open').click();
+    await page.locator('#theme-eclipse').click();
+    await page.locator('#settings-dialog [data-close]').click();
+    await page.reload({ waitUntil: 'networkidle' });
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'eclipse');
+    assert.equal(await page.locator('#ecl-explorer').isVisible(), true);
+    await page.screenshot({ path: path.join(output, 'ko-eclipse-game-desktop.png'), fullPage: true });
+    await page.locator('#ecl-explorer [data-office-action="ranking"]').click();
+    await page.locator('#ranking-dialog').waitFor({ state: 'visible' });
+    await page.locator('#ranking-dialog [data-close]').click();
+
+    // Responsive check across all 4 office/IDE modes (Excel, Notepad, VS Code, Eclipse) on mobile/tablet/landscape
+    for (const modeInfo of [
+        { id: '#theme-excel', name: 'excel', mobileShot: 'ko-excel-game-mobile-390.png', tabletShot: 'ko-excel-game-tablet-768.png' },
+        { id: '#theme-notepad', name: 'notepad', mobileShot: 'ko-notepad-game-mobile-390.png', tabletShot: null },
+        { id: '#theme-vscode', name: 'vscode', mobileShot: 'ko-vscode-game-mobile-390.png', tabletShot: null },
+        { id: '#theme-eclipse', name: 'eclipse', mobileShot: 'ko-eclipse-game-mobile-390.png', tabletShot: null },
+    ]) {
+        await page.setViewportSize({ width: 1440, height: 1000 });
+        await page.locator('#settings-open').click();
+        await page.locator(modeInfo.id).click();
+        await page.locator('#settings-dialog [data-close]').click();
+        for (const [width, height] of [[320, 568], [390, 844], [768, 1024], [844, 390]]) {
+            await page.setViewportSize({ width, height });
+            assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${modeInfo.name} ${width}x${height}: horizontal overflow`);
+            const controls = await page.locator('#home,#prev-answer-btn,#current-solver-btn,#send,#ranking-open,#guide-open,#settings-open,.languages a,button[data-sort]').evaluateAll(
+                nodes => nodes.map(n => ({ id: n.id || n.dataset.sort || n.textContent.trim(), rect: n.getBoundingClientRect().toJSON() }))
+            );
+            for (const { id, rect } of controls) {
+                if (rect.width === 0 && rect.height === 0) continue;
+                assert.ok(rect.width >= 44 && rect.height >= 44, `${modeInfo.name} ${width}x${height}: ${id} touch target ${rect.width}x${rect.height}`);
+            }
+            if (width === 390 && modeInfo.mobileShot) await page.screenshot({ path: path.join(output, modeInfo.mobileShot), fullPage: true });
+            if (width === 768 && modeInfo.tabletShot) await page.screenshot({ path: path.join(output, modeInfo.tabletShot), fullPage: true });
+        }
+    }
+
+    // English Excel check
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.locator('#settings-open').click();
+    await page.locator('#theme-excel').click();
+    await page.locator('#settings-dialog [data-close]').click();
     await Promise.all([
         page.waitForURL(/index-en/),
         page.locator('.languages a[lang="en"]').click(),

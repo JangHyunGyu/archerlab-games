@@ -1,0 +1,492 @@
+/* 햇살 비치는 클래식 서재 라이트 모드 전용 테마 */
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f6efe0;
+  --bg-input: #fffdf7;
+  --text: #1c2833;
+  --text-muted: #526270;
+  --gold: #a47323;
+  --gold-bright: #744908;
+  --cyan: #0b6e82;
+  --violet: #6941b5;
+  --amber: #b35900;
+  --molten: #c43712;
+  --coral: #b32638;
+  --line: rgba(164, 115, 35, 0.38);
+  --line-soft: rgba(52, 73, 94, 0.14);
+  --line-strong: rgba(164, 115, 35, 0.72);
+  --frame-skin: image-set(
+    url('../assets/ui/crafted-panel-light-512.webp?v=20261126-v18') 1x,
+    url('../assets/ui/crafted-panel-light-1024.webp?v=20261126-v18') 2x
+  );
+  --btn-gold-skin: image-set(
+    url('../assets/ui/crafted-btn-light-gold-360.webp?v=20261126-v18') 1x,
+    url('../assets/ui/crafted-btn-light-gold-720.webp?v=20261126-v18') 2x
+  );
+  --btn-teal-skin: image-set(
+    url('../assets/ui/crafted-btn-light-ivory-360.webp?v=20261126-v18') 1x,
+    url('../assets/ui/crafted-btn-light-ivory-720.webp?v=20261126-v18') 2x
+  );
+  --shadow: 0 18px 44px rgba(56, 40, 18, 0.18);
+}
+
+:root[data-theme='light'] body {
+  color: var(--text);
+}
+
+:root[data-theme='light'] button:focus-visible,
+:root[data-theme='light'] a:focus-visible,
+:root[data-theme='light'] input:focus-visible {
+  outline: 2px solid #8a5a12;
+  outline-offset: 3px;
+}
+
+/* 햇살 비치는 전용 서재 배경 */
+:root[data-theme='light'] .observatory-bg {
+  opacity: 1;
+  filter: none;
+  background-color: #f6efe0;
+  background-image:
+    linear-gradient(90deg, rgba(252, 247, 236, 0.76) 0%, rgba(252, 247, 236, 0.44) 58%, rgba(252, 247, 236, 0.24) 100%),
+    linear-gradient(180deg, rgba(252, 247, 236, 0.42) 0%, rgba(252, 247, 236, 0.12) 26%, rgba(252, 247, 236, 0.22) 78%, rgba(246, 236, 214, 0.68) 100%),
+    image-set(
+      url('../assets/backgrounds/study-light-desktop-960.webp?v=20261126-v18') 1x,
+      url('../assets/backgrounds/study-light-desktop-1440.webp?v=20261126-v18') 1.5x,
+      url('../assets/backgrounds/study-light-desktop-1920.webp?v=20261126-v18') 2x
+    );
+}
+
+@media (max-width: 768px) and (orientation: portrait) {
+  :root[data-theme='light'] .observatory-bg {
+    background-image:
+      linear-gradient(180deg, rgba(252, 247, 236, 0.56) 0%, rgba(252, 247, 236, 0.22) 45%, rgba(246, 236, 214, 0.62) 100%),
+      image-set(
+        url('../assets/backgrounds/study-light-mobile-480.webp?v=20261126-v18') 1x,
+        url('../assets/backgrounds/study-light-mobile-828.webp?v=20261126-v18') 2x,
+        url('../assets/backgrounds/study-light-mobile-1080.webp?v=20261126-v18') 3x
+      );
+  }
+}
+
+:root[data-theme='light'] body[data-screen='game'] .observatory-bg {
+  filter: saturate(0.95) brightness(1.01);
+}
+
+/* 헤더 및 로비 타이틀 */
+:root[data-theme='light'] .brand {
+  color: #6b4308;
+  text-shadow: 0 1px 0 rgba(255, 253, 247, 0.8);
+}
+
+:root[data-theme='light'] .brand img {
+  filter: drop-shadow(0 3px 6px rgba(56, 40, 18, 0.26));
+}
+
+:root[data-theme='light'] .languages a {
+  color: #344454;
+  text-shadow: none;
+}
+
+:root[data-theme='light'] .languages a[aria-current] {
+  color: #6b4308;
+  background: rgba(255, 252, 244, 0.92);
+  border: 1px solid rgba(164, 115, 35, 0.46);
+  box-shadow: 0 2px 6px rgba(56, 40, 18, 0.08);
+}
+
+:root[data-theme='light'] .languages span {
+  color: #5b6a78;
+  opacity: 0.6;
+}
+
+:root[data-theme='light'] .icon-button {
+  color: #6b4308;
+  filter: drop-shadow(0 3px 6px rgba(56, 40, 18, 0.2));
+}
+
+:root[data-theme='light'] .icon-button img {
+  filter: drop-shadow(0 1px 2px rgba(56, 40, 18, 0.22));
+}
+
+:root[data-theme='light'] .primary-btn {
+  color: #2f1b05;
+  text-shadow: 0 1px 0 rgba(255, 250, 232, 0.65);
+  filter: drop-shadow(0 4px 10px rgba(82, 54, 14, 0.22));
+}
+
+:root[data-theme='light'] .secondary-btn,
+:root[data-theme='light'] .ghost-btn,
+:root[data-theme='light'] .starter-chip {
+  color: #243240;
+  text-shadow: 0 1px 0 rgba(255, 253, 247, 0.85);
+  filter: drop-shadow(0 3px 8px rgba(56, 40, 18, 0.16));
+}
+
+:root[data-theme='light'] .ghost-btn:hover,
+:root[data-theme='light'] .starter-chip:hover {
+  color: #744908;
+}
+
+:root[data-theme='light'] h1 {
+  background: linear-gradient(180deg, #8a5610 0%, #613906 58%, #3c2203 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 rgba(255, 250, 236, 0.85)) drop-shadow(0 8px 18px rgba(72, 46, 12, 0.16));
+}
+
+:root[data-theme='light'] .eyebrow {
+  color: #7a4f0e;
+  text-shadow: none;
+}
+
+:root[data-theme='light'] .hero-subtitle {
+  color: #6b4308;
+  text-shadow: none;
+}
+
+:root[data-theme='light'] .hero-intro {
+  color: #2c3a47;
+  text-shadow: 0 1px 0 rgba(255, 253, 247, 0.72);
+}
+
+:root[data-theme='light'] .rule-token {
+  background: rgba(255, 252, 244, 0.9);
+  border-color: rgba(164, 115, 35, 0.42);
+  color: #5a3a0a;
+  box-shadow: 0 2px 6px rgba(56, 40, 18, 0.08);
+}
+
+:root[data-theme='light'] .hero-stat {
+  border-left-color: rgba(164, 115, 35, 0.45);
+}
+
+:root[data-theme='light'] .hero-stat span {
+  color: #4f5f6d;
+  text-shadow: none;
+}
+
+:root[data-theme='light'] .hero-stat strong {
+  color: #1c2833;
+  text-shadow: none;
+}
+
+:root[data-theme='light'] .hero-stat.accent strong {
+  color: #744908;
+}
+
+:root[data-theme='light'] .prev-round-strip {
+  background: rgba(255, 252, 244, 0.92);
+  border-color: rgba(164, 115, 35, 0.42);
+  box-shadow: 0 4px 12px rgba(56, 40, 18, 0.08);
+}
+
+:root[data-theme='light'] .prev-round-meta span {
+  color: #526270;
+}
+
+:root[data-theme='light'] .prev-round-meta strong {
+  color: #744908;
+}
+
+:root[data-theme='light'] .crafted-frame {
+  filter: drop-shadow(0 12px 26px rgba(56, 40, 18, 0.16));
+}
+
+:root[data-theme='light'] .showcase-compass {
+  filter: drop-shadow(0 10px 16px rgba(56, 40, 18, 0.3));
+}
+
+:root[data-theme='light'] .showcase-burst {
+  opacity: 0.42;
+}
+
+/* 예시 보드 */
+:root[data-theme='light'] .example-badge {
+  background: rgba(164, 115, 35, 0.14);
+  color: #744908;
+  border-color: rgba(164, 115, 35, 0.42);
+}
+
+:root[data-theme='light'] .example-target {
+  color: #1c2833;
+}
+
+:root[data-theme='light'] .ex-row {
+  background: rgba(248, 241, 224, 0.92);
+  border-color: rgba(164, 115, 35, 0.22);
+  color: #1c2833;
+}
+
+:root[data-theme='light'] .ex-row.warm {
+  background: rgba(241, 234, 252, 0.85);
+  border-color: rgba(105, 65, 181, 0.34);
+}
+
+:root[data-theme='light'] .ex-row.hot {
+  background: rgba(255, 239, 229, 0.9);
+  border-color: rgba(196, 55, 18, 0.36);
+}
+
+:root[data-theme='light'] .ex-row.exact {
+  background: linear-gradient(135deg, #f7df9d 0%, #dca94c 100%);
+  border-color: #b88224;
+  color: #241604;
+}
+
+:root[data-theme='light'] .ex-rank {
+  color: #526270;
+}
+
+:root[data-theme='light'] .ex-row.cool .ex-score { color: #0b6e82; }
+:root[data-theme='light'] .ex-row.warm .ex-score,
+:root[data-theme='light'] .ex-row.warm .ex-rank { color: #6941b5; }
+:root[data-theme='light'] .ex-row.hot .ex-score,
+:root[data-theme='light'] .ex-row.hot .ex-rank { color: #c43712; }
+:root[data-theme='light'] .example-note { color: #526270; }
+
+/* 인게임 계기판 · 벤치마크 · 공명 게이지 */
+:root[data-theme='light'] .case-label {
+  color: #744908;
+  background: rgba(255, 252, 244, 0.94);
+  border-color: rgba(164, 115, 35, 0.48);
+  box-shadow: 0 2px 8px rgba(56, 40, 18, 0.08);
+}
+
+:root[data-theme='light'] .hud-card {
+  background: rgba(249, 243, 228, 0.92);
+  border-color: rgba(164, 115, 35, 0.3);
+}
+
+:root[data-theme='light'] .hud-card span {
+  color: #526270;
+}
+
+:root[data-theme='light'] .hud-card strong {
+  color: #1c2833;
+}
+
+:root[data-theme='light'] .hud-card.timer-card {
+  background: rgba(238, 248, 250, 0.94);
+  border-color: rgba(11, 110, 130, 0.36);
+}
+
+:root[data-theme='light'] .hud-card.timer-card strong {
+  color: #0b6e82;
+  text-shadow: none;
+}
+
+:root[data-theme='light'] .hud-card.accent strong {
+  color: #744908;
+}
+
+:root[data-theme='light'] .solver-card:hover {
+  background: rgba(255, 249, 232, 0.98);
+  border-color: rgba(164, 115, 35, 0.62);
+}
+
+:root[data-theme='light'] .benchmark-strip {
+  background: rgba(248, 241, 224, 0.88);
+  border-color: rgba(164, 115, 35, 0.24);
+  color: #4f5f6d;
+}
+
+:root[data-theme='light'] .bench-prefix {
+  color: #1c2833;
+}
+
+:root[data-theme='light'] .bench-chip {
+  background: rgba(255, 253, 248, 0.96);
+  border: 1px solid rgba(52, 73, 94, 0.14);
+}
+
+:root[data-theme='light'] .resonance-meta {
+  color: #2c3a47;
+}
+
+:root[data-theme='light'] .resonance-track {
+  background: rgba(232, 222, 198, 0.85);
+  border-color: rgba(164, 115, 35, 0.38);
+}
+
+:root[data-theme='light'] .resonance-fill {
+  background: linear-gradient(90deg, #0b6e82, #6941b5, #d47a14, #b88224);
+}
+
+/* 입력창 및 결과 배너 */
+:root[data-theme='light'] .composer input {
+  background: #fffdf7;
+  border-color: rgba(164, 115, 35, 0.52);
+  color: #1c2833;
+  box-shadow: inset 0 2px 5px rgba(56, 40, 18, 0.08);
+}
+
+:root[data-theme='light'] .composer input::placeholder {
+  color: #6b7a88;
+}
+
+:root[data-theme='light'] .input-hint {
+  color: #364554;
+  text-shadow: none;
+}
+
+:root[data-theme='light'] .guess-loading-text {
+  color: #6b4308;
+  text-shadow: none;
+}
+
+:root[data-theme='light'] .result-banner h2 {
+  color: #744908;
+}
+
+:root[data-theme='light'] .result-answer-line strong {
+  background: linear-gradient(180deg, #8a5610 0%, #613906 70%, #3c2203 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+:root[data-theme='light'] .result-stats > div,
+:root[data-theme='light'] .result-name-form {
+  background: rgba(248, 241, 224, 0.92);
+  border-color: rgba(164, 115, 35, 0.28);
+}
+
+:root[data-theme='light'] .result-name-label {
+  color: #744908;
+}
+
+:root[data-theme='light'] .unranked-note {
+  background: rgba(255, 243, 212, 0.96);
+  border-color: rgba(179, 89, 0, 0.42);
+  color: #8a4300;
+}
+
+/* 추측 기록 테이블 */
+:root[data-theme='light'] .guesses-table thead th {
+  background: #f5ecda;
+  border-bottom-color: rgba(164, 115, 35, 0.42);
+  color: #465564;
+}
+
+:root[data-theme='light'] .sort-btn.is-sorted {
+  color: #744908;
+}
+
+:root[data-theme='light'] .guesses-table td {
+  border-bottom-color: rgba(52, 73, 94, 0.12);
+  color: #1c2833;
+}
+
+:root[data-theme='light'] .guesses-table tr.latest-guess {
+  background: rgba(212, 168, 78, 0.16);
+}
+
+:root[data-theme='light'] .guesses-table tr.latest-guess .word-text {
+  color: #613906;
+}
+
+:root[data-theme='light'] .latest-pill {
+  background: #8a5a12;
+  color: #fffaf0;
+}
+
+:root[data-theme='light'] .rank-badge.is-exact {
+  background: #8a5a12;
+  color: #fffaf0;
+}
+
+:root[data-theme='light'] .sim-meter {
+  background: rgba(52, 73, 94, 0.14);
+}
+
+:root[data-theme='light'] .empty-history h2 {
+  color: #744908;
+}
+
+:root[data-theme='light'] .empty-history p {
+  color: #465564;
+}
+
+/* 다이얼로그 · 랭킹 · 설정 · 토스트 */
+:root[data-theme='light'] .game-dialog {
+  color: #1c2833;
+}
+
+:root[data-theme='light'] .game-dialog::backdrop {
+  background: rgba(44, 34, 18, 0.46);
+}
+
+:root[data-theme='light'] .game-dialog h2,
+:root[data-theme='light'] .own-rank,
+:root[data-theme='light'] .name-status,
+:root[data-theme='light'] .leaderboard th.is-active-col,
+:root[data-theme='light'] .leaderboard td.is-active-col,
+:root[data-theme='light'] .stats-grid strong,
+:root[data-theme='light'] .faq-item h3 {
+  color: #744908;
+}
+
+:root[data-theme='light'] .ranking-sort-toggle,
+:root[data-theme='light'] .mode-selector {
+  background: rgba(244, 236, 217, 0.94);
+  border-color: rgba(164, 115, 35, 0.36);
+}
+
+:root[data-theme='light'] .ranking-sort-btn,
+:root[data-theme='light'] .mode-option-btn {
+  color: #4f5f6d;
+}
+
+:root[data-theme='light'] .ranking-sort-btn.is-active,
+:root[data-theme='light'] .mode-option-btn.is-active {
+  background: #fffdf7;
+  border-color: rgba(164, 115, 35, 0.65);
+  color: #6b4308;
+  box-shadow: 0 2px 6px rgba(56, 40, 18, 0.1);
+}
+
+:root[data-theme='light'] .leaderboard th,
+:root[data-theme='light'] .nearest-table th {
+  border-bottom-color: rgba(164, 115, 35, 0.36);
+  color: #4f5f6d;
+}
+
+:root[data-theme='light'] .leaderboard td,
+:root[data-theme='light'] .nearest-table td {
+  border-bottom-color: rgba(52, 73, 94, 0.12);
+}
+
+:root[data-theme='light'] .leaderboard tr.own {
+  background: rgba(212, 168, 78, 0.18);
+  color: #613906;
+}
+
+:root[data-theme='light'] .leaderboard-empty,
+:root[data-theme='light'] .stats-grid > div,
+:root[data-theme='light'] .faq-item {
+  background: rgba(248, 241, 224, 0.9);
+  border-color: rgba(164, 115, 35, 0.28);
+}
+
+:root[data-theme='light'] .leaderboard-empty-title {
+  color: #744908;
+}
+
+:root[data-theme='light'] .setting-row input[type='checkbox'],
+:root[data-theme='light'] #sound-volume {
+  accent-color: #8a5a12;
+}
+
+:root[data-theme='light'] .notice {
+  background: #fffdf7;
+  border-color: #a47323;
+  color: #1c2833;
+  box-shadow: 0 12px 28px rgba(56, 40, 18, 0.2);
+}
+
+:root[data-theme='light'] .site-footer {
+  color: #465564;
+  text-shadow: none;
+}
