@@ -146,6 +146,50 @@
 | `sound` | 효과음 | Sound Effects |
 | `volume` | 효과음 크기 | Effects Volume |
 | `dark_mode` | 다크 모드 | Dark Mode |
+| `display_mode` | 화면 모드 | Display Mode |
+| `mode_dark` | 다크 | Dark |
+| `mode_light` | 라이트 | Light |
+| `mode_excel` | 엑셀 | Excel |
+| `mode_excel_hint` | 사무실에서도 자연스러운 엑셀 스프레드시트 화면으로 바뀌고 이펙트와 진동이 꺼져요. | Switches to an office-friendly spreadsheet layout and disables flashy effects and haptics. |
+| `excel_doc_title` | 2026_Q4_어휘유사도_분석리포트.xlsx - Excel | 2026_Q4_Semantic_Index_Report.xlsx - Excel |
+| `excel_workbook_name` | 2026_Q4_어휘유사도_분석리포트.xlsx | 2026_Q4_Semantic_Index_Report.xlsx |
+| `excel_saved_badge` | 저장됨 | Saved |
+| `excel_autosave` | 자동 저장 | AutoSave |
+| `excel_search_placeholder` | 검색 (Alt+Q) | Search (Alt+Q) |
+| `excel_tab_file` | 파일 | File |
+| `excel_tab_home` | 홈 | Home |
+| `excel_tab_insert` | 삽입 | Insert |
+| `excel_tab_layout` | 페이지 레이아웃 | Page Layout |
+| `excel_tab_formulas` | 수식 | Formulas |
+| `excel_tab_data` | 데이터 | Data |
+| `excel_tab_review` | 검토 | Review |
+| `excel_tab_view` | 보기 | View |
+| `excel_tab_help` | 도움말 | Help |
+| `excel_grp_clipboard` | 클립보드 | Clipboard |
+| `excel_grp_font` | 글꼴 | Font |
+| `excel_grp_align` | 맞춤 | Alignment |
+| `excel_grp_number` | 표시 형식 | Number |
+| `excel_grp_styles` | 스타일 | Styles |
+| `excel_paste` | 붙여넣기 | Paste |
+| `excel_cut` | 잘라내기 | Cut |
+| `excel_copy` | 복사 | Copy |
+| `excel_font_name` | 맑은 고딕 | Calibri |
+| `excel_wrap_text` | 텍스트 줄 바꿈 | Wrap Text |
+| `excel_merge_center` | 병합하고 가운데 맞춤 | Merge & Center |
+| `excel_num_general` | 일반 | General |
+| `excel_cond_format` | 조건부 서식 | Conditional Formatting |
+| `excel_table_format` | 표 서식 | Format as Table |
+| `excel_sheet_main` | 유사도_분석 | Similarity_Data |
+| `excel_sheet_ranking` | 집계_현황 | Summary |
+| `excel_sheet_guide` | 기준_안내 | Reference |
+| `excel_sheet_settings` | 시트_옵션 | Options |
+| `excel_status_ready` | 준비 | Ready |
+| `excel_status_calc` | 계산 중... | Calculating... |
+| `excel_status_avg` | 평균 | Average |
+| `excel_status_count` | 개수 | Count |
+| `excel_status_max` | 최대 | Max |
+| `excel_input_cell_tag` | 입력 | IN |
+| `excel_formula_idle` | =INDEX(유사도표, MATCH(B3, 어휘목록, 0)) | =INDEX(SimTable, MATCH(B3, Vocab, 0)) |
 | `share_guesses` | 결과 공유에 추측 횟수 표시 | Include guess count when sharing |
 | `share_time` | 결과 공유에 걸린 시간 표시 | Include clear time when sharing |
 | `share_max` | 결과 공유에 최고 유사도 표시 | Include max similarity when sharing |

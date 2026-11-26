@@ -50,11 +50,13 @@
 }
     </script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261124-v16">
+  <script>try{var m=localStorage.getItem('archerlab_semantle_themeMode');if(m!=='dark'&&m!=='light'&&m!=='excel')m=localStorage.getItem('archerlab_semantle_darkMode')==='false'?'light':'dark';document.documentElement.dataset.theme=m;}catch(_e){}</script>
+  <link rel="stylesheet" href="css/style.css?v=20261126-v17">
+  <link rel="stylesheet" href="css/excel-mode.css?v=20261126-v17">
   <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
   <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
   <script src="../shared/browser-check.js?v=20261005-env-guard-v1"></script>
-  <script type="module" src="js/main.mjs?v=20261124-v16"></script>
+  <script type="module" src="js/main.mjs?v=20261126-v17"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 
     <meta name="twitter:title" content="시맨틀 | 한국어 단어 유사도 추측 게임 - ArcherLab">
@@ -71,6 +73,30 @@
     <div id="vfx-sprite-a" class="vfx-sprite"></div>
     <div id="vfx-sprite-b" class="vfx-sprite"></div>
   </div>
+  <div class="excel-titlebar" id="excel-titlebar">
+    <div class="excel-title-left">
+      <span class="excel-app-icon" aria-hidden="true">X</span>
+      <span class="excel-autosave" aria-hidden="true"><span>자동 저장</span><i class="excel-autosave-toggle"></i></span>
+      <span class="excel-qat" aria-hidden="true"><i class="qat-save"></i><i class="qat-undo">↶</i><i class="qat-redo">↷</i></span>
+    </div>
+    <div class="excel-title-center">
+      <span class="excel-doc-name">2026_Q4_어휘유사도_분석리포트.xlsx</span>
+      <span class="excel-saved-pill">저장됨</span>
+      <button type="button" id="excel-search-trigger" class="excel-search-box">검색 (Alt+Q)</button>
+    </div>
+    <div class="excel-win-controls" aria-hidden="true"><span>─</span><span>□</span><span class="is-close">×</span></div>
+  </div>
+  <div class="excel-ribbon-tabs" id="excel-ribbon-tabs">
+    <button type="button" class="excel-rtab is-file" data-excel-action="settings">파일</button>
+    <button type="button" class="excel-rtab is-active" data-excel-action="home">홈</button>
+    <span class="excel-rtab is-static" aria-hidden="true">삽입</span>
+    <span class="excel-rtab is-static" aria-hidden="true">페이지 레이아웃</span>
+    <button type="button" class="excel-rtab" data-excel-action="focus-input">수식</button>
+    <button type="button" class="excel-rtab" data-excel-action="ranking">데이터</button>
+    <button type="button" class="excel-rtab" data-excel-action="guide">검토</button>
+    <button type="button" class="excel-rtab" data-excel-action="settings">보기</button>
+    <button type="button" class="excel-rtab" data-excel-action="guide">도움말</button>
+  </div>
   <header class="site-header">
     <a class="brand" href="../" aria-label="게임 모음">
       <img src="assets/ui/compass-chronograph-160.webp?v=4" srcset="assets/ui/compass-chronograph-160.webp?v=4 1x, assets/ui/compass-chronograph-320.webp?v=4 2x" alt="" width="30" height="37" decoding="async">
@@ -78,11 +104,92 @@
     </a>
     <div class="header-controls">
       <nav class="languages" aria-label="언어"><a href="./" lang="ko" aria-current="page">한국어</a><span aria-hidden="true">/</span><a href="index-en" lang="en" >English</a></nav>
-      <button class="icon-button" id="ranking-open" aria-label="랭킹"><img src="assets/ui/icon-trophy-48.webp?v=4" srcset="assets/ui/icon-trophy-48.webp?v=4 1x, assets/ui/icon-trophy-96.webp?v=4 2x" alt="" width="22" height="22" decoding="async"></button>
-      <button class="icon-button" id="guide-open" aria-label="안내 및 기록"><img src="assets/ui/icon-guide-48.webp?v=4" srcset="assets/ui/icon-guide-48.webp?v=4 1x, assets/ui/icon-guide-96.webp?v=4 2x" alt="" width="22" height="22" decoding="async"></button>
-      <button class="icon-button" id="settings-open" aria-label="설정"><img src="assets/ui/icon-settings-48.webp?v=4" srcset="assets/ui/icon-settings-48.webp?v=4 1x, assets/ui/icon-settings-96.webp?v=4 2x" alt="" width="22" height="22" decoding="async"></button>
+      <button class="icon-button" id="ranking-open" aria-label="랭킹"><img src="assets/ui/icon-trophy-48.webp?v=4" srcset="assets/ui/icon-trophy-48.webp?v=4 1x, assets/ui/icon-trophy-96.webp?v=4 2x" alt="" width="22" height="22" decoding="async"><span class="excel-btn-label">랭킹</span></button>
+      <button class="icon-button" id="guide-open" aria-label="안내 및 기록"><img src="assets/ui/icon-guide-48.webp?v=4" srcset="assets/ui/icon-guide-48.webp?v=4 1x, assets/ui/icon-guide-96.webp?v=4 2x" alt="" width="22" height="22" decoding="async"><span class="excel-btn-label">안내 및 기록</span></button>
+      <button class="icon-button" id="settings-open" aria-label="설정"><img src="assets/ui/icon-settings-48.webp?v=4" srcset="assets/ui/icon-settings-48.webp?v=4 1x, assets/ui/icon-settings-96.webp?v=4 2x" alt="" width="22" height="22" decoding="async"><span class="excel-btn-label">설정</span></button>
     </div>
   </header>
+  <div class="excel-ribbon-body" id="excel-ribbon-body" aria-hidden="true">
+    <div class="excel-rgroup">
+      <div class="excel-rgroup-items">
+        <span class="excel-rtool is-tall"><i class="r-ico-paste"></i><span>붙여넣기</span></span>
+        <div class="excel-rcol">
+          <span class="excel-rtool-sm">✂ 잘라내기</span>
+          <span class="excel-rtool-sm">❐ 복사</span>
+        </div>
+      </div>
+      <span class="excel-rgroup-label">클립보드</span>
+    </div>
+    <div class="excel-rgroup">
+      <div class="excel-rgroup-items excel-rstack">
+        <div class="excel-rrow">
+          <span class="excel-rcombo is-font">맑은 고딕 <i>▾</i></span>
+          <span class="excel-rcombo is-size">11 <i>▾</i></span>
+        </div>
+        <div class="excel-rrow">
+          <span class="excel-rbtn"><strong>B</strong></span>
+          <span class="excel-rbtn"><em>I</em></span>
+          <span class="excel-rbtn"><u>U</u></span>
+          <span class="excel-rsep"></span>
+          <span class="excel-rbtn">⊞</span>
+          <span class="excel-rbtn is-color">A<i></i></span>
+        </div>
+      </div>
+      <span class="excel-rgroup-label">글꼴</span>
+    </div>
+    <div class="excel-rgroup">
+      <div class="excel-rgroup-items excel-rstack">
+        <div class="excel-rrow">
+          <span class="excel-rbtn">≡</span>
+          <span class="excel-rbtn">≣</span>
+          <span class="excel-rsep"></span>
+          <span class="excel-rtool-sm">텍스트 줄 바꿈</span>
+        </div>
+        <div class="excel-rrow">
+          <span class="excel-rbtn">⇕</span>
+          <span class="excel-rsep"></span>
+          <span class="excel-rtool-sm">병합하고 가운데 맞춤</span>
+        </div>
+      </div>
+      <span class="excel-rgroup-label">맞춤</span>
+    </div>
+    <div class="excel-rgroup">
+      <div class="excel-rgroup-items excel-rstack">
+        <div class="excel-rrow"><span class="excel-rcombo is-num">일반 <i>▾</i></span></div>
+        <div class="excel-rrow">
+          <span class="excel-rbtn">₩</span>
+          <span class="excel-rbtn">%</span>
+          <span class="excel-rbtn">,</span>
+          <span class="excel-rbtn">.00</span>
+        </div>
+      </div>
+      <span class="excel-rgroup-label">표시 형식</span>
+    </div>
+    <div class="excel-rgroup">
+      <div class="excel-rgroup-items">
+        <span class="excel-rtool is-pill"><i class="r-ico-cf"></i><span>조건부 서식</span></span>
+        <span class="excel-rtool is-pill"><i class="r-ico-tbl"></i><span>표 서식</span></span>
+      </div>
+      <span class="excel-rgroup-label">스타일</span>
+    </div>
+  </div>
+  <div class="excel-formula-bar" id="excel-formula-bar">
+    <div class="excel-name-box" id="excel-name-box">B3</div>
+    <div class="excel-fx-controls" aria-hidden="true"><span>✕</span><span>✓</span><span class="excel-fx-sym">fx</span></div>
+    <button type="button" class="excel-formula-display" id="excel-formula-display">=INDEX(유사도표, MATCH(B3, 어휘목록, 0))</button>
+  </div>
+  <div class="excel-col-letters" id="excel-col-letters" aria-hidden="true">
+    <span class="excel-corner"></span>
+    <span class="excel-col-head is-col-a">A</span>
+    <span class="excel-col-head is-col-b is-active">B</span>
+    <span class="excel-col-head is-col-c">C</span>
+    <span class="excel-col-head is-col-d">D</span>
+    <span class="excel-col-head is-col-e">E</span>
+    <span class="excel-col-head is-col-f">F</span>
+    <span class="excel-col-head is-col-g">G</span>
+    <span class="excel-col-head is-col-h">H</span>
+    <span class="excel-col-head is-col-i">I</span>
+  </div>
   <main>
     <section id="title-screen" class="title-screen" aria-labelledby="game-title">
       <div class="hero-copy">
@@ -192,7 +299,7 @@
         </div>
       </div>
       <div class="composer-wrap">
-        <form id="guess-form" class="composer">
+        <form id="guess-form" class="composer" data-excel-input-tag="입력">
           <label class="sr-only" for="guess-input">단어 입력 (예: 사람, 기쁘다, 갑자기)</label>
           <input id="guess-input" type="text" maxlength="32" placeholder="단어 입력 (예: 사람, 기쁘다, 갑자기)" autocomplete="off" enterkeyhint="send">
           <button id="send" class="primary-btn" type="submit"><span>추측하기</span></button>
@@ -217,7 +324,7 @@
           <table id="guesses-table" class="guesses-table" hidden>
             <thead>
               <tr>
-                <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-sort="guessNo">#</button></th>
+                <th scope="col" aria-sort="none" data-excel-row="4"><button type="button" class="sort-btn" data-sort="guessNo">#</button></th>
                 <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-sort="word">입력한 단어</button></th>
                 <th scope="col" aria-sort="descending"><button type="button" class="sort-btn is-sorted" data-sort="similarity" data-dir="desc">유사도</button></th>
                 <th scope="col">정답과의 거리</th>
@@ -241,6 +348,29 @@
     </section>
   </main>
   <div id="notice" class="notice" role="status" hidden></div>
+  <div class="excel-sheet-bar" id="excel-sheet-bar">
+    <div class="excel-sheet-arrows" aria-hidden="true"><span>◀</span><span>▶</span></div>
+    <div class="excel-sheet-tabs">
+      <button type="button" class="excel-sheet-tab is-active" data-excel-action="sheet-main">유사도_분석</button>
+      <button type="button" class="excel-sheet-tab" data-excel-action="ranking">집계_현황</button>
+      <button type="button" class="excel-sheet-tab" data-excel-action="guide">기준_안내</button>
+      <button type="button" class="excel-sheet-tab" data-excel-action="settings">시트_옵션</button>
+      <span class="excel-sheet-add" aria-hidden="true">＋</span>
+    </div>
+    <div class="excel-hscroll" aria-hidden="true"><span>◀</span><div class="excel-hscroll-track"><i class="excel-hscroll-thumb"></i></div><span>▶</span></div>
+  </div>
+  <div class="excel-status-bar" id="excel-status-bar">
+    <div class="excel-status-left">
+      <span id="excel-status-state">준비</span>
+    </div>
+    <div class="excel-status-right">
+      <span id="excel-status-avg" class="excel-status-stat"></span>
+      <span id="excel-status-count" class="excel-status-stat"></span>
+      <span id="excel-status-max" class="excel-status-stat"></span>
+      <span class="excel-status-views" aria-hidden="true"><span>▦</span><span>▤</span><span>▥</span></span>
+      <span class="excel-status-zoom" aria-hidden="true"><span>−</span><i class="excel-zoom-track"></i><span>+</span><span>100%</span></span>
+    </div>
+  </div>
   <footer class="site-footer"><a href="../">ArcherLab Games</a></footer>
 
   <dialog id="ranking-dialog" class="game-dialog crafted-frame" aria-labelledby="ranking-title">
@@ -294,7 +424,15 @@
   <dialog id="settings-dialog" class="game-dialog crafted-frame" aria-labelledby="settings-title">
     <button class="dialog-close icon-button" data-close aria-label="닫기">✕</button>
     <h2 id="settings-title">설정</h2>
-    <label class="setting-row" for="dark-mode"><span>다크 모드</span><input type="checkbox" id="dark-mode" checked></label>
+    <div class="setting-group">
+      <span id="display-mode-label" class="setting-group-label">화면 모드</span>
+      <div class="mode-selector" role="group" aria-labelledby="display-mode-label">
+        <button type="button" id="theme-dark" class="mode-option-btn is-active" data-theme-option="dark" aria-pressed="true">다크</button>
+        <button type="button" id="theme-light" class="mode-option-btn" data-theme-option="light" aria-pressed="false">라이트</button>
+        <button type="button" id="theme-excel" class="mode-option-btn" data-theme-option="excel" aria-pressed="false">엑셀</button>
+      </div>
+      <p id="mode-excel-hint" class="setting-hint" hidden>사무실에서도 자연스러운 엑셀 스프레드시트 화면으로 바뀌고 이펙트와 진동이 꺼져요.</p>
+    </div>
     <label class="setting-row" for="sound-enabled"><span>효과음</span><input type="checkbox" id="sound-enabled" checked></label>
     <label class="setting-row" for="sound-volume">효과음 크기</label>
     <input type="range" id="sound-volume" min="0" max="100" value="45">

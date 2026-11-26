@@ -1960,3 +1960,59 @@ body.keyboard-open .game-screen {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .vfx-canvas, .vfx-stage, .vfx-burst { display: none !important; }
 }
+
+.excel-btn-label,
+.excel-titlebar,
+.excel-ribbon-tabs,
+.excel-ribbon-body,
+.excel-formula-bar,
+.excel-col-letters,
+.excel-sheet-bar,
+.excel-status-bar {
+  display: none;
+}
+
+.setting-group {
+  margin: 10px 0 12px;
+}
+.setting-group-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+.mode-selector {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(7, 20, 30, 0.78);
+  border: 1px solid var(--line);
+}
+.mode-option-btn {
+  min-height: 44px;
+  padding: 8px 6px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  transition: background-color 0.14s, color 0.14s, border-color 0.14s;
+}
+.mode-option-btn.is-active {
+  background: rgba(213, 166, 84, 0.22);
+  border-color: var(--line-strong);
+  color: var(--gold-bright);
+}
+.mode-option-btn:hover:not(.is-active) {
+  color: var(--text);
+  background: rgba(181, 195, 200, 0.08);
+}
+.setting-hint {
+  margin: 7px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  word-break: keep-all;
+}

@@ -1,6 +1,6 @@
-import { messages, translation } from './i18n.mjs?v=20261124-v16';
-import { request, requestId, storage, reportException } from './api.mjs?v=20261124-v16';
-import { GameAudio } from './audio.mjs?v=20261124-v16';
+import { messages, translation } from './i18n.mjs?v=20261126-v17';
+import { request, requestId, storage, reportException } from './api.mjs?v=20261126-v17';
+import { GameAudio } from './audio.mjs?v=20261126-v17';
 
 const locale = document.documentElement.lang === 'en' ? 'en' : 'ko';
 const t = translation(locale);
@@ -43,15 +43,24 @@ let rolloverRetryAt = 0;
 let syncKeyboard = () => {};
 let sendPointer = null;
 let sendSubmittedByForm = false;
+let selectedExcelWord = null;
+let selectedExcelRow = null;
+
+const ORIGINAL_DOC_TITLE = document.title;
+const FAVICON_LINK = document.querySelector('link[rel="icon"]');
+const ORIGINAL_FAVICON_HREF = FAVICON_LINK ? FAVICON_LINK.getAttribute('href') : '../favicon.svg';
+const THEME_COLOR_META = document.querySelector('meta[name="theme-color"]');
+const ORIGINAL_THEME_COLOR = THEME_COLOR_META ? THEME_COLOR_META.getAttribute('content') : '#07131a';
+const EXCEL_FAVICON_DATA_URI = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#217346"/><path d="M9 9h5l2 5 2-5h5l-4 7 4 7h-5l-2-5-2 5H9l4-7z" fill="#fff"/></svg>');
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const isTouchDevice = () => window.matchMedia('(hover: none), (pointer: coarse)').matches || navigator.maxTouchPoints > 0;
 const VFX_SPRITES = {
-    cool: 'assets/ui/vfx-pulse-cyan.webp?v=20261124-v16',
-    warm: 'assets/ui/vfx-sigil-violet.webp?v=20261124-v16',
-    hot: 'assets/ui/vfx-flare-hot.webp?v=20261124-v16',
-    molten: 'assets/ui/vfx-nova-molten.webp?v=20261124-v16',
-    exact: 'assets/ui/vfx-compass-burst-1024.webp?v=20261124-v16',
+    cool: 'assets/ui/vfx-pulse-cyan.webp?v=20261126-v17',
+    warm: 'assets/ui/vfx-sigil-violet.webp?v=20261126-v17',
+    hot: 'assets/ui/vfx-flare-hot.webp?v=20261126-v17',
+    molten: 'assets/ui/vfx-nova-molten.webp?v=20261126-v17',
+    exact: 'assets/ui/vfx-compass-burst-1024.webp?v=20261126-v17',
 };
 const HAPTIC_PATTERNS = {
     unknown: [24, 30, 24],
@@ -74,7 +83,7 @@ let vfxLastTime = 0;
 
 // 게임 화면 진입 시 5종 네이티브 투명 VFX 스프라이트 백그라운드 프리로드
 function preloadVfxSprites() {
-    if (vfxPreloaded || reducedMotion.matches) return;
+    if (vfxPreloaded || reducedMotion.matches || isExcelMode()) return;
     vfxPreloaded = true;
     Object.keys(VFX_SPRITES).forEach(key => {
         const img = new Image();
@@ -198,7 +207,7 @@ function stepVfx(now) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.scale(dpr, dpr);
-    ctx.globalCompositeOperation = settings.darkMode ? 'lighter' : 'source-over';
+    ctx.globalCompositeOperation = settings.themeMode === 'dark' ? 'lighter' : 'source-over';
 
     // 1. 방사형 빛줄기 (hot / molten / exact)
     for (let i = vfxBeams.length - 1; i >= 0; i--) {
@@ -341,7 +350,7 @@ function stepVfx(now) {
 }
 
 function spawnBurst(x, y, options) {
-    if (reducedMotion.matches || document.hidden) return;
+    if (reducedMotion.matches || document.hidden || isExcelMode()) return;
     const {
         count = 24,
         colors = ['#57e0ff', '#ffe6a8'],
@@ -476,7 +485,7 @@ function spawnBurst(x, y, options) {
 
 // 정답과의 근접도·오답 상태에 맞춘 기기 햅틱 진동 패턴 실행
 function triggerHaptics(tier) {
-    if (reducedMotion.matches || document.hidden) return;
+    if (reducedMotion.matches || document.hidden || isExcelMode()) return;
     const pattern = HAPTIC_PATTERNS[tier];
     if (!pattern) return;
     try {
@@ -488,7 +497,7 @@ function triggerHaptics(tier) {
 
 // 등급별 UI 진동 트리거 (.ledger-panel은 translateX만 사용해 레이아웃 높이 유지)
 function triggerUiShake(tier) {
-    if (reducedMotion.matches) return;
+    if (reducedMotion.matches || isExcelMode()) return;
     const composer = document.querySelector('.composer');
     const consoleEl = document.querySelector('.chronometer-console');
     const panel = document.querySelector('.ledger-panel');
@@ -539,7 +548,7 @@ function triggerUiShake(tier) {
 
 // 네이티브 투명 VFX 스프라이트·화면 테두리 펄스·최고 기록 갱신 공명 바 이펙트 실행
 function triggerStageEffects(tier, cx, cy, improvedBest) {
-    if (reducedMotion.matches) return;
+    if (reducedMotion.matches || isExcelMode()) return;
     const stage = $('vfx-stage');
     if (stage) {
         stage.dataset.tier = tier;
@@ -617,13 +626,14 @@ function computeGuessImprovedBest(event, game) {
 
 // 추측 근접도와 정답 여부에 따라 스프라이트·캔버스·진동 복합 이펙트 실행
 function triggerGameVfx(event, game) {
-    if (reducedMotion.matches || !event || event.replayed) return;
-    const tier = resolveGuessTier(event, game);
-    const isWon = tier === 'exact' && ((game === null || game === void 0 ? void 0 : game.status)) === 'won';
+    if (!event || event.replayed) return;
     const ledgerScroll = document.querySelector('.ledger-scroll');
     if (ledgerScroll && ['guess', 'duplicate', 'won'].includes(event.code)) {
         ledgerScroll.scrollTop = 0;
     }
+    if (reducedMotion.matches || isExcelMode()) return;
+    const tier = resolveGuessTier(event, game);
+    const isWon = tier === 'exact' && ((game === null || game === void 0 ? void 0 : game.status)) === 'won';
 
     const anchor = isWon
         ? ($('result-banner') || $('guess-form'))
@@ -837,15 +847,124 @@ function triggerGameVfx(event, game) {
 
 try { pendingCommand = JSON.parse(storage.get(langKey('pending')) || 'null'); } catch (_err) { pendingCommand = null; }
 
+function loadInitialThemeMode() {
+    const saved = storage.get('themeMode');
+    if (saved === 'dark' || saved === 'light' || saved === 'excel') return saved;
+    return storage.get('darkMode') === 'false' ? 'light' : 'dark';
+}
+
 const settings = {
-    darkMode: storage.get('darkMode') !== 'false',
+    themeMode: loadInitialThemeMode(),
     shareGuesses: storage.get('shareGuesses') !== 'false',
     shareTime: storage.get('shareTime') !== 'false',
     shareMax: storage.get('shareMax') !== 'false',
 };
 
+function isExcelMode() {
+    return settings.themeMode === 'excel';
+}
+
+function formatExcelCellFormula(entry) {
+    if (!entry) return t('excel_formula_idle');
+    const rankStr = entry.rank === 0
+        ? t('rank_exact')
+        : entry.rank !== null
+            ? t('rank_badge', { rank: entry.rank })
+            : t('rank_outside');
+    return `=SIMILARITY("${entry.word}", $TARGET)  // ${entry.similarity.toFixed(2)} (${rankStr})`;
+}
+
+// 엑셀 모드 활성 시 수식 입력줄, 셀 선택, 상태 표시줄 동기화
+function syncExcelChrome() {
+    const nameBox = $('excel-name-box');
+    const formulaDisplay = $('excel-formula-display');
+    const statusAvg = $('excel-status-avg');
+    const statusCount = $('excel-status-count');
+    const statusMax = $('excel-status-max');
+    if (!nameBox || !formulaDisplay) return;
+
+    const guesses = (state.game && state.game.guesses) ? state.game.guesses : [];
+    const inputEl = $('guess-input');
+    const typed = inputEl ? inputEl.value.trim() : '';
+
+    if (screen !== 'game') {
+        nameBox.textContent = 'A1';
+        formulaDisplay.textContent = t('excel_workbook_name');
+    } else if (typed) {
+        nameBox.textContent = 'B3';
+        formulaDisplay.textContent = typed;
+    } else if (selectedExcelWord) {
+        const matched = guesses.find(g => g.word === selectedExcelWord);
+        if (matched) {
+            nameBox.textContent = `B${selectedExcelRow || 5}`;
+            formulaDisplay.textContent = formatExcelCellFormula(matched);
+        } else {
+            selectedExcelWord = null;
+            selectedExcelRow = null;
+            nameBox.textContent = 'B3';
+            formulaDisplay.textContent = t('excel_formula_idle');
+        }
+    } else {
+        nameBox.textContent = 'B3';
+        formulaDisplay.textContent = t('excel_formula_idle');
+    }
+
+    if (statusAvg && statusCount && statusMax) {
+        if (screen === 'game' && guesses.length > 0) {
+            let sum = 0;
+            let max = -Infinity;
+            for (const g of guesses) {
+                sum += g.similarity;
+                if (g.similarity > max) max = g.similarity;
+            }
+            const avg = sum / guesses.length;
+            statusAvg.textContent = `${t('excel_status_avg')}: ${avg.toFixed(2)}`;
+            statusCount.textContent = `${t('excel_status_count')}: ${guesses.length}`;
+            statusMax.textContent = `${t('excel_status_max')}: ${max.toFixed(2)}`;
+        } else {
+            statusAvg.textContent = '';
+            statusCount.textContent = '';
+            statusMax.textContent = '';
+        }
+    }
+}
+
 function applyTheme() {
-    document.documentElement.dataset.theme = settings.darkMode ? 'dark' : 'light';
+    const mode = settings.themeMode;
+    document.documentElement.dataset.theme = mode;
+    for (const btn of document.querySelectorAll('[data-theme-option]')) {
+        const active = btn.dataset.themeOption === mode;
+        btn.classList.toggle('is-active', active);
+        btn.setAttribute('aria-pressed', String(active));
+    }
+    if ($('mode-excel-hint')) $('mode-excel-hint').hidden = mode !== 'excel';
+
+    if (mode === 'excel') {
+        document.title = t('excel_doc_title');
+        if (FAVICON_LINK) FAVICON_LINK.setAttribute('href', EXCEL_FAVICON_DATA_URI);
+        if (THEME_COLOR_META) THEME_COLOR_META.setAttribute('content', '#217346');
+        clearVfxTimers();
+        vfxParticles.length = 0;
+        vfxRings.length = 0;
+        vfxBeams.length = 0;
+        const canvas = $('vfx-canvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+        const burst = $('vfx-burst');
+        if (burst) burst.classList.remove('is-active');
+    } else {
+        document.title = ORIGINAL_DOC_TITLE;
+        if (FAVICON_LINK) FAVICON_LINK.setAttribute('href', ORIGINAL_FAVICON_HREF);
+        if (THEME_COLOR_META) {
+            THEME_COLOR_META.setAttribute('content', mode === 'light' ? '#efe7d6' : ORIGINAL_THEME_COLOR);
+        }
+    }
+    syncExcelChrome();
 }
 applyTheme();
 
@@ -907,6 +1026,7 @@ function changeScreen(next) {
     if (next === 'game') preloadVfxSprites();
     else clearVfxTimers();
     setSessionView(next);
+    syncExcelChrome();
     if (changed) window.scrollTo({ top: 0, behavior: 'instant' });
     syncKeyboard();
 }
@@ -916,6 +1036,8 @@ let guessLoadingHideTimer = 0;
 function startGuessLoading() {
     clearTimeout(guessLoadingHideTimer);
     guessLoadingHideTimer = 0;
+    const excelState = $('excel-status-state');
+    if (excelState) excelState.textContent = t('excel_status_calc');
     const slot = $('composer-status-slot');
     const gl = $('guess-loading');
     ((slot === null || slot === void 0 ? void 0 : slot.classList.add('is-loading')));
@@ -929,6 +1051,8 @@ function startGuessLoading() {
 
 function finishGuessLoading(immediate = false) {
     clearTimeout(guessLoadingHideTimer);
+    const excelState = $('excel-status-state');
+    if (excelState) excelState.textContent = t('excel_status_ready');
     const slot = $('composer-status-slot');
     const gl = $('guess-loading');
     if (!gl || gl.hidden || immediate) {
@@ -999,6 +1123,8 @@ function clearLocalRoundProgress() {
     pendingCommand = null;
     storage.remove(langKey('pending'));
     latestHighlightWord = null;
+    selectedExcelWord = null;
+    selectedExcelRow = null;
     nearestWords = [];
     nearestKey = null;
     showTurnFeedback(null);
@@ -1106,13 +1232,16 @@ function meterPercent(entry) {
     return Math.max(0, Math.min(4, (entry.similarity + 20) * 0.05));
 }
 
-function buildGuessRow(entry, { pinned = false, isNew = false } = {}) {
+function buildGuessRow(entry, { pinned = false, isNew = false, excelRow = null } = {}) {
     const tr = document.createElement('tr');
-    tr.className = `${thermalClass(entry)}${pinned ? ' latest-guess' : ''}${isNew ? ' is-new' : ''}`;
+    const isSelected = Boolean(selectedExcelWord && entry.word === selectedExcelWord && ((excelRow === null && !pinned) || excelRow === selectedExcelRow));
+    tr.className = `${thermalClass(entry)}${pinned ? ' latest-guess' : ''}${isNew ? ' is-new' : ''}${isSelected ? ' is-excel-selected' : ''}`;
     tr.dataset.word = entry.word;
+    if (excelRow !== null) tr.dataset.excelRow = String(excelRow);
 
     const tdNo = document.createElement('td');
     tdNo.className = 'col-no';
+    if (excelRow !== null) tdNo.dataset.excelRow = String(excelRow);
     tdNo.textContent = String(entry.guessNo);
 
     const tdWord = document.createElement('td');
@@ -1204,8 +1333,9 @@ function renderGuessesTable(game, isNewGuess = false) {
         : latest;
 
     const fragment = document.createDocumentFragment();
+    let rowIdx = 5;
     if (pinnedWord) {
-        fragment.append(buildGuessRow(pinnedWord, { pinned: true, isNew: isNewGuess }));
+        fragment.append(buildGuessRow(pinnedWord, { pinned: true, isNew: isNewGuess, excelRow: rowIdx++ }));
         const sep = document.createElement('tr');
         sep.className = 'delimiter';
         const td = document.createElement('td');
@@ -1216,9 +1346,10 @@ function renderGuessesTable(game, isNewGuess = false) {
 
     const sorted = sortGuesses(guesses);
     for (const entry of sorted) {
-        fragment.append(buildGuessRow(entry));
+        fragment.append(buildGuessRow(entry, { excelRow: rowIdx++ }));
     }
     body.replaceChildren(fragment);
+    syncExcelChrome();
 }
 
 function renderResonanceBar(game) {
@@ -1340,6 +1471,7 @@ function render(data, { navigate = true, effects = false } = {}) {
         if ($('guesses-table')) $('guesses-table').hidden = true;
         if ($('empty-history')) $('empty-history').hidden = false;
         if ($('result-banner')) $('result-banner').hidden = true;
+        syncExcelChrome();
         if (screen === 'game' && navigate === false) changeScreen('title');
         syncCountdownLoop();
         return;
@@ -1352,6 +1484,8 @@ function render(data, { navigate = true, effects = false } = {}) {
 
     if (game.id !== prevGameId) {
         latestHighlightWord = null;
+        selectedExcelWord = null;
+        selectedExcelRow = null;
         nearestWords = [];
         nearestKey = null;
         if (!(data.event && data.event.code === 'round_reset')) {
@@ -1361,6 +1495,8 @@ function render(data, { navigate = true, effects = false } = {}) {
 
     if ((((__oc8 = data.event) === null || __oc8 === void 0 ? void 0 : __oc8.word)) && ['guess', 'duplicate', 'won'].includes(data.event.code)) {
         latestHighlightWord = data.event.word;
+        selectedExcelWord = null;
+        selectedExcelRow = null;
     }
 
     if (navigate) changeScreen('game');
@@ -1843,6 +1979,12 @@ $('send').addEventListener('pointercancel', () => {
 
 $('guess-input').addEventListener('input', () => {
     storage.set(langKey('draft'), $('guess-input').value);
+    if ($('guess-input').value.trim()) {
+        selectedExcelWord = null;
+        selectedExcelRow = null;
+        document.querySelectorAll('#guesses-body tr.is-excel-selected').forEach(tr => tr.classList.remove('is-excel-selected'));
+    }
+    syncExcelChrome();
 });
 $('guess-input').addEventListener('compositionstart', () => { composing = true; });
 $('guess-input').addEventListener('compositionend', () => { composing = false; });
@@ -1919,19 +2061,65 @@ if ($('result-name-form')) {
 
 $('sound-enabled').checked = audio.enabled;
 $('sound-volume').value = Math.round(audio.volume * 100);
-$('dark-mode').checked = settings.darkMode;
 $('share-guesses').checked = settings.shareGuesses;
 $('share-time').checked = settings.shareTime;
 $('share-max').checked = settings.shareMax;
 
+for (const btn of document.querySelectorAll('[data-theme-option]')) {
+    btn.addEventListener('click', () => {
+        const nextMode = btn.dataset.themeOption;
+        if (nextMode !== 'dark' && nextMode !== 'light' && nextMode !== 'excel') return;
+        if (nextMode === settings.themeMode) return;
+        settings.themeMode = nextMode;
+        storage.set('themeMode', nextMode);
+        if (nextMode !== 'excel') storage.set('darkMode', nextMode === 'dark');
+        audio.unlock();
+        audio.play('click');
+        applyTheme();
+    });
+}
+
+const focusExcelInput = () => {
+    if (screen === 'game') {
+        const inputEl = $('guess-input');
+        if (inputEl) inputEl.focus({ preventScroll: true });
+    } else if ($('start')) {
+        $('start').click();
+    }
+};
+
+document.querySelectorAll('[data-excel-action]').forEach(el => {
+    el.addEventListener('click', () => {
+        const actionName = el.dataset.excelAction;
+        if (actionName === 'settings') openDialog('settings-dialog');
+        else if (actionName === 'ranking') showRanking();
+        else if (actionName === 'guide') showGuide();
+        else if (actionName === 'focus-input') focusExcelInput();
+        else if (actionName === 'home' || actionName === 'sheet-main') {
+            document.querySelectorAll('dialog[open]').forEach(d => d.close());
+            if (screen === 'game' && $('guess-input')) $('guess-input').focus({ preventScroll: true });
+        }
+    });
+});
+
+if ($('excel-search-trigger')) $('excel-search-trigger').addEventListener('click', focusExcelInput);
+if ($('excel-formula-display')) $('excel-formula-display').addEventListener('click', focusExcelInput);
+if ($('guesses-body')) {
+    $('guesses-body').addEventListener('click', event => {
+        if (!isExcelMode()) return;
+        const tr = event.target.closest('tr');
+        if (!tr || tr.classList.contains('delimiter') || !tr.dataset.word) return;
+        document.querySelectorAll('#guesses-body tr.is-excel-selected').forEach(node => node.classList.remove('is-excel-selected'));
+        tr.classList.add('is-excel-selected');
+        selectedExcelWord = tr.dataset.word;
+        selectedExcelRow = Number(tr.dataset.excelRow) || 5;
+        syncExcelChrome();
+    });
+}
+
 $('sound-enabled').addEventListener('change', () => audio.configure($('sound-enabled').checked));
 $('sound-volume').addEventListener('input', () => audio.configure($('sound-enabled').checked, Number($('sound-volume').value) / 100));
 $('sound-volume').addEventListener('change', () => audio.play('click'));
-$('dark-mode').addEventListener('change', () => {
-    settings.darkMode = $('dark-mode').checked;
-    storage.set('darkMode', settings.darkMode);
-    applyTheme();
-});
 $('share-guesses').addEventListener('change', () => {
     settings.shareGuesses = $('share-guesses').checked;
     storage.set('shareGuesses', settings.shareGuesses);

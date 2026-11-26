@@ -1,4 +1,4 @@
-import { storage } from './api.mjs?v=20261124-v16';
+import { storage } from './api.mjs?v=20261126-v17';
 
 const files = {
     click: 'ui-click.mp3',

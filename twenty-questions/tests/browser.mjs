@@ -104,7 +104,7 @@ try {
 
     // Verify Semantle title screen, zero SVG usage, no give-up/ranking-tabs/name-form/per-round arrows, single api.mjs version, countdown & previous answer display
     await page.goto(origin + '/twenty-questions/', { waitUntil: 'networkidle' });
-    assert.ok(apiMjsRequests.length === 1 && apiMjsRequests[0].endsWith('/twenty-questions/js/api.mjs?v=20261124-v16'), `Expected single versioned api.mjs request, got ${JSON.stringify(apiMjsRequests)}`);
+    assert.ok(apiMjsRequests.length === 1 && apiMjsRequests[0].endsWith('/twenty-questions/js/api.mjs?v=20261126-v17'), `Expected single versioned api.mjs request, got ${JSON.stringify(apiMjsRequests)}`);
     assert.equal(await page.locator('svg').count(), 0, 'Zero SVG elements expected');
     assert.equal(await page.locator('#vfx-stage, #vfx-edge-glow, #vfx-sprite-a, #vfx-sprite-b').count(), 4);
     assert.equal(await page.locator('#give-up, #give-up-dialog, #next-game, #resume, #name-form, .ranking-tab, #ranking-prev, #ranking-next').count(), 0);
@@ -440,10 +440,47 @@ try {
     await page.locator('#guide-dialog [data-close]').click();
 
     await page.locator('#settings-open').click();
-    await page.locator('#dark-mode').click();
+    await page.locator('#theme-light').click();
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'light');
-    await page.locator('#dark-mode').click();
+    await page.locator('#theme-excel').click();
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'excel');
+    assert.equal(await page.title(), '2026_Q4_어휘유사도_분석리포트.xlsx - Excel');
+    await page.screenshot({ path: path.join(output, 'ko-excel-settings-desktop.png') });
+    await page.locator('#settings-dialog [data-close]').click();
+
+    // Excel mode desktop verification: authentic Office workbook UI, zero VFX/haptics, live formula/status stats, persistence on reload
+    assert.equal(await page.locator('svg').count(), 0, 'Excel mode must keep zero SVG DOM nodes');
+    assert.ok(await page.locator('#excel-titlebar').isVisible());
+    assert.ok(await page.locator('#excel-ribbon-tabs').isVisible());
+    assert.ok(await page.locator('#excel-ribbon-body').isVisible());
+    assert.ok(await page.locator('#excel-formula-bar').isVisible());
+    assert.ok(await page.locator('#excel-col-letters').isVisible());
+    assert.ok(await page.locator('#excel-sheet-bar').isVisible());
+    assert.ok(await page.locator('#excel-status-bar').isVisible());
+    assert.equal(await page.locator('.observatory-bg').isVisible(), false);
+    assert.equal(await page.locator('.vfx-stage').isVisible(), false);
+    await page.screenshot({ path: path.join(output, 'ko-excel-won-desktop.png'), fullPage: true });
+
+    await page.reload({ waitUntil: 'networkidle' });
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'excel');
+    assert.equal(await page.title(), '2026_Q4_어휘유사도_분석리포트.xlsx - Excel');
+    await page.locator('#result-banner').waitFor({ state: 'visible' });
+    await page.locator('#home').click();
+    await page.locator('#title-screen').waitFor({ state: 'visible' });
+    await page.screenshot({ path: path.join(output, 'ko-excel-title-desktop.png'), fullPage: true });
+    await page.locator('#start').click();
+    await page.locator('#result-banner').waitFor({ state: 'visible' });
+
+    await page.locator('[data-excel-action="ranking"]').first().click();
+    await page.locator('#ranking-dialog').waitFor({ state: 'visible' });
+    await page.waitForFunction(() => document.querySelectorAll('#leaderboard tbody tr').length === 2);
+    await page.screenshot({ path: path.join(output, 'ko-excel-ranking-desktop.png') });
+    await page.locator('#ranking-dialog [data-close]').click();
+
+    await page.locator('#settings-open').click();
+    await page.locator('#theme-dark').click();
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
+    assert.match(await page.title(), /시맨틀/);
     await page.locator('#settings-dialog [data-close]').click();
 
     // Verify lobby button says '결과 보기' when Korean round is already won, then test live mid-game forced rollover at the 6-hour boundary
@@ -472,6 +509,69 @@ try {
     assert.equal(await page.locator('#nearest-title').textContent(), `‘${roundAnswer}’${expectedJosa} 의미가 가장 가까운 단어 1,000개`);
     await page.waitForFunction(() => document.querySelectorAll('#nearest-body tr').length === 1000);
     await page.locator('#nearest-dialog [data-close]').click();
+
+    // In Round #4: verify active gameplay in Excel mode (zero VFX/vibration, live formula bar, status bar Average/Count/Max, row selection)
+    await page.locator('#settings-open').click();
+    await page.locator('#theme-excel').click();
+    await page.locator('#settings-dialog [data-close]').click();
+    await page.evaluate(() => { window.__vibrateLog = []; });
+    await page.locator('#guess-input').fill('사람');
+    assert.equal(await page.locator('#excel-formula-display').textContent(), '사람');
+    await page.locator('#send').click();
+    await page.waitForFunction(() => document.querySelector('#guess-count-display')?.textContent === '1');
+    await page.locator('#guess-input').fill('행복');
+    await page.locator('#send').click();
+    await page.waitForFunction(() => document.querySelector('#guess-count-display')?.textContent === '2');
+    const excelState = await page.evaluate(() => ({
+        vibeLen: window.__vibrateLog.length,
+        vfxTier: document.getElementById('vfx-stage')?.dataset.tier || '',
+        avg: document.getElementById('excel-status-avg')?.textContent || '',
+        count: document.getElementById('excel-status-count')?.textContent || '',
+        max: document.getElementById('excel-status-max')?.textContent || '',
+    }));
+    assert.equal(excelState.vibeLen, 0, 'Excel mode must suppress haptic vibration');
+    assert.equal(excelState.vfxTier, '', 'Excel mode must suppress VFX stage tier');
+    assert.match(excelState.avg, /평균:/);
+    assert.equal(excelState.count, '개수: 2');
+    assert.match(excelState.max, /최대:/);
+    await page.locator('#guesses-body tr:not(.delimiter)').nth(1).click();
+    assert.match(await page.locator('#excel-name-box').textContent(), /^B\d+$/);
+    assert.match(await page.locator('#excel-formula-display').textContent(), /^=SIMILARITY\(/);
+    await page.screenshot({ path: path.join(output, 'ko-excel-game-desktop.png'), fullPage: true });
+
+    // Responsive Excel mode checks across mobile/tablet/landscape + English Excel mode
+    for (const [width, height, shot] of [[320, 568, null], [390, 844, 'ko-excel-game-mobile-390.png'], [768, 1024, 'ko-excel-game-tablet-768.png'], [844, 390, null]]) {
+        await page.setViewportSize({ width, height });
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Excel ${width}x${height}: horizontal overflow`);
+        const excelControls = await page.locator('#home,#prev-answer-btn,#current-solver-btn,#send,#ranking-open,#guide-open,#settings-open,.languages a,button[data-sort]').evaluateAll(
+            nodes => nodes.map(n => ({ id: n.id || n.dataset.sort || n.textContent.trim(), rect: n.getBoundingClientRect().toJSON() }))
+        );
+        for (const { id, rect } of excelControls) {
+            if (rect.width === 0 && rect.height === 0) continue;
+            assert.ok(rect.width >= 44 && rect.height >= 44, `Excel ${width}x${height}: ${id} touch target ${rect.width}x${rect.height}`);
+        }
+        if (shot) await page.screenshot({ path: path.join(output, shot), fullPage: true });
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await Promise.all([
+        page.waitForURL(/index-en/),
+        page.locator('.languages a[lang="en"]').click(),
+    ]);
+    await page.waitForLoadState('networkidle');
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'excel');
+    assert.equal(await page.title(), '2026_Q4_Semantic_Index_Report.xlsx - Excel');
+    await page.locator('#start').click();
+    await page.locator('#game-screen').waitFor({ state: 'visible' });
+    await page.screenshot({ path: path.join(output, 'en-excel-game-desktop.png'), fullPage: true });
+    await Promise.all([
+        page.waitForURL(url => url.pathname.endsWith('/twenty-questions/') || url.pathname.endsWith('/twenty-questions')),
+        page.locator('.languages a[lang="ko"]').click(),
+    ]);
+    await page.waitForLoadState('networkidle');
+    await page.locator('#game-screen').waitFor({ state: 'visible' });
+    await page.locator('#settings-open').click();
+    await page.locator('#theme-dark').click();
+    await page.locator('#settings-dialog [data-close]').click();
 
     // In Round #4: SpeedRunner solves fast (5s, 1 win) while AlphaSolver solves slower (40s -> total 2 wins, 20s best)
     // Verify 1-A ('최다 정답') vs 1-B ('최단 시간') toggle flips row order accurately
@@ -539,8 +639,15 @@ try {
         await page.locator('#start').click();
         await page.locator('#game-screen').waitFor({ state: 'visible' });
         if (width === 390 && height === 844) {
-            await page.locator('.starter-chip[data-word="사람"]').click();
-            await page.waitForFunction(() => Number(document.querySelector('#guess-count-display').textContent) >= 1);
+            if (await page.locator('.starter-chip[data-word="사람"]').isVisible()) {
+                await page.locator('.starter-chip[data-word="사람"]').click();
+                await page.waitForFunction(() => Number(document.querySelector('#guess-count-display').textContent) >= 1);
+            } else {
+                const beforeCount = Number(await page.locator('#guess-count-display').textContent());
+                await page.locator('#guess-input').fill('자연');
+                await page.locator('#send').click();
+                await page.waitForFunction(n => Number(document.querySelector('#guess-count-display').textContent) === n, beforeCount + 1);
+            }
             await page.screenshot({ path: path.join(output, 'ko-game-mobile-390.png'), fullPage: true });
         }
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width}x${height}: game overflow`);

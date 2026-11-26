@@ -45,11 +45,13 @@ for (const locale of ['ko', 'en']) {
   <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': ['VideoGame', 'WebApplication'], name: t.title, description: `${t.intro} ${t.rules}`, url, image: 'https://game.archerlab.dev/twenty-questions/assets/ui/semantle-card.png', inLanguage: locale, applicationCategory: 'GameApplication', operatingSystem: 'Any', gamePlatform: ['Web Browser', 'Mobile Browser'], playMode: 'SinglePlayer', isAccessibleForFree: true, dateModified: '2026-11-20', author: { '@type': 'Organization', name: 'ArcherLab', url: 'https://archerlab.dev' } })}</script>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=20261124-v16">
+  <script>try{var m=localStorage.getItem('archerlab_semantle_themeMode');if(m!=='dark'&&m!=='light'&&m!=='excel')m=localStorage.getItem('archerlab_semantle_darkMode')==='false'?'light':'dark';document.documentElement.dataset.theme=m;}catch(_e){}</script>
+  <link rel="stylesheet" href="css/style.css?v=20261126-v17">
+  <link rel="stylesheet" href="css/excel-mode.css?v=20261126-v17">
   <link rel="preload" as="image" href="assets/backgrounds/study-mobile-828.webp?v=4" media="(max-width: 768px) and (orientation: portrait)">
   <link rel="preload" as="image" href="assets/backgrounds/study-desktop-1440.webp?v=4" media="(min-width: 769px), (orientation: landscape)">
   <script src="../shared/browser-check.js?v=20261005-env-guard-v1"></script>
-  <script type="module" src="js/main.mjs?v=20261124-v16"></script>
+  <script type="module" src="js/main.mjs?v=20261126-v17"></script>
   <script src="../shared/immersive.js?v=20261028" defer></script>
 </head>
 <body data-no-fullscreen data-screen="title">
@@ -60,6 +62,30 @@ for (const locale of ['ko', 'en']) {
     <div id="vfx-sprite-a" class="vfx-sprite"></div>
     <div id="vfx-sprite-b" class="vfx-sprite"></div>
   </div>
+  <div class="excel-titlebar" id="excel-titlebar">
+    <div class="excel-title-left">
+      <span class="excel-app-icon" aria-hidden="true">X</span>
+      <span class="excel-autosave" aria-hidden="true"><span>${text('excel_autosave')}</span><i class="excel-autosave-toggle"></i></span>
+      <span class="excel-qat" aria-hidden="true"><i class="qat-save"></i><i class="qat-undo">↶</i><i class="qat-redo">↷</i></span>
+    </div>
+    <div class="excel-title-center">
+      <span class="excel-doc-name">${text('excel_workbook_name')}</span>
+      <span class="excel-saved-pill">${text('excel_saved_badge')}</span>
+      <button type="button" id="excel-search-trigger" class="excel-search-box">${text('excel_search_placeholder')}</button>
+    </div>
+    <div class="excel-win-controls" aria-hidden="true"><span>─</span><span>□</span><span class="is-close">×</span></div>
+  </div>
+  <div class="excel-ribbon-tabs" id="excel-ribbon-tabs">
+    <button type="button" class="excel-rtab is-file" data-excel-action="settings">${text('excel_tab_file')}</button>
+    <button type="button" class="excel-rtab is-active" data-excel-action="home">${text('excel_tab_home')}</button>
+    <span class="excel-rtab is-static" aria-hidden="true">${text('excel_tab_insert')}</span>
+    <span class="excel-rtab is-static" aria-hidden="true">${text('excel_tab_layout')}</span>
+    <button type="button" class="excel-rtab" data-excel-action="focus-input">${text('excel_tab_formulas')}</button>
+    <button type="button" class="excel-rtab" data-excel-action="ranking">${text('excel_tab_data')}</button>
+    <button type="button" class="excel-rtab" data-excel-action="guide">${text('excel_tab_review')}</button>
+    <button type="button" class="excel-rtab" data-excel-action="settings">${text('excel_tab_view')}</button>
+    <button type="button" class="excel-rtab" data-excel-action="guide">${text('excel_tab_help')}</button>
+  </div>
   <header class="site-header">
     <a class="brand" href="../" aria-label="${text('portal')}">
       <img src="assets/ui/compass-chronograph-160.webp?v=4" srcset="assets/ui/compass-chronograph-160.webp?v=4 1x, assets/ui/compass-chronograph-320.webp?v=4 2x" alt="" width="30" height="37" decoding="async">
@@ -67,11 +93,92 @@ for (const locale of ['ko', 'en']) {
     </a>
     <div class="header-controls">
       <nav class="languages" aria-label="${text('language')}"><a href="./" lang="ko" ${!en ? 'aria-current="page"' : ''}>한국어</a><span aria-hidden="true">/</span><a href="index-en" lang="en" ${en ? 'aria-current="page"' : ''}>English</a></nav>
-      <button class="icon-button" id="ranking-open" aria-label="${text('ranking')}">${skinIcon('icon-trophy')}</button>
-      <button class="icon-button" id="guide-open" aria-label="${text('guide')}">${skinIcon('icon-guide')}</button>
-      <button class="icon-button" id="settings-open" aria-label="${text('settings')}">${skinIcon('icon-settings')}</button>
+      <button class="icon-button" id="ranking-open" aria-label="${text('ranking')}">${skinIcon('icon-trophy')}<span class="excel-btn-label">${text('ranking')}</span></button>
+      <button class="icon-button" id="guide-open" aria-label="${text('guide')}">${skinIcon('icon-guide')}<span class="excel-btn-label">${text('guide')}</span></button>
+      <button class="icon-button" id="settings-open" aria-label="${text('settings')}">${skinIcon('icon-settings')}<span class="excel-btn-label">${text('settings')}</span></button>
     </div>
   </header>
+  <div class="excel-ribbon-body" id="excel-ribbon-body" aria-hidden="true">
+    <div class="excel-rgroup">
+      <div class="excel-rgroup-items">
+        <span class="excel-rtool is-tall"><i class="r-ico-paste"></i><span>${text('excel_paste')}</span></span>
+        <div class="excel-rcol">
+          <span class="excel-rtool-sm">✂ ${text('excel_cut')}</span>
+          <span class="excel-rtool-sm">❐ ${text('excel_copy')}</span>
+        </div>
+      </div>
+      <span class="excel-rgroup-label">${text('excel_grp_clipboard')}</span>
+    </div>
+    <div class="excel-rgroup">
+      <div class="excel-rgroup-items excel-rstack">
+        <div class="excel-rrow">
+          <span class="excel-rcombo is-font">${text('excel_font_name')} <i>▾</i></span>
+          <span class="excel-rcombo is-size">11 <i>▾</i></span>
+        </div>
+        <div class="excel-rrow">
+          <span class="excel-rbtn"><strong>B</strong></span>
+          <span class="excel-rbtn"><em>I</em></span>
+          <span class="excel-rbtn"><u>U</u></span>
+          <span class="excel-rsep"></span>
+          <span class="excel-rbtn">⊞</span>
+          <span class="excel-rbtn is-color">A<i></i></span>
+        </div>
+      </div>
+      <span class="excel-rgroup-label">${text('excel_grp_font')}</span>
+    </div>
+    <div class="excel-rgroup">
+      <div class="excel-rgroup-items excel-rstack">
+        <div class="excel-rrow">
+          <span class="excel-rbtn">≡</span>
+          <span class="excel-rbtn">≣</span>
+          <span class="excel-rsep"></span>
+          <span class="excel-rtool-sm">${text('excel_wrap_text')}</span>
+        </div>
+        <div class="excel-rrow">
+          <span class="excel-rbtn">⇕</span>
+          <span class="excel-rsep"></span>
+          <span class="excel-rtool-sm">${text('excel_merge_center')}</span>
+        </div>
+      </div>
+      <span class="excel-rgroup-label">${text('excel_grp_align')}</span>
+    </div>
+    <div class="excel-rgroup">
+      <div class="excel-rgroup-items excel-rstack">
+        <div class="excel-rrow"><span class="excel-rcombo is-num">${text('excel_num_general')} <i>▾</i></span></div>
+        <div class="excel-rrow">
+          <span class="excel-rbtn">₩</span>
+          <span class="excel-rbtn">%</span>
+          <span class="excel-rbtn">,</span>
+          <span class="excel-rbtn">.00</span>
+        </div>
+      </div>
+      <span class="excel-rgroup-label">${text('excel_grp_number')}</span>
+    </div>
+    <div class="excel-rgroup">
+      <div class="excel-rgroup-items">
+        <span class="excel-rtool is-pill"><i class="r-ico-cf"></i><span>${text('excel_cond_format')}</span></span>
+        <span class="excel-rtool is-pill"><i class="r-ico-tbl"></i><span>${text('excel_table_format')}</span></span>
+      </div>
+      <span class="excel-rgroup-label">${text('excel_grp_styles')}</span>
+    </div>
+  </div>
+  <div class="excel-formula-bar" id="excel-formula-bar">
+    <div class="excel-name-box" id="excel-name-box">B3</div>
+    <div class="excel-fx-controls" aria-hidden="true"><span>✕</span><span>✓</span><span class="excel-fx-sym">fx</span></div>
+    <button type="button" class="excel-formula-display" id="excel-formula-display">${text('excel_formula_idle')}</button>
+  </div>
+  <div class="excel-col-letters" id="excel-col-letters" aria-hidden="true">
+    <span class="excel-corner"></span>
+    <span class="excel-col-head is-col-a">A</span>
+    <span class="excel-col-head is-col-b is-active">B</span>
+    <span class="excel-col-head is-col-c">C</span>
+    <span class="excel-col-head is-col-d">D</span>
+    <span class="excel-col-head is-col-e">E</span>
+    <span class="excel-col-head is-col-f">F</span>
+    <span class="excel-col-head is-col-g">G</span>
+    <span class="excel-col-head is-col-h">H</span>
+    <span class="excel-col-head is-col-i">I</span>
+  </div>
   <main>
     <section id="title-screen" class="title-screen" aria-labelledby="game-title">
       <div class="hero-copy">
@@ -181,7 +288,7 @@ for (const locale of ['ko', 'en']) {
         </div>
       </div>
       <div class="composer-wrap">
-        <form id="guess-form" class="composer">
+        <form id="guess-form" class="composer" data-excel-input-tag="${text('excel_input_cell_tag')}">
           <label class="sr-only" for="guess-input">${text('guess_placeholder')}</label>
           <input id="guess-input" type="text" maxlength="32" placeholder="${text('guess_placeholder')}" autocomplete="off" enterkeyhint="send">
           <button id="send" class="primary-btn" type="submit"><span>${text('send')}</span></button>
@@ -206,7 +313,7 @@ for (const locale of ['ko', 'en']) {
           <table id="guesses-table" class="guesses-table" hidden>
             <thead>
               <tr>
-                <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-sort="guessNo">${text('col_order')}</button></th>
+                <th scope="col" aria-sort="none" data-excel-row="4"><button type="button" class="sort-btn" data-sort="guessNo">${text('col_order')}</button></th>
                 <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-sort="word">${text('col_word')}</button></th>
                 <th scope="col" aria-sort="descending"><button type="button" class="sort-btn is-sorted" data-sort="similarity" data-dir="desc">${text('col_sim')}</button></th>
                 <th scope="col">${text('col_rank')}</th>
@@ -226,6 +333,29 @@ for (const locale of ['ko', 'en']) {
     </section>
   </main>
   <div id="notice" class="notice" role="status" hidden></div>
+  <div class="excel-sheet-bar" id="excel-sheet-bar">
+    <div class="excel-sheet-arrows" aria-hidden="true"><span>◀</span><span>▶</span></div>
+    <div class="excel-sheet-tabs">
+      <button type="button" class="excel-sheet-tab is-active" data-excel-action="sheet-main">${text('excel_sheet_main')}</button>
+      <button type="button" class="excel-sheet-tab" data-excel-action="ranking">${text('excel_sheet_ranking')}</button>
+      <button type="button" class="excel-sheet-tab" data-excel-action="guide">${text('excel_sheet_guide')}</button>
+      <button type="button" class="excel-sheet-tab" data-excel-action="settings">${text('excel_sheet_settings')}</button>
+      <span class="excel-sheet-add" aria-hidden="true">＋</span>
+    </div>
+    <div class="excel-hscroll" aria-hidden="true"><span>◀</span><div class="excel-hscroll-track"><i class="excel-hscroll-thumb"></i></div><span>▶</span></div>
+  </div>
+  <div class="excel-status-bar" id="excel-status-bar">
+    <div class="excel-status-left">
+      <span id="excel-status-state">${text('excel_status_ready')}</span>
+    </div>
+    <div class="excel-status-right">
+      <span id="excel-status-avg" class="excel-status-stat"></span>
+      <span id="excel-status-count" class="excel-status-stat"></span>
+      <span id="excel-status-max" class="excel-status-stat"></span>
+      <span class="excel-status-views" aria-hidden="true"><span>▦</span><span>▤</span><span>▥</span></span>
+      <span class="excel-status-zoom" aria-hidden="true"><span>−</span><i class="excel-zoom-track"></i><span>+</span><span>100%</span></span>
+    </div>
+  </div>
   <footer class="site-footer"><a href="../">ArcherLab Games</a></footer>
 
   <dialog id="ranking-dialog" class="game-dialog crafted-frame" aria-labelledby="ranking-title">
@@ -279,7 +409,15 @@ for (const locale of ['ko', 'en']) {
   <dialog id="settings-dialog" class="game-dialog crafted-frame" aria-labelledby="settings-title">
     <button class="dialog-close icon-button" data-close aria-label="${text('close')}">✕</button>
     <h2 id="settings-title">${text('settings')}</h2>
-    <label class="setting-row" for="dark-mode"><span>${text('dark_mode')}</span><input type="checkbox" id="dark-mode" checked></label>
+    <div class="setting-group">
+      <span id="display-mode-label" class="setting-group-label">${text('display_mode')}</span>
+      <div class="mode-selector" role="group" aria-labelledby="display-mode-label">
+        <button type="button" id="theme-dark" class="mode-option-btn is-active" data-theme-option="dark" aria-pressed="true">${text('mode_dark')}</button>
+        <button type="button" id="theme-light" class="mode-option-btn" data-theme-option="light" aria-pressed="false">${text('mode_light')}</button>
+        <button type="button" id="theme-excel" class="mode-option-btn" data-theme-option="excel" aria-pressed="false">${text('mode_excel')}</button>
+      </div>
+      <p id="mode-excel-hint" class="setting-hint" hidden>${text('mode_excel_hint')}</p>
+    </div>
     <label class="setting-row" for="sound-enabled"><span>${text('sound')}</span><input type="checkbox" id="sound-enabled" checked></label>
     <label class="setting-row" for="sound-volume">${text('volume')}</label>
     <input type="range" id="sound-volume" min="0" max="100" value="45">
