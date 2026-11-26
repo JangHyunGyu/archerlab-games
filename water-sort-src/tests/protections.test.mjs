@@ -11,7 +11,7 @@ import { recordPour, pourVerdict, MAX_FAST_STREAK, REGULARITY_SAMPLE, FAST_GAP_M
 import { pourDuration, POUR_PACE } from '../lib/challenge-rules.ts';
 import { solve } from '../lib/game.ts';
 
-const MIGRATIONS = ['water-sort-0001-schema.sql', 'water-sort-0002-start-rate-limit.sql'].map(name => readFileSync(new URL(`../../migrations/${name}`, import.meta.url), 'utf8'));
+const MIGRATIONS = ['water-sort-0001-schema.sql', 'water-sort-0002-start-rate-limit.sql', 'water-sort-0003-player-key.sql'].map(name => readFileSync(new URL(`../../migrations/${name}`, import.meta.url), 'utf8'));
 class TestDatabase {
   database = new DatabaseSync(':memory:');
   queries = [];

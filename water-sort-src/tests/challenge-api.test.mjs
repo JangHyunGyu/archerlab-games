@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { invalidateLeaderboard } from '../worker/leaderboard-cache.ts';
 
 // Production applies these files once with `wrangler d1 execute`; the Worker itself never runs DDL.
-const MIGRATIONS = ['water-sort-0001-schema.sql', 'water-sort-0002-start-rate-limit.sql'].map(name => readFileSync(new URL(`../../migrations/${name}`, import.meta.url), 'utf8'));
+const MIGRATIONS = ['water-sort-0001-schema.sql', 'water-sort-0002-start-rate-limit.sql', 'water-sort-0003-player-key.sql'].map(name => readFileSync(new URL(`../../migrations/${name}`, import.meta.url), 'utf8'));
 
 // Actual SQLite executes the production SQL, including compare-and-swap writes.
 class TestDatabase {
@@ -458,5 +458,42 @@ test('an old run never gets the shorter lock: an early pour is ignored, not flag
     now += 470;
     const onTime = await send({ type: 'pour', ...auth, version: first.run.version, from: 0, to: 3 });
     assert.equal(onTime.run.moves, 2);
+  } finally { Date.now = originalNow; db.database.close(); }
+});
+
+test('same-device nickname change renames prior best record while keeping higher cleared/score and protecting legacy rows', async () => {
+  const db = new TestDatabase(), originalNow = Date.now;
+  let now = 1800000000000; Date.now = () => now;
+  const send = async body => {
+    const response = await challengeApi(new Request('https://game.test/api/challenge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), db);
+    return { status: response.status, ...await response.json() };
+  };
+  try {
+    // Legacy row without player_key must never be hijacked by another device registering that nickname.
+    db.database.prepare("INSERT INTO water_sort_runs (id, token, data, version, nickname, cleared, score, created_at) VALUES ('legacy-1', 't', '{\"rules\":2}', 1, '고독한늑대', 50, 55000, 1)").run();
+
+    const finishRun = async (cleared, score, nickname, playerToken) => {
+      const started = await send({ type: 'start' });
+      const auth = { id: started.run.id, token: started.token };
+      const ended = { ...started.run, status: 'ended', endReason: 'timeout', cleared, level: cleared + 1, score, history: [] };
+      db.database.prepare('UPDATE water_sort_runs SET data = ? WHERE id = ?').run(JSON.stringify(ended), auth.id);
+      now = started.run.deadline + 1;
+      return send({ type: 'register', ...auth, version: started.run.version, nickname, playerToken });
+    };
+
+    const devA = 'a'.repeat(64);
+    const devB = 'b'.repeat(64);
+    assert.equal((await finishRun(20, 22000, '고독한늑대', devA)).status, 200);
+    // Same device submits lower stage/score with new nickname -> keeps 20/22000 and renames to 고독한여자.
+    assert.equal((await finishRun(8, 8500, '고독한여자', devA)).status, 200);
+    // Different device registers another nickname; legacy row without player_key stays untouched.
+    assert.equal((await finishRun(10, 10500, '다른기기', devB)).status, 200);
+
+    const rows = (await (await challengeApi(new Request('https://game.test/api/challenge'), db)).json()).rows;
+    assert.deepEqual(rows.map(r => [r.nickname, r.cleared, r.score]), [
+      ['고독한늑대', 50, 55000],
+      ['고독한여자', 20, 22000],
+      ['다른기기', 10, 10500],
+    ]);
   } finally { Date.now = originalNow; db.database.close(); }
 });

@@ -364,3 +364,32 @@ test('GET /rankings caches briefly, invalidates on submit, and serves stale cach
     Date.now = origNow;
   }
 });
+
+test('same-device nickname change renames prior high score, keeps best_score, and protects legacy null player_key rows', async () => {
+  const f = fixture('lumen-shift');
+  await server.initDB(f.db);
+  // Legacy row without player_key must stay untouched.
+  f.db.sql.prepare("INSERT INTO rankings (game_id, player_name, score) VALUES ('lumen-shift', '고독한늑대', 9999)").run();
+
+  const submitForDevice = async (playerToken, delta, playerName) => {
+    const sid = crypto.randomUUID();
+    const box = new server.RankingDelivery({ storage: storage() }, { DB: f.db });
+    const cmd = (path, data = {}) => ({ id: crypto.randomUUID(), path, body: { game_id: 'lumen-shift', ...(path !== '/score-sessions' ? { session_id: sid } : {}), ...data }, after: null });
+    await box.accept(sid, 'lumen-shift', [cmd('/score-sessions')], {});
+    await box.accept(sid, 'lumen-shift', [cmd('/score-events', { events: [{ type: 'clear', lines: delta === 500 ? 3 : 1, level: 1, combo: 1, delta }] })], {});
+    return (await box.accept(sid, 'lumen-shift', [cmd('/rankings', { player_name: playerName, score: delta, player_token: playerToken })], {}))[0].data;
+  };
+
+  const tokenA = '1'.repeat(64);
+  const first = await submitForDevice(tokenA, 500, '고독한늑대');
+  assert.equal(first.score, 500);
+  const second = await submitForDevice(tokenA, 100, '고독한여자');
+  assert.equal(second.best_score, 500, 'best_score reflects existing higher record under new nickname');
+
+  const res = await server.api.fetch(new Request('https://api/rankings?game_id=lumen-shift&limit=20'), { DB: f.db });
+  const body = await res.json();
+  assert.deepEqual(body.rankings.map((r) => [r.player_name, r.score]), [
+    ['고독한늑대', 9999],
+    ['고독한여자', 500],
+  ]);
+});

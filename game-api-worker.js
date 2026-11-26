@@ -2466,6 +2466,13 @@ const initializedDbs = new WeakMap();
 const rankingsCacheByDb = new WeakMap();
 const RANKINGS_CACHE_TTL_MS = 10000;
 const RANKINGS_STALE_MAX_MS = 10 * 60 * 1000;
+const RANKING_PLAYER_TOKEN_RE = /^[a-f0-9]{64}$/;
+
+async function resolveRankingPlayerKey(body) {
+    const rawToken = String(body?.player_token || body?.extra_data?.player_token || '').trim().toLowerCase();
+    if (!RANKING_PLAYER_TOKEN_RE.test(rawToken)) return null;
+    return 'd:' + (await sha256Hex('archer-ranking-player-v1:' + rawToken));
+}
 
 function isTransientD1Error(err) {
     const msg = String(err?.message || err || '');
@@ -2526,6 +2533,7 @@ async function initDB(db) {
                 player_name TEXT NOT NULL,
                 score INTEGER NOT NULL,
                 extra_data TEXT,
+                player_key TEXT,
                 created_at TEXT DEFAULT (datetime('now'))
             )`),
             db.prepare(`CREATE INDEX IF NOT EXISTS idx_rankings_game_score ON rankings(game_id, score DESC)`),
@@ -2561,6 +2569,12 @@ async function initDB(db) {
         if (!hasStateJson) {
             await db.prepare('ALTER TABLE ranking_sessions ADD COLUMN state_json TEXT').run().catch(() => null);
         }
+        const rankingColumns = await db.prepare('PRAGMA table_info(rankings)').all().catch(() => null);
+        const hasPlayerKey = rankingColumns?.results?.some((column) => column.name === 'player_key');
+        if (!hasPlayerKey) {
+            await db.prepare('ALTER TABLE rankings ADD COLUMN player_key TEXT').run().catch(() => null);
+        }
+        await db.prepare('CREATE INDEX IF NOT EXISTS idx_rankings_game_player_key ON rankings(game_id, player_key) WHERE player_key IS NOT NULL').run().catch(() => null);
     })().catch((error) => {
         initializedDbs.delete(db);
         throw error;
@@ -2610,7 +2624,9 @@ async function submitRanking(db, body) {
     }
     scoreForInsert = verified.score;
     verifiedSessionId = verified.sessionId;
-    const baseExtra = isPlainObject(extra_data) ? extra_data : (isPlainObject(body.extra) ? body.extra : {});
+    const playerKey = await resolveRankingPlayerKey(body);
+    const baseExtra = isPlainObject(extra_data) ? { ...extra_data } : (isPlainObject(body.extra) ? { ...body.extra } : {});
+    delete baseExtra.player_token;
     extra_data = {
         ...baseExtra,
         session_id: verified.sessionId,
@@ -2643,9 +2659,13 @@ async function submitRanking(db, body) {
     await db.prepare(`INSERT INTO ranking_submissions (session_id, game_id, player_name, score, extra_data)
         VALUES (?, ?, ?, ?, ?)`)
         .bind(verifiedSessionId, game_id, name, scoreForInsert, extraStr).run();
-    // Keep every verified run. GET /rankings selects each name's best score.
-    await db.prepare('INSERT INTO rankings (game_id, player_name, score, extra_data) VALUES (?, ?, ?, ?)')
-        .bind(game_id, name, scoreForInsert, extraStr).run();
+    // Keep every verified run. GET /rankings selects each device/name's best score.
+    await db.prepare('INSERT INTO rankings (game_id, player_name, score, extra_data, player_key) VALUES (?, ?, ?, ?, ?)')
+        .bind(game_id, name, scoreForInsert, extraStr, playerKey).run();
+    if (playerKey) {
+        await db.prepare('UPDATE rankings SET player_name = ? WHERE game_id = ? AND player_key = ?')
+            .bind(name, game_id, playerKey).run();
+    }
     invalidateRankingsCache(db, game_id);
     const saveResult = { saved_score: scoreForInsert };
     const savedScore = Number(saveResult?.saved_score ?? scoreForInsert);
@@ -2727,8 +2747,7 @@ export default {
                 try {
                     const result = await runWithD1Retry(() => (gameId === SCHOOL_ZOMBIE_GAME_ID
                         ? env.DB.prepare(`
-                            SELECT player_name, score, extra_data, created_at
-                            FROM (
+                            WITH per_player AS (
                                 SELECT
                                     player_name,
                                     score,
@@ -2737,19 +2756,49 @@ export default {
                                     id,
                                     ${SCHOOL_ZOMBIE_KILLS_SQL} AS sort_kills,
                                     ROW_NUMBER() OVER (
-                                        PARTITION BY LOWER(TRIM(player_name))
+                                        PARTITION BY COALESCE(player_key, 'n:' || LOWER(TRIM(player_name)))
                                         ORDER BY score DESC, ${SCHOOL_ZOMBIE_KILLS_SQL} DESC, created_at ASC, id ASC
-                                    ) AS name_rank
+                                    ) AS player_rank
                                 FROM rankings
                                 WHERE game_id = ?
+                            ),
+                            per_name AS (
+                                SELECT
+                                    player_name,
+                                    score,
+                                    extra_data,
+                                    created_at,
+                                    id,
+                                    sort_kills,
+                                    ROW_NUMBER() OVER (
+                                        PARTITION BY LOWER(TRIM(player_name))
+                                        ORDER BY score DESC, sort_kills DESC, created_at ASC, id ASC
+                                    ) AS name_rank
+                                FROM per_player
+                                WHERE player_rank = 1
                             )
+                            SELECT player_name, score, extra_data, created_at
+                            FROM per_name
                             WHERE name_rank = 1
                             ORDER BY score DESC, sort_kills DESC, created_at ASC, id ASC
                             LIMIT ?
                         `).bind(gameId, limit).all()
                         : env.DB.prepare(`
-                            SELECT player_name, score, extra_data, created_at
-                            FROM (
+                            WITH per_player AS (
+                                SELECT
+                                    player_name,
+                                    score,
+                                    extra_data,
+                                    created_at,
+                                    id,
+                                    ROW_NUMBER() OVER (
+                                        PARTITION BY COALESCE(player_key, 'n:' || LOWER(TRIM(player_name)))
+                                        ORDER BY score DESC, created_at ASC, id ASC
+                                    ) AS player_rank
+                                FROM rankings
+                                WHERE game_id = ?
+                            ),
+                            per_name AS (
                                 SELECT
                                     player_name,
                                     score,
@@ -2760,9 +2809,11 @@ export default {
                                         PARTITION BY LOWER(TRIM(player_name))
                                         ORDER BY score DESC, created_at ASC, id ASC
                                     ) AS name_rank
-                                FROM rankings
-                                WHERE game_id = ?
+                                FROM per_player
+                                WHERE player_rank = 1
                             )
+                            SELECT player_name, score, extra_data, created_at
+                            FROM per_name
                             WHERE name_rank = 1
                             ORDER BY score DESC, created_at ASC, id ASC
                             LIMIT ?
@@ -2860,4 +2911,4 @@ export default {
     },
 };
 
-export { initDB, createScoreSession, recordScoreEvents, submitRanking, invalidateRankingsCache, getProtectedGameKind, jsonResponse, bankSchoolZombieRunCoins };
+export { initDB, createScoreSession, recordScoreEvents, submitRanking, invalidateRankingsCache, resolveRankingPlayerKey, getProtectedGameKind, jsonResponse, bankSchoolZombieRunCoins };

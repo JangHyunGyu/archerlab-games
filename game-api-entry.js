@@ -2,7 +2,7 @@ import { waterSortRoute } from './water-sort-src/worker/route.ts';
 import { cleanupStaleRuns } from './water-sort-src/worker/cleanup.ts';
 import { twentyQuestionsRoute, handleRoomRequest } from './server/twenty-questions/service.mjs';
 import { DurableObject } from 'cloudflare:workers';
-import api, { initDB, createScoreSession, recordScoreEvents, submitRanking, invalidateRankingsCache, getProtectedGameKind, jsonResponse, bankSchoolZombieRunCoins } from './game-api-worker.js';
+import api, { initDB, createScoreSession, recordScoreEvents, submitRanking, invalidateRankingsCache, resolveRankingPlayerKey, getProtectedGameKind, jsonResponse, bankSchoolZombieRunCoins } from './game-api-worker.js';
 
 const BANK_RUN_PATH = '/school-zombie/profile/bank-run';
 const PATHS = new Set(['/score-sessions', '/score-events', '/rankings', BANK_RUN_PATH]);
@@ -23,10 +23,14 @@ function canonical(value) {
 async function rankingPosition(db, body) {
     const kills = body.game_id === 'school-zombie-defense'
         ? ", CAST(COALESCE(CASE WHEN json_valid(extra_data) THEN json_extract(extra_data, '$.kills') END, 0) AS INTEGER) DESC" : '';
-    return db.prepare(`WITH per_name AS (
+    return db.prepare(`WITH per_player AS (
+        SELECT player_name, score, extra_data, created_at, id,
+            ROW_NUMBER() OVER (PARTITION BY COALESCE(player_key, 'n:' || LOWER(TRIM(player_name))) ORDER BY score DESC${kills}, created_at, id) AS player_rank
+        FROM rankings WHERE game_id = ?
+    ), per_name AS (
         SELECT player_name, score, extra_data, created_at, id,
             ROW_NUMBER() OVER (PARTITION BY LOWER(TRIM(player_name)) ORDER BY score DESC${kills}, created_at, id) AS name_rank
-        FROM rankings WHERE game_id = ?
+        FROM per_player WHERE player_rank = 1
     ), ordered AS (
         SELECT player_name, score, ROW_NUMBER() OVER (ORDER BY score DESC${kills}, created_at, id) AS rank
         FROM per_name WHERE name_rank = 1

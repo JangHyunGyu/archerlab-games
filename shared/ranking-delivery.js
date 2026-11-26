@@ -4,6 +4,63 @@
     var API = 'https://game-api.yama5993.workers.dev';
     var BANK_RUN_PATH = '/school-zombie/profile/bank-run';
     var PREFIX = 'archer-ranking-outbox-v1:';
+    var PLAYER_TOKEN_KEY = 'archer-ranking-player-v1';
+    var PLAYER_COOKIE_KEY = 'archer_rp_v1';
+    var PLAYER_TOKEN_PATTERN = /^[a-f0-9]{64}$/;
+    var memoryPlayerToken = null;
+    function readCookieToken() {
+        try {
+            var cookies = global.document && typeof global.document.cookie === 'string' ? global.document.cookie : '';
+            if (!cookies) return null;
+            var parts = cookies.split(';');
+            for (var i = 0; i < parts.length; i += 1) {
+                var item = parts[i].trim();
+                if (item.indexOf(PLAYER_COOKIE_KEY + '=') === 0) {
+                    var candidate = item.slice(PLAYER_COOKIE_KEY.length + 1).trim();
+                    if (PLAYER_TOKEN_PATTERN.test(candidate)) return candidate;
+                }
+            }
+        } catch (_) {}
+        return null;
+    }
+    function writeCookieToken(tok) {
+        try {
+            if (global.document && typeof global.document.cookie === 'string') {
+                global.document.cookie = PLAYER_COOKIE_KEY + '=' + tok + '; Path=/; Max-Age=31536000; SameSite=Lax';
+            }
+        } catch (_) {}
+    }
+    function getPlayerToken() {
+        // Headless unit tests without DOM assert exact outbox localStorage counts, so only touch persistent storage in browser/DOM contexts.
+        if (!global.document) return null;
+        if (PLAYER_TOKEN_PATTERN.test(memoryPlayerToken || '')) return memoryPlayerToken;
+        try {
+            var saved = global.localStorage && global.localStorage.getItem(PLAYER_TOKEN_KEY);
+            if (PLAYER_TOKEN_PATTERN.test(saved || '')) {
+                memoryPlayerToken = saved;
+                writeCookieToken(saved);
+                return saved;
+            }
+        } catch (_) {}
+        var fromCookie = readCookieToken();
+        if (fromCookie) {
+            memoryPlayerToken = fromCookie;
+            try { if (global.localStorage) global.localStorage.setItem(PLAYER_TOKEN_KEY, fromCookie); } catch (_) {}
+            return fromCookie;
+        }
+        try {
+            if (!global.crypto || typeof global.crypto.getRandomValues !== 'function') return null;
+            var bytes = new Uint8Array(32);
+            global.crypto.getRandomValues(bytes);
+            var generated = Array.from(bytes, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+            memoryPlayerToken = generated;
+            try { if (global.localStorage) global.localStorage.setItem(PLAYER_TOKEN_KEY, generated); } catch (_) {}
+            writeCookieToken(generated);
+            return generated;
+        } catch (_) {
+            return null;
+        }
+    }
     var originalFetch = global.fetch.bind(global);
     var entries = new Map();
     var sessions = new Map();
@@ -373,7 +430,13 @@
         if (!entry.localSaved && !entry.accepted) throw new Error('기록을 보관하지 못했습니다. 이 화면을 닫지 말고 다시 시도해 주세요.');
         return { pending: true, accepted: entry.accepted, request_id: entry.id, player_name: body.player_name, score: body.score };
     }
-    function submit(body) { return durableMutation('/rankings', body, 'submit_'); }
+    function submit(body) {
+        var payload = body && !body.player_token ? (function () {
+            var pt = getPlayerToken();
+            return pt ? Object.assign({}, body, { player_token: pt }) : body;
+        }()) : body;
+        return durableMutation('/rankings', payload, 'submit_');
+    }
     function bankRun(body) { return durableMutation(BANK_RUN_PATH, body, 'bank_'); }
     var READ_RETRY_DELAYS_MS = [350, 900];
     var READ_ATTEMPT_TIMEOUT_MS = 9000;

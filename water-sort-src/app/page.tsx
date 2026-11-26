@@ -21,6 +21,25 @@ import type { InspectionResult } from '../lib/dead-end.worker';
 
 const API = import.meta.env.DEV ? '/water-sort/api/challenge' : 'https://game-api.yama5993.workers.dev/water-sort/challenge';
 const SESSION = 'water-sort-challenge-v2';
+const PLAYER_TOKEN_KEY = 'water-sort-player-v1';
+const PLAYER_TOKEN_PATTERN = /^[a-f0-9]{64}$/;
+let memoryPlayerToken: string | null = null;
+function getPlayerToken(): string | null {
+  if (PLAYER_TOKEN_PATTERN.test(memoryPlayerToken ?? '')) return memoryPlayerToken;
+  try {
+    const saved = localStorage.getItem(PLAYER_TOKEN_KEY);
+    if (PLAYER_TOKEN_PATTERN.test(saved ?? '')) { memoryPlayerToken = saved; return saved; }
+  } catch { /* Continue with cookie/in-memory token. */ }
+  try {
+    if (typeof crypto === 'undefined' || typeof crypto.getRandomValues !== 'function') return null;
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    const generated = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+    memoryPlayerToken = generated;
+    try { localStorage.setItem(PLAYER_TOKEN_KEY, generated); } catch { /* Keep in memory for this session. */ }
+    return generated;
+  } catch { return null; }
+}
 type Credentials = { id: string; token: string };
 // Only ApiError text reaches the screen. Network, JSON and runtime failures use the generic copy.
 const API_MESSAGES: Record<string, string> = { nickname: c.nicknameError, rate_limited: c.rateLimited, bot: c.botBlocked, conflict: c.syncChanged, missing: c.sessionMissing, legacy: c.sessionMissing, unavailable: c.unavailable, origin: c.originError };
@@ -134,8 +153,9 @@ export default function Home() {
       let response: Response;
       // Bot check only where a run begins or a score is submitted. No key configured: no token, no delay.
       const human = type === 'start' || type === 'register' ? await turnstileToken(API, type) : undefined;
+      const playerToken = type === 'register' ? getPlayerToken() : null;
       if (epoch !== requestEpoch.current) throw abandoned();
-      try { response = await fetch(API, { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type, ...credentials.current, version: runRef.current?.version, ...extra, ...(human ? { turnstile: human } : {}) }) }); }
+      try { response = await fetch(API, { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type, ...credentials.current, version: runRef.current?.version, ...extra, ...(human ? { turnstile: human } : {}), ...(playerToken ? { playerToken } : {}) }) }); }
       catch { throw epoch !== requestEpoch.current || controller.signal.aborted ? abandoned() : new ApiError('network'); }
       // A proxy error page is not JSON; keep the status and never surface the parser's message.
       const data = await response.json().catch(() => null) as { error?: string; run?: RunView; token?: string } | null;

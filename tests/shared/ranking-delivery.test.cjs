@@ -378,3 +378,39 @@ test('GET /rankings and /water-sort/challenge retry transient 503/network errors
   await assert.rejects(pending, { name: 'AbortError' });
   assert.equal(calls.length, 6, 'caller abort stops retries immediately');
 });
+
+test('browser client persists device player_token across reloads and renames prior higher record when submitting lower score', async () => {
+  const e = environment();
+  const local = browserStorage();
+  const makeBrowserClient = () => {
+    const timers = new Map(); let next = 0;
+    const context = {
+      fetch: e.network.fetch.bind(e.network), localStorage: local, document: { cookie: '', addEventListener() {} },
+      crypto, Request, Response, URL, AbortController, DOMException, console,
+      navigator: { onLine: true }, location: { href: 'https://game.archerlab.dev/lumen-shift/' },
+      setTimeout(callback, delay) { const id = ++next; timers.set(id, { callback, delay }); return id; },
+      clearTimeout(id) { timers.delete(id); },
+    };
+    context.window = context; context.globalThis = context;
+    vm.runInNewContext(source, context);
+    return { window: context, ranking: context.ArcherRanking };
+  };
+
+  const c1 = makeBrowserClient();
+  const s1 = await start(c1);
+  e.db.sql.exec('UPDATE ranking_sessions SET started_at = started_at - 600000');
+  c1.ranking.track('lumen-shift', { type: 'clear', lines: 2, level: 1, combo: 1, delta: 300 }, s1);
+  await c1.ranking.submit({ game_id: 'lumen-shift', session_id: s1, player_name: '고독한늑대', score: 300 });
+  const persistedToken = local.getItem('archer-ranking-player-v1');
+  assert.match(persistedToken, /^[a-f0-9]{64}$/);
+
+  const c2 = makeBrowserClient();
+  const s2 = await start(c2);
+  e.db.sql.exec('UPDATE ranking_sessions SET started_at = started_at - 600000');
+  c2.ranking.track('lumen-shift', event(), s2);
+  const res2 = await c2.ranking.submit({ game_id: 'lumen-shift', session_id: s2, player_name: '고독한여자', score: 100 });
+  assert.equal(res2.best_score, 300);
+
+  const list = await (await server.api.fetch(new Request('https://api/rankings?game_id=lumen-shift&limit=20'), { DB: e.db })).json();
+  assert.deepEqual(list.rankings.map((r) => [r.player_name, r.score]), [['고독한여자', 300]]);
+});

@@ -31,13 +31,18 @@ export async function clearEdgeLeaderboard() {
 }
 
 async function queryBoard(db: D1Database): Promise<RankRow[]> {
-  // One name keeps a single record: more clears, then higher score, then the earlier start.
-  // Letter case and surrounding spaces are the same name. Lower scores stay stored, but the board shows only the best.
-  const result = await db.prepare(`SELECT id, nickname, cleared, score, created_at FROM (
+  // One device (player_key) and one nickname each keep a single best record; same-device renames carry the prior highest score to the latest nickname.
+  const result = await db.prepare(`WITH per_player AS (
+    SELECT id, nickname, cleared, score, created_at,
+      ROW_NUMBER() OVER (PARTITION BY COALESCE(player_key, 'n:' || LOWER(TRIM(nickname))) ORDER BY cleared DESC, score DESC, created_at ASC, id ASC) AS player_rank
+    FROM water_sort_runs WHERE nickname IS NOT NULL AND json_extract(data, '$.rules') = 2
+  ),
+  per_name AS (
     SELECT id, nickname, cleared, score, created_at,
       ROW_NUMBER() OVER (PARTITION BY LOWER(TRIM(nickname)) ORDER BY cleared DESC, score DESC, created_at ASC, id ASC) AS name_rank
-    FROM water_sort_runs WHERE nickname IS NOT NULL AND json_extract(data, '$.rules') = 2
-  ) WHERE name_rank = 1 ORDER BY cleared DESC, score DESC, created_at ASC, id ASC LIMIT 50`).all<RankRow>();
+    FROM per_player WHERE player_rank = 1
+  )
+  SELECT id, nickname, cleared, score, created_at FROM per_name WHERE name_rank = 1 ORDER BY cleared DESC, score DESC, created_at ASC, id ASC LIMIT 50`).all<RankRow>();
   return result.results;
 }
 

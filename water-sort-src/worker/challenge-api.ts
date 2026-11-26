@@ -8,13 +8,19 @@ import { invalidateLeaderboard, clearEdgeLeaderboard, leaderboard } from './lead
 export type ChallengeEnv = TurnstileEnv & { WATER_SORT_IP_SALT?: string };
 type Row = { id: string; token: string; data: string; version: number; nickname: string | null; created_at: number };
 const UUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
-const fields: Record<string, string[]> = { start: ['type', 'id', 'token', 'version', 'turnstile'], sync: ['type', 'id', 'token', 'version'], inspect: ['type', 'id', 'token', 'version'], leave: ['type', 'id', 'token', 'version'], resume: ['type', 'id', 'token', 'version'], pour: ['type', 'id', 'token', 'version', 'from', 'to'], register: ['type', 'id', 'token', 'version', 'nickname', 'turnstile'] };
+const fields: Record<string, string[]> = { start: ['type', 'id', 'token', 'version', 'turnstile'], sync: ['type', 'id', 'token', 'version'], inspect: ['type', 'id', 'token', 'version'], leave: ['type', 'id', 'token', 'version'], resume: ['type', 'id', 'token', 'version'], pour: ['type', 'id', 'token', 'version', 'from', 'to'], register: ['type', 'id', 'token', 'version', 'nickname', 'turnstile', 'playerToken'] };
+const PLAYER_TOKEN = /^[a-f0-9]{64}$/;
+async function hashPlayerToken(token: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`water-sort-player-v1:${token}`));
+  return 'd:' + Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+}
 function validPayload(body: unknown): body is Record<string, unknown> & { type: string } {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return false;
   const value = body as Record<string, unknown>;
   if (typeof value.type !== 'string' || !Object.hasOwn(fields, value.type)) return false;
   if (Object.keys(value).some(key => !fields[value.type as string].includes(key))) return false;
   if (value.turnstile !== undefined && (typeof value.turnstile !== 'string' || value.turnstile.length > 2048)) return false;
+  if (value.playerToken !== undefined && (typeof value.playerToken !== 'string' || !PLAYER_TOKEN.test(value.playerToken))) return false;
   if (value.type !== 'start' && (typeof value.id !== 'string' || !UUID.test(value.id) || typeof value.token !== 'string' || !UUID.test(value.token))) return false;
   if ((['pour', 'leave', 'resume', 'register', 'inspect'].includes(value.type) || value.version !== undefined) && (!Number.isSafeInteger(value.version) || Number(value.version) < 0)) return false;
   return value.type !== 'pour' || [value.from, value.to].every(n => Number.isInteger(n) && Number(n) >= 0 && Number(n) < 10);
@@ -76,7 +82,7 @@ export async function challengeApi(request: Request, db: D1Database, allowedOrig
     const now = Date.now(); // Read time after database I/O, never from the client.
     const before = JSON.parse(row.data) as Challenge;
     if (before.rules !== 2) return json({ error: 'legacy' }, 409);
-    let state = expire(before, now), nickname = row.nickname;
+    let state = expire(before, now), nickname = row.nickname, playerKey: string | null = null;
     const matches = body.version === row.version;
     if (body.type === 'register') {
       if (state.status !== 'ended') return json({ error: 'unfinished' }, 409);
@@ -90,6 +96,7 @@ export async function challengeApi(request: Request, db: D1Database, allowedOrig
       const timing = pourVerdict(before.pours);
       if (timing !== 'ok') { console.warn('water_sort_pour_timing', timing, row.id); return json({ error: 'bot' }, 403); }
       nickname ??= checked.name;
+      if (typeof body.playerToken === 'string') playerKey = await hashPlayerToken(body.playerToken);
     } else if (body.type === 'sync') {
       // Expiration is evaluated against the server clock on reload and retry.
     } else if (body.type === 'inspect') {
@@ -107,11 +114,17 @@ export async function challengeApi(request: Request, db: D1Database, allowedOrig
       state = advance(before, { type: 'pour', from: Number(body.from), to: Number(body.to) }, now);
     } else return json({ error: 'action' }, 400);
     if (state !== before || nickname !== row.nickname) {
-      const update = await db.prepare('UPDATE water_sort_runs SET data = ?, version = version + 1, nickname = ?, cleared = ?, score = ? WHERE id = ? AND version = ? AND nickname IS NULL')
-        .bind(JSON.stringify(state), nickname, state.cleared, state.score, row.id, row.version).run();
+      const update = await db.prepare('UPDATE water_sort_runs SET data = ?, version = version + 1, nickname = ?, cleared = ?, score = ?, player_key = COALESCE(?, player_key) WHERE id = ? AND version = ? AND nickname IS NULL')
+        .bind(JSON.stringify(state), nickname, state.cleared, state.score, playerKey, row.id, row.version).run();
       row = (await db.prepare('SELECT * FROM water_sort_runs WHERE id = ? AND token = ?').bind(body.id, body.token).first<Row>())!;
       if (!update.meta.changes) return json({ error: 'conflict', run: view(row, Date.now()) }, 409);
-      if (nickname !== null) { invalidateLeaderboard(); await clearEdgeLeaderboard(); }
+      if (nickname !== null) {
+        if (playerKey) {
+          await db.prepare('UPDATE water_sort_runs SET nickname = ? WHERE player_key = ? AND nickname IS NOT NULL').bind(nickname, playerKey).run();
+        }
+        invalidateLeaderboard();
+        await clearEdgeLeaderboard();
+      }
     }
     return json({ run: view(row, Date.now()) });
   } catch (error) {
