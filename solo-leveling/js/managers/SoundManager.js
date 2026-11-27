@@ -19,6 +19,12 @@ export function guardToneOscillatorCleanup(tone) { var __oc0;
     Object.defineProperty(prototype, TONE_CLEANUP_GUARD, { value: true });
 }
 
+const SFX_ASSET_VERSION = '20261127-trim-v1';
+const PRIORITY_COMBAT_SFX = [
+    'hit', 'critHit', 'kill', 'burnHit', 'playerHit',
+    'xp', 'dagger', 'daggerThrow', 'slash', 'select',
+];
+
 const CHARACTER_SFX_CONFIG = {
     shadowMonarchBasicDagger: { file: 'effects/characters/shadow_monarch/shadow_monarch_basic_dagger.wav', pool: 6, throttle: 220, release: 360, volume: 0.45, priority: 2 },
     shadowMonarchShadowDagger: { file: 'effects/characters/shadow_monarch/shadow_monarch_shadow_dagger.wav', pool: 6, throttle: 240, release: 430, volume: 0.5, priority: 2 },
@@ -215,10 +221,16 @@ export class SoundManager {
         return wavSrc;
     }
 
+    _withAssetVersion(src) {
+        if (typeof src !== 'string' || !src) return src;
+        if (src.indexOf('v=' + SFX_ASSET_VERSION) !== -1) return src;
+        return src + (src.indexOf('?') === -1 ? '?v=' : '&v=') + SFX_ASSET_VERSION;
+    }
+
     // WAV 오디오 풀 생성 (동시 재생 지원, 라운드로빈)
     _createPool(name, src, poolSize = 4) {
-        this._sfxFallbacks[name] = src;
-        const preferred = this._preferredAudioSrc(src);
+        this._sfxFallbacks[name] = this._withAssetVersion(src);
+        const preferred = this._withAssetVersion(this._preferredAudioSrc(src));
         this._sfxSources[name] = preferred;
         this._pools[name] = [];
         for (let i = 0; i < poolSize; i++) {
@@ -433,7 +445,7 @@ export class SoundManager {
 
     setActiveCharacter(characterId) {
         this._activeCharacterId = characterId || null;
-        if (!this._sfxContext || !this._initialized || this._destroyed || !this._sfxLoadPromise) return null;
+        if (!this._sfxContext || !this._initialized || this._destroyed) return null;
         const keys = CHARACTER_SFX_BY_ID[this._activeCharacterId] || [];
         const missing = [];
         for (let i = 0; i < keys.length; i++) {
@@ -447,6 +459,25 @@ export class SoundManager {
             return this._decodeSfxEntries(missing, this._sfxContext);
         }
         return null;
+    }
+
+    _loadPrioritySfxBuffers() {
+        if (!this._sfxContext || typeof fetch === 'undefined' || this._destroyed || !this._initialized) return null;
+        const keys = PRIORITY_COMBAT_SFX.slice();
+        const charKeys = CHARACTER_SFX_BY_ID[this._activeCharacterId] || [];
+        for (let i = 0; i < charKeys.length; i++) {
+            if (keys.indexOf(charKeys[i]) === -1) keys.push(charKeys[i]);
+        }
+        const entries = [];
+        for (let i = 0; i < keys.length; i++) {
+            const name = keys[i];
+            const src = this._sfxSources[name];
+            if (src && !this._sfxBuffers.has(name) && !this._sfxLoadingKeys.has(name)) {
+                entries.push([name, src]);
+            }
+        }
+        if (entries.length === 0) return null;
+        return this._decodeSfxEntries(entries, this._sfxContext);
     }
 
     _waitForTone(timeoutMs = 2500) {
@@ -702,9 +733,9 @@ export class SoundManager {
             const safeVolume = Math.max(0, Math.min(0.88, volume));
             const now = ctx.currentTime;
             gain.gain.setValueAtTime(0, now);
-            gain.gain.linearRampToValueAtTime(safeVolume, now + 0.006);
+            gain.gain.linearRampToValueAtTime(safeVolume, now + 0.003);
             if (buffer.duration > 0.03) {
-                gain.gain.setValueAtTime(safeVolume, now + Math.max(0.006, buffer.duration - 0.018));
+                gain.gain.setValueAtTime(safeVolume, now + Math.max(0.003, buffer.duration - 0.018));
                 gain.gain.linearRampToValueAtTime(0, now + buffer.duration);
             }
             source.connect(gain);
@@ -853,6 +884,8 @@ export class SoundManager {
             }
             if (typeof Tone !== 'undefined' && this._toneReady) {
                 this._ensureSfxBus();
+                // 타격·스킬 핵심 SFX는 idle 대기 없이 즉시 디코딩
+                this._loadPrioritySfxBuffers();
                 this._scheduleSfxBufferLoad();
             }
             return typeof Tone !== 'undefined'

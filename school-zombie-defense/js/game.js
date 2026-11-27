@@ -592,6 +592,11 @@
   const CHARACTER_DAMAGE_MULTIPLIER = WEAPON_FIRE_INTERVAL_MULTIPLIER * WEAPON_DAMAGE_EXTRA_MULTIPLIER;
   const scaleWeaponInterval = (value) => value * WEAPON_FIRE_INTERVAL_MULTIPLIER;
   const SFX_MASTER_VOLUME = 0.44;
+  const SFX_TRIM_VERSION = "20261127-trim-v1";
+  const withSfxVersion = (url) => {
+    if (!url || url.includes(SFX_TRIM_VERSION)) return url;
+    return `${url}${url.includes("?") ? "&" : "?"}sfx=${SFX_TRIM_VERSION}`;
+  };
   const SFX_ASSETS = {
     start: "assets/sounds/sfx/start.wav",
     skill: "assets/sounds/sfx/skill.wav",
@@ -4558,7 +4563,7 @@
       if (existing) {
         return existing;
       }
-      const loadPromise = this.fetchWithAbort(url, {}, this.sfxFetchControllers)
+      const loadPromise = this.fetchWithAbort(withSfxVersion(url), {}, this.sfxFetchControllers)
         .then((response) => response.ok ? response.arrayBuffer() : Promise.reject(new Error(`sfx ${response.status}`)))
         .then((data) => {
           if (this.disposed || this.audioCtx !== ctx || this.sfxPreloadToken !== preloadToken) {
@@ -4604,7 +4609,7 @@
         this.sfxFallbackTracks = new Map();
       }
       Object.entries(SFX_ASSETS).forEach(([name, url]) => {
-        const track = new Audio(url);
+        const track = new Audio(withSfxVersion(url));
         track.preload = "metadata";
         track.volume = 0;
         this.sfxFallbackTracks.set(name, track);

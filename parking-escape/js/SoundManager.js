@@ -1,6 +1,7 @@
 (function (global) {
   "use strict";
 
+  const SAMPLE_CACHE_VERSION = "20261127-trim-v1";
   const SAMPLE_ASSETS = {
     start: "assets/sounds/parking-start.mp3",
     move: "assets/sounds/parking-car-move.mp3",
@@ -61,10 +62,31 @@
       return this.setEnabled(!this.enabled);
     }
 
+    _configureLowLatency() {
+      if (typeof Tone === "undefined") return;
+      try {
+        const ctx = (typeof Tone.getContext === "function") ? Tone.getContext() : Tone.context;
+        if (!ctx) return;
+        if (typeof ctx.lookAhead === "number") ctx.lookAhead = Math.min(ctx.lookAhead, 0.01);
+        if (typeof ctx.updateInterval === "number") ctx.updateInterval = Math.min(ctx.updateInterval, 0.01);
+      } catch (_) {}
+    }
+
+    _now() {
+      if (typeof Tone === "undefined") return 0;
+      try {
+        if (typeof Tone.immediate === "function") return Tone.immediate() + 0.006;
+        const raw = Tone.context && Tone.context.rawContext;
+        if (raw && typeof raw.currentTime === "number") return raw.currentTime + 0.006;
+      } catch (_) {}
+      return Tone.now();
+    }
+
     async ensure() {
       if (!this.enabled) return false;
       if (typeof Tone === "undefined") return false;
       try {
+        this._configureLowLatency();
         if (Tone.context && Tone.context.state !== "running") {
           await Tone.start();
         }
@@ -77,6 +99,7 @@
 
     init() {
       if (this.ready || typeof Tone === "undefined") return;
+      this._configureLowLatency();
 
       this.nodes.limiter = new Tone.Limiter(-1).toDestination();
       this.nodes.comp = new Tone.Compressor({
@@ -104,7 +127,7 @@
         Object.entries(SAMPLE_ASSETS).forEach(([key, url]) => { var __oc0;
           const settings = SAMPLE_SETTINGS[key] || {};
           this.players[key] = new Tone.Player({
-            url,
+            url: `${url}?v=${SAMPLE_CACHE_VERSION}`,
             fadeIn: 0.004,
             fadeOut: 0.08,
           }).connect(this.nodes.sample);
@@ -452,7 +475,7 @@
         const minGap = gaps[type] || 28;
         if (nowMs - (this.lastAt.get(type) || 0) < minGap) return;
         this.lastAt.set(type, nowMs);
-        const now = Tone.now() + 0.01;
+        const now = this._now();
         const vel = Math.max(0.08, Math.min(0.9, intensity));
 
         try {

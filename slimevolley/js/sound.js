@@ -5,8 +5,57 @@ class SoundManager {
         this.muted = false;
         this.volume = 1.0;
         this.cooldowns = {};
-        // MP3 풀: 동시 재생을 위해 여러 Audio 인스턴스 관리
+        // MP3 풀: 동시 재생을 위해 여러 Audio 인스턴스 관리 + Web Audio AudioBuffer 캐시
         this.mp3Pools = {};
+        this.sfxBuffers = new Map();
+        this.sfxPending = new Set();
+    }
+
+    _configureLowLatency() {
+        if (typeof Tone === 'undefined') return;
+        try {
+            const ctx = typeof Tone.getContext === 'function' ? Tone.getContext() : Tone.context;
+            if (!ctx) return;
+            if (typeof ctx.lookAhead === 'number') ctx.lookAhead = Math.min(ctx.lookAhead, 0.01);
+            if (typeof ctx.updateInterval === 'number') ctx.updateInterval = Math.min(ctx.updateInterval, 0.01);
+        } catch (_) {}
+    }
+
+    _getRawContext() {
+        if (typeof Tone === 'undefined') return null;
+        try {
+            const ctx = typeof Tone.getContext === 'function' ? Tone.getContext() : Tone.context;
+            return (ctx && ctx.rawContext) || null;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    _now() {
+        if (typeof Tone === 'undefined') return 0;
+        try {
+            if (typeof Tone.immediate === 'function') return Tone.immediate() + 0.006;
+            const raw = this._getRawContext();
+            if (raw && typeof raw.currentTime === 'number') return raw.currentTime + 0.006;
+        } catch (_) {}
+        return Tone.now();
+    }
+
+    _decodeSfxBuffer(name, src) {
+        const raw = this._getRawContext();
+        if (!raw || typeof fetch === 'undefined' || typeof raw.decodeAudioData !== 'function') return;
+        if (this.sfxBuffers.has(name) || this.sfxPending.has(name)) return;
+        this.sfxPending.add(name);
+        fetch(src)
+            .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error('sfx load failed'))))
+            .then((data) => raw.decodeAudioData(data))
+            .then((buf) => {
+                if (this.sfxBuffers) this.sfxBuffers.set(name, buf);
+            })
+            .catch(() => {})
+            .finally(() => {
+                if (this.sfxPending) this.sfxPending.delete(name);
+            });
     }
 
     // 쿨다운 체크: 같은 사운드가 너무 빨리 재트리거되는 것을 방지
@@ -27,6 +76,7 @@ class SoundManager {
             this.mp3Pools[name].push(audio);
         }
         this.mp3Pools[name]._index = 0;
+        this._decodeSfxBuffer(name, src);
     }
 
     _unlockMp3Pools() {
@@ -68,13 +118,33 @@ class SoundManager {
         }
     }
 
-    // MP3 풀에서 재생 (볼륨 적용, 라운드로빈)
+    // MP3 풀에서 재생 (Web Audio 버퍼 우선, HTMLAudio 폴백)
     playMp3(name, volumeMultiplier = 1) {
+        const raw = this._getRawContext();
+        const buffer = this.sfxBuffers && this.sfxBuffers.get(name);
+        const gainLevel = Math.max(0, Math.min(1, this.volume * volumeMultiplier));
+        if (raw && buffer && raw.state === 'running') {
+            try {
+                const source = raw.createBufferSource();
+                const gain = raw.createGain();
+                source.buffer = buffer;
+                gain.gain.value = gainLevel;
+                const dest = (this.limiter && this.limiter.input) || raw.destination;
+                source.connect(gain);
+                gain.connect(dest);
+                source.onended = () => {
+                    try { source.disconnect(); } catch (_) {}
+                    try { gain.disconnect(); } catch (_) {}
+                };
+                source.start(0);
+                return;
+            } catch (_) {}
+        }
         const pool = this.mp3Pools[name];
         if (!pool) return;
         const audio = pool[pool._index];
         pool._index = (pool._index + 1) % pool.length;
-        audio.volume = Math.max(0, Math.min(1, this.volume * volumeMultiplier));
+        audio.volume = gainLevel;
         audio.currentTime = 0;
         audio.play().catch(() => {});
     }
@@ -82,7 +152,9 @@ class SoundManager {
     async init() {
         if (this.initialized) return;
         try {
+            this._configureLowLatency();
             await Tone.start();
+            this._configureLowLatency();
 
             // 마스터 체인: 컴프레서 + 리미터로 클리핑 방지
             this.compressor = new Tone.Compressor({
@@ -180,13 +252,14 @@ class SoundManager {
         if (!this.canPlay('jump', 100)) return;
         try {
             // 젤리 뽱: 낮은음→높은음 슬라이드 + 하모닉
+            const now = this._now();
             this.jumpSynth.volume.value = -20;
-            this.jumpSynth.frequency.setValueAtTime(200, Tone.now());
-            this.jumpSynth.frequency.exponentialRampToValueAtTime(600, Tone.now() + 0.08);
-            this.jumpSynth.triggerAttackRelease('C4', 0.1);
+            this.jumpSynth.frequency.setValueAtTime(200, now);
+            this.jumpSynth.frequency.exponentialRampToValueAtTime(600, now + 0.08);
+            this.jumpSynth.triggerAttackRelease('C4', 0.1, now);
             // 경쾌한 상승음
             this.jumpSweep.volume.value = -26;
-            this.jumpSweep.triggerAttackRelease('E6', 0.05, Tone.now() + 0.02);
+            this.jumpSweep.triggerAttackRelease('E6', 0.05, now + 0.02);
         } catch (e) {}
     }
 
@@ -213,7 +286,7 @@ class SoundManager {
         if (!this.canPlay('score', 300)) return;
         try {
             this.scoreSynth.volume.value = -10;
-            const now = Tone.now();
+            const now = this._now();
             if (team === 0) {
                 this.scoreSynth.triggerAttackRelease(['E4', 'G#4', 'B4'], 0.2, now);
                 this.scoreSynth.triggerAttackRelease(['E5'], 0.15, now + 0.15);
@@ -228,7 +301,7 @@ class SoundManager {
         if (!this.initialized || this.muted) return;
         try {
             this.gameOverSynth.volume.value = -8;
-            const now = Tone.now();
+            const now = this._now();
             if (won) {
                 this.gameOverSynth.triggerAttackRelease(['C4', 'E4', 'G4'], 0.3, now);
                 this.gameOverSynth.triggerAttackRelease(['E4', 'G4', 'C5'], 0.3, now + 0.25);
@@ -245,15 +318,15 @@ class SoundManager {
         if (!this.canPlay('ui', 60)) return;
         try {
             this.uiSynth.volume.value = -18;
+            const now = this._now();
             switch (type) {
                 case 'click':
-                    this.uiSynth.triggerAttackRelease('A5', 0.03);
+                    this.uiSynth.triggerAttackRelease('A5', 0.03, now);
                     break;
                 case 'ready':
-                    this.uiSynth.triggerAttackRelease('E5', 0.06);
+                    this.uiSynth.triggerAttackRelease('E5', 0.06, now);
                     break;
                 case 'start': {
-                    const now = Tone.now();
                     this.uiSynth.triggerAttackRelease('C5', 0.06, now);
                     this.uiSynth.triggerAttackRelease('E5', 0.06, now + 0.1);
                     this.uiSynth.triggerAttackRelease('G5', 0.08, now + 0.2);
@@ -267,10 +340,11 @@ class SoundManager {
         if (!this.initialized || this.muted) return;
         try {
             this.uiSynth.volume.value = -15;
+            const now = this._now();
             if (num > 0) {
-                this.uiSynth.triggerAttackRelease('G4', 0.08);
+                this.uiSynth.triggerAttackRelease('G4', 0.08, now);
             } else {
-                this.uiSynth.triggerAttackRelease('C5', 0.15);
+                this.uiSynth.triggerAttackRelease('C5', 0.15, now);
             }
         } catch (e) {}
     }

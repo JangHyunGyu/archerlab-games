@@ -65,6 +65,7 @@
       // Legend 팡파레 재생 중 후속 merge/combo가 releaseAll로 끊지 않도록 잠금
       this._legendLockUntil = 0;
       this._meowAudio = null;
+      this._meowAudioSrc = 'sound/stu9-cute-cat-352656.mp3?v=20261127-trim-v1';
 
       this._visibilityHandler = () => {
         if (!document.hidden && this.enabled && this._initialized) {
@@ -226,6 +227,12 @@
         this._sweep.volume.value = -16;
 
         this._patchSynths();
+        if (typeof Audio !== 'undefined' && !this._meowAudio) {
+          this._meowAudio = new Audio(this._meowAudioSrc);
+          this._meowAudio.preload = 'auto';
+          this._meowAudio.volume = 0.8;
+          try { this._meowAudio.load(); } catch (_err) {}
+        }
         this._initialized = true;
       } catch (e) {
         console.warn('[SoundManager] init 실패:', e.message);
@@ -980,7 +987,8 @@
       if (!this.enabled) return;
       try {
         if (!this._meowAudio) {
-          this._meowAudio = new Audio('sound/stu9-cute-cat-352656.mp3');
+          this._meowAudio = new Audio(this._meowAudioSrc);
+          this._meowAudio.preload = 'auto';
           this._meowAudio.volume = 0.8;
         } else {
           this._meowAudio.currentTime = 0;

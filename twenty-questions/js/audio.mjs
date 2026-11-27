@@ -1,5 +1,7 @@
 import { storage } from './api.mjs?v=20261126-v19';
 
+const AUDIO_ASSET_VERSION = '20261127-trim-v1';
+
 const files = {
     click: 'ui-click.mp3',
     start: 'round-start.mp3',
@@ -31,7 +33,7 @@ export class GameAudio {
         this.prefetched = new Map(
             ['click', 'start', 'send', 'clueMild', 'clueWarm', 'clueHot', 'clueMolten'].map(key => [
                 key,
-                fetch(new URL(`../assets/audio/${files[key]}`, import.meta.url))
+                fetch(new URL(`../assets/audio/${files[key]}?v=${AUDIO_ASSET_VERSION}`, import.meta.url))
                     .then(response => (response.ok ? response.arrayBuffer() : null))
                     .catch(() => null),
             ])
@@ -69,7 +71,7 @@ export class GameAudio {
         if (!this.loading.has(key)) {
             this.loading.set(
                 key,
-                (this.prefetched.get(key) || fetch(new URL(`../assets/audio/${files[key]}`, import.meta.url))
+                (this.prefetched.get(key) || fetch(new URL(`../assets/audio/${files[key]}?v=${AUDIO_ASSET_VERSION}`, import.meta.url))
                     .then(r => { if (!r.ok) throw new Error('Sound unavailable'); return r.arrayBuffer(); }))
                     .then(data => { if (!data) throw new Error('Sound unavailable'); return this.ctx.decodeAudioData(data); })
                     .then(buffer => { this.buffers.set(key, buffer); return buffer; })

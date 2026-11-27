@@ -268,6 +268,7 @@ class SoundManager {
         }
 
         try {
+            this._configureLowLatency();
             this._ensureMasterBus();
             // Synths sum into the same limiter as the WAVs. Tone.Destination
             // stays muted so nothing is boosted past the ceiling.
@@ -491,10 +492,31 @@ class SoundManager {
         }
     }
 
+    _configureLowLatency() {
+        if (typeof Tone === 'undefined') return;
+        try {
+            const ctx = (typeof Tone.getContext === 'function') ? Tone.getContext() : Tone.context;
+            if (!ctx) return;
+            if (typeof ctx.lookAhead === 'number') ctx.lookAhead = Math.min(ctx.lookAhead, 0.01);
+            if (typeof ctx.updateInterval === 'number') ctx.updateInterval = Math.min(ctx.updateInterval, 0.01);
+        } catch (_) {}
+    }
+
+    _now() {
+        if (typeof Tone === 'undefined') return 0;
+        try {
+            if (typeof Tone.immediate === 'function') return Tone.immediate() + 0.006;
+            const raw = this._getAudioContext();
+            if (raw && typeof raw.currentTime === 'number') return raw.currentTime + 0.006;
+        } catch (_) {}
+        return Tone.now();
+    }
+
     ensureContext() {
         if (!this._initialized) {
             this.init();
         }
+        this._configureLowLatency();
         const raw = this._getAudioContext();
         const wasRunning = !!(raw && raw.state === 'running');
         if (typeof Tone !== 'undefined') {
@@ -541,7 +563,7 @@ class SoundManager {
      * Returns a safe time for Tone.js scheduling (never in the past).
      */
     _safeTime(time) {
-        return Math.max(time, Tone.now());
+        return Math.max(time, this._now());
     }
 
     // ── PLACE: Heavy satisfying THUMP + crystalline click ──────────
@@ -554,7 +576,7 @@ class SoundManager {
         this._playWav('place', 0.9);
 
         if (!this._hasTone()) return;
-        const now = Tone.now();
+        const now = this._now();
 
         // Harmonic pop (satisfying "lock-in" tone)
         this._bell.envelope.attack = 0.001;
@@ -580,7 +602,7 @@ class SoundManager {
     }
 
     _playClearInner(lineCount) {
-        const now = this._hasTone() ? Tone.now() : 0;
+        const now = this._hasTone() ? this._now() : 0;
         const clampLines = Math.min(Math.max(lineCount, 1), 4);
 
         // ── WAV layer: matching clear sound ──
@@ -731,7 +753,7 @@ class SoundManager {
     }
 
     _playComboInner(level) {
-        const now = this._hasTone() ? Tone.now() : 0;
+        const now = this._hasTone() ? this._now() : 0;
         const clampLevel = Math.min(level, 8);
 
         // ── WAV layers: escalating with combo level ──
@@ -805,7 +827,7 @@ class SoundManager {
         this.ensureContext();
 
         if (!this._hasTone()) return;
-        const now = Tone.now();
+        const now = this._now();
 
         // Descending minor chord progression
         const progression = [
@@ -887,7 +909,7 @@ class SoundManager {
         this.ensureContext();
 
         if (!this._hasTone()) return;
-        const now = Tone.now();
+        const now = this._now();
 
         // Swoosh down
         this._fm.harmonicity.value = 3;
@@ -944,7 +966,7 @@ class SoundManager {
         this._playWav('pickup', 0.6);
 
         if (!this._hasTone()) return;
-        const now = Tone.now();
+        const now = this._now();
 
         // Soft low pop
         this._click.oscillator.type = 'sine';
@@ -981,7 +1003,7 @@ class SoundManager {
         this._playWav('impact_heavy', 0.6);
 
         if (!this._hasTone()) return;
-        const now = Tone.now();
+        const now = this._now();
 
         // Impact hit
         this._membrane.octaves = 5;
@@ -1050,7 +1072,7 @@ class SoundManager {
         this._playWav('sparkle', 0.8);
 
         if (!this._hasTone()) return;
-        const now = Tone.now();
+        const now = this._now();
 
         // Massive impact
         this._membrane.octaves = 6;
@@ -1113,7 +1135,7 @@ class SoundManager {
         this.ensureContext();
 
         if (!this._hasTone()) return;
-        const now = Tone.now();
+        const now = this._now();
 
         this._click.oscillator.type = 'sine';
         this._click.envelope.attack = 0.001;
@@ -1131,7 +1153,7 @@ class SoundManager {
         this.ensureContext();
 
         if (!this._hasTone()) return;
-        const now = Tone.now();
+        const now = this._now();
 
         const note = emptyCells === 1 ? 'E5' : 'B4';
         this._bell.envelope.attack = 0.005;

@@ -10,6 +10,7 @@ const MUSIC_ASSETS = {
 
 // 외부 실음원 SFX. 파일이 있으면 합성 대신 이 샘플을 재생하고,
 // 로드 실패 시 해당 이벤트는 자동으로 기존 합성으로 폴백한다.
+const SFX_ASSET_VERSION = '20261127-trim-v1';
 const SFX_ASSETS = {
   swap: 'assets/sounds/sfx/swap.mp3',
   invalid: 'assets/sounds/sfx/invalid.mp3',
@@ -169,7 +170,8 @@ export class AudioManager {
     if (!this.ctx) return;
     Object.entries(SFX_ASSETS).forEach(([name, url]) => {
       if (this.sfxBuffers.has(name)) return;
-      fetch(url)
+      const versionedUrl = url.includes('?') ? `${url}&v=${SFX_ASSET_VERSION}` : `${url}?v=${SFX_ASSET_VERSION}`;
+      fetch(versionedUrl)
         .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error('no sfx'))))
         .then((data) => this.ctx.decodeAudioData(data))
         .then((buf) => { this.sfxBuffers.set(name, buf); })

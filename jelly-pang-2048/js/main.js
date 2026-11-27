@@ -59,6 +59,12 @@
     jellyDrop: "assets/images/effects/jelly-drop.png",
     crownBurst: "assets/images/effects/crown-burst.png",
   };
+  const SOUND_ASSET_VERSION = "20261127-trim-v1";
+  function soundUrl(src) {
+    if (!src || src.indexOf(SOUND_ASSET_VERSION) !== -1) return src;
+    return `${src}${src.indexOf("?") === -1 ? "?" : "&"}v=${SOUND_ASSET_VERSION}`;
+  }
+
   const SOUND_ASSETS = {
     slide: "assets/sounds/jelly-slide.mp3",
     merge: "assets/sounds/jelly-merge.mp3",
@@ -236,6 +242,8 @@
   let audioCtx = null;
   let soundPools = {};
   let soundCursor = {};
+  const soundBuffers = new Map();
+  const soundBufferLoading = new Map();
   let ranking = null;
   let rankSubmitInFlight = false;
   let startInFlight = false;
@@ -2384,14 +2392,35 @@
     soundCursor = {};
     Object.entries(SOUND_ASSETS).forEach(([type, src]) => {
       const poolSize = type === "slide" || type === "merge" || type === "bump" ? 4 : 2;
+      const versioned = soundUrl(src);
       soundPools[type] = Array.from({ length: poolSize }, () => { var __oc21;
-        const audio = new Audio(src);
+        const audio = new Audio(versioned);
         audio.preload = "auto";
         audio.volume = (((__oc21 = SOUND_VOLUME[type]) !== null && __oc21 !== void 0 ? __oc21 : 0.55));
         audio.muted = !soundEnabled;
         return audio;
       });
       soundCursor[type] = 0;
+    });
+  }
+
+  function preloadSoundBuffers() {
+    if (!audioCtx || typeof fetch !== "function" || typeof audioCtx.decodeAudioData !== "function") return;
+    Object.entries(SOUND_ASSETS).forEach(([type, src]) => {
+      if (soundBuffers.has(type) || soundBufferLoading.has(type)) return;
+      const ctx = audioCtx;
+      const pending = fetch(soundUrl(src))
+        .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error("sound fetch failed"))))
+        .then((data) => ctx.decodeAudioData(data))
+        .then((buf) => {
+          soundBuffers.set(type, buf);
+          return buf;
+        })
+        .catch(() => null)
+        .finally(() => {
+          if (soundBufferLoading.get(type) === pending) soundBufferLoading.delete(type);
+        });
+      soundBufferLoading.set(type, pending);
     });
   }
 
@@ -2402,6 +2431,7 @@
       if (!AudioCtor) return;
       if (!audioCtx) audioCtx = new AudioCtor();
       if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+      preloadSoundBuffers();
     } catch (_err) {
       audioCtx = null;
     }
@@ -2423,8 +2453,32 @@
     } catch (_err) {}
   }
 
+  function playBufferSound(type) { var __ocBufVol;
+    if (!audioCtx || audioCtx.state !== "running") return false;
+    const buffer = soundBuffers.get(type);
+    if (!buffer) return false;
+    try {
+      const source = audioCtx.createBufferSource();
+      const gain = audioCtx.createGain();
+      source.buffer = buffer;
+      gain.gain.value = (((__ocBufVol = SOUND_VOLUME[type]) !== null && __ocBufVol !== void 0 ? __ocBufVol : 0.55));
+      source.connect(gain);
+      gain.connect(audioCtx.destination);
+      source.onended = () => {
+        try { source.disconnect(); } catch (_e) {}
+        try { gain.disconnect(); } catch (_e) {}
+      };
+      source.start(0);
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
   function playSound(type) {
     if (!soundEnabled) return;
+    resumeAudio();
+    if (playBufferSound(type)) return;
     if (playMp3Sound(type)) return;
     playSynthSound(type);
   }
