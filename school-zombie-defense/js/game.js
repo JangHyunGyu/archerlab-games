@@ -74,9 +74,10 @@
   const ZOMBIE_ASSET_VERSION = "20261126-zombies-native-v3";
   const CHARACTER_ASSET_VERSION = "20261123-defenders-8f-v3";
   const CHARACTER_CONTINUITY_ASSET_VERSION = "20261123-defender-continuity-8f-v3";
-  const FIREBOMB_RECOVERY_ASSET_VERSION = "20261123-firebomb-recovery-8f-v3";
+  const FIREBOMB_RECOVERY_ASSET_VERSION = "20261127-firebomb-low-ready-v1";
   const CROSSBOW_ASSET_VERSION = "20261123-crossbow-8f-v3";
   const PISTOL_READY_ASSET_VERSION = "20261127-pistol-ready-v1";
+  const DEFENDER_READY_ASSET_VERSION = "20261127-defender-ready-v2";
   const CROSSBOW_AUDIO_VERSION = "20260719-freesound-crossbow-firing-v1";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const COMBAT_EFFECT_ASSET_VERSION = "20261126-combat-fx-v4";
@@ -872,7 +873,7 @@
     diva: { id: "diva", hpScale: 1.12, speedScale: 1.08, sizeScale: 1.07, attackScale: 1.04, hitRadiusScale: 0.94, knockbackScale: 0.9, animRate: 6.4, reward: 1, tauntAura: true, tauntRadius: 210 },
     athlete: { id: "athlete", hpScale: 0.68, speedScale: 1.88, sizeScale: 0.86, attackScale: 0.82, hitRadiusScale: 0.9, knockbackScale: 1.2, animRate: 10.2, reward: 1 },
     janitor: { id: "janitor", hpScale: 2.55, speedScale: 0.8, sizeScale: 1.14, attackScale: 1.26, hitRadiusScale: 1.14, knockbackScale: 0.55, animRate: 5.4, reward: 2 },
-    guard: { id: "guard", hpScale: 3.25, speedScale: 0.68, sizeScale: 1.12, attackScale: 1.18, hitRadiusScale: 1.12, knockbackScale: 0.48, animRate: 4.8, reward: 2, armorReduction: 0.34 },
+    guard: { id: "guard", hpScale: 2.35, speedScale: 0.68, sizeScale: 1.12, attackScale: 1.18, hitRadiusScale: 1.12, knockbackScale: 0.48, animRate: 4.8, reward: 2, armorReduction: 0.34 },
     crawler: { id: "crawler", hpScale: 0.9, speedScale: 1.38, sizeScale: 0.68, attackScale: 0.72, hitRadiusScale: 0.68, knockbackScale: 0.95, animRate: 8.8, reward: 1 },
     screamer: { id: "screamer", hpScale: 0.92, speedScale: 1.42, sizeScale: 0.95, attackScale: 0.98, hitRadiusScale: 0.92, knockbackScale: 1.04, animRate: 8.6, reward: 2, hasteRoarInterval: 5.5, hasteRoarRadius: 185, hasteDuration: 2.6, hasteSpeedScale: 1.38 },
     spider: { id: "spider", hpScale: 0.78, speedScale: 1.64, sizeScale: 0.72, attackScale: 0.78, hitRadiusScale: 0.76, knockbackScale: 1.08, animRate: 9.8, reward: 1 },
@@ -901,7 +902,7 @@
     swimmer: { id: "swimmer", hpScale: 1.12, speedScale: 1.62, sizeScale: 0.94, attackScale: 0.98, hitRadiusScale: 0.9, knockbackScale: 1.06, animRate: 9.2, reward: 2, slowResist: 0.55 },
     ballet: { id: "ballet", hpScale: 0.96, speedScale: 1.48, sizeScale: 0.94, attackScale: 1.06, hitRadiusScale: 0.9, knockbackScale: 1.05, animRate: 8.6, reward: 2, parryCharges: 1, parryCooldown: 1.4 },
     librarian: { id: "librarian", hpScale: 1.34, speedScale: 1.02, sizeScale: 0.98, attackScale: 1.14, hitRadiusScale: 0.94, knockbackScale: 0.88, animRate: 6.4, reward: 2, veilAuraInterval: 5.4, veilAuraRadius: 165, veilDuration: 3.2, veilReduction: 0.25 },
-    elite: { id: "elite", hpScale: 1.5, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 0.5, animRate: 5.2, reward: 4 }
+    elite: { id: "elite", hpScale: 1.0, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 0.5, animRate: 5.2, reward: 4 }
   };
   const ZOMBIE_TEXTURE_TYPES = [
     "normal",
@@ -1040,7 +1041,7 @@
     1: { type: "brute", nameKey: "boss.brute", hpMultiplier: 4.8, scale: 1.28, speedScale: 0.78, attackScale: 1.15, accent: 0xff6b47, escorts: ["runner", "normal"] },
     2: { type: "diva", nameKey: "boss.diva", hpMultiplier: 5.4, scale: 1.28, speedScale: 0.88, attackScale: 1.25, accent: 0xff4fa7, escorts: ["ballet", "swimmer"] },
     3: { type: "guard", nameKey: "boss.guard", hpMultiplier: 6.2, scale: 1.28, speedScale: 0.74, attackScale: 1.35, accent: 0x6dd5ff, escorts: ["kendo", "librarian"] },
-    4: { type: "elite", nameKey: "boss.elite", hpMultiplier: 7.2, scale: 1.28, speedScale: 0.84, attackScale: 1.4, accent: 0xffd15c, escorts: ["plump", "volleyball"] }
+    4: { type: "elite", nameKey: "boss.elite", hpMultiplier: 9.5, scale: 1.28, speedScale: 0.84, attackScale: 1.35, accent: 0xffd15c, escorts: ["plump", "volleyball"] }
   };
   const isBossWave = (level) => level > 0 && level % 4 === 0;
   const SKILL_ACCENTS = {
@@ -2344,13 +2345,13 @@
     this.load.image("skill-choice-backdrop", imageAsset("assets/images/skill-choice-backdrop.png"));
     this.load.image("gameover-last-stand", imageAsset("assets/images/gameover-last-stand.png"));
     this.load.image("character-a", versionedImageAsset("assets/images/character-a.png", CROSSBOW_ASSET_VERSION));
-    this.load.image("character-b", versionedImageAsset("assets/images/character-b.png", CHARACTER_ASSET_VERSION));
+    this.load.image("character-b", versionedImageAsset("assets/images/character-b.png", DEFENDER_READY_ASSET_VERSION));
     this.load.image("character-c", versionedImageAsset("assets/images/character-c.png", PISTOL_READY_ASSET_VERSION));
-    this.load.image("character-d", versionedImageAsset("assets/images/character-d.png", CHARACTER_CONTINUITY_ASSET_VERSION));
-    this.load.image("character-e", versionedImageAsset("assets/images/character-e.png", CHARACTER_ASSET_VERSION));
-    this.load.image("character-f", versionedImageAsset("assets/images/character-f.png", CHARACTER_ASSET_VERSION));
+    this.load.image("character-d", versionedImageAsset("assets/images/character-d.png", DEFENDER_READY_ASSET_VERSION));
+    this.load.image("character-e", versionedImageAsset("assets/images/character-e.png", DEFENDER_READY_ASSET_VERSION));
+    this.load.image("character-f", versionedImageAsset("assets/images/character-f.png", DEFENDER_READY_ASSET_VERSION));
     this.load.image("character-g", versionedImageAsset("assets/images/character-g.png", CHARACTER_ASSET_VERSION));
-    this.load.image("character-h", versionedImageAsset("assets/images/character-h.png", CHARACTER_ASSET_VERSION));
+    this.load.image("character-h", versionedImageAsset("assets/images/character-h.png", DEFENDER_READY_ASSET_VERSION));
     Object.entries(CHARACTER_ATTACK_ACTIONS).forEach(([id, action]) => { var __oc4;
       const assetVersion = id === "a" ? CROSSBOW_ASSET_VERSION
         : id === "d" ? CHARACTER_CONTINUITY_ASSET_VERSION : CHARACTER_ASSET_VERSION;
@@ -2362,7 +2363,7 @@
         this.load.image(
           `character-${id}-${action}-${frame}`,
           versionedImageAsset(`assets/images/character-${id}-${action}-${frame}.png`,
-            id === "f" && frame === 7 ? FIREBOMB_RECOVERY_ASSET_VERSION : (id === "c" && frame === 0 ? PISTOL_READY_ASSET_VERSION : assetVersion))
+            id === "f" && frame === 7 ? FIREBOMB_RECOVERY_ASSET_VERSION : (id === "c" && frame === 0 ? PISTOL_READY_ASSET_VERSION : ((id === "f" || id === "h") && frame === 0 ? DEFENDER_READY_ASSET_VERSION : assetVersion)))
         );
       }
     });
@@ -7227,10 +7228,11 @@
         const levelCurve = Math.pow(this.level, ZOMBIE_LEVEL_HP_EXPONENT);
         const lateLevelBonus = Math.max(0, this.level - 10);
         const earlyHpScale = clamp(0.82 + Math.max(0, this.level - 1) * 0.018, 0.82, 0.9);
+        const useEliteBaseStats = eliteRoll && !isBoss;
         const baseHp =
-          (eliteRoll ? 220 : 48)
-          + levelCurve * (eliteRoll ? ZOMBIE_ELITE_LEVEL_HP_GAIN : ZOMBIE_NORMAL_LEVEL_HP_GAIN)
-          + lateLevelBonus * (eliteRoll ? ZOMBIE_ELITE_LATE_HP_GAIN : ZOMBIE_NORMAL_LATE_HP_GAIN)
+          (useEliteBaseStats ? 220 : 48)
+          + levelCurve * (useEliteBaseStats ? ZOMBIE_ELITE_LEVEL_HP_GAIN : ZOMBIE_NORMAL_LEVEL_HP_GAIN)
+          + lateLevelBonus * (useEliteBaseStats ? ZOMBIE_ELITE_LATE_HP_GAIN : ZOMBIE_NORMAL_LATE_HP_GAIN)
           + rand(-6, 12);
         const hpMultiplier = (overrideConfig && overrideConfig.hpMultiplier) || 1;
         const effectiveTypeHpScale = isBoss ? 1 : typeConfig.hpScale;
@@ -7245,7 +7247,7 @@
         zombie.maxHp = hp;
         zombie.speed = (rand(30, 40) + (eliteRoll ? -6 : 0)) * typeConfig.speedScale * ((overrideConfig && overrideConfig.speedScale) || 1);
         zombie.hitRadius = (eliteRoll ? 42 : 32) * typeConfig.hitRadiusScale * scaleFactor;
-        zombie.attack = (eliteRoll ? 40 : 18) * typeConfig.attackScale * ((overrideConfig && overrideConfig.attackScale) || 1);
+        zombie.attack = (useEliteBaseStats ? 40 : 18) * typeConfig.attackScale * ((overrideConfig && overrideConfig.attackScale) || 1);
         zombie.attackTimer = rand(0.2, 0.7);
         zombie.slowTimer = 0;
         zombie.stunTimer = 0;

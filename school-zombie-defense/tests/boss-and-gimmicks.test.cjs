@@ -40,10 +40,17 @@ for (const [stage, cfg] of Object.entries(bossConfigs)) {
   assert.ok(Array.isArray(cfg.escorts) && cfg.escorts.length >= 2, `stage ${stage} boss must declare escorts`);
 }
 assert.ok(configs.brute.hpScale <= 3.2, "regular brute hpScale must stay balanced");
+assert.ok(configs.guard.hpScale <= 2.6, "regular guard hpScale must stay balanced with armorReduction");
+assert.ok(configs.elite.hpScale <= 1.1, "regular elite hpScale must stay balanced with eliteRoll base");
 assert.match(
   gameSource,
   /const effectiveTypeHpScale = isBoss \? 1 : typeConfig\.hpScale;/,
   "boss HP must not double-multiply brute.hpScale on top of hpMultiplier"
+);
+assert.match(
+  gameSource,
+  /const useEliteBaseStats = eliteRoll && !isBoss;/,
+  "elite stage boss must not stack eliteRoll base stats on top of boss hpMultiplier"
 );
 
 const isBossWaveMatch = gameSource.match(/const isBossWave = ([^;]+);/);
