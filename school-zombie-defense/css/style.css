@@ -3,9 +3,13 @@
 }
 
 :root {
-  --ui-surface-panel: image-set(url("../assets/images/ui-survival-panel.webp") type("image/webp"), url("../assets/images/ui-survival-panel.png") type("image/png"));
-  --ui-surface-button: image-set(url("../assets/images/ui-survival-button.webp") type("image/webp"), url("../assets/images/ui-survival-button.png") type("image/png"));
-  --ui-surface-primary: image-set(url("../assets/images/ui-survival-primary.webp") type("image/webp"), url("../assets/images/ui-survival-primary.png") type("image/png"));
+  --ui-surface-panel: image-set(url("../assets/images/ui-survival-panel.webp?v=20261127-ui-v2") type("image/webp"), url("../assets/images/ui-survival-panel.png?v=20261127-ui-v2") type("image/png"));
+  --ui-surface-button: image-set(url("../assets/images/ui-survival-button.webp?v=20261127-ui-v2") type("image/webp"), url("../assets/images/ui-survival-button.png?v=20261127-ui-v2") type("image/png"));
+  --ui-surface-primary: image-set(url("../assets/images/ui-survival-primary.webp?v=20261127-ui-v2") type("image/webp"), url("../assets/images/ui-survival-primary.png?v=20261127-ui-v2") type("image/png"));
+  --ui-surface-danger: image-set(url("../assets/images/ui-survival-danger.webp?v=20261127-ui-v2") type("image/webp"), url("../assets/images/ui-survival-danger.png?v=20261127-ui-v2") type("image/png"));
+  --ui-surface-card: image-set(url("../assets/images/ui-survival-card.webp?v=20261127-ui-v2") type("image/webp"), url("../assets/images/ui-survival-card.png?v=20261127-ui-v2") type("image/png"));
+  --ui-surface-header: image-set(url("../assets/images/ui-survival-header.webp?v=20261127-ui-v2") type("image/webp"), url("../assets/images/ui-survival-header.png?v=20261127-ui-v2") type("image/png"));
+  --ui-surface-slot: image-set(url("../assets/images/ui-survival-slot.webp?v=20261127-ui-v2") type("image/webp"), url("../assets/images/ui-survival-slot.png?v=20261127-ui-v2") type("image/png"));
   --game-viewport-width: 100vw;
   --game-viewport-height: 100dvh;
   --game-safe-top: env(safe-area-inset-top, 0px);
@@ -56,15 +60,25 @@ body::after {
 
 body::before {
   z-index: -2;
-  background: radial-gradient(ellipse at 50% 45%, #2c2d25 0%, #10110e 70%);
+  inset: -24px;
+  opacity: 0.72;
+  background:
+    linear-gradient(180deg, rgba(6, 9, 12, 0.62), rgba(6, 9, 12, 0.88)),
+    image-set(
+      url("../assets/images/corridor-battlefield.webp") type("image/webp"),
+      url("../assets/images/corridor-battlefield.png") type("image/png")
+    );
+  background-position: center;
+  background-size: cover;
+  filter: blur(20px) saturate(0.68) brightness(0.54);
+  transform: scale(1.08);
 }
 
 body::after {
   z-index: -1;
   background:
-    linear-gradient(90deg, rgba(4, 7, 9, 0.78), rgba(4, 7, 9, 0.2) 38%, rgba(4, 7, 9, 0.2) 62%, rgba(4, 7, 9, 0.78)),
-    repeating-linear-gradient(180deg, rgba(118, 116, 101, 0.035) 0 1px, transparent 1px 7px),
-    radial-gradient(circle at 50% 50%, rgba(44, 181, 214, 0.14), transparent 48%);
+    linear-gradient(90deg, rgba(4, 7, 9, 0.76), rgba(4, 7, 9, 0.14) 34%, rgba(4, 7, 9, 0.14) 66%, rgba(4, 7, 9, 0.76)),
+    radial-gradient(ellipse at 50% 50%, rgba(213, 182, 117, 0.08), transparent 56%);
 }
 
 #game-shell {
@@ -77,12 +91,33 @@ body::after {
     calc(var(--game-viewport-height) - var(--game-safe-top) - var(--game-safe-bottom)),
     calc((var(--game-viewport-width) - var(--game-safe-left) - var(--game-safe-right)) * 1.7777778)
   );
-  max-width: 540px;
-  max-height: 960px;
+  max-width: 100%;
+  max-height: 100%;
   background: #20221d;
   overflow: hidden;
-  border-inline: 1px solid rgba(118, 116, 101, 0.2);
-  box-shadow: 0 18px 70px rgba(0, 0, 0, 0.72);
+  border-inline: 1px solid rgba(197, 185, 149, 0.22);
+  box-shadow: 0 22px 72px rgba(0, 0, 0, 0.78);
+}
+
+@media (min-width: 720px) and (max-width: 1023px) {
+  #game-shell {
+    max-width: 640px;
+    max-height: calc(var(--game-viewport-height) - var(--game-safe-top) - var(--game-safe-bottom) - 16px);
+    border: 1px solid rgba(197, 185, 149, 0.26);
+    border-radius: 6px;
+  }
+}
+
+@media (min-width: 1024px) {
+  #game-shell {
+    max-width: 620px;
+    max-height: min(1100px, calc(var(--game-viewport-height) - var(--game-safe-top) - var(--game-safe-bottom) - 24px));
+    border: 1px solid rgba(197, 185, 149, 0.28);
+    border-radius: 8px;
+    box-shadow:
+      0 26px 84px rgba(0, 0, 0, 0.85),
+      0 0 0 1px rgba(0, 0, 0, 0.8);
+  }
 }
 
 #game-root,
@@ -950,22 +985,7 @@ noscript {
   }
 }
 
-@media (max-width: 720px) {
-  body::before {
-    inset: -24px;
-    opacity: 0.72;
-    background:
-      linear-gradient(180deg, rgba(3, 7, 10, 0.52), rgba(3, 7, 10, 0.84)),
-      image-set(
-        url("../assets/images/corridor-battlefield.webp") type("image/webp"),
-        url("../assets/images/corridor-battlefield.png") type("image/png")
-      );
-    background-position: center;
-    background-size: cover;
-    filter: blur(18px) saturate(0.7) brightness(0.58);
-    transform: scale(1.08);
-  }
-
+@media (max-width: 719px) {
   body::after {
     opacity: 1;
     background: linear-gradient(180deg, rgba(15, 16, 12, 0.4), transparent 30%, transparent 70%, rgba(15, 16, 12, 0.6));
@@ -974,6 +994,14 @@ noscript {
   #game-shell {
     border: 0;
     box-shadow: 0 12px 42px rgba(0, 0, 0, 0.6);
+  }
+}
+
+@media (min-width: 720px) {
+  .loading__content,
+  .run-loading__panel,
+  .school-zombie-rank-dialog:not(.school-zombie-rank-dialog--gameover) {
+    max-width: 440px;
   }
 }
 
@@ -1105,29 +1133,32 @@ noscript {
 }
 
 /* Match live HTML dialogs to the canvas material system without stretching rims. */
+.loading__content,
 .run-loading__panel,
 .school-zombie-rank-prep__panel,
 .school-zombie-rank-dialog:not(.school-zombie-rank-dialog--gameover),
 .school-zombie-rank-loader {
   border: 1px solid transparent;
-  border-image: var(--ui-surface-panel) 40 fill / 8px / 0 stretch;
-  background: var(--ui-panel);
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4);
+  border-image: var(--ui-surface-panel) 256 fill / 18px / 0 stretch;
+  background: transparent;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.62);
 }
 
 .school-zombie-rank-actions button {
   border: 1px solid transparent;
-  border-image: var(--ui-surface-button) 64 fill / 8px / 0 stretch;
+  border-image: var(--ui-surface-button) 160 fill / 10px / 0 stretch;
   background: none;
-  color: #f0e8d5;
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
+  color: #f4ecda;
+  text-shadow: 0 1px 2px #000;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
   font-weight: 800;
   min-height: 46px;
 }
 
 .school-zombie-rank-actions .school-zombie-rank-submit {
-  border-image-source: var(--ui-surface-primary);
-  color: #20221d;
+  border-image: var(--ui-surface-primary) 230 fill / 12px / 0 stretch;
+  color: #fff8e6;
+  text-shadow: 0 1px 3px #1c1307, 0 0 6px rgba(28, 19, 7, 0.8);
 }
 
 .school-zombie-rank-actions button:focus-visible {
@@ -1146,8 +1177,8 @@ noscript {
 @media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
   .rotate-lock::before {
     border: 1px solid transparent;
-    border-image: var(--ui-surface-panel) 40 fill / 8px / 0 stretch;
-    background: var(--ui-panel);
+    border-image: var(--ui-surface-panel) 256 fill / 16px / 0 stretch;
+    background: transparent;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
   }
   .rotate-lock__phone { box-shadow: none; background: #22271e; }

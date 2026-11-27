@@ -3350,13 +3350,13 @@
     },
     {
       "path": "school-zombie-defense/assets/images/title-keyart.png",
-      "bytes": 2476487,
-      "sha256": "be83af71ddb04d0176df6f1da4187f8f282037a4aacf4d04b9ddda0e1f21298a"
+      "bytes": 2234784,
+      "sha256": "31ecb3a3b10d7949da3c6e72209cbcf1e23b64d11612190b121ed544b4114989"
     },
     {
       "path": "school-zombie-defense/assets/images/title-keyart.webp",
-      "bytes": 244568,
-      "sha256": "0668c9abc6eda1a1eb9bf8b8ae224ef740cbea8ad85413c22ff7d4cadb998017"
+      "bytes": 423140,
+      "sha256": "5825113eeaeb665939b7160f53d1675dc1aba8695b50da10fea644895247ae6c"
     },
     {
       "path": "school-zombie-defense/assets/images/ui-frame-sheet.png",
@@ -3370,13 +3370,33 @@
     },
     {
       "path": "school-zombie-defense/assets/images/ui-survival-button.png",
-      "bytes": 2038312,
-      "sha256": "ea86c2a1a580335f445b94ec7e94e7365ed9edc4465547ba213457e59ca72403"
+      "bytes": 3182165,
+      "sha256": "6222e263e98c7614f2e0a3404ce9effda5a354ba21acb6f1efa767a4229c9f69"
     },
     {
       "path": "school-zombie-defense/assets/images/ui-survival-button.webp",
-      "bytes": 134358,
-      "sha256": "d87c3e95b94d764a3c38788a521dc4d16d8c553835b7836292a15af2a5d8bf72"
+      "bytes": 428870,
+      "sha256": "ffe189753d87a328b550f26ed4be0bce58b4228693e3fb0387573f2ae86782ca"
+    },
+    {
+      "path": "school-zombie-defense/assets/images/ui-survival-card.png",
+      "bytes": 1255570,
+      "sha256": "a7f4da888daa90874e876d87b563dcf1ec4444572555b7dbdcda86cfefd56661"
+    },
+    {
+      "path": "school-zombie-defense/assets/images/ui-survival-card.webp",
+      "bytes": 123826,
+      "sha256": "1843f6711eacf2c81fbcdf87121f5d3a502ecc3ccc381e618cd797efff3b0f0e"
+    },
+    {
+      "path": "school-zombie-defense/assets/images/ui-survival-danger.png",
+      "bytes": 1471986,
+      "sha256": "cbe58f663905a11587f6570bd5573fe36c3bca43899d11c400231559a8908b1b"
+    },
+    {
+      "path": "school-zombie-defense/assets/images/ui-survival-danger.webp",
+      "bytes": 200694,
+      "sha256": "5a4e4c25811c27502ca12afc89bb4580a4d9973ea81d2cac0f4126191c6af20e"
     },
     {
       "path": "school-zombie-defense/assets/images/ui-survival-equipment-extra.png",
@@ -3399,24 +3419,44 @@
       "sha256": "37350055602004609c25bf5d58705722d44abc51954ddf1af13498e4e924a47e"
     },
     {
+      "path": "school-zombie-defense/assets/images/ui-survival-header.png",
+      "bytes": 1395983,
+      "sha256": "fcffbb9b16f5cd5c09645fdafd38f12480801893e466f5a11b05e3c405f93ef4"
+    },
+    {
+      "path": "school-zombie-defense/assets/images/ui-survival-header.webp",
+      "bytes": 144832,
+      "sha256": "a0240e586f34a553a6bc2416c3eca7068afa855b212ad4fb272efad750e3bed1"
+    },
+    {
       "path": "school-zombie-defense/assets/images/ui-survival-panel.png",
-      "bytes": 2504056,
-      "sha256": "e506a2efc0aa7bb2bd7f9160d74145ef6b9af8dca3388efc74ca800a7c33d03c"
+      "bytes": 2748806,
+      "sha256": "501c214e4c0b829b0888722f62ecf66fcf827a709f8c0cf19670541d994d4f55"
     },
     {
       "path": "school-zombie-defense/assets/images/ui-survival-panel.webp",
-      "bytes": 256318,
-      "sha256": "6afd7be669afcc08a1966905ffca94019cbad9572eb0638f4e1c437cda7c36e0"
+      "bytes": 292710,
+      "sha256": "db4d61fa6fda3b13b62fe0d785d43b4808d16fce585ea736d6b7fae9863821ec"
     },
     {
       "path": "school-zombie-defense/assets/images/ui-survival-primary.png",
-      "bytes": 2205964,
-      "sha256": "c4e94c0ea7851dac455ff243bb8852941d40a1d20c44c65b3f9c482850a55f78"
+      "bytes": 3536462,
+      "sha256": "1ddad3b36cb0691d9c7af1ac90a8a27bba5e5c5a48aea20ab2080306f69f4605"
     },
     {
       "path": "school-zombie-defense/assets/images/ui-survival-primary.webp",
-      "bytes": 161912,
-      "sha256": "6ebeb52815330bb4d4b6744497db153f879b102202c44a61430d0d6d9f39e743"
+      "bytes": 416766,
+      "sha256": "76c250844663209147f2c1858caf9857312840f7131e2a0975e5d7fe9237ddfc"
+    },
+    {
+      "path": "school-zombie-defense/assets/images/ui-survival-slot.png",
+      "bytes": 386826,
+      "sha256": "9e9fd97d39747ec83852a0e5939d772e419c87710de152db48a1e957047b1b14"
+    },
+    {
+      "path": "school-zombie-defense/assets/images/ui-survival-slot.webp",
+      "bytes": 66718,
+      "sha256": "7036bc32da24d91d8e0b2df734cdb12de1a9aa83ce3cf9740efde8d122f0e83c"
     },
     {
       "path": "school-zombie-defense/assets/images/ui-title-button.png",

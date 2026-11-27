@@ -2,9 +2,13 @@
   "use strict";
 
   const SURFACES = Object.freeze({
-    button: { key: "ui-survival-button", sourceBorder: 64, border: 6 },
-    primary: { key: "ui-survival-primary", sourceBorder: 64, border: 9 },
-    panel: { key: "ui-survival-panel", sourceBorder: 40, border: 7 }
+    button: { key: "ui-survival-button", sourceBorder: 160, border: 6 },
+    primary: { key: "ui-survival-primary", sourceBorder: 230, border: 14 },
+    panel: { key: "ui-survival-panel", sourceBorder: 256, border: 20 },
+    danger: { key: "ui-survival-danger", sourceBorder: 168, border: 14 },
+    card: { key: "ui-survival-card", sourceBorder: 140, border: 12 },
+    header: { key: "ui-survival-header", sourceBorder: 150, border: 14 },
+    slot: { key: "ui-survival-slot", sourceBorder: 150, border: 10 }
   });
 
   const ICONS = Object.freeze({

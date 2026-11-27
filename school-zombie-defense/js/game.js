@@ -81,6 +81,7 @@
   const COMBAT_EFFECT_ASSET_VERSION = "20261126-combat-fx-v4";
   const COMBAT_PROP_ASSET_VERSION = "20261126-combat-props-v3";
   const ALLIED_WEAPON_ASSET_VERSION = "20260912-allied-weapons-v1";
+  const UI_SURFACE_ASSET_VERSION = "20261127-ui-v2";
   const versionedImageAsset = (path, version) => {
     const resolvedPath = imageAsset(path);
     return version ? `${resolvedPath}?v=${encodeURIComponent(version)}` : resolvedPath;
@@ -2330,9 +2331,9 @@
   function queueMenuAssetFiles() {
     this.load.image("bg-corridor", imageAsset("assets/images/corridor-battlefield.png"));
     Object.values(window.SchoolZombieUI.SURFACES).forEach(({ key }) => {
-      this.load.image(key, imageAsset(`assets/images/${key}.png`));
+      this.load.image(key, versionedImageAsset(`assets/images/${key}.png`, UI_SURFACE_ASSET_VERSION));
     });
-    this.load.image("title-keyart", imageAsset("assets/images/title-keyart.png"));
+    this.load.image("title-keyart", versionedImageAsset("assets/images/title-keyart.png", UI_SURFACE_ASSET_VERSION));
     this.load.image("shop-blackmarket", imageAsset("assets/images/shop-blackmarket.png"));
   }
 
@@ -3263,13 +3264,12 @@
       const portrait = recruit.portrait || recruit.icon || OWNER_SKILL_PORTRAITS[roster.id];
       const panel = this.trackTransient(this.add.container(GAME_WIDTH + 260, 178).setDepth(346).setAlpha(0).setScale(0.96));
       const shadow = this.add.rectangle(4, 12, 430, 132, 0x000000, 0.46);
-      const frame = this.addSurfaceImage(0, 0, 426, 124);
+      const frame = this.addSurfaceImage(0, 0, 426, 124, "card");
       const topLine = this.add.rectangle(-160, -59, 52, 2, accent, 0.8);
       const scan = this.add.rectangle(36, 30, 320, 2, 0xeee6d2, 0.18);
-      const portraitGlow = this.add.circle(-154, -4, 66, accent, 0.16)
-        .setStrokeStyle(1, UI_COLORS.steel, 0.65);
+      const portraitGlow = this.addSurfaceImage(-154, -2, 114, 114, "slot");
       const portraitImage = this.add.image(-154, -2, portrait)
-        .setDisplaySize(132, 132);
+        .setDisplaySize(102, 102);
       const kicker = this.add.text(-58, -34, "NEW ALLY", {
         resolution: 2, fontFamily: "Arial, sans-serif",
         fontSize: 13,
@@ -3547,45 +3547,33 @@
     createHud() {
       this.ui = {};
       this._hudCache = null;
-      this.add.rectangle(270, 58, 538, 118, 0x11120f, 0.74).setDepth(299);
-      this.addCommandPanel(270, 42, 532, 82, 300, COLORS.gold, { track: false, alpha: 0.96 });
-      this.add.rectangle(270, 116, 516, 12, 0x030708, 0.84)
-        .setStrokeStyle(1, 0xc5b995, 0.18)
-        .setDepth(301);
-      this.progressBack = this.add.rectangle(270, 115, 506, 8, 0x020303, 0.9)
-        .setStrokeStyle(1, 0xeee6d2, 0.12)
+      this.addCommandPanel(270, 34, 532, 64, 300, COLORS.gold, { track: false, alpha: 0.96, surface: "header" });
+      this.progressBack = this.add.rectangle(270, 71, 506, 7, 0x050708, 0.85)
         .setOrigin(0.5)
         .setDepth(302);
-      this.progressBar = this.add.rectangle(17, 115, 1, 6, UI_COLORS.amber, 1).setOrigin(0, 0.5).setDepth(303);
-      this.createHomeButton();
+      this.progressBar = this.add.rectangle(17, 71, 1, 5, UI_COLORS.amber, 1).setOrigin(0, 0.5).setDepth(303);
       this.createPauseButton();
       this.createSpeedButton();
 
-      this.add.text(100, 20, "SURVIVE", {
+      this.ui.timer = this.add.text(56, 34, "00:00", {
         resolution: 2, fontFamily: "Arial, sans-serif",
-        fontSize: 9,
-        fontStyle: "900",
-        color: "#c5b995"
-      }).setOrigin(0.5).setDepth(316);
-      this.ui.timer = this.add.text(100, 42, "00:00", {
-        resolution: 2, fontFamily: "Arial, sans-serif",
-        fontSize: 19,
+        fontSize: 18,
         fontStyle: "900",
         color: "#eee6d2",
         stroke: "#0c1115",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(316);
-      this.ui.stage = this.add.text(270, 30, SchoolI18n.t("stage.line", { stage: "01", name: SchoolI18n.t("stage.gate") }), {
+      this.ui.stage = this.add.text(248, 24, SchoolI18n.t("stage.line", { stage: "01", name: SchoolI18n.t("stage.gate") }), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 22,
+        fontSize: 19,
         fontStyle: "900",
         color: "#eee6d2",
         stroke: "#1a2228",
-        strokeThickness: 5
+        strokeThickness: 4
       }).setOrigin(0.5).setDepth(316);
-      this.ui.level = this.add.text(270, 57, "WAVE 01 · 0 / 4", {
+      this.ui.level = this.add.text(248, 46, "WAVE 01 · 0 / 4", {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 13,
+        fontSize: 12,
         fontStyle: "900",
         color: "#c6c4b5",
         stroke: "#1a2228",
@@ -3599,8 +3587,7 @@
     createBossHud() {
       const y = 132;
       const barWidth = 312;
-      const panel = this.add.rectangle(270, y, 360, 26, 0x16090b, 0.9)
-        .setStrokeStyle(1, 0xff6b47, 0.72)
+      const panel = this.addSurfaceImage(270, y, 368, 30, "danger")
         .setDepth(315)
         .setVisible(false);
       const barBack = this.add.rectangle(270, y + 7, barWidth, 5, 0x060304, 0.92)
@@ -3636,7 +3623,7 @@
       const x = 38;
       const y = 42;
       const glow = this.add.rectangle(x, y + 4, 46, 46, 0x000000, 0.38).setDepth(317);
-      const base = this.addSurfaceImage(x, y, 46, 46, "button").setDepth(318);
+      const base = this.addSurfaceImage(x, y, 46, 46, "slot").setDepth(318);
       const icon = this.add.graphics().setDepth(319);
       const hit = this.add.zone(x, y, 76, 76)
         .setDepth(320)
@@ -3677,22 +3664,22 @@
     }
 
     createPauseButton() {
-      const x = 426;
-      const y = 42;
-      const glow = this.add.rectangle(x, y + 4, 46, 46, 0x000000, 0.38).setDepth(314);
-      const circle = this.addSurfaceImage(x, y, 46, 46, "button").setDepth(315);
+      const x = 444;
+      const y = 34;
+      const glow = this.add.rectangle(x, y + 3, 42, 42, 0x000000, 0.34).setDepth(314);
+      const circle = this.addSurfaceImage(x, y, 42, 42, "slot").setDepth(315);
       const text = this.add.text(x, y - 1, "Ⅱ", {
         resolution: 2, fontFamily: "Arial, sans-serif",
-        fontSize: 19,
+        fontSize: 18,
         fontStyle: "900",
         color: "#fff6d6",
         stroke: "#050607",
         strokeThickness: 3
       }).setOrigin(0.5).setDepth(316);
-      const hit = this.add.zone(x, y, 76, 76).setDepth(320).setInteractive({ useHandCursor: true });
+      const hit = this.add.zone(x, y, 56, 56).setDepth(320).setInteractive({ useHandCursor: true });
       const setHover = (hovered) => {
         circle.setTint(hovered ? 0xffffff : 0xd8d7cd);
-        glow.setAlpha(0.38);
+        glow.setAlpha(0.34);
         text.setScale(hovered ? 1.06 : 1);
       };
       hit.on("pointerdown", (pointer, localX, localY, event) => { var __oc28;
@@ -3708,18 +3695,18 @@
     }
 
     createSpeedButton() {
-      const x = 502;
-      const y = 42;
-      const circle = this.addSurfaceImage(x, y, 46, 46, "button").setDepth(315);
+      const x = 498;
+      const y = 34;
+      const circle = this.addSurfaceImage(x, y, 42, 42, "slot").setDepth(315);
       const text = this.add.text(x, y, formatGameSpeedLabel(this.speedMultiplier || DEFAULT_GAME_SPEED), {
         resolution: 2, fontFamily: "Arial, sans-serif",
-        fontSize: 16,
+        fontSize: 15,
         fontStyle: "900",
         color: "#eee6d2",
         stroke: "#111",
         strokeThickness: 3
       }).setOrigin(0.5).setDepth(316);
-      const hit = this.add.zone(x, y, 76, 76)
+      const hit = this.add.zone(x, y, 56, 56)
         .setDepth(320)
         .setInteractive({ useHandCursor: true });
       const setHover = (hovered) => {
@@ -3746,20 +3733,21 @@
       this.ui.coins = coins.value;
       this.ui.statusChips = { coins };
 
-      const corePanel = this.addCommandPanel(270, 925, 438, 58, 315, COLORS.green, {
-        alpha: 0.88,
+      const corePanel = this.addCommandPanel(270, 924, 428, 46, 315, COLORS.green, {
+        alpha: 0.94,
+        surface: "header",
         track: false
       });
       this.ui.corePanel = corePanel;
-      this.add.text(72, 913, "BARRICADE", {
+      this.add.text(76, 913, "BARRICADE", {
         resolution: 2, fontFamily: "Arial, sans-serif",
-        fontSize: 12,
+        fontSize: 11,
         fontStyle: "900",
         color: "#b4b2a0"
       }).setOrigin(0, 0.5).setDepth(317);
-      this.ui.core = this.add.text(468, 913, "3000 / 3000", {
+      this.ui.core = this.add.text(464, 913, "3000 / 3000", {
         resolution: 2, fontFamily: "Arial, sans-serif",
-        fontSize: 14,
+        fontSize: 13,
         fontStyle: "900",
         color: "#eee6d2",
         stroke: "#050607",
@@ -3786,7 +3774,7 @@
         fontSize: 12,
         fontStyle: "900",
         color: "#b4c097"
-      }).setOrigin(0.5).setDepth(317);
+      }).setOrigin(0.5).setDepth(317).setVisible(false);
     }
 
     bindInput() {
@@ -5145,8 +5133,8 @@
     }
 
     addCommandPanel(x, y, width, height, depth = 500, accent = COLORS.blue, options = {}) { var __oc48, __oc49, __oc50;
-      const shadow = this.add.rectangle(x, y + 5, width - 4, height - 3, 0x000000, (((__oc48 = options.shadowAlpha) !== null && __oc48 !== void 0 ? __oc48 : 0.38))).setDepth(depth);
-      const panel = this.addSurfaceImage(x, y, width, height).setAlpha((((__oc49 = options.surfaceAlpha) !== null && __oc49 !== void 0 ? __oc49 : Math.max(0.84, (__oc50 = options.alpha) !== null && __oc50 !== void 0 ? __oc50 : 0.96)))).setDepth(depth + 0.1);
+      const shadow = this.add.rectangle(x, y + 5, width - 4, height - 3, 0x000000, (((__oc48 = options.shadowAlpha) !== null && __oc48 !== void 0 ? __oc48 : 0.42))).setDepth(depth);
+      const panel = this.addSurfaceImage(x, y, width, height, options.surface || "panel").setAlpha((((__oc49 = options.surfaceAlpha) !== null && __oc49 !== void 0 ? __oc49 : Math.max(0.88, (__oc50 = options.alpha) !== null && __oc50 !== void 0 ? __oc50 : 0.98)))).setDepth(depth + 0.1);
       const wash = this.add.rectangle(x, y, width - 8, height - 8, UI_COLORS.chalk, options.fill ? 0.045 : 0).setDepth(depth + 0.15);
       const objects = [shadow, panel, wash];
       if (options.track !== false) this.overlayObjects.push(...objects);
@@ -5154,20 +5142,21 @@
     }
 
     addHudChip(x, y, width, label, value, accent, depth = 322) {
-      const panel = this.addCommandPanel(x, y, width, 34, depth, accent, {
-        alpha: 0.82,
+      const panel = this.addCommandPanel(x, y, width, 28, depth, accent, {
+        alpha: 0.92,
+        surface: "button",
         shadowAlpha: 0.3,
         track: false
       });
-      const labelText = this.add.text(x - width / 2 + 15, y, label, {
+      const labelText = this.add.text(x - width / 2 + 12, y, label, {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 12,
+        fontSize: 11,
         fontStyle: "800",
         color: "#b4b2a0"
       }).setOrigin(0, 0.5).setDepth(depth + 0.3);
       const valueText = this.add.text(x + width / 2 - 10, y, value, {
         resolution: 2, fontFamily: "Arial, sans-serif",
-        fontSize: 18,
+        fontSize: 16,
         fontStyle: "800",
         color: "#eee6d2",
         stroke: "#030607",
@@ -5176,35 +5165,38 @@
       return { ...panel, label: labelText, value: valueText, objects: [...panel.objects, labelText, valueText] };
     }
 
-    addOverlayHeader({ y = 120, title, kicker = "DEFENSE COMMAND", subtitle = "", accent = COLORS.gold, depth = 502 }) {
-      const panel = this.addCommandPanel(270, y, 440, 116, depth, accent, {
-        alpha: 0.88,
+    addOverlayHeader({ y = 120, title, kicker = "", subtitle = "", accent = COLORS.gold, depth = 502 }) {
+      const hasKicker = Boolean(kicker);
+      const panel = this.addCommandPanel(270, y, 440, hasKicker ? 116 : 90, depth, accent, {
+        alpha: 0.96,
+        surface: "header"
       });
-      const signal = this.add.rectangle(270, y - 53, 42, 2, fieldAccent(accent), 0.74).setDepth(depth + 0.22);
-      const kickerText = this.add.text(270, y - 34, kicker, {
+      const signal = this.add.rectangle(270, y - (hasKicker ? 53 : 40), 42, 2, fieldAccent(accent), 0.74).setDepth(depth + 0.22);
+      const kickerText = hasKicker ? this.add.text(270, y - 34, kicker, {
         resolution: 2, fontFamily: "Arial, sans-serif",
         fontSize: 11,
         fontStyle: "800",
         color: accent === COLORS.gold ? "#d5b675" : "#c5b995"
-      }).setOrigin(0.5).setDepth(depth + 0.3);
-      const titleText = this.add.text(270, y - 4, title, {
+      }).setOrigin(0.5).setDepth(depth + 0.3) : null;
+      const titleText = this.add.text(270, y - (hasKicker ? 4 : 13), title, {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 32,
+        fontSize: hasKicker ? 32 : 30,
         fontStyle: "800",
         color: "#eee6d2",
         stroke: "#030607",
         strokeThickness: 1
       }).setOrigin(0.5).setDepth(depth + 0.3);
-      const subtitleText = this.add.text(270, y + 35, subtitle, {
+      const subtitleText = subtitle ? this.add.text(270, y + (hasKicker ? 35 : 22), subtitle, {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 14,
+        fontSize: 13,
         fontStyle: "800",
         color: "#c6c4b5",
         stroke: "#030607",
         strokeThickness: 1
-      }).setOrigin(0.5).setDepth(depth + 0.3);
-      this.overlayObjects.push(signal, kickerText, titleText, subtitleText);
-      return { ...panel, signal, kicker: kickerText, title: titleText, subtitle: subtitleText, objects: [...panel.objects, signal, kickerText, titleText, subtitleText] };
+      }).setOrigin(0.5).setDepth(depth + 0.3) : null;
+      const headerItems = [...panel.objects, signal, kickerText, titleText, subtitleText].filter(Boolean);
+      this.overlayObjects.push(...[signal, kickerText, titleText, subtitleText].filter(Boolean));
+      return { ...panel, signal, kicker: kickerText, title: titleText, subtitle: subtitleText, objects: headerItems };
     }
 
     animateOverlayEntrance(objects, delay = 0, offsetY = 16, duration = 360) {
@@ -5245,32 +5237,38 @@
       const visualHeight = Math.max(34, Number(options.visualHeight) || height);
       const hitHeight = Math.max(height, Number(options.hitHeight) || height);
       const primary = options.primary === true;
+      const danger = options.danger === true || (!primary && accent === COLORS.red);
       const lightText = !primary || options.lightText === true;
       const compact = options.compact === true;
       const disabled = options.disabled === true;
-      const shadow = this.add.rectangle(x, y + 4, width - 6, visualHeight - 4, 0x000000, (((__oc51 = options.shadowAlpha) !== null && __oc51 !== void 0 ? __oc51 : 0.45))).setDepth(depth);
-      const frame = this.addSurfaceImage(x, y, width, visualHeight, primary ? "primary" : "button")
-        .setAlpha((((__oc52 = options.surfaceAlpha) !== null && __oc52 !== void 0 ? __oc52 : 1))).setDepth(depth + 0.1);
+      const surfaceKind = options.surface || (danger ? "danger" : primary ? "primary" : "button");
+      const shadow = this.add.rectangle(x, y + 4, width - 6, visualHeight - 4, 0x000000, (((__oc51 = options.shadowAlpha) !== null && __oc51 !== void 0 ? __oc51 : 0.48))).setDepth(depth);
+      const frame = this.addSurfaceImage(x, y, width, visualHeight, surfaceKind)
+        .setAlpha((((__oc52 = options.surfaceAlpha) !== null && __oc52 !== void 0 ? __oc52 : 0.96))).setDepth(depth + 0.1);
+      const frameBaseScaleX = frame.scaleX;
+      const frameBaseScaleY = frame.scaleY;
       const wash = this.add.rectangle(x, y, width - 12, visualHeight - 12, 0xffeed0, 0).setDepth(depth + 0.2);
-      const kicker = options.kicker ? this.add.text(x, y - visualHeight * 0.22, String(options.kicker), {
+      const kicker = options.kicker ? this.add.text(x, y - visualHeight * 0.23, String(options.kicker), {
         resolution: 2, fontFamily: "Arial, sans-serif", fontSize: compact ? 9 : 10,
-        fontStyle: "700", color: lightText ? "#bdb8a6" : "#30291d",
-        stroke: "#131712", strokeThickness: options.lightText ? 2 : 0
+        fontStyle: "800", color: primary && !options.lightText ? "#2f220c" : primary ? "#fff2cf" : danger ? "#ffd0c4" : "#c5b995",
+        stroke: primary && !options.lightText ? "#f2cf84" : "#120d06", strokeThickness: primary && !options.lightText ? 0 : 2
       }).setOrigin(0.5).setDepth(depth + 0.24) : null;
       const text = this.add.text(x, y + (kicker ? visualHeight * 0.13 : 0), label, {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: Number(options.fontSize) || (compact ? 16 : primary ? 30 : 21),
-        fontStyle: "800", color: lightText ? accent === COLORS.red ? "#e0aa91" : "#f0e8d5" : "#1d211b",
-        stroke: lightText ? "#131712" : "#1d211b", strokeThickness: options.lightText ? 2 : lightText ? 1 : 0
+        fontStyle: "900", color: lightText ? danger ? "#ffe4dc" : primary ? "#fff9e8" : "#f2ead7" : "#1d170f",
+        stroke: lightText ? (primary ? "#1f1506" : danger ? "#240807" : "#101418") : "#1d170f",
+        strokeThickness: lightText ? (primary ? 4 : 3) : 0
       }).setOrigin(0.5).setDepth(depth + 0.3);
       const hit = this.add.rectangle(x, y, width, hitHeight, 0xffffff, 0)
         .setDepth(depth + 0.5).setInteractive({ useHandCursor: !disabled });
       const setHover = (hovered) => {
         if (disabled) return;
-        wash.setAlpha(hovered ? 0.075 : 0);
-        frame.setTint(hovered ? 0xffffff : 0xeeeae0);
+        wash.setAlpha(hovered ? 0.08 : 0);
+        frame.setTint(hovered ? 0xffffff : 0xf4f0e8);
+        frame.setScale(frameBaseScaleX * (hovered ? 1.012 : 1), frameBaseScaleY * (hovered ? 1.012 : 1));
       };
-      frame.setTint(disabled ? 0x777a71 : 0xeeeae0);
+      frame.setTint(disabled ? 0x777a71 : 0xf4f0e8);
       if (disabled) { text.setAlpha(0.55); ((kicker === null || kicker === void 0 ? void 0 : kicker.setAlpha(0.55))); hit.disableInteractive(); }
       hit.on("pointerover", () => setHover(true));
       hit.on("pointerout", () => setHover(false));
@@ -5329,7 +5327,8 @@
           wordWrap: { width: 402, useAdvancedWrap: true }
         }).setOrigin(0.5).setDepth(431));
         const panel = this.trackTransient(this.addSurfaceImage(270, 158,
-          Math.min(450, Math.max(330, text.width + 32)), Math.max(48, text.height + 20))
+          Math.min(450, Math.max(330, text.width + 36)), Math.max(50, text.height + 22),
+          color === COLORS.red ? "danger" : "header")
           .setDepth(430));
 
       this.tweens.add({
@@ -5694,25 +5693,26 @@
       }
       items.push(this.add.rectangle(270, 480, 540, 960, 0x020304, 0.78).setDepth(501));
       const header = this.addOverlayHeader({
-        y: 112,
+        y: 116,
         title: SchoolI18n.t("rank.title"),
-        kicker: "DEFENDER RECORDS",
+        kicker: "",
         subtitle: SchoolI18n.t("rank.subtitle"),
         accent: COLORS.gold,
         depth: 502
       });
-      const board = this.addCommandPanel(270, 500, 464, 620, 502, COLORS.blue, {
-        alpha: 0.91,
+      const board = this.addCommandPanel(270, 502, 464, 624, 502, COLORS.blue, {
+        alpha: 0.96,
+        surface: "panel"
       });
-      const boardTop = this.add.rectangle(270, 214, 416, 38, 0xb1a17b, 0.09)
+      const boardTop = this.addSurfaceImage(270, 212, 424, 38, "header")
         .setDepth(504);
       const headers = [
-        this.add.text(74, 214, "RANK", { resolution: 2, fontFamily: "Arial, sans-serif", fontSize: 11, fontStyle: "800", color: "#c5b995" }).setOrigin(0, 0.5).setDepth(505),
-        this.add.text(146, 214, "DEFENDER", { resolution: 2, fontFamily: "Arial, sans-serif", fontSize: 11, fontStyle: "800", color: "#c5b995" }).setOrigin(0, 0.5).setDepth(505),
-        this.add.text(410, 214, "CLEAR", { resolution: 2, fontFamily: "Arial, sans-serif", fontSize: 11, fontStyle: "800", color: "#c5b995" }).setOrigin(1, 0.5).setDepth(505)
+        this.add.text(74, 212, "RANK", { resolution: 2, fontFamily: "Arial, sans-serif", fontSize: 11, fontStyle: "800", color: "#c5b995" }).setOrigin(0, 0.5).setDepth(505),
+        this.add.text(146, 212, "DEFENDER", { resolution: 2, fontFamily: "Arial, sans-serif", fontSize: 11, fontStyle: "800", color: "#c5b995" }).setOrigin(0, 0.5).setDepth(505),
+        this.add.text(410, 212, "CLEAR", { resolution: 2, fontFamily: "Arial, sans-serif", fontSize: 11, fontStyle: "800", color: "#c5b995" }).setOrigin(1, 0.5).setDepth(505)
       ];
       items.push(boardTop, ...headers);
-      this.addLanguageSwitch(470, 48, 560);
+      this.addLanguageSwitch(470, 34, 560);
 
       const visibleRows = rows.slice(0, 11);
       if (!visibleRows.length) {
@@ -5749,7 +5749,7 @@
         const storedName = this.getStoredRankName().toLocaleUpperCase();
         const medalColors = [0xd5b675, 0xcbd6dc, 0xd89868];
         visibleRows.forEach((row, index) => {
-          const y = 262 + index * 48;
+          const y = 268 + index * 47;
           const rank = Math.max(1, Math.floor(Number(row.rank) || index + 1));
           const score = Math.max(0, Math.floor(Number(row.score) || 0));
           const fullName = String(row.player_name || "DEFENDER").trim() || "DEFENDER";
@@ -5761,15 +5761,16 @@
           const rowPanel = this.add.rectangle(270, y, 414, 40, isPlayer ? UI_COLORS.amber : 0xffffff, isPlayer ? 0.12 : index % 2 ? 0.015 : 0.04).setDepth(503);
           const rowRule = this.add.rectangle(270, y + 23, 404, 1, UI_COLORS.steel, 0.16).setDepth(504);
           items.push(rowPanel, rowRule);
-          const rankBadge = this.add.rectangle(95, y, 28, 28, rank <= 3 ? rowAccent : 0x292b22, rank <= 3 ? 0.85 : 0)
-            .setDepth(505);
+          const rankBadge = rank <= 3
+            ? this.addSurfaceImage(95, y, 30, 30, rank === 1 ? "primary" : "slot").setDepth(505)
+            : this.add.rectangle(95, y, 28, 28, 0x292b22, 0).setDepth(505);
           const rankText = this.add.text(95, y, `${rank}`, {
             resolution: 2, fontFamily: "Arial, sans-serif",
             fontSize: 14,
-            fontStyle: "800",
-            color: rank <= 3 ? "#101418" : "#eee6d2",
+            fontStyle: "900",
+            color: "#fff7e2",
             stroke: "#050607",
-            strokeThickness: rank <= 3 ? 0 : 2
+            strokeThickness: 3
           }).setOrigin(0.5).setDepth(506);
           const nameText = this.add.text(132, y - 5, name, {
             resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
@@ -5798,16 +5799,18 @@
       }
 
       const canRegister = this.lastRankableRun && this.lastRankableRun.score > 0;
-      const back = this.addTacticalMenuButton(canRegister ? 154 : 270, 884, canRegister ? 196 : 328, 64, SchoolI18n.t("rank.menu"), 560, () => this.showMenu(), COLORS.gold, {
-        kicker: "BACK · ESC / B",
+      const back = this.addTacticalMenuButton(canRegister ? 154 : 270, 884, canRegister ? 196 : 328, 60, SchoolI18n.t("rank.menu"), 560, () => this.showMenu(), COLORS.gold, {
         hitHeight: 76,
-        fontSize: 19
+        fontSize: 19,
+        surfaceAlpha: 0.96
       });
       if (canRegister) {
-        this.addTacticalMenuButton(386, 884, 196, 64, SchoolI18n.t("rank.submit"), 560, () => this.submitRankScore(), COLORS.blue, {
-          kicker: "SUBMIT RUN",
+        this.addTacticalMenuButton(386, 884, 196, 60, SchoolI18n.t("rank.submit"), 560, () => this.submitRankScore(), COLORS.gold, {
+          primary: true,
+          lightText: true,
           hitHeight: 76,
-          fontSize: 19
+          fontSize: 19,
+          surfaceAlpha: 0.98
         });
       }
       this.animateOverlayEntrance([...header.objects, ...board.objects, boardTop, ...headers, ...Object.values(back)], 40, 16, 340);
@@ -6128,12 +6131,15 @@
     }
 
     addLanguageSwitch(x, y, depth) {
-      const make = (lang, offset) => this.addTacticalMenuButton(
-        x + offset, y, 52, 34, lang.toUpperCase(), depth,
-        () => this.switchLanguage(lang),
-        SchoolI18n.getLang() === lang ? COLORS.gold : COLORS.blue,
-        { compact: true, fontSize: 12, hitHeight: 44, visualHeight: 32, surfaceAlpha: 0.45, shadowAlpha: 0.12 }
-      );
+      const make = (lang, offset) => {
+        const active = SchoolI18n.getLang() === lang;
+        return this.addTacticalMenuButton(
+          x + offset, y, 52, 34, lang.toUpperCase(), depth,
+          () => this.switchLanguage(lang),
+          active ? COLORS.gold : COLORS.blue,
+          { primary: active, lightText: true, compact: true, fontSize: 12, hitHeight: 44, visualHeight: 32, surfaceAlpha: active ? 0.96 : 0.9, shadowAlpha: 0.25 }
+        );
+      };
       return [make("ko", -30), make("en", 30)];
     }
 
@@ -6210,131 +6216,100 @@
 
       const archerButton = this.addTacticalMenuButton(112, 38, 178, 42, "← ARCHERLAB", 530, () => {
         goToArcherLabHome();
-      }, COLORS.blue, { compact: true, fontSize: 14, hitHeight: 76, surfaceAlpha: 0.32, shadowAlpha: 0.1, activateOnRelease: true });
-      const protocol = this.add.text(492, 38, this.profileSyncFailed ? "SYNC · OFFLINE" : "THREAT · RED", {
-        resolution: 2, fontFamily: "Arial, sans-serif",
-        fontSize: 13,
-        fontStyle: "800",
-        color: "#ca9273",
-        stroke: "#050607",
-        strokeThickness: 1
-      }).setOrigin(1, 0.5).setDepth(504);
-      this.menuProtocolText = protocol;
-      items.push(protocol);
-      this.addLanguageSwitch(292, 38, 530);
-      const eyebrow = this.add.text(270, 79, "SCHOOL UNDEAD · LAST DEFENSE", {
-        resolution: 2, fontFamily: "Arial, sans-serif",
-        fontSize: 14,
-        fontStyle: "800",
-        color: "#c5b995",
-        stroke: "#050607",
-        strokeThickness: 1
-      }).setOrigin(0.5).setDepth(504);
-      eyebrow.setShadow(0, 2, "#000000", 8, true, true);
-      items.push(eyebrow);
-      const title = this.add.text(270, 132, SchoolI18n.t("menu.title"), {
+      }, COLORS.blue, { compact: true, fontSize: 14, hitHeight: 76, surfaceAlpha: 0.92, shadowAlpha: 0.3, activateOnRelease: true });
+      const offlineBadgeItems = [];
+      if (this.profileSyncFailed) {
+        const protocolBg = this.addSurfaceImage(270, 38, 128, 30, "danger").setAlpha(0.92).setDepth(503);
+        const protocol = this.add.text(270, 38, "OFFLINE", {
+          resolution: 2, fontFamily: "Arial, sans-serif",
+          fontSize: 11,
+          fontStyle: "900",
+          color: "#ffd9cf",
+          stroke: "#1d0706",
+          strokeThickness: 2
+        }).setOrigin(0.5).setDepth(504);
+        this.menuProtocolText = protocol;
+        offlineBadgeItems.push(protocolBg, protocol);
+        items.push(protocolBg, protocol);
+      } else {
+        this.menuProtocolText = null;
+      }
+      this.addLanguageSwitch(468, 38, 530);
+      const title = this.add.text(270, 122, SchoolI18n.t("menu.title"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 40,
-        fontStyle: "800",
-        color: "#eee6d2",
-        stroke: "#030607",
-        strokeThickness: 1
+        fontStyle: "900",
+        color: "#f4ecda",
+        stroke: "#080b0e",
+        strokeThickness: 4
       }).setOrigin(0.5).setDepth(504);
       title.setShadow(0, 5, "#000000", 10, true, true);
       items.push(title);
-      const subtitle = this.add.text(270, 179, SchoolI18n.t("menu.subtitle"), {
+      const subtitle = this.add.text(270, 168, SchoolI18n.t("menu.subtitle"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 18,
+        fontSize: 17,
         fontStyle: "800",
-        color: "#d0cbbd",
+        color: "#dfd9c8",
         stroke: "#050607",
-        strokeThickness: 1
+        strokeThickness: 3
       }).setOrigin(0.5).setDepth(504);
       subtitle.setShadow(0, 3, "#000000", 7, true, true);
       items.push(subtitle);
 
-      const missionPanel = this.addCommandPanel(270, 602, 432, 74, 522, COLORS.blue, {
-        surfaceAlpha: 0.28,
-        shadowAlpha: 0.08,
+      const creditPanel = this.addCommandPanel(270, 706, 210, 38, 526, COLORS.gold, {
+        surface: "header",
+        surfaceAlpha: 0.94,
+        shadowAlpha: 0.36,
       });
-      const missionKicker = this.add.text(72, 584, "CURRENT OBJECTIVE", {
-        resolution: 2, fontFamily: "Arial, sans-serif",
-        fontSize: 10,
-        fontStyle: "800",
-        color: "#c5b995"
-      }).setOrigin(0, 0.5).setDepth(524);
-      const missionTitle = this.add.text(72, 610, SchoolI18n.t("menu.objective"), {
+      const creditLabel = this.add.text(184, 706, SchoolI18n.t("hud.supply"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 15,
+        fontSize: 12,
         fontStyle: "800",
-        color: "#eee6d2",
-        stroke: "#030607",
-        strokeThickness: 1
-      }).setOrigin(0, 0.5).setDepth(524);
-      const missionTag = this.add.text(468, 602, "ENDLESS", {
-        resolution: 2, fontFamily: "Arial, sans-serif",
-        fontSize: 11,
-        fontStyle: "800",
-        color: "#d5b675",
-        stroke: "#030607",
-        strokeThickness: 1
-      }).setOrigin(1, 0.5).setDepth(524);
-      items.push(missionKicker, missionTitle, missionTag);
-
-      const creditPanel = this.addCommandPanel(270, 700, 318, 46, 526, COLORS.gold, {
-        surfaceAlpha: 0.3,
-        shadowAlpha: 0.08,
-      });
-      const creditLabel = this.add.text(132, 700, this.profileSyncFailed ? "OFFLINE SUPPLY" : "SUPPLY CREDIT", {
-        resolution: 2, fontFamily: "Arial, sans-serif",
-        fontSize: 11,
-        fontStyle: "800",
-        color: "#aaa998",
+        color: "#c5b995",
         stroke: "#050607",
-        strokeThickness: 1
+        strokeThickness: 2
       }).setOrigin(0, 0.5).setDepth(527);
       this.menuCreditLabel = creditLabel;
-      const creditValue = this.add.text(408, 700, `$${this.meta.coins}`, {
+      const creditValue = this.add.text(356, 706, `$${this.meta.coins}`, {
         resolution: 2, fontFamily: "Arial, sans-serif",
-        fontSize: 19,
-        fontStyle: "800",
-        color: "#d5b675",
+        fontSize: 18,
+        fontStyle: "900",
+        color: "#f2cf84",
         stroke: "#050607",
-        strokeThickness: 1
+        strokeThickness: 3
       }).setOrigin(1, 0.5).setDepth(527);
       this.menuCoinsText = creditValue;
       items.push(creditLabel, creditValue);
 
-      const startButton = this.addTacticalMenuButton(270, 790, 410, 86, SchoolI18n.t("menu.deploy"), 530, () => this.startRun(), 0xf15a47, {
+      const startButton = this.addTacticalMenuButton(270, 790, 380, 78, SchoolI18n.t("menu.deploy"), 530, () => this.startRun(), 0xf15a47, {
         primary: true,
-        surfaceAlpha: 0.55,
-        shadowAlpha: 0.14,
+        surfaceAlpha: 0.98,
+        shadowAlpha: 0.48,
         lightText: true,
-        kicker: "BEGIN SORTIE · ENTER / A",
-        hitHeight: 86
+        hitHeight: 84,
+        fontSize: 32
       });
-      const rankingButton = this.addTacticalMenuButton(164, 892, 188, 76, SchoolI18n.t("menu.ranks"), 530, () => this.showRankings(), COLORS.gold, {
-        surfaceAlpha: 0.32,
-        shadowAlpha: 0.1,
-        kicker: "RECORDS · L",
-        hitHeight: 76
+      const rankingButton = this.addTacticalMenuButton(172, 884, 184, 62, SchoolI18n.t("menu.ranks"), 530, () => this.showRankings(), COLORS.gold, {
+        surfaceAlpha: 0.95,
+        shadowAlpha: 0.42,
+        hitHeight: 72,
+        fontSize: 20
       });
-      const shopButton = this.addTacticalMenuButton(376, 892, 188, 76, SchoolI18n.t("menu.armory"), 530, () => this.showShop(), COLORS.blue, {
-        surfaceAlpha: 0.32,
-        shadowAlpha: 0.1,
-        kicker: "ARMORY · A",
-        hitHeight: 76
+      const shopButton = this.addTacticalMenuButton(368, 884, 184, 62, SchoolI18n.t("menu.armory"), 530, () => this.showShop(), COLORS.blue, {
+        surfaceAlpha: 0.95,
+        shadowAlpha: 0.42,
+        hitHeight: 72,
+        fontSize: 20
       });
 
       this.animateOverlayEntrance(Object.values(archerButton), 40, -10, 300);
-      this.animateOverlayEntrance([protocol, eyebrow], 90, 10, 320);
-      this.animateOverlayEntrance([title], 150, 18, 420);
-      this.animateOverlayEntrance([subtitle], 230, 14, 380);
-      this.animateOverlayEntrance([...missionPanel.objects, missionKicker, missionTitle, missionTag], 270, 18, 360);
-      this.animateOverlayEntrance([...creditPanel.objects, creditLabel, creditValue], 300, 18, 360);
-      this.animateOverlayEntrance(Object.values(startButton), 350, 22, 420);
-      this.animateOverlayEntrance(Object.values(rankingButton), 430, 18, 380);
-      this.animateOverlayEntrance(Object.values(shopButton), 470, 18, 380);
+      if (offlineBadgeItems.length) this.animateOverlayEntrance(offlineBadgeItems, 90, 10, 320);
+      this.animateOverlayEntrance([title], 120, 18, 400);
+      this.animateOverlayEntrance([subtitle], 180, 14, 360);
+      this.animateOverlayEntrance([...creditPanel.objects, creditLabel, creditValue], 250, 18, 360);
+      this.animateOverlayEntrance(Object.values(startButton), 310, 22, 400);
+      this.animateOverlayEntrance(Object.values(rankingButton), 380, 18, 360);
+      this.animateOverlayEntrance(Object.values(shopButton), 410, 18, 360);
     }
 
     showShop(selectedId = this.shopSelectedCharacter || "c") { var __oc77;
@@ -6929,9 +6904,9 @@
         alpha: 0.94,
       });
       const header = this.addOverlayHeader({
-        y: 230,
+        y: 234,
         title: SchoolI18n.t("pause.title"),
-        kicker: "TACTICAL HOLD",
+        kicker: "",
         subtitle: `STAGE ${String(this.stage).padStart(2, "0")} · WAVE ${String(this.level).padStart(2, "0")}`,
         accent: COLORS.gold,
         depth: 523
@@ -6939,7 +6914,8 @@
 
       const addSnapshot = (x, label, value, accent) => {
         const panel = this.addCommandPanel(x, 352, 126, 82, 525, accent, {
-          alpha: 0.78,
+          alpha: 0.94,
+          surface: "card"
         });
         const labelText = this.add.text(x, 331, label, {
           resolution: 2, fontFamily: "Arial, sans-serif",
@@ -6965,7 +6941,8 @@
       ];
 
       const corePanel = this.addCommandPanel(270, 456, 400, 88, 525, this.coreHp < this.maxCoreHp * 0.35 ? COLORS.red : COLORS.green, {
-        alpha: 0.78,
+        alpha: 0.94,
+        surface: "card"
       });
       const coreTitle = this.add.text(92, 431, SchoolI18n.t("pause.core"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
@@ -6991,7 +6968,8 @@
       items.push(coreTitle, coreValue, coreTrack, coreFill);
 
       const speedPanel = this.addCommandPanel(270, 540, 400, 54, 525, COLORS.blue, {
-        alpha: 0.72,
+        alpha: 0.94,
+        surface: "button"
       });
       const speedLabel = this.add.text(92, 540, SchoolI18n.t("pause.speed"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
@@ -7016,24 +6994,16 @@
       });
       items.push(speedLabel, this.ui.pauseSpeedValue, speedHit);
 
-      const resume = this.addTacticalMenuButton(270, 636, 382, 78, SchoolI18n.t("pause.resume"), 530, () => this.togglePause(), COLORS.gold, {
+      const resume = this.addTacticalMenuButton(270, 636, 382, 72, SchoolI18n.t("pause.resume"), 530, () => this.togglePause(), COLORS.gold, {
         primary: true,
-        kicker: "RESUME · ESC / START",
+        lightText: true,
         hitHeight: 82
       });
-      const exit = this.addTacticalMenuButton(270, 734, 382, 62, SchoolI18n.t("pause.exit"), 530, () => this.showQuitConfirmation(), COLORS.red, {
-        kicker: "BANK SUPPLIES & RETURN",
+      const exit = this.addTacticalMenuButton(270, 728, 382, 60, SchoolI18n.t("pause.exit"), 530, () => this.showQuitConfirmation(), COLORS.red, {
+        danger: true,
         hitHeight: 76,
         fontSize: 20
       });
-      const hint = this.add.text(270, 800, SchoolI18n.t("pause.hint"), {
-        resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 11,
-        fontStyle: "800",
-        color: "#8fa8ae",
-        align: "center"
-      }).setOrigin(0.5).setDepth(532);
-      items.push(hint);
       this.animateOverlayEntrance([
         ...header.objects,
         ...snapshotObjects,
@@ -7042,8 +7012,7 @@
         speedLabel,
         this.ui.pauseSpeedValue,
         ...Object.values(resume),
-        ...Object.values(exit),
-        hint
+        ...Object.values(exit)
       ], 40, 18, 360);
     }
 
@@ -10851,9 +10820,9 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       items.push(this.add.rectangle(270, 514, 500, 694, 0x010204, 0.24).setDepth(522));
       items.push(this.add.ellipse(270, 514, 474, 720, COLORS.gold, 0.045).setDepth(522.2));
       const header = this.addOverlayHeader({
-        y: 118,
+        y: 122,
         title: SchoolI18n.t("skill.title"),
-        kicker: "WAVE CLEAR · SUPPLY AUTHORIZED",
+        kicker: "",
         subtitle: SchoolI18n.t("skill.subtitle", { wave: String(this.level).padStart(2, "0") }),
         accent: COLORS.gold,
         depth: 523
@@ -10862,14 +10831,6 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
 
       this.renderSkillChoiceCards();
       this.addSkillRerollButton();
-      items.push(this.add.text(270, 912, SchoolI18n.t("skill.hint"), {
-        fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 14,
-        fontStyle: "900",
-        color: "#ffffff",
-        stroke: "#050607",
-        strokeThickness: 4
-      }).setOrigin(0.5).setDepth(535));
       this.updateHud();
     }
 
@@ -11742,23 +11703,24 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       const ownerTexture = upgrade.ownerCharacterTexture;
       const hasOwnerCharacter = Boolean(ownerTexture && !isRecruit && this.textures.exists(ownerTexture));
       const panel = this.addCommandPanel(x, y, 452, 150, 523, accent, {
-        alpha: 0.92,
-        shadowAlpha: 0.42,
+        alpha: 0.98,
+        surface: "card",
+        shadowAlpha: 0.45,
         track: false
       });
-      const accentRail = this.add.rectangle(x - 215, y, 3, 64, accent, 0.65).setDepth(525);
-      const portraitHalo = this.add.rectangle(x - 166, y, 94, 94, 0x11120f, 0.78)
-        .setStrokeStyle(1, UI_COLORS.steel, 0.6)
+      const portraitHalo = this.addSurfaceImage(x - 166, y, 96, 96, "slot")
         .setDepth(525);
+      const portraitBaseScaleX = portraitHalo.scaleX;
+      const portraitBaseScaleY = portraitHalo.scaleY;
       const icon = this.add.image(x - 166, y, isRecruit ? recruitPortraitTexture : upgrade.icon).setDepth(526);
-      icon.setDisplaySize(isRecruit ? 92 : 78, isRecruit ? 92 : 78);
+      icon.setDisplaySize(isRecruit ? 84 : 74, isRecruit ? 84 : 74);
       const iconBaseScaleX = icon.scaleX;
       const iconBaseScaleY = icon.scaleY;
       const ownerHalo = hasOwnerCharacter
-        ? this.add.circle(x - 142, y + 34, 21, 0x11120f, 0.92).setStrokeStyle(1, UI_COLORS.steel, 0.65).setDepth(526)
+        ? this.addSurfaceImage(x - 134, y + 34, 40, 40, "slot").setDepth(526)
         : null;
       const ownerCharacter = hasOwnerCharacter
-        ? this.add.image(x - 142, y + 34, ownerTexture).setDisplaySize(38, 38).setDepth(527)
+        ? this.add.image(x - 134, y + 34, ownerTexture).setDisplaySize(34, 34).setDepth(527)
         : null;
       const tagBg = this.add.rectangle(x - 64, y - 51, 86, 24, accent, 0.2)
         .setStrokeStyle(1, accent, 0.72)
@@ -11792,8 +11754,9 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       }).setOrigin(0, 0).setDepth(526);
       const statLines = upgrade.stat ? String(upgrade.stat).split("\n").length : 0;
       const statPanel = this.addCommandPanel(x + 132, y - 10, 128, statLines > 1 ? 70 : 58, 525, accent, {
-        alpha: 0.7,
-        shadowAlpha: 0.18,
+        alpha: 0.94,
+        surface: "card",
+        shadowAlpha: 0.22,
         track: false
       });
       const statText = upgrade.stat
@@ -11817,13 +11780,12 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       const chooseText = this.add.text(x + 132, y + 49, SchoolI18n.t("skill.choose"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 17,
-        fontStyle: "800",
-        color: "#eee6d2",
-        stroke: "#030607",
-        strokeThickness: 1
+        fontStyle: "900",
+        color: "#f4ecda",
+        stroke: "#080b0e",
+        strokeThickness: 3
       }).setOrigin(0.5).setDepth(527);
-      const keyBadge = this.add.rectangle(x + 205, y - 58, 28, 26, UI_COLORS.panelRaised, 0.92)
-        .setStrokeStyle(1, UI_COLORS.steel, 0.7)
+      const keyBadge = this.addSurfaceImage(x + 205, y - 58, 30, 28, "slot")
         .setDepth(527);
       const keyText = this.add.text(x + 205, y - 58, `${index + 1}`, {
         resolution: 2, fontFamily: "Arial, sans-serif",
@@ -11836,7 +11798,6 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
         .setInteractive({ useHandCursor: true });
       const animated = [
         ...panel.objects,
-        accentRail,
         portraitHalo,
         icon,
         ownerHalo,
@@ -11869,12 +11830,16 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       }
       const setHover = (active) => {
         panel.wash.setAlpha(active ? 0.085 : 0);
-        portraitHalo.setScale(active ? 1.05 : 1);
+        portraitHalo.setScale(
+          portraitBaseScaleX * (active ? 1.05 : 1),
+          portraitBaseScaleY * (active ? 1.05 : 1)
+        );
         icon.setScale(
           iconBaseScaleX * (active ? 1.035 : 1),
           iconBaseScaleY * (active ? 1.035 : 1)
         );
-        chooseBg.setTint(active ? 0xffffff : 0xcacbc1);
+        chooseBg.setTexture(window.SchoolZombieUI.texture(this, active ? "primary" : "button", 122, 38));
+        chooseBg.setTint(active ? 0xffffff : 0xe5e3d8);
         chooseText.setScale(active ? 1.04 : 1);
       };
       this.skillChoiceFocusHandlers[index] = setHover;
@@ -12159,17 +12124,18 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       }
       const rankSnapshot = this.getRankSnapshot(earnedCoins);
       this.lastRankableRun = rankSnapshot.score > 0 ? rankSnapshot : null;
+      const showInlineMenu = !this.lastRankableRun;
       const items = this.overlayObjects;
-      const summaryPanel = this.addSurfaceImage(270, 166, 424, 236).setAlpha(0.9)
+      const summaryPanel = this.addSurfaceImage(270, showInlineMenu ? 190 : 166, 424, showInlineMenu ? 286 : 236, "panel").setAlpha(0.96)
         .setDepth(542);
-      const summaryLine = this.add.rectangle(270, 62, 300, 4, 0xbf7963, 0.9).setDepth(543);
-      const summaryTitle = this.add.text(270, 98, SchoolI18n.t("over.title"), {
+      const summaryLine = this.addSurfaceImage(270, 96, 368, 48, "danger").setAlpha(0.96).setDepth(543);
+      const summaryTitle = this.add.text(270, 96, SchoolI18n.t("over.title"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 42,
+        fontSize: 34,
         fontStyle: "900",
-        color: "#bf7963",
-        stroke: "#050607",
-        strokeThickness: 6
+        color: "#ffe8df",
+        stroke: "#230706",
+        strokeThickness: 5
       }).setOrigin(0.5).setDepth(544);
       const summaryWave = this.add.text(270, 146, SchoolI18n.t("over.wave", { level: this.level, kills: this.kills }), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
@@ -12205,7 +12171,7 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
           returnToMenuOnSuccess: true
         });
       } else {
-        this.addOverlayButton(270, 286, 184, 52, SchoolI18n.t("over.menu"), 545, () => this.returnToGameStart(), COLORS.gold);
+        this.addOverlayButton(270, 290, 196, 54, SchoolI18n.t("over.menu"), 545, () => this.returnToGameStart(), COLORS.gold);
       }
     }
 
@@ -12247,7 +12213,7 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       }
       const ratio = clamp(boss.hp / Math.max(1, boss.maxHp), 0, 1);
       const accent = (boss.bossConfig && boss.bossConfig.accent) || 0xff6b47;
-      bossHud.panel.setStrokeStyle(1, accent, 0.78).setVisible(true);
+      bossHud.panel.setVisible(true);
       bossHud.barBack.setVisible(true);
       bossHud.barFill.setFillStyle(accent, 1).setSize(Math.max(2, bossHud.barWidth * ratio), 5).setVisible(true);
       bossHud.tag.setVisible(true);
