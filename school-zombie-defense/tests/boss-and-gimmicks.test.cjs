@@ -39,6 +39,12 @@ for (const [stage, cfg] of Object.entries(bossConfigs)) {
   assert.ok(cfg.hpMultiplier >= 4, `stage ${stage} boss hpMultiplier must scale cleanly`);
   assert.ok(Array.isArray(cfg.escorts) && cfg.escorts.length >= 2, `stage ${stage} boss must declare escorts`);
 }
+assert.ok(configs.brute.hpScale <= 3.2, "regular brute hpScale must stay balanced");
+assert.match(
+  gameSource,
+  /const effectiveTypeHpScale = isBoss \? 1 : typeConfig\.hpScale;/,
+  "boss HP must not double-multiply brute.hpScale on top of hpMultiplier"
+);
 
 const isBossWaveMatch = gameSource.match(/const isBossWave = ([^;]+);/);
 assert.ok(isBossWaveMatch, "isBossWave helper must exist");

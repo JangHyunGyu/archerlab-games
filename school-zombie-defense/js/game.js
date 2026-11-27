@@ -76,6 +76,7 @@
   const CHARACTER_CONTINUITY_ASSET_VERSION = "20261123-defender-continuity-8f-v3";
   const FIREBOMB_RECOVERY_ASSET_VERSION = "20261123-firebomb-recovery-8f-v3";
   const CROSSBOW_ASSET_VERSION = "20261123-crossbow-8f-v3";
+  const PISTOL_READY_ASSET_VERSION = "20261127-pistol-ready-v1";
   const CROSSBOW_AUDIO_VERSION = "20260719-freesound-crossbow-firing-v1";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const COMBAT_EFFECT_ASSET_VERSION = "20261126-combat-fx-v4";
@@ -864,7 +865,7 @@
     normal: { id: "normal", hpScale: 1, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 1, animRate: 6.8, reward: 1 },
     student: { id: "student", hpScale: 0.86, speedScale: 1.16, sizeScale: 0.9, attackScale: 0.9, hitRadiusScale: 0.9, knockbackScale: 1.08, animRate: 7.7, reward: 1 },
     runner: { id: "runner", hpScale: 0.72, speedScale: 1.72, sizeScale: 0.82, attackScale: 0.76, hitRadiusScale: 0.86, knockbackScale: 1.18, animRate: 9.4, reward: 1 },
-    brute: { id: "brute", hpScale: 4.1, speedScale: 0.72, sizeScale: 1.24, attackScale: 1.45, hitRadiusScale: 1.22, knockbackScale: 0.42, animRate: 4.9, reward: 2 },
+    brute: { id: "brute", hpScale: 2.9, speedScale: 0.72, sizeScale: 1.24, attackScale: 1.45, hitRadiusScale: 1.22, knockbackScale: 0.42, animRate: 4.9, reward: 2 },
     volatile: { id: "volatile", hpScale: 1.05, speedScale: 1.08, sizeScale: 1.02, attackScale: 1.06, hitRadiusScale: 1, knockbackScale: 0.72, animRate: 7.4, reward: 2, deathExplosion: true },
     teacher: { id: "teacher", hpScale: 1.28, speedScale: 0.92, sizeScale: 1.03, attackScale: 1.18, hitRadiusScale: 1.04, knockbackScale: 0.82, animRate: 6.2, reward: 2 },
     nurse: { id: "nurse", hpScale: 0.82, speedScale: 1.32, sizeScale: 0.9, attackScale: 0.88, hitRadiusScale: 0.88, knockbackScale: 1.08, animRate: 8.2, reward: 1, healAuraInterval: 4.2, healAuraRadius: 150, healAuraRatio: 0.14 },
@@ -1036,7 +1037,7 @@
     return ZOMBIE_TYPE_CONFIGS.normal;
   }
   const STAGE_BOSS_CONFIGS = {
-    1: { type: "brute", nameKey: "boss.brute", hpMultiplier: 4.8, scale: 1.28, speedScale: 0.78, attackScale: 1.35, accent: 0xff6b47, escorts: ["runner", "normal"] },
+    1: { type: "brute", nameKey: "boss.brute", hpMultiplier: 4.8, scale: 1.28, speedScale: 0.78, attackScale: 1.15, accent: 0xff6b47, escorts: ["runner", "normal"] },
     2: { type: "diva", nameKey: "boss.diva", hpMultiplier: 5.4, scale: 1.28, speedScale: 0.88, attackScale: 1.25, accent: 0xff4fa7, escorts: ["ballet", "swimmer"] },
     3: { type: "guard", nameKey: "boss.guard", hpMultiplier: 6.2, scale: 1.28, speedScale: 0.74, attackScale: 1.35, accent: 0x6dd5ff, escorts: ["kendo", "librarian"] },
     4: { type: "elite", nameKey: "boss.elite", hpMultiplier: 7.2, scale: 1.28, speedScale: 0.84, attackScale: 1.4, accent: 0xffd15c, escorts: ["plump", "volleyball"] }
@@ -2344,7 +2345,7 @@
     this.load.image("gameover-last-stand", imageAsset("assets/images/gameover-last-stand.png"));
     this.load.image("character-a", versionedImageAsset("assets/images/character-a.png", CROSSBOW_ASSET_VERSION));
     this.load.image("character-b", versionedImageAsset("assets/images/character-b.png", CHARACTER_ASSET_VERSION));
-    this.load.image("character-c", versionedImageAsset("assets/images/character-c.png", CHARACTER_ASSET_VERSION));
+    this.load.image("character-c", versionedImageAsset("assets/images/character-c.png", PISTOL_READY_ASSET_VERSION));
     this.load.image("character-d", versionedImageAsset("assets/images/character-d.png", CHARACTER_CONTINUITY_ASSET_VERSION));
     this.load.image("character-e", versionedImageAsset("assets/images/character-e.png", CHARACTER_ASSET_VERSION));
     this.load.image("character-f", versionedImageAsset("assets/images/character-f.png", CHARACTER_ASSET_VERSION));
@@ -2361,7 +2362,7 @@
         this.load.image(
           `character-${id}-${action}-${frame}`,
           versionedImageAsset(`assets/images/character-${id}-${action}-${frame}.png`,
-            id === "f" && frame === 7 ? FIREBOMB_RECOVERY_ASSET_VERSION : assetVersion)
+            id === "f" && frame === 7 ? FIREBOMB_RECOVERY_ASSET_VERSION : (id === "c" && frame === 0 ? PISTOL_READY_ASSET_VERSION : assetVersion))
         );
       }
     });
@@ -7232,7 +7233,8 @@
           + lateLevelBonus * (eliteRoll ? ZOMBIE_ELITE_LATE_HP_GAIN : ZOMBIE_NORMAL_LATE_HP_GAIN)
           + rand(-6, 12);
         const hpMultiplier = (overrideConfig && overrideConfig.hpMultiplier) || 1;
-        const hp = Math.round(baseHp * ZOMBIE_HP_MULTIPLIER * typeConfig.hpScale * earlyHpScale * hpMultiplier);
+        const effectiveTypeHpScale = isBoss ? 1 : typeConfig.hpScale;
+        const hp = Math.round(baseHp * ZOMBIE_HP_MULTIPLIER * effectiveTypeHpScale * earlyHpScale * hpMultiplier);
         const textureBase = `zombie-walk-${typeConfig.id}`;
         const zombie = this.add.image(x, y, `${textureBase}-${variant}-${frame}`)
           .setOrigin(0.5, 0.56)

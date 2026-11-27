@@ -2290,13 +2290,13 @@
     },
     {
       "path": "school-zombie-defense/assets/images/character-c-attack-0.png",
-      "bytes": 515242,
-      "sha256": "a99f3dc6cfd0ad16adf1500aa2ba22f7d7ea74c42d625700e3ddff1edf1a04b8"
+      "bytes": 564820,
+      "sha256": "257858002bdf1a57f13dc9aebab474a9b538e5872d7ec47ac111b3a47bd669fa"
     },
     {
       "path": "school-zombie-defense/assets/images/character-c-attack-0.webp",
-      "bytes": 104498,
-      "sha256": "22180abdfdb9da05fc538a5a6c09d03acade8c34c517077ee18cc6b37bf46ad3"
+      "bytes": 114190,
+      "sha256": "20be470f033cddfd895f5509cf13d065940bba6cf9fb252ef755fbc0f20d9a71"
     },
     {
       "path": "school-zombie-defense/assets/images/character-c-attack-1.png",
@@ -2370,13 +2370,13 @@
     },
     {
       "path": "school-zombie-defense/assets/images/character-c.png",
-      "bytes": 515242,
-      "sha256": "a99f3dc6cfd0ad16adf1500aa2ba22f7d7ea74c42d625700e3ddff1edf1a04b8"
+      "bytes": 564820,
+      "sha256": "257858002bdf1a57f13dc9aebab474a9b538e5872d7ec47ac111b3a47bd669fa"
     },
     {
       "path": "school-zombie-defense/assets/images/character-c.webp",
-      "bytes": 104498,
-      "sha256": "22180abdfdb9da05fc538a5a6c09d03acade8c34c517077ee18cc6b37bf46ad3"
+      "bytes": 114190,
+      "sha256": "20be470f033cddfd895f5509cf13d065940bba6cf9fb252ef755fbc0f20d9a71"
     },
     {
       "path": "school-zombie-defense/assets/images/character-d-attack-1.png",
@@ -16429,9 +16429,19 @@
       "sha256": "7459925f3ec38b115c3492f209a8ff65fd535af0fb2ccb4641693b6934d60366"
     },
     {
+      "path": "solo-leveling/assets/ui/crafted-button-v1.png",
+      "bytes": 742962,
+      "sha256": "8a44181e74c53fc4c06c536a178c58c68aa7a10bd53e473748e41e47e245b23f"
+    },
+    {
       "path": "solo-leveling/assets/ui/crafted-button-v1.webp",
       "bytes": 133774,
       "sha256": "930644ecbf1ee7374bd097acf345b8c6c8d34285c60614c9ff9de843594fcff4"
+    },
+    {
+      "path": "solo-leveling/assets/ui/crafted-frame-v1.png",
+      "bytes": 1018828,
+      "sha256": "55519f86d67d5cb5657638aaa2d5d22a65579d44bc42f74c762c45faa3334427"
     },
     {
       "path": "solo-leveling/assets/ui/crafted-frame-v1.webp",
@@ -17129,6 +17139,16 @@
       "sha256": "473c154d84eaa993151fd618a2c83a42e2c435b5c99bbb850abd56d29097366d"
     },
     {
+      "path": "solo-leveling/assets/ui/ui_button_gold.png",
+      "bytes": 680437,
+      "sha256": "402eae8b298ea77a36f30377de2f2d24b293cee5f4114422c6bac80eec75d6ba"
+    },
+    {
+      "path": "solo-leveling/assets/ui/ui_button_gold.webp",
+      "bytes": 121418,
+      "sha256": "a18b9f8d3207fec41b72e958b78b006493c7e2adf623862d26373d17d1477c25"
+    },
+    {
       "path": "solo-leveling/assets/ui/ui_button_hover.png",
       "bytes": 16621,
       "sha256": "6d07f3a9d414786ab53e9b4c66168b1c0992e6f3c1cd2978019b47ae2f52b06e"
@@ -17197,6 +17217,26 @@
       "path": "solo-leveling/assets/ui/ui_choice_hover.webp",
       "bytes": 11756,
       "sha256": "bfc968acdce1dba6656567b12696977bba008339f24d5dde9afb23bda178f8b5"
+    },
+    {
+      "path": "solo-leveling/assets/ui/ui_hero_ring.png",
+      "bytes": 746147,
+      "sha256": "4e16df9cd5c412d306204ed08903698a5081b51f24a7ce2cb42578410070a656"
+    },
+    {
+      "path": "solo-leveling/assets/ui/ui_hero_ring.webp",
+      "bytes": 171134,
+      "sha256": "2cee7af502410b32888d3449d39d600d69dd8071e1346b262cb9fe66c720a456"
+    },
+    {
+      "path": "solo-leveling/assets/ui/ui_hud_bar_frame.png",
+      "bytes": 466038,
+      "sha256": "f2d5ce01dfe3c8fd7cd4cfead3c12b08cb5812dba418bcc4568167a55dc09a3c"
+    },
+    {
+      "path": "solo-leveling/assets/ui/ui_hud_bar_frame.webp",
+      "bytes": 108342,
+      "sha256": "c1458700373eb07e093366015d7bd3c6ad0cf0b22dbc5ccba7e04d4829efd6e9"
     },
     {
       "path": "solo-leveling/assets/ui/ui_minimap.png",
