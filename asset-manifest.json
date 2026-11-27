@@ -3379,6 +3379,16 @@
       "sha256": "d87c3e95b94d764a3c38788a521dc4d16d8c553835b7836292a15af2a5d8bf72"
     },
     {
+      "path": "school-zombie-defense/assets/images/ui-survival-equipment-extra.png",
+      "bytes": 813071,
+      "sha256": "a811590762e7d176112f9423e196b98c501fed1ac35184062832195e5260bbc8"
+    },
+    {
+      "path": "school-zombie-defense/assets/images/ui-survival-equipment-extra.webp",
+      "bytes": 202772,
+      "sha256": "0ed6e56e19ecaa8b6594ff74c4cfef3d0048212d648caf142bd2241315f73572"
+    },
+    {
       "path": "school-zombie-defense/assets/images/ui-survival-equipment.png",
       "bytes": 1796274,
       "sha256": "a248d6918985606e728328217abd9960bf85a317666619840d44c128a5ce3c1a"

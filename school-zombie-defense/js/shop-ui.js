@@ -86,6 +86,7 @@ String(((value !== null && value !== void 0 ? value : ""))).replace(/[&<>"']/g, 
       });
       dialog.querySelector(".school-shop-dialog__upgrades").innerHTML = view.upgrades.map((upgrade) => `
         <article class="school-shop-upgrade">
+          ${upgrade.icon ? `<div class="school-shop-upgrade__icon" aria-hidden="true"><span style="background-image:url('${escape(upgrade.icon.sheet)}');background-position:${((upgrade.icon.col * 100) / 3).toFixed(4)}% ${((upgrade.icon.row * 100) / 3).toFixed(4)}%"></span></div>` : ""}
           <div class="school-shop-upgrade__copy"><h4>${escape(upgrade.title)}</h4><p>${escape(upgrade.part)}</p>
             <p class="school-shop-upgrade__stats">${escape(upgrade.stats)}</p></div>
           <div class="school-shop-upgrade__purchase"><span>Lv.${upgrade.level}/${view.maxLevel}</span>

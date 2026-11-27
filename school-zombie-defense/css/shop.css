@@ -77,7 +77,9 @@
 .school-shop-dialog__characters span { color: #d5b675; font-size: 10px; }
 .school-shop-dialog__selected { margin: 16px 0 8px; font-size: 16px; }
 .school-shop-dialog__upgrades { display: grid; gap: 7px; }
-.school-shop-upgrade { display: grid; grid-template-columns: minmax(0, 1fr) 105px; gap: 10px; padding: 12px; background: #070d094f; border: 1px solid #b0a78730; border-radius: 6px; }
+.school-shop-upgrade { display: grid; grid-template-columns: 56px minmax(0, 1fr) 105px; align-items: center; gap: 10px; padding: 12px; background: #070d094f; border: 1px solid #b0a78730; border-radius: 6px; }
+.school-shop-upgrade__icon { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 6px; background: #111610b8; border: 1px solid #b0a78742; flex: none; }
+.school-shop-upgrade__icon span { width: 48px; height: 48px; display: block; background-repeat: no-repeat; background-size: 400% 400%; }
 .school-shop-upgrade h4 { margin: 0 0 3px; font-size: 16px; }
 .school-shop-upgrade p { margin: 0; color: #bfbcae; font-size: 12px; line-height: 1.45; }
 .school-shop-upgrade .school-shop-upgrade__stats { margin-top: 5px; color: #e2c28d; white-space: pre-line; overflow-wrap: anywhere; }
@@ -98,7 +100,9 @@
   .school-shop-dialog__header { padding: 12px; }
   .school-shop-dialog__scroll { padding: 8px; }
   .school-shop-dialog__characters { gap: 5px; }
-  .school-shop-upgrade { grid-template-columns: minmax(0, 1fr) 78px; padding: 9px; gap: 8px; }
+  .school-shop-upgrade { grid-template-columns: 44px minmax(0, 1fr) 78px; padding: 9px; gap: 7px; }
+  .school-shop-upgrade__icon { width: 44px; height: 44px; }
+  .school-shop-upgrade__icon span { width: 38px; height: 38px; }
   .school-shop-upgrade h4 { font-size: 14px; }
   .school-shop-upgrade p { font-size: 11px; }
   .school-shop-dialog__footer { padding: 8px; }

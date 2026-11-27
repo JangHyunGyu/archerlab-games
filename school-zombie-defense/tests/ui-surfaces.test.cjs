@@ -49,4 +49,29 @@ for (const surface of Object.values(ui.SURFACES)) {
     assert.ok(fs.existsSync(path.join(__dirname, `../assets/images/${surface.key}.${extension}`)), 'both format paths must load');
   }
 }
-console.log('UI surfaces verified: responsive corner sizes, complete coverage, 2x rendering, texture reuse, and inventory coverage');
+for (const extension of ['png', 'webp']) {
+  assert.ok(fs.existsSync(path.join(__dirname, `../assets/images/ui-survival-equipment-extra.${extension}`)), 'supplementary equipment atlas must exist in both formats');
+}
+
+const shopBlockMatch = game.match(/const SHOP_CHARACTER_UPGRADES = (\{[\s\S]*?\n  \});/);
+assert.ok(shopBlockMatch, 'SHOP_CHARACTER_UPGRADES must exist in game.js');
+const shopUpgrades = vm.runInNewContext(`(${shopBlockMatch[1]})`, { SchoolI18n: { t: key => key } });
+for (const [charId, items] of Object.entries(shopUpgrades)) {
+  const seenCells = new Set();
+  for (const item of items) {
+    const resolved = ui.resolveIconCell(item.icon);
+    assert.ok(resolved, `${charId}:${item.id} (${item.icon}) must resolve to an equipment cell`);
+    assert.ok(!seenCells.has(resolved.cell), `${charId} shop upgrades must use distinct icons (${item.id} duplicates cell ${resolved.cell})`);
+    seenCells.add(resolved.cell);
+  }
+}
+
+assert.ok(![4, 7, 3, 1].includes(ui.ICONS['skill-fire-zone']), 'fire zone must not reuse rocket/frost/rifle/ammo');
+assert.ok(![4, 7, 3, 1].includes(ui.ICONS['skill-fire-bottle']), 'fire bottle must not reuse rocket/frost/rifle/ammo');
+assert.ok(![4, 7, 3, 1].includes(ui.ICONS['skill-fire-sticky']), 'fire sticky must not reuse rocket/frost/rifle/ammo');
+assert.ok(![1, 3, 4, 7].includes(ui.ICONS['skill-shock-chain']), 'shock chain must not reuse ammo/rifle/rocket/frost');
+assert.ok(![1, 3, 4, 7].includes(ui.ICONS['skill-shock-overload']), 'shock overload must not reuse ammo/rifle/rocket/frost');
+assert.ok(![1, 3, 10].includes(ui.ICONS['skill-engineer-nail']), 'engineer nail must not reuse ammo/rifle/turret');
+assert.equal(ui.ICONS['skill-engineer-turret'], ui.EQUIPMENT['equipment-turret'], 'engineer turret must use turret icon');
+assert.equal(ui.ICONS['skill-engineer-wire'], ui.EQUIPMENT['equipment-wire'], 'engineer wire must use wire icon');
+console.log('UI surfaces verified: responsive corner sizes, complete coverage, 2x rendering, texture reuse, shop icons, and inventory coverage');

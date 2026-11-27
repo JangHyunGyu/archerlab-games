@@ -707,7 +707,7 @@
       get name() { return SchoolI18n.t("char.b.name"); },
       get weapon() { return SchoolI18n.t("char.b.weapon"); },
       portrait: "avatar-rifle",
-      icon: "skill-rifle-grenade",
+      icon: "skill-barrage",
       accent: 0xf6b04f
     },
     {
@@ -731,7 +731,7 @@
       get name() { return SchoolI18n.t("char.f.name"); },
       get weapon() { return SchoolI18n.t("char.f.weapon"); },
       portrait: "avatar-fire",
-      icon: "skill-rocket",
+      icon: "skill-fire-bottle",
       accent: 0xff7a22
     },
     {
@@ -747,45 +747,45 @@
       get name() { return SchoolI18n.t("char.h.name"); },
       get weapon() { return SchoolI18n.t("char.h.weapon"); },
       portrait: "avatar-engineer",
-      icon: "skill-barrage",
+      icon: "skill-engineer-turret",
       accent: 0xffd166
     }
   ];
   const SHOP_CHARACTER_UPGRADES = {
     c: [
-      { id: "c_power", get title() { return SchoolI18n.t("up.c_power.title"); }, get subtitle() { return SchoolI18n.t("up.c_power.subtitle"); }, get part() { return SchoolI18n.t("up.c_power.part"); }, icon: "skill-pistol-rapid" },
-      { id: "c_speed", get title() { return SchoolI18n.t("up.c_speed.title"); }, get subtitle() { return SchoolI18n.t("up.c_speed.subtitle"); }, get part() { return SchoolI18n.t("up.c_speed.part"); }, icon: "equipment-wrench" },
+      { id: "c_power", get title() { return SchoolI18n.t("up.c_power.title"); }, get subtitle() { return SchoolI18n.t("up.c_power.subtitle"); }, get part() { return SchoolI18n.t("up.c_power.part"); }, icon: "equipment-pistol-barrel" },
+      { id: "c_speed", get title() { return SchoolI18n.t("up.c_speed.title"); }, get subtitle() { return SchoolI18n.t("up.c_speed.subtitle"); }, get part() { return SchoolI18n.t("up.c_speed.part"); }, icon: "equipment-spring" },
       { id: "c_crit", get title() { return SchoolI18n.t("up.c_crit.title"); }, get subtitle() { return SchoolI18n.t("up.c_crit.subtitle"); }, get part() { return SchoolI18n.t("up.c_crit.part"); }, icon: "equipment-scope" }
     ],
     a: [
-      { id: "a_power", get title() { return SchoolI18n.t("up.a_power.title"); }, get subtitle() { return SchoolI18n.t("up.a_power.subtitle"); }, get part() { return SchoolI18n.t("up.a_power.part"); }, icon: "skill-arrow-pin" },
-      { id: "a_mark", get title() { return SchoolI18n.t("up.a_mark.title"); }, get subtitle() { return SchoolI18n.t("up.a_mark.subtitle"); }, get part() { return SchoolI18n.t("up.a_mark.part"); }, icon: "equipment-bolt" },
-      { id: "a_crit", get title() { return SchoolI18n.t("up.a_crit.title"); }, get subtitle() { return SchoolI18n.t("up.a_crit.subtitle"); }, get part() { return SchoolI18n.t("up.a_crit.part"); }, icon: "equipment-bolt" }
+      { id: "a_power", get title() { return SchoolI18n.t("up.a_power.title"); }, get subtitle() { return SchoolI18n.t("up.a_power.subtitle"); }, get part() { return SchoolI18n.t("up.a_power.part"); }, icon: "equipment-crossbow" },
+      { id: "a_mark", get title() { return SchoolI18n.t("up.a_mark.title"); }, get subtitle() { return SchoolI18n.t("up.a_mark.subtitle"); }, get part() { return SchoolI18n.t("up.a_mark.part"); }, icon: "equipment-marked-tip" },
+      { id: "a_crit", get title() { return SchoolI18n.t("up.a_crit.title"); }, get subtitle() { return SchoolI18n.t("up.a_crit.subtitle"); }, get part() { return SchoolI18n.t("up.a_crit.part"); }, icon: "equipment-fletching" }
     ],
     b: [
-      { id: "b_power", get title() { return SchoolI18n.t("up.b_power.title"); }, get subtitle() { return SchoolI18n.t("up.b_power.subtitle"); }, get part() { return SchoolI18n.t("up.b_power.part"); }, icon: "skill-barrage" },
+      { id: "b_power", get title() { return SchoolI18n.t("up.b_power.title"); }, get subtitle() { return SchoolI18n.t("up.b_power.subtitle"); }, get part() { return SchoolI18n.t("up.b_power.part"); }, icon: "equipment-rifle" },
       { id: "b_control", get title() { return SchoolI18n.t("up.b_control.title"); }, get subtitle() { return SchoolI18n.t("up.b_control.subtitle"); }, get part() { return SchoolI18n.t("up.b_control.part"); }, icon: "equipment-wrench" },
-      { id: "b_grenade", get title() { return SchoolI18n.t("up.b_grenade.title"); }, get subtitle() { return SchoolI18n.t("up.b_grenade.subtitle"); }, get part() { return SchoolI18n.t("up.b_grenade.part"); }, icon: "equipment-rocket" }
+      { id: "b_grenade", get title() { return SchoolI18n.t("up.b_grenade.title"); }, get subtitle() { return SchoolI18n.t("up.b_grenade.subtitle"); }, get part() { return SchoolI18n.t("up.b_grenade.part"); }, icon: "equipment-grenade" }
     ],
     d: [
-      { id: "d_charge", get title() { return SchoolI18n.t("up.d_charge.title"); }, get subtitle() { return SchoolI18n.t("up.d_charge.subtitle"); }, get part() { return SchoolI18n.t("up.d_charge.part"); }, icon: "skill-rocket-impact" },
-      { id: "d_radius", get title() { return SchoolI18n.t("up.d_radius.title"); }, get subtitle() { return SchoolI18n.t("up.d_radius.subtitle"); }, get part() { return SchoolI18n.t("up.d_radius.part"); }, icon: "skill-rocket" },
-      { id: "d_slow", get title() { return SchoolI18n.t("up.d_slow.title"); }, get subtitle() { return SchoolI18n.t("up.d_slow.subtitle"); }, get part() { return SchoolI18n.t("up.d_slow.part"); }, icon: "skill-frost" }
+      { id: "d_charge", get title() { return SchoolI18n.t("up.d_charge.title"); }, get subtitle() { return SchoolI18n.t("up.d_charge.subtitle"); }, get part() { return SchoolI18n.t("up.d_charge.part"); }, icon: "equipment-rocket" },
+      { id: "d_radius", get title() { return SchoolI18n.t("up.d_radius.title"); }, get subtitle() { return SchoolI18n.t("up.d_radius.subtitle"); }, get part() { return SchoolI18n.t("up.d_radius.part"); }, icon: "equipment-nozzle" },
+      { id: "d_slow", get title() { return SchoolI18n.t("up.d_slow.title"); }, get subtitle() { return SchoolI18n.t("up.d_slow.part"); }, get part() { return SchoolI18n.t("up.d_slow.part"); }, icon: "equipment-coolant" }
     ],
     e: [
-      { id: "e_power", get title() { return SchoolI18n.t("up.e_power.title"); }, get subtitle() { return SchoolI18n.t("up.e_power.subtitle"); }, get part() { return SchoolI18n.t("up.e_power.part"); }, icon: "skill-sniper" },
-      { id: "e_focus", get title() { return SchoolI18n.t("up.e_focus.title"); }, get subtitle() { return SchoolI18n.t("up.e_focus.subtitle"); }, get part() { return SchoolI18n.t("up.e_focus.part"); }, icon: "skill-sniper-weakpoint" },
-      { id: "e_pierce", get title() { return SchoolI18n.t("up.e_pierce.title"); }, get subtitle() { return SchoolI18n.t("up.e_pierce.subtitle"); }, get part() { return SchoolI18n.t("up.e_pierce.part"); }, icon: "skill-pierce" }
+      { id: "e_power", get title() { return SchoolI18n.t("up.e_power.title"); }, get subtitle() { return SchoolI18n.t("up.e_power.subtitle"); }, get part() { return SchoolI18n.t("up.e_power.part"); }, icon: "equipment-sniper-rifle" },
+      { id: "e_focus", get title() { return SchoolI18n.t("up.e_focus.title"); }, get subtitle() { return SchoolI18n.t("up.e_focus.subtitle"); }, get part() { return SchoolI18n.t("up.e_focus.part"); }, icon: "equipment-scope" },
+      { id: "e_pierce", get title() { return SchoolI18n.t("up.e_pierce.title"); }, get subtitle() { return SchoolI18n.t("up.e_pierce.subtitle"); }, get part() { return SchoolI18n.t("up.e_pierce.part"); }, icon: "equipment-ap-round" }
     ],
     f: [
-      { id: "f_burn", get title() { return SchoolI18n.t("up.f_burn.title"); }, get subtitle() { return SchoolI18n.t("up.f_burn.subtitle"); }, get part() { return SchoolI18n.t("up.f_burn.part"); }, icon: "equipment-fire" },
-      { id: "f_area", get title() { return SchoolI18n.t("up.f_area.title"); }, get subtitle() { return SchoolI18n.t("up.f_area.subtitle"); }, get part() { return SchoolI18n.t("up.f_area.part"); }, icon: "equipment-fire" },
+      { id: "f_burn", get title() { return SchoolI18n.t("up.f_burn.title"); }, get subtitle() { return SchoolI18n.t("up.f_burn.subtitle"); }, get part() { return SchoolI18n.t("up.f_burn.part"); }, icon: "equipment-fuel-can" },
+      { id: "f_area", get title() { return SchoolI18n.t("up.f_area.title"); }, get subtitle() { return SchoolI18n.t("up.f_area.subtitle"); }, get part() { return SchoolI18n.t("up.f_area.part"); }, icon: "equipment-fire-spread" },
       { id: "f_throw", get title() { return SchoolI18n.t("up.f_throw.title"); }, get subtitle() { return SchoolI18n.t("up.f_throw.subtitle"); }, get part() { return SchoolI18n.t("up.f_throw.part"); }, icon: "equipment-fire" }
     ],
     g: [
       { id: "g_voltage", get title() { return SchoolI18n.t("up.g_voltage.title"); }, get subtitle() { return SchoolI18n.t("up.g_voltage.subtitle"); }, get part() { return SchoolI18n.t("up.g_voltage.part"); }, icon: "equipment-battery" },
       { id: "g_chain", get title() { return SchoolI18n.t("up.g_chain.title"); }, get subtitle() { return SchoolI18n.t("up.g_chain.subtitle"); }, get part() { return SchoolI18n.t("up.g_chain.part"); }, icon: "equipment-coil" },
-      { id: "g_control", get title() { return SchoolI18n.t("up.g_control.title"); }, get subtitle() { return SchoolI18n.t("up.g_control.subtitle"); }, get part() { return SchoolI18n.t("up.g_control.part"); }, icon: "equipment-wrench" }
+      { id: "g_control", get title() { return SchoolI18n.t("up.g_control.title"); }, get subtitle() { return SchoolI18n.t("up.g_control.subtitle"); }, get part() { return SchoolI18n.t("up.g_control.part"); }, icon: "equipment-insulated-grip" }
     ],
     h: [
       { id: "h_turret", get title() { return SchoolI18n.t("up.h_turret.title"); }, get subtitle() { return SchoolI18n.t("up.h_turret.subtitle"); }, get part() { return SchoolI18n.t("up.h_turret.part"); }, icon: "equipment-turret" },
@@ -2338,6 +2338,7 @@
 
   function queueCombatAssetFiles() {
     this.load.image("ui-survival-equipment", imageAsset("assets/images/ui-survival-equipment.png"));
+    this.load.image("ui-survival-equipment-extra", imageAsset("assets/images/ui-survival-equipment-extra.png"));
     this.load.image("skill-choice-backdrop", imageAsset("assets/images/skill-choice-backdrop.png"));
     this.load.image("gameover-last-stand", imageAsset("assets/images/gameover-last-stand.png"));
     this.load.image("character-a", versionedImageAsset("assets/images/character-a.png", CROSSBOW_ASSET_VERSION));
@@ -6385,8 +6386,12 @@
         upgrades: this.getCharacterShopUpgrades(selected.id).map((upgrade) => {
           const level = this.getMetaUpgradeLevel(upgrade.id);
           const cost = getShopUpgradeCost(level);
+          const iconSpec = window.SchoolZombieUI && typeof window.SchoolZombieUI.resolveIconCell === "function"
+            ? window.SchoolZombieUI.resolveIconCell(upgrade.icon)
+            : null;
           return {
             id: upgrade.id, title: upgrade.title, part: upgrade.part,
+            icon: iconSpec ? { sheet: imageAsset(`assets/images/${iconSpec.sheet}.png`), col: iconSpec.col, row: iconSpec.row } : null,
             stats: this.getShopUpgradeStatText(upgrade, level), level,
             cost: formatShopCost(cost), maxed: level >= SHOP_MAX_LEVEL,
             canAfford: this.meta.coins >= cost
@@ -11442,7 +11447,7 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       });
       add("f", {
         id: "f-zone",
-        icon: "skill-rocket",
+        icon: "skill-fire-zone",
         tag: SchoolI18n.t("tag.fire"),
         title: SchoolI18n.t("skill.f-zone.title"),
         desc: SchoolI18n.t("skill.f-zone.desc"),
@@ -11463,7 +11468,7 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       });
       add("f", {
         id: "f-bottle",
-        icon: "skill-rocket-impact",
+        icon: "skill-fire-bottle",
         tag: SchoolI18n.t("tag.fire"),
         title: SchoolI18n.t("skill.f-bottle.title"),
         desc: SchoolI18n.t("skill.f-bottle.desc"),
@@ -11484,7 +11489,7 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       });
       add("f", {
         id: "f-sticky",
-        icon: "skill-frost",
+        icon: "skill-fire-sticky",
         tag: SchoolI18n.t("tag.fire"),
         title: SchoolI18n.t("skill.f-sticky.title"),
         desc: SchoolI18n.t("skill.f-sticky.desc"),
@@ -11524,7 +11529,7 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       });
       add("g", {
         id: "g-voltage",
-        icon: "skill-shock-amplifier",
+        icon: "skill-shock-voltage",
         tag: SchoolI18n.t("tag.shock"),
         title: SchoolI18n.t("skill.g-voltage.title"),
         desc: SchoolI18n.t("skill.g-voltage.desc"),
@@ -11546,7 +11551,7 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       });
       add("g", {
         id: "g-chain",
-        icon: "skill-pierce",
+        icon: "skill-shock-chain",
         tag: SchoolI18n.t("tag.shock"),
         title: SchoolI18n.t("skill.g-chain.title"),
         desc: SchoolI18n.t("skill.g-chain.desc"),
@@ -11568,7 +11573,7 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       });
       add("g", {
         id: "g-overload",
-        icon: "skill-barrage",
+        icon: "skill-shock-overload",
         tag: SchoolI18n.t("tag.shock"),
         title: SchoolI18n.t("skill.g-overload.title"),
         desc: SchoolI18n.t("skill.g-overload.desc"),
@@ -11607,7 +11612,7 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       });
       add("h", {
         id: "h-turret",
-        icon: "skill-barrage",
+        icon: "skill-engineer-turret",
         tag: SchoolI18n.t("tag.engineer"),
         title: ((((__oc104 = this.turrets) === null || __oc104 === void 0 ? void 0 : __oc104.length)) || 0) > 0 ? SchoolI18n.t("skill.h-turret.titleOwned") : SchoolI18n.t("skill.h-turret.title"),
         desc: SchoolI18n.t("skill.h-turret.desc"),
@@ -11626,7 +11631,7 @@ turret && !(((__oc90 = turret.container) === null || __oc90 === void 0 ? void 0 
       });
       add("h", {
         id: "h-wire",
-        icon: "skill-pierce",
+        icon: "skill-engineer-wire",
         tag: SchoolI18n.t("tag.engineer"),
         title: this.barbedWire ? SchoolI18n.t("skill.h-wire.titleOwned") : SchoolI18n.t("skill.h-wire.title"),
         desc: SchoolI18n.t("skill.h-wire.desc"),
