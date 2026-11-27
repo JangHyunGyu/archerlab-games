@@ -14,10 +14,11 @@ import { XPOrbPool } from '../entities/XPOrb.js?v=20261009-levelup-v1';
 import { ItemDropManager } from '../entities/ItemDrop.js?v=20260928-locale-exports-v1';
 import { Boss } from '../entities/Boss.js?v=20261120-fastload-v2';
 import { Enemy } from '../entities/Enemy.js?v=20261120-fastload-v2';
-import { HUD } from '../ui/HUD.js?v=20261009-orient-v1&audit=20261009-v1';
-import { SystemMessage } from '../ui/SystemMessage.js?v=20261009-orient-v1';
-import { StatusWindow } from '../ui/StatusWindow.js?v=20261009-orient-v1&audit=20261009-v1';
-import { MobileControls } from '../ui/MobileControls.js?v=20261009-orient-v1';
+import { HUD } from '../ui/HUD.js?v=20261009-orient-v1&audit=20261009-v1&ui=20261127-gothic-ui-v2';
+import { SystemMessage } from '../ui/SystemMessage.js?v=20261009-orient-v1&ui=20261127-gothic-ui-v2';
+import { StatusWindow } from '../ui/StatusWindow.js?v=20261009-orient-v1&audit=20261009-v1&ui=20261127-gothic-ui-v2';
+import { MobileControls } from '../ui/MobileControls.js?v=20261009-orient-v1&ui=20261127-gothic-ui-v2';
+import { UIAssets } from '../ui/UIAssets.js?v=20261127-gothic-ui-v1';
 import { DEFAULT_CHARACTER_ID, getCharacter, getCharacterRankingGameId, getCharacterWeaponKeys, getStarterWeaponKey } from '../utils/Characters.js';
 import { getGameplayDeferredBatches } from '../utils/AssetManifest.js?v=20261120-fastload-v2';
 import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v2';
@@ -527,30 +528,19 @@ export class GameScene extends Phaser.Scene {
         const x = cx - w / 2;
         const y = cy - h / 2;
 
-        const bg = this.add.rectangle(cx, cy, cam.width, cam.height, 0x020308, 0.86)
+        const bg = this.add.rectangle(cx, cy, cam.width, cam.height, 0x05030d, 0.88)
             .setScrollFactor(0).setDepth(300);
-        const panel = this.add.graphics().setScrollFactor(0).setDepth(301);
-        drawSystemPanel(panel, x, y, w, h, {
-            cut: uv(12),
-            fill: SYSTEM.BG_PANEL,
-            fillAlpha: 0.96,
-            border: SYSTEM.BORDER,
-            borderAlpha: 0.82,
-            borderWidth: 1,
+        const panel = UIAssets.createPanel(this, x, y, w, h, {
+            variant: 'modal',
+            depth: 301,
+            scrollFactor: 0,
         });
-        drawSystemPanel(panel, x + uv(7), y + uv(7), w - uv(14), h - uv(14), {
-            cut: uv(8),
-            fill: SYSTEM.BG_PANEL,
-            fillAlpha: 0,
-            border: SYSTEM.BORDER_DIM,
-            borderAlpha: 0.34,
-            borderWidth: 1,
-        });
-        const innerShade = this.add.rectangle(cx, cy + uv(4), w - uv(118), h - uv(82), 0x02040a, 0.5)
+        const innerShade = this.add.rectangle(cx, cy + uv(4), w - uv(96), h - uv(72), 0x05030d, 0.42)
             .setScrollFactor(0).setDepth(301.2);
         const core = this.textures.exists('icon_loading_core')
             ? this.add.image(cx, cy - uv(58), 'icon_loading_core')
                 .setDisplaySize(uv(46), uv(46))
+                .setTint(0xc8a4ff)
                 .setAlpha(0.98)
                 .setBlendMode(Phaser.BlendModes.ADD)
                 .setScrollFactor(0)
@@ -569,39 +559,47 @@ export class GameScene extends Phaser.Scene {
             fontSize: fs(17),
             fontFamily: UI_FONT_KR,
             fontStyle: 'bold',
-            color: SYSTEM.TEXT_BRIGHT,
+            color: '#f5efff',
             stroke: '#02040a',
             strokeThickness: 4,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(302);
         const label = this.add.text(cx, cy + uv(8), '[ GATE LINK · WORLD SYNC ]', {
             fontSize: fs(9),
             fontFamily: UI_FONT_MONO,
-            color: SYSTEM.TEXT_CYAN_DIM,
+            color: '#d4c398',
             stroke: '#02040a',
             strokeThickness: 2,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(302);
         const barW = Math.max(uv(160), w - uv(176));
+        const barH = Math.max(uv(12), 12);
         const barY = cy + uv(39);
-        const barBg = this.add.rectangle(cx - barW / 2, barY, barW, uv(7), 0x061522, 0.98)
+        const barBg = this.add.rectangle(cx - barW / 2, barY, barW, barH, 0x080514, 0.98)
             .setOrigin(0, 0.5)
-            .setStrokeStyle(1, SYSTEM.BORDER_DIM, 0.72)
+            .setStrokeStyle(1, 0x4d3a7a, 0.72)
             .setScrollFactor(0).setDepth(302);
-        const barFill = this.add.rectangle(cx - barW / 2, barY, 2, uv(5), SYSTEM.BORDER, 1)
+        const barFill = this.add.rectangle(cx - barW / 2, barY, 2, Math.max(4, barH - 4), 0x9b6eff, 1)
             .setOrigin(0, 0.5).setScrollFactor(0).setDepth(303);
-        const percent = this.add.text(cx, cy + uv(62), '000 %  ·  00 / 00', {
+        const barFrame = this.textures.exists('ui_hud_bar_frame')
+            ? UIAssets.createPanel(this, cx - barW / 2 - uv(12), barY - (barH + uv(12)) / 2, barW + uv(24), barH + uv(12), {
+                variant: 'bar',
+                depth: 303.5,
+                scrollFactor: 0,
+            })
+            : null;
+        const percent = this.add.text(cx, cy + uv(64), '000 %  ·  00 / 00', {
             fontSize: fs(10),
             fontFamily: UI_FONT_MONO,
-            color: SYSTEM.TEXT_CYAN,
+            color: '#e8c266',
             stroke: '#02040a',
             strokeThickness: 2,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(302);
 
-        this._startupOverlay = [bg, panel, innerShade, core, title, label, barBg, barFill, percent].filter(Boolean);
+        this._startupOverlay = [bg, panel, innerShade, core, title, label, barBg, barFill, barFrame, percent].filter(Boolean);
         this._startupLabel = label;
         this._startupPercent = percent;
         this._startupProgressFill = barFill;
         this._startupProgressWidth = barW;
-        this._startupProgressHeight = uv(5);
+        this._startupProgressHeight = Math.max(4, barH - 4);
     }
 
     _setStartupProgress(done, total, label) {

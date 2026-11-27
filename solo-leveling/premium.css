@@ -1,4 +1,4 @@
-/* Keep the HTML controls clean, minimal, and aligned with the physical-pixel UI. */
+/* Obsidian Shadow Monarch Gothic-Arcane UI styling for HTML overlays */
 .archerlab-link,
 .archerlab-link:hover {
     left: max(18px, env(safe-area-inset-left));
@@ -7,43 +7,72 @@
     min-height: 44px;
     display: inline-flex;
     align-items: center;
-    padding: 8px 14px;
-    background: rgba(14, 12, 26, 0.58);
-    border: 1px solid rgba(182, 168, 224, 0.28);
-    border-radius: 8px;
-    color: #dcd2f2;
+    padding: 8px 16px;
+    background: linear-gradient(180deg, rgba(28, 20, 48, 0.88), rgba(10, 7, 20, 0.94));
+    border: 1px solid rgba(232, 194, 102, 0.45);
+    border-radius: 6px;
+    color: #efe4ff;
     font-size: 11px;
-    letter-spacing: 0.06em;
+    font-weight: 700;
+    letter-spacing: 0.09em;
     opacity: 1;
-    box-shadow: none;
+    box-shadow:
+        0 6px 20px rgba(0, 0, 0, 0.48),
+        inset 0 1px 0 rgba(232, 194, 102, 0.22),
+        inset 0 0 12px rgba(138, 92, 255, 0.14);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
 }
 .archerlab-link:hover {
-    background: rgba(28, 24, 52, 0.84);
-    border-color: rgba(204, 188, 248, 0.65);
-    color: #ffffff;
+    background: linear-gradient(180deg, rgba(46, 30, 82, 0.94), rgba(18, 12, 34, 0.98));
+    border-color: rgba(232, 194, 102, 0.85);
+    color: #fff6dc;
+    box-shadow:
+        0 8px 24px rgba(138, 92, 255, 0.25),
+        inset 0 1px 0 rgba(255, 232, 173, 0.35),
+        inset 0 0 16px rgba(138, 92, 255, 0.26);
 }
-.archerlab-link:focus-visible { outline: 2px solid #c8b5f8; outline-offset: 3px; }
+.archerlab-link:focus-visible { outline: 2px solid #e8c266; outline-offset: 3px; }
 
 body { height: 100dvh; }
 #game-container canvas { margin: 0 !important; }
 .shadow-name-entry {
-    --entry-accent: #b39bcf;
-    background: rgba(13, 11, 26, 0.92);
-    border: 1px solid rgba(182, 168, 224, 0.36);
-    border-radius: 10px;
+    --entry-accent: #e8c266;
+    background: linear-gradient(135deg, rgba(232, 194, 102, 0.52), rgba(138, 92, 255, 0.65) 50%, rgba(232, 194, 102, 0.48));
+    border: 1px solid rgba(232, 194, 102, 0.42);
+    border-radius: 8px;
     clip-path: none;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.58),
+        0 0 18px rgba(138, 92, 255, 0.2);
 }
-.shadow-name-input { background: #12101e; color: #eee6f5; font-size: 16px; }
+.shadow-name-entry:focus-within {
+    background: linear-gradient(135deg, rgba(255, 224, 140, 0.78), rgba(164, 122, 255, 0.88) 50%, rgba(255, 224, 140, 0.74));
+    border-color: rgba(255, 224, 140, 0.78);
+    box-shadow:
+        0 12px 34px rgba(0, 0, 0, 0.64),
+        0 0 24px rgba(232, 194, 102, 0.28);
+}
+.shadow-name-input {
+    background: linear-gradient(180deg, rgba(19, 13, 34, 0.98), rgba(8, 5, 16, 0.99));
+    border-radius: 7px;
+    color: #f6efff;
+    caret-color: #e8c266;
+    font-size: 16px;
+}
+.shadow-name-input:focus {
+    background: linear-gradient(180deg, rgba(26, 18, 46, 0.99), rgba(11, 7, 22, 0.99));
+}
+.shadow-name-input::placeholder {
+    color: #8f80aa;
+}
 
 @media (max-width: 768px), (max-height: 500px) {
     .archerlab-link,
     .archerlab-link:hover {
         left: max(14px, env(safe-area-inset-left));
         top: max(10px, env(safe-area-inset-top));
-        padding: 8px 12px;
+        padding: 8px 13px;
         min-height: 44px;
         font-size: 11px;
     }

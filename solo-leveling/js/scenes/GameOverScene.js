@@ -6,6 +6,7 @@ import {
 } from '../utils/Constants.js';
 import { t, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
 import { DEFAULT_CHARACTER_ID, getCharacter, getCharacterRankingGameId } from '../utils/Characters.js';
+import { UIAssets } from '../ui/UIAssets.js?v=20261127-gothic-ui-v1';
 
 const UI_FONT_DISPLAY = '"Pretendard Variable", Pretendard, "Noto Sans KR", "Malgun Gothic", sans-serif';
 
@@ -178,70 +179,21 @@ export class GameOverScene extends Phaser.Scene {
         const layout = this._getNameLayout();
         const accent = isVictory ? SYSTEM.BORDER_GOLD : SYSTEM.BORDER;
 
-        const panelGlow = this.add.graphics().setDepth(depth - 2);
-        drawSystemPanel(
-            panelGlow,
-            layout.panelX - uv(5),
-            layout.panelY - uv(5),
-            layout.panelW + uv(10),
-            layout.panelH + uv(10),
-            {
-                cut: uv(17),
-                fill: SYSTEM.BG_PANEL, fillAlpha: 0.12,
-                border: accent, borderAlpha: 0.1, borderWidth: uv(4),
-            },
-        );
-        nameElements.push(panelGlow);
-
-        const panel = this.add.graphics().setDepth(depth - 1);
-        drawSystemPanel(panel, layout.panelX, layout.panelY, layout.panelW, layout.panelH, {
-            cut: uv(14),
-            fill: SYSTEM.BG_PANEL, fillAlpha: 0.94,
-            border: accent, borderAlpha: 0.76, borderWidth: 1,
+        const panel = UIAssets.createPanel(this, layout.panelX, layout.panelY, layout.panelW, layout.panelH, {
+            variant: 'modal',
+            depth: depth - 1,
         });
-        drawSystemPanel(
-            panel,
-            layout.panelX + uv(8),
-            layout.panelY + uv(8),
-            layout.panelW - uv(16),
-            layout.panelH - uv(16),
-            {
-                cut: uv(9),
-                fill: SYSTEM.BG_PANEL, fillAlpha: 0,
-                border: SYSTEM.BORDER_DIM, borderAlpha: 0.3, borderWidth: 1,
-            },
-        );
-        panel.fillStyle(accent, 0.9);
-        panel.fillRect(layout.panelX + uv(20), layout.panelY, uv(90), Math.max(1, uv(2)));
-        panel.fillStyle(accent, 0.46);
-        panel.fillRect(
-            layout.panelX + layout.panelW - uv(72),
-            layout.panelY + layout.panelH - Math.max(1, uv(2)),
-            uv(52),
-            Math.max(1, uv(2)),
-        );
-        panel.lineStyle(1, SYSTEM.BORDER_DIM, 0.34);
-        panel.lineBetween(
-            layout.panelX + uv(28),
-            layout.scoreY + uv(24),
-            layout.panelX + layout.panelW - uv(28),
-            layout.scoreY + uv(24),
-        );
         nameElements.push(panel);
 
-        // The authored 4:3 chrome is optional; the procedural panel remains the runtime fallback.
-        if (!layout.isShortLandscape && this.textures.exists('ui_modal_master')) {
-            const chromeFrameW = Math.min(layout.panelW, layout.panelH * (4 / 3));
-            const chromeFrameH = chromeFrameW * (3 / 4);
-            const modalChrome = this.add.image(
-                cx,
-                layout.panelY + layout.panelH / 2,
-                'ui_modal_master',
-            ).setDisplaySize(chromeFrameW * 1.42, chromeFrameH * 1.42)
-                .setDepth(depth - 0.5)
-                .setAlpha(0.78);
-            nameElements.push(modalChrome);
-        }
+        const dividerG = this.add.graphics().setDepth(depth - 0.5);
+        dividerG.lineStyle(1, isVictory ? 0xe8c266 : 0x8a5cff, 0.42);
+        dividerG.lineBetween(
+            layout.panelX + uv(36),
+            layout.scoreY + uv(24),
+            layout.panelX + layout.panelW - uv(36),
+            layout.scoreY + uv(24),
+        );
+        nameElements.push(dividerG);
 
         const tag = padText(this.add.text(
             cx,
@@ -322,8 +274,10 @@ export class GameOverScene extends Phaser.Scene {
             btnH,
             {
                 label: t('submitScore'),
-                labelColor: SYSTEM.TEXT_BRIGHT,
+                labelColor: '#ffffff',
                 border: accent,
+                tone: isVictory ? 'gold' : 'primary',
+                primary: true,
                 labelSize: 13,
                 labelFont: UI_FONT_DISPLAY,
                 depth,
@@ -337,8 +291,9 @@ export class GameOverScene extends Phaser.Scene {
             btnH,
             {
                 label: t('skipScore'),
-                labelColor: SYSTEM.TEXT_MUTED,
+                labelColor: '#d9d0eb',
                 border: SYSTEM.BORDER_DIM,
+                tone: 'secondary',
                 labelSize: 13,
                 labelFont: UI_FONT_DISPLAY,
                 depth,
@@ -851,54 +806,16 @@ export class GameOverScene extends Phaser.Scene {
         ).setOrigin(0.5), 4, 5, 3, 3);
         fitText(subtitle, GAME_WIDTH - layout.sidePad * 2, uv(36), 0.66);
 
-        const cardGlow = this.add.graphics();
-        drawSystemPanel(
-            cardGlow,
-            layout.cardX - uv(5),
-            layout.cardY - uv(5),
-            layout.cardW + uv(10),
-            layout.cardH + uv(10),
-            {
-                cut: uv(16),
-                fill: SYSTEM.BG_PANEL, fillAlpha: 0.12,
-                border: accent, borderAlpha: 0.1, borderWidth: uv(4),
-            },
-        );
-
-        const card = this.add.graphics();
-        drawSystemPanel(card, layout.cardX, layout.cardY, layout.cardW, layout.cardH, {
-            cut: uv(14),
-            fill: SYSTEM.BG_PANEL, fillAlpha: 0.94,
-            border: accent, borderAlpha: 0.84, borderWidth: 1,
+        UIAssets.createPanel(this, layout.cardX, layout.cardY, layout.cardW, layout.cardH, {
+            variant: 'modal',
+            depth: 0,
         });
-        drawSystemPanel(
-            card,
-            layout.cardX + uv(8),
-            layout.cardY + uv(8),
-            layout.cardW - uv(16),
-            layout.cardH - uv(16),
-            {
-                cut: uv(9),
-                fill: SYSTEM.BG_PANEL, fillAlpha: 0,
-                border: SYSTEM.BORDER_DIM, borderAlpha: 0.25, borderWidth: 1,
-            },
-        );
-        card.fillStyle(accent, 0.92);
-        card.fillRect(layout.cardX + uv(20), layout.cardY, uv(92), Math.max(1, uv(2)));
-        card.fillStyle(accent, 0.4);
-        card.fillRect(
-            layout.cardX + layout.cardW - uv(72),
-            layout.cardY + layout.cardH - Math.max(1, uv(2)),
-            uv(52),
-            Math.max(1, uv(2)),
-        );
 
-        const cardLabel = padText(this.add.text(layout.cardX + uv(20), layout.cardY - uv(9), '  RESULT  ', {
-            fontSize: fs(9), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
-            color: isVictory ? SYSTEM.TEXT_GOLD : SYSTEM.TEXT_CYAN,
-            backgroundColor: '#05070d',
-            padding: { left: 6, right: 6, top: 1, bottom: 1 },
-        }), 3, 4, 3, 3);
+        const cardLabel = padText(this.add.text(cx, layout.cardY + uv(22), 'RESULT', {
+            fontSize: fs(10), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: isVictory ? '#ffe8ad' : '#d8beff',
+            stroke: '#05030d', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(2), 3, 4, 3, 3);
         fitText(cardLabel, layout.cardW * 0.4, 0, 0.7);
 
         const min = Math.floor(time / 60).toString().padStart(2, '0');
@@ -915,10 +832,10 @@ export class GameOverScene extends Phaser.Scene {
         ];
 
         const rows = Math.ceil(stats.length / layout.columns);
-        const gridX = layout.cardX + uv(15);
-        const gridY = layout.cardY + uv(34);
-        const gridW = layout.cardW - uv(30);
-        const gridH = layout.cardH - uv(48);
+        const gridX = layout.cardX + uv(26);
+        const gridY = layout.cardY + uv(38);
+        const gridW = layout.cardW - uv(52);
+        const gridH = layout.cardH - uv(56);
         const cellW = gridW / layout.columns;
         const cellH = gridH / rows;
         const statGrid = this.add.graphics();
@@ -947,15 +864,15 @@ export class GameOverScene extends Phaser.Scene {
                 statGrid.fillRect(cellX + 1, cellY + 1, cellW - 2, cellH - 2);
             }
 
-            const label = padText(this.add.text(textX, cellY + uv(10), '▸ ' + stat.label, {
+            const label = padText(this.add.text(textX, cellY + cellH * 0.25, '▸ ' + stat.label, {
                 fontSize: fs(layout.isShortLandscape ? 9 : 10),
                 fontFamily: UI_FONT_DISPLAY,
                 fontStyle: 'bold',
                 color: SYSTEM.TEXT_CYAN_DIM,
-            }), 3, 4, 2, 2);
-            fitText(label, maxTextW, cellH * 0.34, 0.58);
+            }).setOrigin(0, 0.5), 3, 4, 2, 2);
+            fitText(label, maxTextW, cellH * 0.3, 0.58);
 
-            const value = padText(this.add.text(textX, cellY + cellH * 0.48, stat.value, {
+            const value = padText(this.add.text(textX, cellY + cellH * 0.64, stat.value, {
                 fontSize: fs(layout.isShortLandscape ? 16 : 17),
                 fontFamily: UI_FONT_MONO,
                 fontStyle: 'bold',
@@ -963,7 +880,7 @@ export class GameOverScene extends Phaser.Scene {
                 stroke: '#02040a',
                 strokeThickness: 1,
             }).setOrigin(0, 0.5), 4, 5, 2, 2);
-            fitText(value, maxTextW, cellH * 0.44, 0.58);
+            fitText(value, maxTextW, cellH * 0.42, 0.58);
         });
 
         const retryW = Math.min(
@@ -977,8 +894,10 @@ export class GameOverScene extends Phaser.Scene {
             layout.retryH,
             {
                 label: `↻  ${t('retry')}`,
-                labelColor: SYSTEM.TEXT_BRIGHT,
+                labelColor: '#ffffff',
                 border: accent,
+                tone: isVictory ? 'gold' : 'primary',
+                primary: true,
                 labelSize: layout.isShortLandscape ? 15 : 16,
                 labelFont: UI_FONT_DISPLAY,
                 onClick: () => {
@@ -1005,8 +924,9 @@ export class GameOverScene extends Phaser.Scene {
             layout.menuH,
             {
                 label: t('toMenu'),
-                labelColor: SYSTEM.TEXT_MUTED,
+                labelColor: '#e0d8f2',
                 border: SYSTEM.BORDER_DIM,
+                tone: 'secondary',
                 labelSize: layout.isShortLandscape ? 11 : 12,
                 labelFont: UI_FONT_DISPLAY,
                 onClick: () => {
@@ -1025,38 +945,22 @@ export class GameOverScene extends Phaser.Scene {
         label,
         labelColor,
         border,
+        tone = '',
+        primary = false,
         labelSize = 16,
         labelFont = UI_FONT_DISPLAY,
         depth = 0,
         onClick,
     }) {
-        const g = this.add.graphics().setDepth(depth);
+        const resolvedTone = tone || (primary ? 'primary' : 'secondary');
+        const g = UIAssets.createPanel(this, x, y, w, h, {
+            variant: 'button',
+            tone: resolvedTone,
+            primary,
+            border,
+            depth,
+        });
         let isHover = false;
-        let isPressed = false;
-
-        const redraw = () => {
-            g.clear();
-            if (isHover || isPressed) {
-                drawSystemPanel(g, x - uv(3), y - uv(3), w + uv(6), h + uv(6), {
-                    cut: uv(10),
-                    fill: SYSTEM.BG_PANEL, fillAlpha: 0,
-                    border, borderAlpha: isPressed ? 0.12 : 0.18, borderWidth: uv(3),
-                });
-            }
-            drawSystemPanel(g, x, y, w, h, {
-                cut: uv(8),
-                fill: isPressed ? 0x14253a : (isHover ? SYSTEM.BG_PANEL_HI : SYSTEM.BG_PANEL),
-                fillAlpha: isHover || isPressed ? 0.97 : 0.88,
-                border,
-                borderAlpha: isHover || isPressed ? 1 : 0.8,
-                borderWidth: isHover || isPressed ? 2 : 1,
-            });
-            g.fillStyle(border, isPressed ? 0.95 : (isHover ? 0.76 : 0.48));
-            g.fillRect(x + uv(10), y, Math.min(uv(48), w * 0.24), Math.max(1, uv(2)));
-            g.fillStyle(border, isHover ? 0.08 : 0.035);
-            g.fillRect(x + uv(8), y + uv(7), Math.max(1, w - uv(16)), Math.max(1, h - uv(14)));
-        };
-        redraw();
 
         const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
             .setDepth(depth + 2)
@@ -1066,34 +970,32 @@ export class GameOverScene extends Phaser.Scene {
             fontFamily: labelFont,
             fontStyle: 'bold',
             color: labelColor,
+            stroke: '#05030d',
+            strokeThickness: 3,
             letterSpacing: 0,
-            shadow: { offsetX: 0, offsetY: 0, color: '#4dd2ff', blur: uv(5), fill: true },
         }).setOrigin(0.5).setDepth(depth + 1), 4, 5, 2, 2);
-        const baseScale = fitText(txt, w - uv(20), h - uv(10), 0.62);
+        const baseScale = fitText(txt, w - uv(34), h - uv(12), 0.62);
 
         hit.on('pointerover', () => {
             isHover = true;
-            redraw();
-            txt.setScale(baseScale * 1.015);
+            g.setUIState('hover');
+            txt.setScale(baseScale * 1.02);
         });
         hit.on('pointerout', () => {
             isHover = false;
-            isPressed = false;
-            redraw();
+            g.setUIState('normal');
             txt.setScale(baseScale);
             txt.setY(y + h / 2);
         });
         hit.on('pointerdown', () => {
-            isPressed = true;
-            redraw();
+            g.setUIState('pressed');
             txt.setScale(baseScale * 0.985);
             txt.setY(y + h / 2 + uv(1));
             if (onClick) onClick();
         });
         hit.on('pointerup', () => {
-            isPressed = false;
-            redraw();
-            txt.setScale(baseScale * (isHover ? 1.015 : 1));
+            g.setUIState(isHover ? 'hover' : 'normal');
+            txt.setScale(baseScale * (isHover ? 1.02 : 1));
             txt.setY(y + h / 2);
         });
 

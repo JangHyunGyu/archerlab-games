@@ -4,7 +4,7 @@ import {
     UI_SCALE, fs, uv, fitText, padText,
 } from '../utils/Constants.js';
 import { t } from '../utils/i18n.js';
-import { UIAssets } from './UIAssets.js?v=20260913-crafted-ui-v1';
+import { UIAssets } from './UIAssets.js?v=20261127-gothic-ui-v1';
 
 function cssPerGameUnit(scene) { var __oc0, __oc1;
     const scale = (((__oc1 = (__oc0 = scene === null || scene === void 0 ? void 0 : scene.game) === null || __oc0 === void 0 ? void 0 : __oc0.scale) === null || __oc1 === void 0 ? void 0 : __oc1.displayScale));
@@ -42,6 +42,12 @@ export class StatusWindow {
         this.tabKey = scene.input.keyboard.addKey('TAB');
         this._onTabDown = () => this.toggle();
         this.tabKey.on('down', this._onTabDown);
+
+        this.escKey = scene.input.keyboard.addKey('ESC');
+        this._onEscDown = () => {
+            if (this.isOpen) this.close();
+        };
+        this.escKey.on('down', this._onEscDown);
     }
 
     _text(x, y, value, style) {
@@ -71,13 +77,13 @@ export class StatusWindow {
         const cy = GAME_HEIGHT / 2;
         const touch = this._detectTouch();
         const safeX = Math.max(12, Math.min(uv(20), GAME_WIDTH * 0.04));
-        const safeY = Math.max(10, Math.min(uv(18), GAME_HEIGHT * 0.035));
-        const w = Math.max(1, Math.min(uv(380), GAME_WIDTH - safeX * 2));
-        const h = Math.max(1, Math.min(uv(540), GAME_HEIGHT - safeY * 2));
+        const safeY = Math.max(10, Math.min(uv(16), GAME_HEIGHT * 0.03));
+        const w = Math.max(1, Math.min(uv(424), GAME_WIDTH - safeX * 2));
+        const h = Math.max(1, Math.min(uv(596), GAME_HEIGHT - safeY * 2));
         const px = cx - w / 2;
         const py = cy - h / 2;
 
-        const dim = this.scene.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.68)
+        const dim = this.scene.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.72)
             .setDepth(300).setScrollFactor(0).setInteractive();
         dim.on('pointerup', pointer => {
             const outsidePanel = pointer.x < px || pointer.x > px + w
@@ -86,82 +92,63 @@ export class StatusWindow {
         });
         this.elements.push(dim);
 
-        // Main angular panel
+        // Main gothic modal panel
         const panelG = UIAssets.createPanel(this.scene, px, py, w, h, {
-            asset: 'ui_panel_cyan',
-            cut: uv(14),
-            fill: SYSTEM.BG_PANEL, fillAlpha: 0.95,
-            border: SYSTEM.BORDER, borderAlpha: 0.9, borderWidth: 1,
-            accent: SYSTEM.BORDER,
-            glow: 6,
-            variant: 'panel',
+            variant: 'modal',
             depth: 301,
             scrollFactor: 0,
         });
         this.elements.push(panelG);
 
         // Header tag and explicit close action. The close hit area remains at least 44px.
-        const tag = this._text(px + uv(18), py + uv(10), '  STATUS  ', {
-            fontSize: fs(10), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN,
-            backgroundColor: '#05070d', padding: { left: 6, right: 6, top: 1, bottom: 1 },
+        const tag = this._text(px + uv(28), py + uv(20), 'STATUS', {
+            fontSize: fs(10), fontFamily: UI_FONT_MONO, fontStyle: 'bold', color: '#e8c266',
         }).setDepth(303).setScrollFactor(0);
         this.elements.push(tag);
 
         const minTouchUnits = Math.ceil(44 / cssPerGameUnit(this.scene));
         const closeH = Math.max(minTouchUnits, Math.round(44 * (1 + (UI_SCALE - 1) * 0.7)));
-        const closeW = Math.max(minTouchUnits, Math.min(uv(78), w * 0.3));
-        const closeX = px + w - closeW - uv(8);
-        const closeY = py + uv(8);
+        const closeW = Math.max(minTouchUnits, Math.min(uv(92), w * 0.3));
+        const closeX = px + w - closeW - uv(20);
+        const closeY = py + uv(16);
         const closePanel = UIAssets.createPanel(this.scene, closeX, closeY, closeW, closeH, {
-            cut: uv(7),
-            fill: 0x101a27, fillAlpha: 0.94,
-            border: SYSTEM.BORDER, borderAlpha: 0.74, borderWidth: 1,
-            accent: SYSTEM.BORDER,
             variant: 'button',
-            ornament: false,
+            tone: 'secondary',
             depth: 303,
             scrollFactor: 0,
-            hover: {
-                fill: SYSTEM.BG_PANEL_HI,
-                fillAlpha: 1,
-                border: 0xffffff,
-                borderAlpha: 0.95,
-                borderWidth: 2,
-                glow: 5,
-            },
         });
         const closeText = this._text(closeX + closeW / 2, closeY + closeH / 2, `×  ${t('close')}`, {
             fontSize: fs(11), fontFamily: UI_FONT_KR, fontStyle: 'bold',
-            color: SYSTEM.TEXT_BRIGHT,
+            color: '#ebe4f8', stroke: '#05040d', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(305).setScrollFactor(0);
-        fitText(closeText, closeW - uv(10), closeH - uv(8), 0.66);
+        fitText(closeText, closeW - uv(18), closeH - uv(8), 0.66);
         const closeHit = UIAssets.createHitArea(this.scene, closeX, closeY, closeW, closeH, 306)
             .setScrollFactor(0);
-        closeHit.on('pointerover', () => closePanel.setUIState('hover').setAlpha(1));
-        closeHit.on('pointerout', () => closePanel.setUIState('normal').setAlpha(1));
-        closeHit.on('pointerdown', () => closePanel.setAlpha(0.76));
+        closeHit.on('pointerover', () => { closePanel.setUIState('hover').setAlpha(1); closeText.setColor('#ffffff'); });
+        closeHit.on('pointerout', () => { closePanel.setUIState('normal').setAlpha(1); closeText.setColor('#ebe4f8'); });
+        closeHit.on('pointerdown', () => closePanel.setUIState('pressed'));
         closeHit.on('pointerup', () => this.close());
         this.elements.push(closePanel, closeText, closeHit);
 
         // Title
-        const title = this._text(cx, py + uv(43), t('statusTitle'), {
+        const title = this._text(cx, py + uv(48), t('statusTitle'), {
             fontSize: fs(20), fontFamily: UI_FONT_KR, fontStyle: 'bold',
-            color: SYSTEM.TEXT_BRIGHT,
-            stroke: '#02040a',
-            strokeThickness: 2,
+            color: '#f5efff',
+            stroke: '#05030d',
+            strokeThickness: 3,
             letterSpacing: 0,
         }).setOrigin(0.5).setDepth(303).setScrollFactor(0);
-        fitText(title, Math.max(uv(96), w - closeW * 2 - uv(24)), uv(38), 0.64);
+        fitText(title, Math.max(uv(96), w - closeW * 2 - uv(34)), uv(38), 0.64);
         this.elements.push(title);
 
         // Title underline
         const headerLineY = Math.max(
-            py + Math.min(uv(68), h * 0.2),
-            closeY + closeH + uv(5)
+            py + Math.min(uv(74), h * 0.2),
+            closeY + closeH + uv(6)
         );
         const ul = this.scene.add.graphics().setDepth(302).setScrollFactor(0);
-        ul.lineStyle(1, SYSTEM.BORDER, 0.55);
-        ul.lineBetween(px + uv(22), headerLineY, px + w - uv(22), headerLineY);
+        ul.lineStyle(1, 0xe8c266, 0.52);
+        ul.lineBetween(px + uv(30), headerLineY, px + w - uv(30), headerLineY);
         this.elements.push(ul);
 
         const rank = RANKS[player.currentRank];
@@ -176,7 +163,10 @@ export class StatusWindow {
             { label: t('statCDR'), value: (player.stats.cooldownReduction * 100).toFixed(1) + '%', color: SYSTEM.TEXT_CYAN },
         ];
         const soldiers = (((__oc3 = this.scene.shadowArmyManager) === null || __oc3 === void 0 ? void 0 : __oc3.getSoldiers())) || [];
-        const contentBottom = py + h - uv(touch ? 48 : 44);
+        const hintY = py + h - uv(20);
+        const footerH = Math.max(minTouchUnits, uv(38));
+        const footerY = touch ? (py + h - uv(34) - footerH) : (hintY - uv(12) - footerH);
+        const contentBottom = footerY - uv(10);
         let yOff = headerLineY + uv(10);
         const contentH = Math.max(1, contentBottom - yOff);
         const tight = contentH < uv(270);
@@ -188,9 +178,9 @@ export class StatusWindow {
         const statStep = Math.max(textStep, uv(tight ? 17 : (compact ? 19 : 21)));
         const sectionStep = Math.max(textStep, uv(tight ? 17 : (compact ? 19 : 22)));
         const soldierStep = Math.max(soldierTextStep, uv(tight ? 15 : (compact ? 17 : 18)));
-        const leftX = px + uv(compact ? 22 : 26);
-        const rowLeftX = px + uv(compact ? 25 : 30);
-        const rightX = px + w - uv(compact ? 22 : 26);
+        const leftX = px + uv(compact ? 30 : 34);
+        const rowLeftX = px + uv(compact ? 32 : 36);
+        const rightX = px + w - uv(compact ? 30 : 34);
 
         // Profile block
         this._addRow(leftX, rightX, yOff, t('statName'), t('playerName'), SYSTEM.TEXT_BRIGHT, labelSize);
@@ -253,13 +243,85 @@ export class StatusWindow {
                 '└ …', `+${soldiers.length - visibleCount}`, SYSTEM.TEXT_CYAN, tight ? 9 : 11);
         }
 
-        // Close hint
-        const hintText = touch ? `☝  ${t('close')}` : t('tabClose');
-        const hint = this._text(cx, py + h - uv(touch ? 25 : 23), hintText, {
-            fontSize: fs(11), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_MUTED,
-        }).setOrigin(0.5).setDepth(303).setScrollFactor(0);
-        fitText(hint, w - uv(40), 0, 0.72);
-        this.elements.push(hint);
+        // Footer controls: Sound toggle & Exit to menu (keeps main HUD clean)
+        const footerPadX = uv(28);
+        const footerGap = uv(12);
+        const footerBtnW = Math.max(minTouchUnits, Math.floor((w - footerPadX * 2 - footerGap) / 2));
+        const soundBtnX = px + footerPadX;
+        const exitBtnX = soundBtnX + footerBtnW + footerGap;
+
+        const isSoundEnabled = !(this.scene.soundManager && this.scene.soundManager.enabled === false);
+        const soundPanel = UIAssets.createPanel(this.scene, soundBtnX, footerY, footerBtnW, footerH, {
+            variant: 'button',
+            tone: 'secondary',
+            depth: 303,
+            scrollFactor: 0,
+        });
+        const soundLabel = () => (
+            this.scene && this.scene.soundManager && this.scene.soundManager.enabled === false
+                ? t('sysSoundOff')
+                : t('sysSoundOn')
+        );
+        const soundText = this._text(soundBtnX + footerBtnW / 2, footerY + footerH / 2, soundLabel(), {
+            fontSize: fs(11), fontFamily: UI_FONT_KR, fontStyle: 'bold',
+            color: isSoundEnabled ? '#ebe4f8' : SYSTEM.TEXT_MUTED,
+            stroke: '#05040d', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(305).setScrollFactor(0);
+        fitText(soundText, footerBtnW - uv(22), footerH - uv(8), 0.62);
+        const soundHit = UIAssets.createHitArea(this.scene, soundBtnX, footerY, footerBtnW, footerH, 306)
+            .setScrollFactor(0);
+        soundHit.on('pointerover', () => { soundPanel.setUIState('hover').setAlpha(1); soundText.setColor('#ffffff'); });
+        soundHit.on('pointerout', () => {
+            soundPanel.setUIState('normal').setAlpha(1);
+            const enabled = !(this.scene && this.scene.soundManager && this.scene.soundManager.enabled === false);
+            soundText.setColor(enabled ? '#ebe4f8' : SYSTEM.TEXT_MUTED);
+        });
+        soundHit.on('pointerdown', () => soundPanel.setUIState('pressed'));
+        soundHit.on('pointerup', () => {
+            if (!this.scene || !this.scene.soundManager) return;
+            const enabled = this.scene.soundManager.toggleSound();
+            soundText.setText(soundLabel());
+            soundText.setColor(enabled ? '#ffffff' : SYSTEM.TEXT_MUTED);
+            fitText(soundText, footerBtnW - uv(22), footerH - uv(8), 0.62);
+            soundPanel.setUIState('normal');
+        });
+        this.elements.push(soundPanel, soundText, soundHit);
+
+        const exitPanel = UIAssets.createPanel(this.scene, exitBtnX, footerY, footerBtnW, footerH, {
+            variant: 'button',
+            tone: 'gold',
+            depth: 303,
+            scrollFactor: 0,
+        });
+        const exitText = this._text(exitBtnX + footerBtnW / 2, footerY + footerH / 2, t('toMenu'), {
+            fontSize: fs(11), fontFamily: UI_FONT_KR, fontStyle: 'bold',
+            color: '#ffe8ad', stroke: '#05040d', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(305).setScrollFactor(0);
+        fitText(exitText, footerBtnW - uv(22), footerH - uv(8), 0.62);
+        const exitHit = UIAssets.createHitArea(this.scene, exitBtnX, footerY, footerBtnW, footerH, 306)
+            .setScrollFactor(0);
+        exitHit.on('pointerover', () => { exitPanel.setUIState('hover').setAlpha(1); exitText.setColor('#ffffff'); });
+        exitHit.on('pointerout', () => { exitPanel.setUIState('normal').setAlpha(1); exitText.setColor('#ffe8ad'); });
+        exitHit.on('pointerdown', () => exitPanel.setUIState('pressed'));
+        exitHit.on('pointerup', () => {
+            const targetScene = this.scene;
+            if (!targetScene) return;
+            this.close();
+            targetScene.cameras.main.fadeOut(220, 0, 0, 0);
+            targetScene.time.delayedCall(220, () => {
+                if (targetScene.scene) targetScene.scene.start('MenuScene');
+            });
+        });
+        this.elements.push(exitPanel, exitText, exitHit);
+
+        // Close hint (desktop keyboard hint only; touch uses Close button or outside tap)
+        if (!touch) {
+            const hint = this._text(cx, hintY, t('tabClose'), {
+                fontSize: fs(10), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_MUTED,
+            }).setOrigin(0.5).setDepth(303).setScrollFactor(0);
+            fitText(hint, w - uv(48), 0, 0.7);
+            this.elements.push(hint);
+        }
 
         // Fade in
         this.elements.forEach(el => {
@@ -323,6 +385,11 @@ export class StatusWindow {
             this.tabKey.off('down', this._onTabDown);
             this.tabKey = null;
             this._onTabDown = null;
+        }
+        if (this.escKey && this._onEscDown) {
+            this.escKey.off('down', this._onEscDown);
+            this.escKey = null;
+            this._onEscDown = null;
         }
         this.scene = null;
     }

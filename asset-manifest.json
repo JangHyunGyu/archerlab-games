@@ -16430,13 +16430,13 @@
     },
     {
       "path": "solo-leveling/assets/ui/crafted-button-v1.webp",
-      "bytes": 176200,
-      "sha256": "71b18d4fa3cae4f83a7146e2925d4d8acddd01f30dbcb626b7c1d57c358e3097"
+      "bytes": 133774,
+      "sha256": "930644ecbf1ee7374bd097acf345b8c6c8d34285c60614c9ff9de843594fcff4"
     },
     {
       "path": "solo-leveling/assets/ui/crafted-frame-v1.webp",
-      "bytes": 250188,
-      "sha256": "b3a21a40b629718af13eb623ed2b4b991f835e809f5fb85a6fb2e6e45e2efc7c"
+      "bytes": 126092,
+      "sha256": "746267e54ffbee70f22835a474485e07c1a5168683ca19206155c2471d00f555"
     },
     {
       "path": "solo-leveling/assets/ui/icons/basicDagger.png",
@@ -17100,23 +17100,23 @@
     },
     {
       "path": "solo-leveling/assets/ui/skin-button-v1.png",
-      "bytes": 1810936,
-      "sha256": "ec2c1212b7f4bc12dc8c36127e61cf1ea7f393b7bea989bee771b01d33ab6ffd"
+      "bytes": 633296,
+      "sha256": "f93991b56e915aa29d6ad341f9b88edaec55df145cefdb739f946136185689da"
     },
     {
       "path": "solo-leveling/assets/ui/skin-button-v1.webp",
-      "bytes": 181710,
-      "sha256": "f553427dbc88cdda0fc82e53d3a6fb0dc2499a43e51110229a1e25e27f761d41"
+      "bytes": 101264,
+      "sha256": "a8ccf483c999d3d3d6b513fd578b2913530b5498fe35d4751b6247ed398d7999"
     },
     {
       "path": "solo-leveling/assets/ui/skin-panel-v1.png",
-      "bytes": 1682198,
-      "sha256": "fe2c02ccd0ee62689dc55efc459f07b07c44586f675ba73856b72814b05abd9a"
+      "bytes": 1318707,
+      "sha256": "da4f04175f2df1069969cc67d9d005af7fe37e236c7fb90dcccb30316fb1ed4c"
     },
     {
       "path": "solo-leveling/assets/ui/skin-panel-v1.webp",
-      "bytes": 97276,
-      "sha256": "f036737d93d5e88f50401d1bdd12be70e27673caa7c61f7821258f31961c11b9"
+      "bytes": 156208,
+      "sha256": "d048dd590589ab92f363e935773a13c070ca189bd084d03a8c19337208756582"
     },
     {
       "path": "solo-leveling/assets/ui/ui_button_cyan.png",
@@ -17140,23 +17140,23 @@
     },
     {
       "path": "solo-leveling/assets/ui/ui_card_cyan.png",
-      "bytes": 53154,
-      "sha256": "65935c035732e5aacc71660fc2c8538b25216d01a503ec501a7fc524107fcfbf"
+      "bytes": 1315370,
+      "sha256": "3b4d33966e49f33b36ba199da260358eac9563181b5084a51e7108c87becd00a"
     },
     {
       "path": "solo-leveling/assets/ui/ui_card_cyan.webp",
-      "bytes": 13818,
-      "sha256": "1ec38169509d99463c759d6c1ed78f328d625db35fb9784188c54080d64fcb90"
+      "bytes": 169428,
+      "sha256": "34b7940b977faa1d3f8a0f101437f3ce21fc6a52364b311c0b0c0259ab5e9daf"
     },
     {
       "path": "solo-leveling/assets/ui/ui_card_gold.png",
-      "bytes": 54286,
-      "sha256": "fc39989b08f4600fe58b5a1294a135e57de7639bf391b0ccc97eec09c33ed106"
+      "bytes": 1289430,
+      "sha256": "b574e97b0f67c2609da89cc7d0492879ab306e9af9d596058d6e6a4e9e324719"
     },
     {
       "path": "solo-leveling/assets/ui/ui_card_gold.webp",
-      "bytes": 22026,
-      "sha256": "a8a2263b2f2cc487cbacdc303d2e786b00cd814cb74db113520ce5f8b98f30d0"
+      "bytes": 228308,
+      "sha256": "24d6763dbfed8b527ada93490881768bba056ac3b5a6a8041847a688e3d5bec5"
     },
     {
       "path": "solo-leveling/assets/ui/ui_card_hover.png",
@@ -17200,13 +17200,13 @@
     },
     {
       "path": "solo-leveling/assets/ui/ui_minimap.png",
-      "bytes": 26230,
-      "sha256": "8e3177544fe833a1d53e440a04858864dcf5e6da68d606383e7466373ea518c8"
+      "bytes": 678198,
+      "sha256": "d742221592824fbd60299ef2fb10772fe2c6548bc2f28387aa4c7caafc2d63fc"
     },
     {
       "path": "solo-leveling/assets/ui/ui_minimap.webp",
-      "bytes": 4884,
-      "sha256": "01cc0b708dfb36c711f7efa69458078c2861a8d9ae279703a16cd1cb5ebfd53f"
+      "bytes": 149226,
+      "sha256": "418c93822c33c96930e5ac38148d82b5565f3bb042e3a4bbd1ee259fcea167d3"
     },
     {
       "path": "solo-leveling/assets/ui/ui_modal_master.png",
@@ -17260,13 +17260,13 @@
     },
     {
       "path": "solo-leveling/assets/ui/ui_slot.png",
-      "bytes": 12735,
-      "sha256": "371c1c5e7ede4b7d71d7cc48c85e79ff50864f5981d75d541e1e0cb09b7119a6"
+      "bytes": 1328085,
+      "sha256": "740ea39745e57d4b006e74304b2a52e04c4aded4d3b4b0d69fd96e58b6e4aed3"
     },
     {
       "path": "solo-leveling/assets/ui/ui_slot.webp",
-      "bytes": 2106,
-      "sha256": "057fab00f00311d575f4a985490af0f84ccba17afc524a28f7ef46d6bb323615"
+      "bytes": 170844,
+      "sha256": "af9104331d40e41ee07b21d2c50d5757be37081f866340442eec9941bb836cae"
     },
     {
       "path": "solo-leveling/docs/basic-combo-review-20261010/dagger-style-comparison.jpg",

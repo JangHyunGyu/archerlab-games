@@ -1,5 +1,5 @@
 import { GAME_WIDTH, GAME_HEIGHT, UI_FONT_MONO, UI_FONT_KR, fs, uv, fitText, padText } from '../utils/Constants.js';
-import { UIAssets } from './UIAssets.js?v=20260913-crafted-ui-v1';
+import { UIAssets } from './UIAssets.js?v=20261127-gothic-ui-v1';
 import { t } from '../utils/i18n.js';
 
 /**
@@ -105,18 +105,18 @@ export class SystemMessage {
         const safeX = Math.max(14, Math.min(uv(20), GAME_WIDTH * 0.045));
         const safeTop = Math.max(14, Math.min(uv(24), GAME_HEIGHT * 0.04));
         const safeBottom = Math.max(14, Math.min(uv(20), GAME_HEIGHT * 0.04));
-        const boxW = Math.max(1, Math.min(uv(320), GAME_WIDTH - safeX * 2));
+        const boxW = Math.max(1, Math.min(uv(304), GAME_WIDTH - safeX * 2));
         const maxBoxH = Math.max(1, GAME_HEIGHT - safeTop - safeBottom);
-        let lineH = uv(19);
-        const headerH = uv(22);
-        const padBottom = uv(10);
+        let lineH = uv(16);
+        const headerH = uv(20);
+        const padBottom = uv(9);
         if (headerH + lineCount * lineH + padBottom > maxBoxH) {
-            lineH = Math.max(14, Math.floor((maxBoxH - headerH - padBottom) / lineCount));
+            lineH = Math.max(13, Math.floor((maxBoxH - headerH - padBottom) / lineCount));
         }
         const boxH = Math.min(maxBoxH, headerH + lineCount * lineH + padBottom);
         const preferredTop = this.placement === 'bottom'
             ? GAME_HEIGHT - safeBottom - boxH
-            : (portrait ? uv(64) : uv(50));
+            : (portrait ? uv(52) : uv(46));
         const boxTop = Math.max(safeTop, Math.min(preferredTop, GAME_HEIGHT - safeBottom - boxH));
         const boxLeft = cx - boxW / 2;
         const startY = boxTop + boxH / 2;
@@ -131,13 +131,9 @@ export class SystemMessage {
             boxW,
             boxH,
             {
-                cut: uv(6),
-                fill: colors.bg,
-                fillAlpha: 0.84,
-                border: colors.border,
-                borderAlpha: 0.52,
-                borderWidth: 1,
                 variant: 'hud',
+                tintColor: colors.border,
+                tintAlpha: 0.14,
                 depth: 201,
                 scrollFactor: 0,
             }
@@ -145,13 +141,13 @@ export class SystemMessage {
         elements.push(bg);
 
         // Clean slim left severity accent bar
-        const rail = this.scene.add.rectangle(boxLeft + uv(4), startY, Math.max(2, uv(3)), boxH - uv(12), colors.border, 0.9)
+        const rail = this.scene.add.rectangle(boxLeft + uv(10), startY, Math.max(2, uv(3)), boxH - uv(16), colors.border, 0.92)
             .setDepth(202).setScrollFactor(0).setAlpha(0);
         elements.push(rail);
 
         // Compact header tag
-        const textX = boxLeft + uv(14);
-        const titleText = padText(this.scene.add.text(textX, boxTop + uv(6), msg.title, {
+        const textX = boxLeft + uv(20);
+        const titleText = padText(this.scene.add.text(textX, boxTop + uv(8), msg.title, {
             fontSize: fs(10),
             fontFamily: UI_FONT_MONO,
             fontStyle: 'bold',
@@ -159,7 +155,7 @@ export class SystemMessage {
             stroke: '#02040a',
             strokeThickness: 2,
         }).setOrigin(0, 0).setDepth(203).setScrollFactor(0).setAlpha(0), 2, 2);
-        fitText(titleText, boxW - uv(28), uv(16), 0.72);
+        fitText(titleText, boxW - uv(36), uv(16), 0.72);
         elements.push(titleText);
 
         // Concise message lines
@@ -174,13 +170,13 @@ export class SystemMessage {
                 strokeThickness: 2,
                 lineSpacing: 2,
             }).setOrigin(0, 0).setDepth(203).setScrollFactor(0).setAlpha(0), 2, 2);
-            fitText(body, boxW - uv(28), lineH, 0.66);
+            fitText(body, boxW - uv(36), lineH, 0.66);
             elements.push(body);
         });
 
         // Subtle lifetime progress bar at bottom
         const progress = this.scene.add.rectangle(
-            boxLeft + uv(8), boxTop + boxH - uv(3), boxW - uv(16), Math.max(1, uv(2)), colors.border, 0.65
+            boxLeft + uv(14), boxTop + boxH - uv(6), boxW - uv(28), Math.max(1, uv(2)), colors.border, 0.72
         ).setOrigin(0, 0.5).setDepth(203).setScrollFactor(0).setAlpha(0);
         elements.push(progress);
         elements.forEach(element => element.setVisible(this.visible));

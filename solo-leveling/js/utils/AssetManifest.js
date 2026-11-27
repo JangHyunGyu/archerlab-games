@@ -140,7 +140,7 @@ export const CHARACTER_VISUAL_ASSET_VERSION = '20261120-opt-v2';
 export const CHARACTER_MOTION_ASSET_VERSION = '20261119-native-rgba-motion-v7';
 export const CHARACTER_COMBAT_VFX_ASSET_VERSION = '20261120-opt-v2';
 export const ASSET_ATLAS_VERSION = '20261124-enemies-v1';
-export const RUNTIME_WEBP_VERSION = '20261124-enemies-v1';
+export const RUNTIME_WEBP_VERSION = '20261127-gothic-ui-v1';
 export const CHARACTER_COMBAT_VFX_FRAME_COUNT = 6;
 
 const uiAsset = (key) => ({
@@ -230,8 +230,11 @@ const MENU_CORE_UI_ASSETS = [
     { key: 'env_shadow_portal', path: 'assets/environment/shadow_portal.png', cacheVersion: RUNTIME_WEBP_VERSION },
     { key: 'ui_skin_button', path: 'assets/ui/skin-button-v1.png', cacheVersion: RUNTIME_WEBP_VERSION },
     { key: 'ui_skin_panel', path: 'assets/ui/skin-panel-v1.png', cacheVersion: RUNTIME_WEBP_VERSION },
-    { key: 'ui_crafted_button', path: 'assets/ui/crafted-button-v1.webp', cacheVersion: RUNTIME_WEBP_VERSION },
-    { key: 'ui_crafted_frame', path: 'assets/ui/crafted-frame-v1.webp', cacheVersion: RUNTIME_WEBP_VERSION },
+    { key: 'ui_crafted_button', path: 'assets/ui/crafted-button-v1.png', cacheVersion: RUNTIME_WEBP_VERSION },
+    { key: 'ui_crafted_frame', path: 'assets/ui/crafted-frame-v1.png', cacheVersion: RUNTIME_WEBP_VERSION },
+    { key: 'ui_button_gold', path: 'assets/ui/ui_button_gold.png', cacheVersion: RUNTIME_WEBP_VERSION },
+    { key: 'ui_hud_bar_frame', path: 'assets/ui/ui_hud_bar_frame.png', cacheVersion: RUNTIME_WEBP_VERSION },
+    { key: 'ui_hero_ring', path: 'assets/ui/ui_hero_ring.png', cacheVersion: RUNTIME_WEBP_VERSION },
     { key: 'icon_loading_core', path: 'assets/ui/menu/icon_loading_core.png', cacheVersion: RUNTIME_WEBP_VERSION },
     { key: 'icon_error', path: 'assets/ui/menu/icon_error.png', cacheVersion: RUNTIME_WEBP_VERSION },
 ];
@@ -422,6 +425,10 @@ export function getSharedGameplayCoreAssetList(options = {}) {
         ...ITEM_KEYS.map(key => ({ key: `item_${key}`, path: `assets/items/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
         ...ENV_KEYS.map(key => ({ key: `env_${key}`, path: `assets/environment/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
         ...['goblin', 'antSoldier'].map(key => ({ key: `ai_enemy_${key}`, path: `assets/enemies/source/${key}.png`, cacheVersion: RUNTIME_WEBP_VERSION })),
+        { key: 'ui_slot', path: 'assets/ui/ui_slot.png', cacheVersion: RUNTIME_WEBP_VERSION },
+        { key: 'ui_minimap', path: 'assets/ui/ui_minimap.png', cacheVersion: RUNTIME_WEBP_VERSION },
+        { key: 'ui_card_gold', path: 'assets/ui/ui_card_gold.png', cacheVersion: RUNTIME_WEBP_VERSION },
+        { key: 'ui_card_cyan', path: 'assets/ui/ui_card_cyan.png', cacheVersion: RUNTIME_WEBP_VERSION },
         ...(useAtlases
             ? [...getSharedCombatVfxAtlasAssets(), getEnemyAtlasAsset('early')]
             : buildCombatEffectAssets(['monster_hit', 'monster_crit', 'monster_death'])),
@@ -696,8 +703,11 @@ export function getMenuAssetList() {
     return [
         { key: 'ui_skin_button', path: 'assets/ui/skin-button-v1.png' },
         { key: 'ui_skin_panel', path: 'assets/ui/skin-panel-v1.png' },
-        { key: 'ui_crafted_button', path: 'assets/ui/crafted-button-v1.webp' },
-        { key: 'ui_crafted_frame', path: 'assets/ui/crafted-frame-v1.webp' },
+        { key: 'ui_crafted_button', path: 'assets/ui/crafted-button-v1.png' },
+        { key: 'ui_crafted_frame', path: 'assets/ui/crafted-frame-v1.png' },
+        { key: 'ui_button_gold', path: 'assets/ui/ui_button_gold.png' },
+        { key: 'ui_hud_bar_frame', path: 'assets/ui/ui_hud_bar_frame.png' },
+        { key: 'ui_hero_ring', path: 'assets/ui/ui_hero_ring.png' },
         ...UI_ASSET_KEYS.map(uiAsset),
         { key: 'ui_modal_master', path: 'assets/ui/ui_modal_master.png' },
         { key: 'env_shadow_portal', path: 'assets/environment/shadow_portal.png' },

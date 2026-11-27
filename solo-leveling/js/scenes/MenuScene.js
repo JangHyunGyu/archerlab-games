@@ -1,5 +1,5 @@
 import { createRankingTable } from '../ui/RankingTable.js?v=20260913-immersive-v1';
-import { UIAssets } from '../ui/UIAssets.js?v=20260913-crafted-ui-v1';
+import { UIAssets } from '../ui/UIAssets.js?v=20261127-gothic-ui-v1';
 import { getShadowMenuLayout } from '../ui/MenuLayout.js?v=20260913-crafted-ui-v1';
 import {
     GAME_WIDTH, GAME_HEIGHT,
@@ -9,7 +9,7 @@ import {
 import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v2';
 import { SoundManager } from '../managers/SoundManager.js?v=20261127-sfx-sync-v1';
 import { t, LANG, LANGUAGES, setLang, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
-import { GameScene } from './GameScene.js?v=20260928-locale-exports-v1&ranking=20261006-client-exception-v1&levelup=20261009-audio-v3&orient=20261009-orient-v1&audit=20261009-v1&arise=20261010-v1&audiofix=20261018-cleanup-v1&fastload=20261120-v2';
+import { GameScene } from './GameScene.js?v=20260928-locale-exports-v1&ranking=20261006-client-exception-v1&levelup=20261009-audio-v3&orient=20261009-orient-v1&audit=20261009-v1&arise=20261010-v1&audiofix=20261018-cleanup-v1&fastload=20261120-v2&ui=20261127-gothic-ui-v2';
 import { CHARACTER_DEFS, getCharacter, getStoredCharacterId, setStoredCharacterId, getCharacterRankingGameId } from '../utils/Characters.js';
 import {
     getCharacterMenuPortraitAsset,
@@ -338,9 +338,22 @@ export class MenuScene extends Phaser.Scene {
         const cx = layout.portrait ? cssW / 2 : layout.x;
         const origin = layout.portrait ? .5 : 0;
         const titleText = LANG === 'ko' ? '그림자\n서바이벌' : LANG === 'ja' ? 'シャドウ\nサバイバル' : 'SHADOW\nSURVIVAL';
-        const title = addText(cx, layout.top, titleText, layout.titleSize, '#f0e9f6', origin, true);
-        title.setShadow(0, 4 * px, '#281b41', 0, false, true);
-        this._fitText(title, layout.contentW * px, layout.titleSize * 2.3 * px);
+        const title = addText(cx, layout.top, titleText, layout.titleSize, '#f7f1ff', origin, true);
+        title.setShadow(0, 4 * px, '#1a0f30', 6 * px, false, true);
+        title.setStroke('#120a24', Math.max(2, 4 * px));
+        this._fitText(title, layout.contentW * px, layout.titleSize * 2.2 * px);
+
+        const titleRuleY = title.y + title.displayHeight + 5 * px;
+        const ruleW = Math.min(layout.contentW * 0.72, 270) * px;
+        const ruleStartX = layout.portrait ? (cx * px - ruleW / 2) : (cx * px);
+        const ruleG = this.add.graphics().setDepth(4);
+        ruleG.lineStyle(Math.max(1, px), 0xe8c266, 0.78);
+        ruleG.lineBetween(ruleStartX, titleRuleY, ruleStartX + ruleW, titleRuleY);
+        ruleG.lineStyle(Math.max(1, px), 0x8a5cff, 0.45);
+        ruleG.lineBetween(ruleStartX, titleRuleY + 3 * px, ruleStartX + ruleW * 0.65, titleRuleY + 3 * px);
+        const diamondX = layout.portrait ? cx * px : ruleStartX + ruleW * 0.5;
+        ruleG.fillStyle(0xe8c266, 0.95);
+        ruleG.fillRect(diamondX - 3 * px, titleRuleY - 3 * px, 6 * px, 6 * px);
 
         const startGame = async (resume = false, characterIdOverride = null) => { var __oc2, __oc3, __oc4;
             if (this._startingGame) return;
@@ -374,16 +387,26 @@ export class MenuScene extends Phaser.Scene {
             const minutes = Math.floor((((summary === null || summary === void 0 ? void 0 : summary.timeSec)) || 0) / 60);
             const seconds = String((((summary === null || summary === void 0 ? void 0 : summary.timeSec)) || 0) % 60).padStart(2, '0');
             this._makePremiumAction(btnX, actionY, btnW, layout.buttonH, px, {
-                label: t('continueGame'), meta: `${characterText.name} · LV.${((summary === null || summary === void 0 ? void 0 : summary.level)) || 1} · ${minutes}:${seconds}`,
+                label: t('continueGame'),
+                meta: `${characterText.name} · LV.${((summary === null || summary === void 0 ? void 0 : summary.level)) || 1} · ${minutes}:${seconds}`,
+                tone: 'gold',
+                iconKey: 'icon_resume',
                 onClick: () => startGame(true),
             });
             actionY += layout.buttonH + layout.gap;
         }
         this._makePremiumAction(btnX, actionY, btnW, layout.buttonH, px, {
-            label: t('startGame'), primary: true, onClick: openCharacters,
+            label: t('startGame'),
+            primary: true,
+            tone: 'primary',
+            iconKey: 'icon_play',
+            onClick: openCharacters,
         });
         this._makePremiumAction(btnX, actionY + layout.buttonH + layout.gap, btnW, layout.buttonH, px, {
-            label: t('hallOfFame'), onClick: () => this._showHallOfFame(layout.portrait),
+            label: t('hallOfFame'),
+            tone: 'secondary',
+            iconKey: 'icon_ranking',
+            onClick: () => this._showHallOfFame(layout.portrait),
         });
         this._createLanguageDropdown(layout.portrait);
         let focusIndex = hasSave ? 1 : 0;
@@ -420,44 +443,79 @@ export class MenuScene extends Phaser.Scene {
         this._scheduleIdleWarmup(180);
     }
 
-    _makePremiumAction(x, y, w, h, px, { label, meta = '', primary = false, onClick }) {
+    _makePremiumAction(x, y, w, h, px, { label, meta = '', primary = false, tone = '', iconKey = '', onClick }) {
         const bx = x * px;
         const by = y * px;
         const bw = w * px;
         const bh = h * px;
-        const radius = Math.min(10 * px, bh * 0.28);
-        const bg = this.add.graphics().setDepth(5);
-        const title = this.add.text((x + w / 2) * px, (y + h * (meta ? .36 : .5)) * px, label, {
-            fontFamily: UI_FONT_KR, fontSize: `${(meta ? 15 : 18) * px}px`, fontStyle: 'bold',
-            color: primary ? '#ffffff' : '#e4dcf5',
+        const resolvedTone = primary ? 'primary' : (tone || 'secondary');
+        const bg = UIAssets.createPanel(this, bx, by, bw, bh, {
+            variant: 'button',
+            tone: resolvedTone,
+            primary,
+            depth: 5,
+        });
+
+        const iconSize = Math.min(22 * px, bh * 0.42);
+        const showIcon = iconKey && this.textures.exists(iconKey) && bw >= 165 * px;
+        const icon = showIcon
+            ? this.add.image(bx + Math.max(26 * px, bh * 0.56), by + bh / 2, iconKey)
+                .setDisplaySize(iconSize, iconSize)
+                .setAlpha(primary ? 0.96 : 0.88)
+                .setDepth(6)
+            : null;
+        const textPadX = showIcon ? 74 : 46;
+        const titleColor = primary ? '#ffffff' : (resolvedTone === 'gold' ? '#ffe8ad' : '#ebe4f8');
+        const title = this.add.text((x + w / 2) * px, (y + h * (meta ? .34 : .5)) * px, label, {
+            fontFamily: UI_FONT_KR,
+            fontSize: `${(meta ? 14 : 18) * px}px`,
+            fontStyle: 'bold',
+            color: titleColor,
+            stroke: '#06040e',
+            strokeThickness: Math.max(2, 3 * px),
         }).setOrigin(.5).setDepth(6).setResolution(2);
-        this._fitText(title, (w - 32) * px, h * (meta ? .5 : .78) * px);
+        const titleBaseScale = this._fitText(title, (w - textPadX) * px, h * (meta ? .42 : .66) * px);
+        let sub = null;
         if (meta) {
-            const sub = this.add.text((x + w / 2) * px, (y + h * .73) * px, meta, {
-                fontFamily: UI_FONT_KR, fontSize: `${10 * px}px`, color: '#b4a6cd',
+            sub = this.add.text((x + w / 2) * px, (y + h * .67) * px, meta, {
+                fontFamily: UI_FONT_KR,
+                fontSize: `${11 * px}px`,
+                color: '#ffe5a3',
+                stroke: '#06040e',
+                strokeThickness: Math.max(1, 2 * px),
             }).setOrigin(.5).setDepth(6).setResolution(2);
-            this._fitText(sub, (w - 24) * px, h * .24 * px);
+            this._fitText(sub, (w - textPadX - 10) * px, h * .34 * px);
         }
-        const draw = (hover = false) => {
-            bg.clear();
-            const fillColor = primary ? (hover ? 0x6d42e8 : 0x5a2fd4) : (hover ? 0x1e1938 : 0x121022);
-            const fillAlpha = primary ? (hover ? 1 : 0.94) : (hover ? 0.9 : 0.72);
-            const borderColor = primary ? 0xb39dfa : (hover ? 0xc8b5f8 : 0x9c8ac8);
-            const borderAlpha = primary ? (hover ? 1 : 0.75) : (hover ? 0.72 : 0.36);
-            bg.fillStyle(fillColor, fillAlpha);
-            bg.fillRoundedRect(bx, by, bw, bh, radius);
-            bg.lineStyle(Math.max(1, px), borderColor, borderAlpha);
-            bg.strokeRoundedRect(bx, by, bw, bh, radius);
-            if (!primary) {
-                title.setColor(hover ? '#ffffff' : '#e4dcf5');
+
+        const setState = (state) => {
+            bg.setUIState(state);
+            const hover = state === 'hover';
+            const pressed = state === 'pressed';
+            if (pressed) {
+                title.setScale(titleBaseScale * 0.985);
+            } else if (hover) {
+                title.setScale(titleBaseScale * 1.02);
+                if (!primary && resolvedTone !== 'gold') title.setColor('#ffffff');
+            } else {
+                title.setScale(titleBaseScale);
+                title.setColor(titleColor);
+            }
+            if (icon && icon.active) {
+                icon.setAlpha(hover || primary ? 1 : 0.86);
             }
         };
-        draw(false);
+        setState('normal');
+
         const hit = this.add.rectangle((x + w / 2) * px, (y + h / 2) * px, w * px, h * px, 0, 0)
             .setDepth(8).setInteractive({ useHandCursor: true });
-        hit.on('pointerover', () => draw(true));
-        hit.on('pointerout', () => draw(false));
-        hit.on('pointerdown', () => { if (!this._startingGame) ((onClick === null || onClick === void 0 ? void 0 : onClick())); });
+        hit.on('pointerover', () => setState('hover'));
+        hit.on('pointerout', () => setState('normal'));
+        hit.on('pointerdown', () => {
+            if (this._startingGame) return;
+            setState('pressed');
+            if (onClick) onClick();
+        });
+        hit.on('pointerup', () => setState('hover'));
         this._menuKeyboardActions.push(hit);
     }
 
@@ -467,9 +525,29 @@ export class MenuScene extends Phaser.Scene {
         const key = this._getCharacterHeroTexture(character);
         if (!this.textures.exists(key)) return;
         const x = layout.heroX * px, y = layout.heroY * px, size = layout.heroSize * px;
+
+        if (this.textures.exists('env_shadow_portal')) {
+            this._heroPreviewAura = this.add.image(x, y, 'env_shadow_portal')
+                .setDepth(1.5)
+                .setAlpha(0.24)
+                .setDisplaySize(size * 1.32, size * 1.32)
+                .setBlendMode(Phaser.BlendModes.ADD);
+            if (!this._reduceMenuMotion) {
+                this.tweens.add({
+                    targets: this._heroPreviewAura,
+                    alpha: { from: 0.16, to: 0.3 },
+                    duration: 2400,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut',
+                });
+            }
+        }
+
         const rings = this.add.graphics().setDepth(2);
-        rings.lineStyle(Math.max(1, px), 0x9e88d6, 0.42);
-        rings.strokeCircle(x, y, size * .515);
+        rings.fillStyle(0x070512, 0.78);
+        rings.fillCircle(x, y, size * 0.49);
+
         this._heroPreviewSprite = this.add.image(x, y, key).setDepth(3).setDisplaySize(size, size);
         if (onHeroClick) {
             this._heroPreviewSprite.setInteractive({ useHandCursor: true });
@@ -478,11 +556,37 @@ export class MenuScene extends Phaser.Scene {
         this._applyHeroPreviewMask(this._heroPreviewSprite, x, y, size);
         this._heroPreviewMaxW = size;
         this._heroPreviewMaxH = size;
-        const captionY = y + size * .54 + 10 * px;
-        this._heroPreviewCaption = this.add.text(x, captionY, characterText.name, {
-            fontFamily: UI_FONT_KR, fontSize: `${layout.short ? 13 * px : 15 * px}px`,
-            fontStyle: 'bold', color: '#e4dcf5',
-        }).setOrigin(.5, 0).setDepth(4).setResolution(2);
+
+        if (this.textures.exists('ui_hero_ring')) {
+            const ringTex = UIAssets.ensureTrimmedTexture(this, 'ui_hero_ring') || 'ui_hero_ring';
+            this._heroPreviewRing = this.add.image(x, y, ringTex)
+                .setDepth(3.6)
+                .setDisplaySize(size * 1.15, size * 1.15);
+            if (onHeroClick) {
+                this._heroPreviewRing.setInteractive({ useHandCursor: true });
+                this._heroPreviewRing.on('pointerdown', () => { if (!this._startingGame) onHeroClick(); });
+            }
+        } else {
+            rings.lineStyle(Math.max(1, px), 0x9e88d6, 0.48);
+            rings.strokeCircle(x, y, size * .515);
+        }
+
+        const plaqueW = Math.min(Math.max(size * 0.88, 176 * px), 248 * px);
+        const plaqueH = (layout.short ? 30 : 38) * px;
+        const captionY = y + size * .55 + 8 * px;
+        UIAssets.createPanel(this, x - plaqueW / 2, captionY, plaqueW, plaqueH, {
+            variant: 'hud',
+            depth: 3.4,
+        });
+        this._heroPreviewCaption = this.add.text(x, captionY + plaqueH / 2, characterText.name, {
+            fontFamily: UI_FONT_KR,
+            fontSize: `${(layout.short ? 12 : 14) * px}px`,
+            fontStyle: 'bold',
+            color: '#f7efd8',
+            stroke: '#06040e',
+            strokeThickness: Math.max(2, 3 * px),
+        }).setOrigin(.5).setDepth(4).setResolution(2);
+        this._fitText(this._heroPreviewCaption, plaqueW - 22 * px, plaqueH - 8 * px);
         this._heroPreviewCaptionMeta = null;
     }
 
@@ -965,10 +1069,11 @@ export class MenuScene extends Phaser.Scene {
                 .setDepth(218)
                 .setInteractive();
             const panel = UIAssets.createPanel(this, panelX, panelY, panelW, panelH, { variant: 'modal', depth: 219 });
-            const innerShade = this.add.rectangle(cx, cy + uv(4), panelW - uv(118), panelH - uv(82), 0x02040a, 0.48)
+            const innerShade = this.add.rectangle(cx, cy + uv(4), panelW - uv(104), panelH - uv(74), 0x05030d, 0.56)
                 .setDepth(219.2);
             const loadingIcon = this._addMenuIcon('icon_loading_core', cx, cy - uv(58), uv(46), 220, 0.98);
             if (loadingIcon) {
+                loadingIcon.setTint(0xc8a4ff);
                 loadingIcon.setBlendMode(Phaser.BlendModes.ADD);
                 this.tweens.add({
                     targets: loadingIcon,
@@ -982,23 +1087,30 @@ export class MenuScene extends Phaser.Scene {
                 fontSize: fs(17),
                 fontFamily: UI_FONT_KR,
                 fontStyle: 'bold',
-                color: SYSTEM.TEXT_BRIGHT,
+                color: '#f5efff',
                 stroke: '#02040a',
                 strokeThickness: 4,
             }).setOrigin(0.5).setDepth(220);
             const barW = Math.max(uv(160), panelW - uv(176));
+            const barH = Math.max(uv(12), 12);
             const barY = cy + uv(39);
-            const barBg = this.add.rectangle(cx - barW / 2, barY, barW, uv(7), 0x061522, 0.98)
+            const barBg = this.add.rectangle(cx - barW / 2, barY, barW, barH, 0x080514, 0.98)
                 .setOrigin(0, 0.5)
-                .setStrokeStyle(1, SYSTEM.BORDER_DIM, 0.72)
+                .setStrokeStyle(1, 0x4d3a7a, 0.72)
                 .setDepth(220);
-            const barFill = this.add.rectangle(cx - barW / 2, barY, 2, uv(5), SYSTEM.BORDER, 1)
+            const barFill = this.add.rectangle(cx - barW / 2, barY, 2, Math.max(4, barH - 4), 0x9b6eff, 1)
                 .setOrigin(0, 0.5)
                 .setDepth(221);
-            const progress = this.add.text(cx, cy + uv(62), '000 %  ·  00 / 00', {
+            const barFrame = this.textures.exists('ui_hud_bar_frame')
+                ? UIAssets.createPanel(this, cx - barW / 2 - uv(12), barY - (barH + uv(12)) / 2, barW + uv(24), barH + uv(12), {
+                    variant: 'bar',
+                    depth: 221.5,
+                })
+                : null;
+            const progress = this.add.text(cx, cy + uv(64), '000 %  ·  00 / 00', {
                 fontSize: fs(10),
                 fontFamily: UI_FONT_MONO,
-                color: SYSTEM.TEXT_CYAN,
+                color: '#e8c266',
                 stroke: '#02040a',
                 strokeThickness: 2,
             }).setOrigin(0.5).setDepth(220);
@@ -1009,7 +1121,7 @@ export class MenuScene extends Phaser.Scene {
                 const ratio = Phaser.Math.Clamp(value, 0, 1);
                 const percent = Math.floor(ratio * 100);
                 const loaded = Math.min(queued.length, Math.round(ratio * queued.length));
-                barFill.setDisplaySize(Math.max(2, barW * ratio), uv(5));
+                barFill.setDisplaySize(Math.max(2, barW * ratio), Math.max(4, barH - 4));
                 progress.setText(
                     `${String(percent).padStart(3, '0')} %  ·  ${String(loaded).padStart(2, '0')} / ${String(queued.length).padStart(2, '0')}`
                 );
@@ -1041,6 +1153,7 @@ export class MenuScene extends Phaser.Scene {
                 if (loading.active) loading.destroy();
                 if (barBg.active) barBg.destroy();
                 if (barFill.active) barFill.destroy();
+                if (((barFrame === null || barFrame === void 0 ? void 0 : barFrame.active))) barFrame.destroy();
                 if (progress.active) progress.destroy();
             };
             const finish = (assetsReady) => {
@@ -1943,19 +2056,23 @@ export class MenuScene extends Phaser.Scene {
             const active = lang.code === LANG;
             const code = lang.code.toUpperCase();
 
-            const itemG = UIAssets.createPanel(this, btnX, itemY, btnW, btnH, { depth: depth + 2, variant: 'button' }).setVisible(false);
-            const drawItem = hover => itemG.setUIState(hover || active ? 'hover' : 'normal');
+            const itemG = UIAssets.createPanel(this, btnX, itemY, btnW, btnH, {
+                depth: depth + 2,
+                variant: 'button',
+                tone: active ? 'gold' : 'secondary',
+            }).setVisible(false);
+            const drawItem = hover => itemG.setUIState(hover ? 'hover' : 'normal');
             drawItem(false);
 
             const itemHit = this.add.rectangle(btnX + btnW / 2, itemY + btnH / 2, btnW, btnH, 0x000000, 0)
                 .setDepth(depth + 2).setInteractive({ useHandCursor: true }).setVisible(false);
             const itemText = this.add.text(btnX + btnW / 2, itemY + btnH / 2, `${code}`, {
-                fontSize: `${13 / cssPerUnit}px`, fontFamily: UI_FONT_MONO,
-                color: active ? SYSTEM.TEXT_BRIGHT : SYSTEM.TEXT_CYAN_DIM,
+                fontSize: `${13 / cssPerUnit}px`, fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+                color: active ? '#ffe8ad' : '#dcd2f2',
             }).setOrigin(0.5).setDepth(depth + 2).setResolution(2).setVisible(false);
 
-            itemHit.on('pointerover', () => { drawItem(true); itemText.setColor(SYSTEM.TEXT_BRIGHT); });
-            itemHit.on('pointerout', () => { drawItem(false); itemText.setColor(active ? SYSTEM.TEXT_BRIGHT : SYSTEM.TEXT_CYAN_DIM); });
+            itemHit.on('pointerover', () => { drawItem(true); itemText.setColor('#ffffff'); });
+            itemHit.on('pointerout', () => { drawItem(false); itemText.setColor(active ? '#ffe8ad' : '#dcd2f2'); });
             itemHit.on('pointerdown', () => {
                 if (lang.code !== LANG) { setLang(lang.code); this.scene.restart(); }
                 else closeDropdown();
@@ -2022,24 +2139,31 @@ export class MenuScene extends Phaser.Scene {
             .setInteractive();
         elements.push(bodyShield);
 
-        const title = this.add.text(cx, by + (isShortLandscape ? 24 * px : uv(42)), 'HUNTER SELECT', {
+        const title = this.add.text(cx, by + (isShortLandscape ? 26 * px : uv(46)), 'HUNTER SELECT', {
             fontSize: `${(isPortrait || isShortLandscape ? 18 : 22) * px}px`,
             fontFamily: UI_FONT_MONO,
             fontStyle: 'bold',
-            color: '#eee2ff',
-            stroke: '#02040a',
+            color: '#ffe8ad',
+            stroke: '#05030d',
             strokeThickness: 4,
         }).setOrigin(0.5).setDepth(depth + 5);
         elements.push(title);
+
+        const headerRule = this.add.graphics().setDepth(depth + 4);
+        const headerRuleW = Math.min(boxW * 0.44, uv(340));
+        const headerRuleY = title.y + title.displayHeight * 0.68;
+        headerRule.lineStyle(1, 0xe8c266, 0.45);
+        headerRule.lineBetween(cx - headerRuleW / 2, headerRuleY, cx + headerRuleW / 2, headerRuleY);
+        elements.push(headerRule);
 
         const characters = Object.values(CHARACTER_DEFS);
         const columns = isShortLandscape ? 5 : (isPortrait ? 2 : 3);
         const rows = Math.ceil(characters.length / columns);
         const gap = isShortLandscape ? 8 * px : uv(16);
-        const areaPadX = isShortLandscape ? 12 * px : uv(isPortrait ? 34 : 68);
-        const cardAreaTop = by + (isShortLandscape ? 70 * px : uv(isPortrait ? 114 : 122));
+        const areaPadX = isShortLandscape ? 14 * px : uv(isPortrait ? 30 : 74);
+        const cardAreaTop = by + (isShortLandscape ? 68 * px : uv(isPortrait ? 114 : 122));
         const cardAreaW = boxW - areaPadX * 2;
-        const cardAreaH = by + boxH - cardAreaTop - (isShortLandscape ? 60 * px : uv(84));
+        const cardAreaH = by + boxH - cardAreaTop - (isShortLandscape ? 64 * px : uv(92));
         const cardW = Math.floor(Math.min(
             (isShortLandscape ? 200 * px : uv(isPortrait ? 220 : 292)),
             (cardAreaW - gap * (columns - 1)) / columns
@@ -2052,9 +2176,9 @@ export class MenuScene extends Phaser.Scene {
         const cardRefs = [];
         const redrawCard = (ref, hover = false) => {
             const selected = this.selectedCharacterId === ref.character.id;
-            if (ref.bg) {
-                ref.bg.setTint(selected || hover ? 0xffffff : 0x9b94aa);
-                ref.bg.setAlpha(selected ? 1 : (hover ? 0.96 : 0.82));
+            if (ref.bg && ref.bg.setUIState) {
+                ref.bg.setUIState(selected ? 'active' : (hover ? 'hover' : 'normal'));
+                ref.bg.setAlpha(selected ? 1 : (hover ? 0.98 : 0.92));
             } else if (ref.g) {
                 ref.g.clear();
                 drawSystemPanel(ref.g, ref.x, ref.y, ref.w, ref.h, {
@@ -2069,8 +2193,9 @@ export class MenuScene extends Phaser.Scene {
             if (ref.accentG) ref.accentG.clear();
             if (selected || hover) {
                 const g = ref.accentG || ref.g;
-                g.lineStyle(selected ? 3 : 2, ref.character.accent, selected ? 0.82 : 0.5);
-                g.lineBetween(ref.x + uv(14), ref.y + ref.h - uv(10), ref.x + ref.w - uv(14), ref.y + ref.h - uv(10));
+                const glowColor = selected ? 0xe8c266 : ref.character.accent;
+                g.lineStyle(selected ? 2 : 1.5, glowColor, selected ? 0.72 : 0.45);
+                g.lineBetween(ref.x + uv(18), ref.y + ref.h - uv(11), ref.x + ref.w - uv(18), ref.y + ref.h - uv(11));
             }
         };
         const redrawCards = () => cardRefs.forEach(ref => redrawCard(ref, false));
@@ -2086,6 +2211,10 @@ export class MenuScene extends Phaser.Scene {
 
         this._prioritizePortraitWarmup(characters);
 
+        const ringTex = this.textures.exists('ui_hero_ring')
+            ? (UIAssets.ensureTrimmedTexture(this, 'ui_hero_ring') || 'ui_hero_ring')
+            : null;
+
         characters.forEach((character, i) => {
             const characterText = getCharacterText(character);
             const col = i % columns;
@@ -2094,19 +2223,31 @@ export class MenuScene extends Phaser.Scene {
             const rowStartX = cx - (cardW * rowCount + gap * (rowCount - 1)) / 2;
             const x = rowStartX + col * (cardW + gap);
             const y = cardAreaTop + row * (cardH + gap);
-            const bg = UIAssets.createPanel(this, x, y, cardW, cardH, { depth: depth + 4, variant: 'card' });
+            const bg = UIAssets.createPanel(this, x, y, cardW, cardH, {
+                depth: depth + 4,
+                variant: 'card',
+                asset: 'ui_crafted_frame',
+                tintColor: character.accent,
+                tintAlpha: 0.08,
+            });
             const g = null;
             const accentG = this.add.graphics().setDepth(depth + 5);
             const hit = this.add.rectangle(x + cardW / 2, y + cardH / 2, cardW, cardH, 0x000000, 0)
                 .setDepth(depth + 8)
                 .setInteractive({ useHandCursor: true });
-            const portraitSize = Math.min(isShortLandscape ? 44 * px : uv(78), cardH * 0.46);
+            const portraitSize = Math.min(isShortLandscape ? 42 * px : uv(72), cardH * 0.42);
+            const portraitY = y + cardH * 0.29;
             const desiredPortraitKey = `char_${character.assetKey}_menu_portrait`;
             const portraitReady = this.textures.exists(desiredPortraitKey);
             const portraitKey = portraitReady ? desiredPortraitKey : (this._getCharacterPortraitTexture(character) || 'icon_loading_core');
-            const portrait = this.add.image(x + cardW / 2, y + cardH * 0.28, portraitKey)
+            const portrait = this.add.image(x + cardW / 2, portraitY, portraitKey)
                 .setDepth(depth + 6)
                 .setOrigin(0.5);
+            const portraitRing = ringTex
+                ? this.add.image(x + cardW / 2, portraitY, ringTex)
+                    .setDisplaySize(portraitSize * 1.24, portraitSize * 1.24)
+                    .setDepth(depth + 6.5)
+                : null;
             if (!portraitReady) {
                 portrait.setTint(character.accent).setAlpha(0.45);
                 const eventName = `filecomplete-image-${desiredPortraitKey}`;
@@ -2114,53 +2255,58 @@ export class MenuScene extends Phaser.Scene {
                     if (!portrait.active || !this.textures.exists(desiredPortraitKey)) return;
                     portrait.clearTint().setAlpha(1).setTexture(desiredPortraitKey);
                     this._fitImageDisplay(portrait, desiredPortraitKey, portraitSize, portraitSize);
+                    this._applyHeroPreviewMask(portrait, x + cardW / 2, portraitY, portraitSize);
                 };
                 if (this.load) {
                     this.load.once(eventName, onPortraitReady);
                     this._portraitSwapListeners.push({ event: eventName, fn: onPortraitReady });
                 }
+            } else {
+                this._fitImageDisplay(portrait, portraitKey, portraitSize, portraitSize);
+                this._applyHeroPreviewMask(portrait, x + cardW / 2, portraitY, portraitSize);
             }
-            this._fitImageDisplay(portrait, portraitKey, portraitSize, portraitSize);
-            const name = this.add.text(x + cardW / 2, y + cardH * 0.53, characterText.name, {
+            const name = this.add.text(x + cardW / 2, y + cardH * 0.56, characterText.name, {
                 fontSize: `${14 * px}px`,
                 fontFamily: UI_FONT_KR,
                 fontStyle: 'bold',
-                color: SYSTEM.TEXT_BRIGHT,
+                color: '#f5efff',
                 stroke: '#02040a',
                 strokeThickness: 4,
             }).setOrigin(0.5).setDepth(depth + 6).setResolution(2);
-            this._fitText(name, cardW - uv(14), cardH * 0.18);
-            const role = this.add.text(x + cardW / 2, y + cardH * 0.66, characterText.archetype, {
+            this._fitText(name, cardW - uv(18), cardH * 0.17);
+            const role = this.add.text(x + cardW / 2, y + cardH * 0.69, characterText.archetype, {
                 fontSize: `${11 * px}px`,
                 fontFamily: UI_FONT_KR,
                 color: character.accentText,
                 stroke: '#02040a',
                 strokeThickness: 3,
             }).setOrigin(0.5).setDepth(depth + 6).setResolution(2);
-            this._fitText(role, cardW - uv(14), cardH * 0.14);
+            this._fitText(role, cardW - uv(18), cardH * 0.13);
             const statLabel = isShortLandscape
                 ? `HP ${character.stats.hp}\nATK ${character.stats.attack}`
                 : `HP ${character.stats.hp}  ATK ${character.stats.attack}`;
-            const stat = this.add.text(x + cardW / 2, y + cardH * 0.8, statLabel, {
+            const stat = this.add.text(x + cardW / 2, y + cardH * 0.82, statLabel, {
                 align: 'center',
                 fontSize: `${11 * px}px`,
                 fontFamily: UI_FONT_MONO,
-                color: '#c7b4de',
+                color: '#d2c2e8',
                 stroke: '#02040a',
                 strokeThickness: 3,
             }).setOrigin(0.5).setDepth(depth + 6).setResolution(2);
-            this._fitText(stat, cardW - uv(20), cardH * (isShortLandscape ? 0.24 : 0.14));
+            this._fitText(stat, cardW - uv(22), cardH * (isShortLandscape ? 0.22 : 0.14));
 
-            const ref = { g, bg, accentG, hit, portrait, character, x, y, w: cardW, h: cardH };
+            const ref = { g, bg, accentG, hit, portrait, portraitRing, character, x, y, w: cardW, h: cardH };
             cardRefs.push(ref);
-            elements.push(...[bg, g, accentG, hit, portrait, name, role, stat].filter(Boolean));
+            elements.push(...[bg, g, accentG, hit, portrait, portraitRing, name, role, stat].filter(Boolean));
 
             hit.on('pointerover', () => {
                 redrawCard(ref, true);
                 portrait.setDisplaySize(portraitSize * 1.05, portraitSize * 1.05);
+                if (portraitRing) portraitRing.setDisplaySize(portraitSize * 1.29, portraitSize * 1.29);
             });
             hit.on('pointerout', () => {
                 portrait.setDisplaySize(portraitSize, portraitSize);
+                if (portraitRing) portraitRing.setDisplaySize(portraitSize * 1.24, portraitSize * 1.24);
                 redrawCard(ref, false);
             });
             hit.on('pointerdown', () => {
@@ -2205,14 +2351,14 @@ export class MenuScene extends Phaser.Scene {
         closeBtn.on('pointerout', () => closeBtn.setColor(SYSTEM.TEXT_MUTED));
         closeBtn.on('pointerdown', closeAll);
         const closeHeight = Math.ceil(44 * GAME_WIDTH / Math.max(1, this.game.canvas.getBoundingClientRect().width));
-        const closeWidth = Math.max(closeHeight * 2.8, closeBtn.width);
+        const closeWidth = Math.max(closeHeight * 3.1, closeBtn.width + uv(36));
         const closeSkin = UIAssets.createPanel(this, cx - closeWidth / 2, closeBtn.y - closeHeight / 2,
-            closeWidth, closeHeight, { depth: depth + 7, variant: 'button' });
+            closeWidth, closeHeight, { depth: depth + 7, variant: 'button', tone: 'secondary' });
         elements.push(closeSkin);
         const closeHit = this.add.rectangle(cx, closeBtn.y, closeWidth, closeHeight, 0, 0)
             .setDepth(depth + 9).setInteractive({ useHandCursor: true });
-        closeHit.on('pointerover', () => closeSkin.setUIState('hover'));
-        closeHit.on('pointerout', () => closeSkin.setUIState('normal'));
+        closeHit.on('pointerover', () => { closeSkin.setUIState('hover'); closeBtn.setColor('#ffffff'); });
+        closeHit.on('pointerout', () => { closeSkin.setUIState('normal'); closeBtn.setColor(SYSTEM.TEXT_BRIGHT); });
         closeHit.on('pointerdown', closeAll);
         elements.push(closeHit);
         dim.on('pointerdown', closeAll);
@@ -2229,90 +2375,77 @@ export class MenuScene extends Phaser.Scene {
             .setDepth(100).setInteractive();
         elements.push(dim);
 
-        const boxW = uv(320);
-        const boxH = uv(220);
+        const boxW = Math.min(GAME_WIDTH - uv(32), uv(380));
+        const boxH = Math.min(GAME_HEIGHT - uv(32), uv(268));
         const bx = cx - boxW / 2;
         const by = cy - boxH / 2;
-        let boxFrame;
-        const useMasterFrame = this.textures.exists('ui_modal_master')
-            && Math.abs(boxW / Math.max(1, boxH) - 4 / 3) <= 0.22;
-        if (useMasterFrame) {
-            boxFrame = this._addBitmapPanel(bx, by, boxW, boxH, {
-                key: 'ui_modal_master',
-                alpha: 0.98,
-                depth: 101,
-            });
-        } else {
-            boxFrame = this.add.graphics().setDepth(101);
-            drawSystemPanel(boxFrame, bx, by, boxW, boxH, {
-                cut: uv(12),
-                fill: SYSTEM.BG_PANEL, fillAlpha: 0.97,
-                border: SYSTEM.BORDER, borderWidth: 1,
-            });
-        }
+        const boxFrame = UIAssets.createPanel(this, bx, by, boxW, boxH, {
+            variant: 'modal',
+            depth: 101,
+        });
         elements.push(boxFrame);
 
-        const title = this.add.text(cx, by + uv(24), `[ ${t('contactTitle')} ]`, {
-            fontSize: fs(14), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN,
+        const title = this.add.text(cx, by + uv(34), `[ ${t('contactTitle')} ]`, {
+            fontSize: fs(14), fontFamily: UI_FONT_MONO, fontStyle: 'bold', color: '#ffe8ad',
+            stroke: '#05030d', strokeThickness: 3,
         }).setOrigin(0.5).setDepth(102);
         elements.push(title);
 
-        const desc = this.add.text(cx, by + uv(50), t('contactDesc'), {
-            fontSize: fs(11), fontFamily: UI_FONT_KR, color: SYSTEM.TEXT_MUTED,
+        const desc = this.add.text(cx, by + uv(60), t('contactDesc'), {
+            fontSize: fs(11), fontFamily: UI_FONT_KR, color: '#cfc4e6',
         }).setOrigin(0.5).setDepth(102);
         elements.push(desc);
 
         const mk = (y, iconKey, label, onClick) => {
-            const bw = boxW - uv(40);
-            const bh = uv(36);
+            const bw = boxW - uv(64);
+            const bh = uv(44);
             const bxi = cx - bw / 2;
-            const normalKey = this.textures.exists('start_button_secondary_wide') ? 'start_button_secondary_wide' : 'ui_button_cyan';
-            const hoverKey = this.textures.exists('start_button_secondary_wide_hover') ? 'start_button_secondary_wide_hover' : normalKey;
-            const bg = this.textures.exists(normalKey)
-                ? this._addBitmapPanel(bxi, y, bw, bh, { key: normalKey, alpha: 0.82, depth: 101 })
-                : this.add.graphics().setDepth(101);
-            const redraw = (h) => {
-                if (bg.setTexture) {
-                    bg.setTexture(h ? hoverKey : normalKey).setDisplaySize(bw, bh).setAlpha(h ? 1 : 0.82);
-                    return;
-                }
-                bg.clear();
-                drawSystemPanel(bg, bxi, y, bw, bh, {
-                    cut: uv(6),
-                    fill: h ? SYSTEM.BG_PANEL_HI : SYSTEM.BG_PANEL, fillAlpha: 0.9,
-                    border: SYSTEM.BORDER, borderWidth: 1,
-                });
-            };
-            redraw(false);
+            const bg = UIAssets.createPanel(this, bxi, y, bw, bh, {
+                variant: 'button',
+                tone: 'secondary',
+                depth: 101.5,
+            });
             const hit = this.add.rectangle(cx, y + bh / 2, bw, bh, 0x000000, 0)
-                .setDepth(102).setInteractive({ useHandCursor: true });
-            const icon = this._addMenuIcon(iconKey, bxi + uv(26), y + bh / 2, Math.min(uv(24), bh * 0.68), 102, 0.96);
-            const txt = this.add.text(bxi + uv(52), y + bh / 2, label, {
-                fontSize: fs(13), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_BRIGHT,
+                .setDepth(103).setInteractive({ useHandCursor: true });
+            const icon = this._addMenuIcon(iconKey, bxi + uv(26), y + bh / 2, Math.min(uv(22), bh * 0.56), 102, 0.96);
+            const txt = this.add.text(bxi + uv(50), y + bh / 2, label, {
+                fontSize: fs(12), fontFamily: UI_FONT_MONO, fontStyle: 'bold', color: '#f3edff',
+                stroke: '#05030d', strokeThickness: 2,
             }).setOrigin(0, 0.5).setDepth(102);
-            this._fitText(txt, bw - uv(66), bh - uv(8));
-            hit.on('pointerover', () => redraw(true));
-            hit.on('pointerout', () => redraw(false));
+            this._fitText(txt, bw - uv(68), bh - uv(10));
+            hit.on('pointerover', () => { bg.setUIState('hover'); txt.setColor('#ffffff'); });
+            hit.on('pointerout', () => { bg.setUIState('normal'); txt.setColor('#f3edff'); });
             hit.on('pointerdown', onClick);
             elements.push(...[bg, hit, icon, txt].filter(Boolean));
         };
 
-        mk(by + uv(78), 'icon_kakao', t('contactKakao'), () => window.open('https://open.kakao.com/o/pF6xil6h', '_blank'));
-        mk(by + uv(122), 'icon_mail', t('contactEmail'), () => window.open('mailto:archerlab@archerlab.dev'));
+        mk(by + uv(86), 'icon_kakao', t('contactKakao'), () => window.open('https://open.kakao.com/o/pF6xil6h', '_blank'));
+        mk(by + uv(140), 'icon_mail', t('contactEmail'), () => window.open('mailto:archerlab@archerlab.dev'));
 
-        const closeBtn = this.add.text(cx, by + boxH - uv(20), `[ ${t('close')} ]`, {
-            fontSize: fs(12), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_MUTED,
-        }).setOrigin(0.5).setDepth(102).setInteractive({ useHandCursor: true });
-        elements.push(closeBtn);
-        closeBtn.on('pointerover', () => closeBtn.setColor(SYSTEM.TEXT_CYAN));
-        closeBtn.on('pointerout', () => closeBtn.setColor(SYSTEM.TEXT_MUTED));
+        const closeW = uv(128);
+        const closeH = uv(36);
+        const closeY = by + boxH - uv(34);
+        const closeSkin = UIAssets.createPanel(this, cx - closeW / 2, closeY - closeH / 2, closeW, closeH, {
+            variant: 'button',
+            tone: 'secondary',
+            depth: 101.5,
+        });
+        const closeBtn = this.add.text(cx, closeY, t('close'), {
+            fontSize: fs(12), fontFamily: UI_FONT_KR, fontStyle: 'bold', color: '#dcd2f2',
+            stroke: '#05030d', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(102);
+        const closeHit = this.add.rectangle(cx, closeY, closeW, closeH, 0x000000, 0)
+            .setDepth(103).setInteractive({ useHandCursor: true });
+        elements.push(closeSkin, closeBtn, closeHit);
+        closeHit.on('pointerover', () => { closeSkin.setUIState('hover'); closeBtn.setColor('#ffffff'); });
+        closeHit.on('pointerout', () => { closeSkin.setUIState('normal'); closeBtn.setColor('#dcd2f2'); });
 
         this._modalElements.push(...elements);
         const closeAll = () => {
             elements.forEach(el => el.destroy());
             this._modalElements = this._modalElements.filter(el => !elements.includes(el));
         };
-        closeBtn.on('pointerdown', closeAll);
+        closeHit.on('pointerdown', closeAll);
         dim.on('pointerdown', closeAll);
     }
 
@@ -2364,7 +2497,7 @@ closed || ((((__oc38 = this.scene) === null || __oc38 === void 0 ? void 0 : __oc
         );
         const bx = cx - boxW / 2;
         const by = cy - boxH / 2;
-        const safePadX = uv(isPortrait ? 72 : (isCrampedLandscape ? 82 : 116));
+        const safePadX = uv(isPortrait ? 56 : (isCrampedLandscape ? 78 : 112));
         const safeLeft = bx + safePadX;
         const safeRight = bx + boxW - safePadX;
         const safeW = safeRight - safeLeft;
@@ -2392,7 +2525,7 @@ closed || ((((__oc38 = this.scene) === null || __oc38 === void 0 ? void 0 : __oc
         elements.push(bodyShield);
 
         const innerShadeH = Math.max(uv(160), contentBottom - safeTop);
-        const innerShade = this.add.rectangle(cx, safeTop + innerShadeH / 2, safeW, innerShadeH, 0x02040a, 0.54)
+        const innerShade = this.add.rectangle(cx, safeTop + innerShadeH / 2, safeW, innerShadeH, 0x05030d, 0.22)
             .setDepth(depth + 1.4);
         elements.push(innerShade);
 
@@ -2484,9 +2617,12 @@ closed || ((((__oc38 = this.scene) === null || __oc38 === void 0 ? void 0 : __oc
         this.events.once('shutdown', clearContent);
         const drawTab = (ref, hover = false) => {
             const selected = ref.character.id === activeCharacterId;
-            ref.g.setTint(selected || hover ? 0xffffff : 0x9b94aa).setAlpha(selected || hover ? 1 : 0.88);
-            ref.txt.setColor(selected ? ref.character.accentText : SYSTEM.TEXT_BRIGHT);
-            ref.txt.setAlpha(selected ? 1 : (hover ? 0.96 : 0.74));
+            if (ref.g && ref.g.setUIState) {
+                ref.g.setUIState(selected ? 'active' : (hover ? 'hover' : 'normal'));
+                ref.g.setAlpha(selected || hover ? 1 : 0.9);
+            }
+            ref.txt.setColor(selected ? '#ffe8ad' : (hover ? '#ffffff' : '#dcd2f2'));
+            ref.txt.setAlpha(selected ? 1 : (hover ? 0.98 : 0.84));
         };
         const redrawTabs = () => tabRefs.forEach(ref => drawTab(ref, false));
 
@@ -2498,7 +2634,12 @@ closed || ((((__oc38 = this.scene) === null || __oc38 === void 0 ? void 0 : __oc
             const rowStartX = cx - (tabW * rowCount + tabGap * (rowCount - 1)) / 2;
             const x = rowStartX + col * (tabW + tabGap);
             const y = tabTop + row * (tabH + tabGap);
-            const g = UIAssets.createPanel(this, x, y, tabW, tabH, { variant: 'button', depth: depth + 3 });
+            const g = UIAssets.createPanel(this, x, y, tabW, tabH, {
+                variant: 'button',
+                tone: 'secondary',
+                activeAsset: 'ui_button_gold',
+                depth: depth + 3,
+            });
             const hit = this.add.rectangle(x + tabW / 2, y + tabH / 2, tabW, tabH, 0x000000, 0)
                 .setDepth(depth + 5)
                 .setInteractive({ useHandCursor: true });

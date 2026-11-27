@@ -4,7 +4,7 @@ import {
     fs, uv, fitText, padText,
 } from '../utils/Constants.js';
 import { t } from '../utils/i18n.js';
-import { UIAssets } from './UIAssets.js?v=20260913-crafted-ui-v1';
+import { UIAssets } from './UIAssets.js?v=20261127-gothic-ui-v1';
 
 function cssPerGameUnit(scene) { var __oc0, __oc1;
     const scale = (((__oc1 = (__oc0 = scene === null || scene === void 0 ? void 0 : scene.game) === null || __oc0 === void 0 ? void 0 : __oc0.scale) === null || __oc1 === void 0 ? void 0 : __oc1.displayScale));
@@ -63,24 +63,24 @@ export class MobileControls {
     }
 
     _setupFloatingJoystick() {
-        // Dark translucent base
-        this.joystickBase = this.scene.add.circle(0, 0, this.baseRadius, SYSTEM.BG_DEEP, 0.74)
+        // Dark obsidian translucent base
+        this.joystickBase = this.scene.add.circle(0, 0, this.baseRadius, 0x090614, 0.78)
             .setDepth(600).setScrollFactor(0)
-            .setStrokeStyle(2, SYSTEM.BORDER_DIM, 0.8)
+            .setStrokeStyle(2, 0x8a5cff, 0.65)
             .setVisible(false);
 
-        // Thin cyan ring
+        // Antique gold outer ring
         this.joystickRing = this.scene.add.circle(0, 0, this.baseRadius + 4, 0x000000, 0)
             .setDepth(600).setScrollFactor(0)
-            .setStrokeStyle(2, SYSTEM.BORDER, 0.5)
+            .setStrokeStyle(1.5, 0xe8c266, 0.45)
             .setVisible(false);
 
-        // Thumb — small angular look via circle + inner dot
-        this.joystickThumb = this.scene.add.circle(0, 0, this.thumbRadius, SYSTEM.BG_PANEL_HI, 0.94)
+        // Thumb — amethyst-gold jewel core
+        this.joystickThumb = this.scene.add.circle(0, 0, this.thumbRadius, 0x1d1336, 0.94)
             .setDepth(601).setScrollFactor(0)
-            .setStrokeStyle(2, SYSTEM.BORDER, 0.95)
+            .setStrokeStyle(2, 0xe8c266, 0.92)
             .setVisible(false);
-        this.joystickThumbDot = this.scene.add.circle(0, 0, 3, SYSTEM.BORDER, 1)
+        this.joystickThumbDot = this.scene.add.circle(0, 0, 3.5, 0xc8a4ff, 1)
             .setDepth(602).setScrollFactor(0)
             .setVisible(false);
         this.elements.push(this.joystickBase, this.joystickRing, this.joystickThumb, this.joystickThumbDot);
@@ -197,84 +197,32 @@ export class MobileControls {
         });
     }
 
+    _syncMenuButtonExclusion() {
+        const bounds = this.scene && this.scene.hud && this.scene.hud._menuButtonBounds;
+        if (bounds && Number.isFinite(bounds.x) && Number.isFinite(bounds.y)) {
+            const pad = uv(8);
+            this.actionButtonBounds = {
+                x: bounds.x - pad,
+                y: bounds.y - pad,
+                width: bounds.width + pad * 2,
+                height: bounds.height + pad * 2,
+            };
+        } else {
+            const cssPerUnit = cssPerGameUnit(this.scene);
+            const minTouch = Math.ceil(44 / cssPerUnit);
+            const size = Math.max(uv(44), minTouch);
+            this.actionButtonBounds = {
+                x: GAME_WIDTH - uv(20) - size,
+                y: uv(4),
+                width: size + uv(16),
+                height: size + uv(20),
+            };
+        }
+    }
+
     _createButtons() {
-        const cssPerUnit = cssPerGameUnit(this.scene);
-        const minTouch = Math.ceil(44 / cssPerUnit);
-        const btnGap = Math.max(uv(6), Math.ceil(6 / cssPerUnit));
-        const btnW = Math.max(uv(40), minTouch);
-        const btnH = Math.max(uv(34), minTouch);
-        const btnX = GAME_WIDTH - uv(12) - btnW;
-        const homeBottom = (this.scene && this.scene.hud && this.scene.hud._homeBottom)
-            ? this.scene.hud._homeBottom : uv(56);
-        const statusY = homeBottom + btnGap;
-        const soundY = statusY + btnH + btnGap;
-        const totalBtnH = btnH * 2 + btnGap;
-        this.actionButtonBounds = { x: btnX - uv(6), y: statusY - uv(6), width: btnW + uv(12), height: totalBtnH + uv(12) };
-
-        // Status button
-        const statusPanel = UIAssets.createPanel(this.scene, btnX, statusY, btnW, btnH, {
-            fillAlpha: 0.58,
-            variant: 'button',
-            depth: 600,
-            scrollFactor: 0,
-        });
-        const statusHit = UIAssets.createHitArea(this.scene, btnX, statusY, btnW, btnH, 601).setScrollFactor(0);
-        const statusText = padText(this.scene.add.text(btnX + btnW / 2, statusY + btnH / 2, t('hudStatus'), {
-            fontSize: fs(10), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
-            color: '#d8d0ee',
-        }).setOrigin(0.5).setDepth(602).setScrollFactor(0), 2, 2);
-        fitText(statusText, btnW - uv(6), btnH - uv(4), 0.62);
-        this.elements.push(statusPanel, statusHit, statusText);
-        this.buttonElements.push(statusPanel, statusHit, statusText);
-        this.buttonHitAreas.push(statusHit);
-
-        statusHit.on('pointerover', () => statusPanel.setUIState('hover'));
-        statusHit.on('pointerout', () => statusPanel.setUIState('normal'));
-        statusHit.on('pointerdown', () => {
-            if (this._isStatusModalOpen()) return;
-            statusPanel.setUIState('hover');
-            this.scene.time.delayedCall(110, () => {
-                if (statusPanel && statusPanel.active) statusPanel.setUIState('normal');
-            });
-            if (this.scene.statusWindow) {
-                this.scene.statusWindow.toggle();
-                this._syncModalState(true);
-            }
-        });
-
-        // Sound button
-        const soundPanel = UIAssets.createPanel(this.scene, btnX, soundY, btnW, btnH, {
-            fillAlpha: 0.58,
-            variant: 'button',
-            depth: 600,
-            scrollFactor: 0,
-        });
-        const soundHit = UIAssets.createHitArea(this.scene, btnX, soundY, btnW, btnH, 601).setScrollFactor(0);
-        const soundEnabled = !(this.scene.soundManager && this.scene.soundManager.enabled === false);
-        this.soundBtnText = padText(this.scene.add.text(btnX + btnW / 2, soundY + btnH / 2, soundEnabled ? 'SND' : 'OFF', {
-            fontSize: fs(10), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
-            color: soundEnabled ? '#d8d0ee' : SYSTEM.TEXT_MUTED,
-        }).setOrigin(0.5).setDepth(602).setScrollFactor(0), 2, 2);
-        fitText(this.soundBtnText, btnW - uv(6), btnH - uv(4), 0.62);
-        this.elements.push(soundPanel, soundHit, this.soundBtnText);
-        this.buttonElements.push(soundPanel, soundHit, this.soundBtnText);
-        this.buttonHitAreas.push(soundHit);
-
-        soundHit.on('pointerover', () => soundPanel.setUIState('hover'));
-        soundHit.on('pointerout', () => soundPanel.setUIState('normal'));
-        soundHit.on('pointerdown', () => {
-            if (this._isStatusModalOpen()) return;
-            soundPanel.setUIState('hover');
-            this.scene.time.delayedCall(110, () => {
-                if (soundPanel && soundPanel.active) soundPanel.setUIState('normal');
-            });
-            if (this.scene.soundManager) {
-                const enabled = this.scene.soundManager.toggleSound();
-                this.soundBtnText.setText(enabled ? 'SND' : 'OFF');
-                this.soundBtnText.setColor(enabled ? '#d8d0ee' : SYSTEM.TEXT_MUTED);
-                fitText(this.soundBtnText, btnW - uv(6), btnH - uv(4), 0.62);
-            }
-        });
+        // Sound toggle and Exit live inside the unified Status/Pause overlay opened by the single HUD button.
+        this._syncMenuButtonExclusion();
     }
 
     getJoystickState() {
@@ -293,27 +241,9 @@ export class MobileControls {
     }
 
     updateLayout() {
-        // GameScene rebuilds controls after a resize. Refresh visibility and keep the
-        // exclusion box tied to the live hit-area bounds in case this is called directly.
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        for (let i = 0; i < this.buttonHitAreas.length; i++) {
-            const hit = this.buttonHitAreas[i];
-            if (!hit || !hit.active || typeof hit.getBounds !== 'function') continue;
-            const b = hit.getBounds();
-            if (b.x < minX) minX = b.x;
-            if (b.y < minY) minY = b.y;
-            if (b.x + b.width > maxX) maxX = b.x + b.width;
-            if (b.y + b.height > maxY) maxY = b.y + b.height;
-        }
-        if (Number.isFinite(minX) && Number.isFinite(minY)) {
-            const pad = uv(6);
-            this.actionButtonBounds = {
-                x: minX - pad,
-                y: minY - pad,
-                width: (maxX - minX) + pad * 2,
-                height: (maxY - minY) + pad * 2,
-            };
-        }
+        // GameScene rebuilds controls after a resize. Keep the top-right pause button excluded
+        // from joystick touches even though right-column action buttons are unified into StatusWindow.
+        this._syncMenuButtonExclusion();
         this._syncModalState(true);
     }
 

@@ -1,7 +1,8 @@
 import { SpriteFactory } from '../utils/SpriteFactory.js?v=20261120-fastload-v2';
 import { SYSTEM, UI_FONT_MONO, fs, uv, drawSystemPanel, fitText, padText } from '../utils/Constants.js';
-import { getMenuCoreAssetList } from '../utils/AssetManifest.js?v=20261120-fastload-v2';
+import { getMenuCoreAssetList, RUNTIME_WEBP_VERSION } from '../utils/AssetManifest.js?v=20261120-fastload-v2';
 import { getStoredCharacterId } from '../utils/Characters.js';
+import { UIAssets } from '../ui/UIAssets.js?v=20261127-gothic-ui-v1';
 
 export class PreloadScene extends Phaser.Scene {
     constructor() {
@@ -111,18 +112,18 @@ export class PreloadScene extends Phaser.Scene {
         }
 
         const barW = Math.min(panelW - uv(70), uv(isPortrait ? 500 : 560));
-        const barH = Math.max(uv(14), 14);
+        const barH = Math.max(uv(18), 18);
         const barX = cx - barW / 2;
         const barY = panelY + uv(isPortrait ? 190 : 180);
 
         const barFrame = this.add.graphics().setDepth(3);
         drawSystemPanel(barFrame, barX - uv(8), barY - barH / 2 - uv(8), barW + uv(16), barH + uv(16), {
             cut: uv(7),
-            fill: 0x03070d, fillAlpha: 0.94,
-            border: SYSTEM.BORDER_DIM, borderAlpha: 0.85, borderWidth: 1,
+            fill: 0x05040d, fillAlpha: 0.94,
+            border: 0x8f7bc4, borderAlpha: 0.72, borderWidth: 1,
         });
 
-        this.add.rectangle(barX, barY - barH / 2, barW, barH, 0x0a1520, 1)
+        this.add.rectangle(barX, barY - barH / 2, barW, barH, 0x0b0818, 1)
             .setOrigin(0, 0)
             .setDepth(3);
 
@@ -131,28 +132,28 @@ export class PreloadScene extends Phaser.Scene {
             barY - barH / 2 + 1,
             0,
             barH - 2,
-            SYSTEM.BORDER,
-            0.88,
+            0x8a5cff,
+            0.92,
         ).setOrigin(0, 0).setDepth(4).setBlendMode(Phaser.BlendModes.ADD);
         const barGloss = this.add.rectangle(
             barX + 1,
             barY - barH / 2 + 1,
             0,
-            Math.max(1, barH * 0.24),
-            0xc8f6ff,
-            0.88,
+            Math.max(1, barH * 0.28),
+            0xe8c266,
+            0.82,
         ).setOrigin(0, 0).setDepth(5);
         const barCap = this.add.rectangle(
             barX + 1,
             barY,
-            Math.max(2, uv(2)),
+            Math.max(2, uv(3)),
             barH + uv(8),
-            0x8cecff,
-            0.9,
+            0xe8c266,
+            0.95,
         ).setDepth(5).setVisible(false).setBlendMode(Phaser.BlendModes.ADD);
 
         const barTicks = this.add.graphics().setDepth(6);
-        barTicks.lineStyle(1, 0x02070d, 0.6);
+        barTicks.lineStyle(1, 0x04030a, 0.55);
         for (let i = 1; i < 16; i++) {
             const tickX = barX + (barW * i / 16);
             barTicks.lineBetween(tickX, barY - barH / 2 + 2, tickX, barY + barH / 2 - 2);
@@ -160,9 +161,28 @@ export class PreloadScene extends Phaser.Scene {
 
         let barFillSkin = null;
         let barFrameSkin = null;
+        let panelSkin = null;
         let coreIcon = null;
         const buildPreloadSkin = () => {
-            if (!barFrameSkin && this.textures.exists('preload_bar_frame')) {
+            if (!panelSkin && this.textures.exists('ui_skin_panel')) {
+                panelSkin = UIAssets.createPanel(this, panelX - uv(8), panelY - uv(8), panelW + uv(16), panelH + uv(16), {
+                    variant: 'modal',
+                    depth: 1.5,
+                });
+                frame.setAlpha(0.16);
+                frameGlow.setAlpha(0.12);
+            }
+            if (!barFrameSkin && this.textures.exists('ui_hud_bar_frame')) {
+                barFrameSkin = UIAssets.createPanel(
+                    this,
+                    barX - uv(16),
+                    barY - (barH + uv(16)) / 2,
+                    barW + uv(32),
+                    barH + uv(16),
+                    { variant: 'bar', depth: 6.5 }
+                );
+                barFrame.setAlpha(0.14);
+            } else if (!barFrameSkin && this.textures.exists('preload_bar_frame')) {
                 barFrameSkin = this.add.image(cx, barY, 'preload_bar_frame')
                     .setDisplaySize(barW + uv(22), barH + uv(26))
                     .setDepth(3.5);
@@ -172,6 +192,7 @@ export class PreloadScene extends Phaser.Scene {
                 barFillSkin = this.add.image(barX + 1, barY, 'preload_bar_fill')
                     .setOrigin(0, 0.5)
                     .setDisplaySize(1, barH - 2)
+                    .setTint(0x9b6eff)
                     .setVisible(false)
                     .setDepth(4.5);
             }
@@ -179,6 +200,7 @@ export class PreloadScene extends Phaser.Scene {
                 const coreSize = uv(isPortrait ? 60 : 56);
                 coreIcon = this.add.image(cx, coreY, 'preload_core')
                     .setDisplaySize(coreSize, coreSize)
+                    .setTint(0xc8a4ff)
                     .setDepth(2.5)
                     .setBlendMode(Phaser.BlendModes.ADD);
                 coreFallback.setAlpha(0.34);
@@ -305,6 +327,8 @@ export class PreloadScene extends Phaser.Scene {
             { key: 'preload_core', path: 'assets/ui/menu/preload_core.png' },
             { key: 'preload_bar_frame', path: 'assets/ui/menu/preload_bar_frame.png' },
             { key: 'preload_bar_fill', path: 'assets/ui/menu/preload_bar_fill.png' },
+            { key: 'ui_skin_panel', path: 'assets/ui/skin-panel-v1.png', cacheVersion: RUNTIME_WEBP_VERSION },
+            { key: 'ui_hud_bar_frame', path: 'assets/ui/ui_hud_bar_frame.png', cacheVersion: RUNTIME_WEBP_VERSION },
         ].forEach(asset => this._loadImage(asset.key, asset.path, asset));
     }
 

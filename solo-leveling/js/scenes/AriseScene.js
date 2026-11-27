@@ -1,4 +1,4 @@
-import { SystemMessage } from '../ui/SystemMessage.js?v=20261009-orient-v1';
+import { SystemMessage } from '../ui/SystemMessage.js?v=20261009-orient-v1&ui=20261127-gothic-ui-v2';
 
 // A separate clock keeps the extraction moving while the entire combat scene,
 // including projectile tweens and delayed damage, is paused.

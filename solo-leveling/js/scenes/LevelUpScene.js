@@ -5,7 +5,7 @@ import {
     fs, uv, fitText, padText,
 } from '../utils/Constants.js';
 import { t } from '../utils/i18n.js';
-import { UIAssets } from '../ui/UIAssets.js?v=20260913-crafted-ui-v1';
+import { UIAssets } from '../ui/UIAssets.js?v=20261127-gothic-ui-v1';
 import { getCharacterWeaponKeys, getStarterWeaponKey } from '../utils/Characters.js';
 
 function cssPerGameUnit(scene) { var __oc0, __oc1;
@@ -85,15 +85,15 @@ export class LevelUpScene extends Phaser.Scene {
         const layout = this._getLayout();
 
         // Dim overlay and restrained focal glow separate the decision layer from the battlefield.
-        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, SYSTEM.BG_DEEP, 0.84)
+        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x05030d, 0.86)
             .setDepth(0);
         const focalGlow = this.add.ellipse(
             GAME_WIDTH / 2,
             layout.titleY + uv(74),
             Math.min(GAME_WIDTH * 0.88, uv(760)),
             Math.min(GAME_HEIGHT * 0.42, uv(300)),
-            0x19466f,
-            0.1
+            0x361c6b,
+            0.16
         ).setDepth(0);
 
         const sg = this.add.graphics().setDepth(0);
@@ -148,23 +148,20 @@ export class LevelUpScene extends Phaser.Scene {
         ul.lineBetween(GAME_WIDTH / 2 - uw / 2, titleY + title.displayHeight / 2 + uv(4),
                        GAME_WIDTH / 2 + uw / 2, titleY + title.displayHeight / 2 + uv(4));
 
-        const levelBadgeW = Math.min(uv(160), GAME_WIDTH - layout.sidePad * 2);
-        const levelBadgeH = Math.max(34, uv(34));
-        const levelBadgeY = titleY + title.displayHeight / 2 + uv(18);
+        const levelBadgeW = Math.min(uv(216), GAME_WIDTH - layout.sidePad * 2);
+        const levelBadgeH = Math.max(40, uv(40));
+        const levelBadgeY = titleY + title.displayHeight / 2 + uv(16);
         UIAssets.createPanel(this, GAME_WIDTH / 2 - levelBadgeW / 2, levelBadgeY, levelBadgeW, levelBadgeH, {
-            cut: uv(8),
-            fill: 0x0a1726, fillAlpha: 0.94,
-            border: SYSTEM.BORDER_GOLD, borderAlpha: 0.64, borderWidth: 1,
-            accent: SYSTEM.BORDER_GOLD,
-            variant: 'button', ornament: false, surfaceLines: false,
+            variant: 'button',
+            tone: 'gold',
             depth: 1,
         });
         const levelText = padText(this.add.text(GAME_WIDTH / 2, levelBadgeY + levelBadgeH / 2,
-            `◆  LV. ${String(this.player.level).padStart(2, '0')}`, {
-                fontSize: fs(layout.stack ? 15 : 14), fontFamily: UI_FONT_MONO,
-                fontStyle: 'bold', color: SYSTEM.TEXT_GOLD, letterSpacing: 0,
+            `◈  LV. ${String(this.player.level).padStart(2, '0')}`, {
+                fontSize: fs(layout.stack ? 14 : 13.5), fontFamily: UI_FONT_MONO,
+                fontStyle: 'bold', color: '#ffe8ad', stroke: '#05030d', strokeThickness: 3, letterSpacing: 0,
             }).setOrigin(0.5).setDepth(2), 2, 2);
-        fitText(levelText, levelBadgeW - uv(18), levelBadgeH - uv(6), 0.7);
+        fitText(levelText, levelBadgeW - uv(52), levelBadgeH - uv(12), 0.7);
 
         const promptY = levelBadgeY + levelBadgeH + uv(9);
         const prompt = padText(this.add.text(GAME_WIDTH / 2, promptY, t('newSkill'), {
@@ -195,21 +192,26 @@ export class LevelUpScene extends Phaser.Scene {
 
     _getLayout() {
         const isPortrait = GAME_HEIGHT > GAME_WIDTH;
-        const isShort = GAME_HEIGHT <= 820;
+        const viewport = window.visualViewport;
+        const cssW = (viewport && viewport.width) || window.innerWidth || GAME_WIDTH;
+        const cssH = (viewport && viewport.height) || window.innerHeight || GAME_HEIGHT;
+        const isShort = cssH <= 500 || GAME_HEIGHT <= 820;
         const touch = this._detectTouch();
-        const stack = isPortrait || (touch && GAME_WIDTH < 1180);
+        const stack = isPortrait;
         const sidePad = Math.max(16, uv(stack ? 24 : 34));
-        const safeTop = Math.max(16, uv(isShort ? 22 : 34));
+        const safeTop = Math.max(14, uv(isShort ? 20 : 34));
 
         return {
             touch,
             stack,
             isPortrait,
             isShort,
+            cssW,
+            cssH,
             sidePad,
             safeTop,
-            bottomPad: Math.max(16, uv(isShort ? 18 : 28)),
-            titleY: safeTop + uv(isShort ? 36 : 44),
+            bottomPad: Math.max(14, uv(isShort ? 18 : 28)),
+            titleY: safeTop + uv(isShort ? 34 : 44),
         };
     }
 
@@ -327,95 +329,75 @@ export class LevelUpScene extends Phaser.Scene {
         const theme = this._cardTheme(choice);
         const panel = UIAssets.createPanel(this, x, y, w, h, {
             asset: choice.isNew ? 'ui_card_gold' : 'ui_card_cyan',
-            hoverAsset: 'ui_card_hover',
-            cut: uv(12),
-            fill: theme.fill,
-            fillAlpha: 0.94,
-            border: theme.border,
-            borderAlpha: 1,
-            borderWidth: 1,
-            accent: theme.accent,
-            glow: theme.glow,
             variant: 'card',
             depth: 1,
-            hover: {
-                fill: SYSTEM.BG_PANEL_HI,
-                fillAlpha: 1,
-                border: theme.accent,
-                borderWidth: 2,
-                glow: 9,
-            },
         });
         const visuals = [panel];
 
-        const topRail = this.add.rectangle(x + w / 2, y + uv(5), w - uv(34), Math.max(2, uv(2)), theme.accent, 0.82)
-            .setDepth(2);
-        const sideRail = this.add.rectangle(x + uv(6), y + h / 2, Math.max(2, uv(3)), h - uv(34), theme.accent, 0.72)
-            .setDepth(2);
-        visuals.push(topRail, sideRail);
-
-        const selectionGlow = this.add.rectangle(x + w / 2, y + h / 2, w - uv(7), h - uv(7), theme.haloColor, 0.07)
+        const selectionGlow = this.add.rectangle(x + w / 2, y + h / 2, w - uv(12), h - uv(12), theme.haloColor, 0.08)
             .setStrokeStyle(2, theme.border, 1).setDepth(4).setAlpha(0).setVisible(false);
         const minTarget = this._detectTouch() ? this._minTouchUnits() : 44;
         const hitH = Math.max(minTarget, h);
         const hit = UIAssets.createHitArea(this, x, y - (hitH - h) / 2, Math.max(minTarget, w), hitH, 5);
 
-        // NEW tag (top-left)
+        // NEW tag (top-left, inset clear of ornate corners)
         if (choice.isNew) {
-            const badge = padText(this.add.text(x + uv(14), y + uv(10), '  NEW  ', {
+            const badge = padText(this.add.text(x + uv(28), y + uv(24), ' NEW ', {
                 fontSize: fs(10), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
-                color: SYSTEM.TEXT_GOLD, backgroundColor: '#05070d',
-                padding: { left: 6, right: 6, top: 1, bottom: 1 },
+                color: '#ffe8ad', backgroundColor: '#1a1106',
+                padding: { left: 6, right: 6, top: 2, bottom: 2 },
             }).setDepth(3), 2, 2, 6, 6);
             visuals.push(badge);
         }
-        // Level badge (top-right)
+        // Level badge (top-right, inset clear of ornate corners)
         if (choice.level > 0) {
-            const badge = padText(this.add.text(x + w - uv(14), y + uv(10), `  LV.${choice.level}  `, {
-                fontSize: fs(10), fontFamily: UI_FONT_MONO,
-                color: theme.typeColor, backgroundColor: '#05070d',
-                padding: { left: 6, right: 6, top: 1, bottom: 1 },
+            const badge = padText(this.add.text(x + w - uv(28), y + uv(24), ` LV.${choice.level} `, {
+                fontSize: fs(10), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+                color: theme.typeColor, backgroundColor: '#0c081a',
+                padding: { left: 6, right: 6, top: 2, bottom: 2 },
             }).setOrigin(1, 0).setDepth(3), 2, 2, 6, 6);
             visuals.push(badge);
         }
 
-        // Icon
-        const iconScale = Math.min(2.05, Math.max(1.2, h / uv(150)));
-        const haloSize = Math.min(w * 0.44, h * 0.28, uv(92));
-        const halo = this.add.circle(x + w / 2, y + h * 0.24, haloSize / 2, theme.haloColor, 0.12)
-            .setStrokeStyle(1, theme.accent, 0.36).setDepth(2);
-        const icon = this.add.sprite(x + w / 2, y + h * 0.23, choice.icon)
-            .setDepth(3).setScale(iconScale);
-        visuals.push(halo, icon);
+        // Icon fitted strictly inside ornate slot socket regardless of source texture size (e.g. 128x128)
+        const iconY = y + h * 0.28;
+        const slotSize = Math.max(36, Math.min(w * 0.36, h * 0.25, uv(76)));
+        const iconSlot = UIAssets.createPanel(this, x + w / 2 - slotSize / 2, iconY - slotSize / 2, slotSize, slotSize, {
+            variant: 'slot',
+            depth: 2,
+        });
+        const icon = this.add.sprite(x + w / 2, iconY, choice.icon).setDepth(3);
+        const iconTargetSize = Math.max(20, Math.round(slotSize * 0.7));
+        const iconScale = iconTargetSize / Math.max(1, icon.width, icon.height);
+        icon.setScale(iconScale);
+        visuals.push(iconSlot, icon);
 
         // Type label
         const typeLabel = choice.type === 'weapon' ? t('skillLabel') : t('passiveLabel');
-        const typeText = padText(this.add.text(x + w / 2, y + h * 0.43, `[ ${typeLabel} ]`, {
-            fontSize: fs(10), fontFamily: UI_FONT_MONO, fontStyle: 'bold', color: theme.typeColor,
+        const typeText = padText(this.add.text(x + w / 2, y + h * 0.48, `[ ${typeLabel} ]`, {
+            fontSize: fs(11), fontFamily: UI_FONT_KR, fontStyle: 'bold', color: theme.typeColor,
             letterSpacing: 0,
-        }).setOrigin(0.5).setDepth(3), 2, 2);
-        fitText(typeText, w - uv(28), 0, 0.72);
+        }).setOrigin(0.5).setDepth(3), 4, 4, 4, 4);
+        fitText(typeText, w - uv(44), 0, 0.72);
         visuals.push(typeText);
 
         // Name
-        const nameText = padText(this.add.text(x + w / 2, y + h * 0.54, choice.name, {
+        const nameText = padText(this.add.text(x + w / 2, y + h * 0.59, choice.name, {
             fontSize: fs(18), fontFamily: UI_FONT_KR, fontStyle: 'bold',
-            color: SYSTEM.TEXT_BRIGHT,
-            stroke: '#02040a', strokeThickness: 2,
+            color: '#f5efff',
+            stroke: '#04030a', strokeThickness: 3,
         }).setOrigin(0.5).setDepth(3), 3, 3);
-        fitText(nameText, w - uv(28), uv(40), 0.62);
+        fitText(nameText, w - uv(44), uv(40), 0.62);
         visuals.push(nameText);
 
         // Description
-        const descY = y + h * 0.68;
+        const descY = y + h * 0.705;
         const descText = padText(this.add.text(x + w / 2, descY, choice.description, {
-            fontSize: fs(12), fontFamily: UI_FONT_KR, color: SYSTEM.TEXT_CYAN_DIM,
-            wordWrap: { width: w - uv(30), useAdvancedWrap: true }, align: 'center', lineSpacing: 5,
+            fontSize: fs(12), fontFamily: UI_FONT_KR, color: '#d8ccee',
+            wordWrap: { width: w - uv(46), useAdvancedWrap: true }, align: 'center', lineSpacing: 5,
         }).setOrigin(0.5, 0).setDepth(3), 3, 4);
-        fitText(descText, w - uv(30), Math.max(1, y + h - uv(16) - descY), 0.66);
-        const bottomMark = this.add.rectangle(x + w / 2, y + h - uv(8), uv(6), uv(6), theme.accent, 0.7)
-            .setRotation(Math.PI / 4).setDepth(3);
-        visuals.push(descText, bottomMark);
+        fitText(descText, w - uv(46), Math.max(1, y + h - uv(28) - descY), 0.64);
+        visuals.push(descText);
 
         this._registerCard({ choice, panel, icon, iconScale, hit, visuals, selectionGlow });
     }
@@ -423,92 +405,76 @@ export class LevelUpScene extends Phaser.Scene {
     _createMobileCard(x, y, w, h, choice) {
         const theme = this._cardTheme(choice);
         const panel = UIAssets.createPanel(this, x, y, w, h, {
-            asset: choice.isNew ? 'ui_choice_gold' : 'ui_choice_cyan',
-            hoverAsset: 'ui_choice_hover',
-            cut: uv(10),
-            fill: theme.fill,
-            fillAlpha: 0.94,
-            border: theme.border,
-            borderAlpha: 1,
-            borderWidth: 1,
-            accent: theme.accent,
-            glow: theme.glow,
+            asset: 'ui_crafted_frame',
+            tintColor: choice.isNew ? 0xe8b64a : theme.accent,
+            tintAlpha: choice.isNew ? 0.14 : 0.08,
             variant: 'card',
             depth: 1,
-            hover: {
-                fill: SYSTEM.BG_PANEL_HI,
-                fillAlpha: 1,
-                border: theme.accent,
-                borderWidth: 2,
-                glow: 8,
-            },
         });
         const visuals = [panel];
 
-        const topRail = this.add.rectangle(x + w / 2, y + uv(4), w - uv(30), Math.max(2, uv(2)), theme.accent, 0.76)
-            .setDepth(2);
-        const sideRail = this.add.rectangle(x + uv(6), y + h / 2, Math.max(3, uv(4)), h - uv(24), theme.accent, 0.84)
-            .setDepth(2);
-        const selectionGlow = this.add.rectangle(x + w / 2, y + h / 2, w - uv(7), h - uv(7), theme.haloColor, 0.07)
+        const selectionGlow = this.add.rectangle(x + w / 2, y + h / 2, w - uv(10), h - uv(10), theme.haloColor, 0.08)
             .setStrokeStyle(2, theme.border, 1).setDepth(4).setAlpha(0).setVisible(false);
-        visuals.push(topRail, sideRail);
 
         const minTarget = this._detectTouch() ? this._minTouchUnits() : 44;
         const hitH = Math.max(minTarget, h);
         const hit = UIAssets.createHitArea(this, x, y - (hitH - h) / 2, Math.max(minTarget, w), hitH, 5);
 
-        const iconX = x + Math.min(uv(58), w * 0.17);
-        const iconScale = Math.min(2, Math.max(0.78, h / uv(76)));
-        const haloSize = Math.max(28, Math.min(h * 0.62, uv(74)));
-        const halo = this.add.circle(iconX, y + h / 2, haloSize / 2, theme.haloColor, 0.12)
-            .setStrokeStyle(1, theme.accent, 0.36).setDepth(2);
-        const icon = this.add.sprite(iconX, y + h / 2, choice.icon)
-            .setDepth(3).setScale(iconScale);
-        visuals.push(halo, icon);
+        const slotSize = Math.max(36, Math.min(h * 0.62, uv(68)));
+        const iconX = x + uv(18) + slotSize / 2;
+        const iconSlot = UIAssets.createPanel(this, iconX - slotSize / 2, y + h / 2 - slotSize / 2, slotSize, slotSize, {
+            variant: 'slot',
+            depth: 2,
+        });
+        const icon = this.add.sprite(iconX, y + h / 2, choice.icon).setDepth(3);
+        const iconTargetSize = Math.max(20, Math.round(slotSize * 0.7));
+        const iconScale = iconTargetSize / Math.max(1, icon.width, icon.height);
+        icon.setScale(iconScale);
+        visuals.push(iconSlot, icon);
 
         if (choice.isNew) {
-            const badge = padText(this.add.text(x + w - uv(14), y + uv(8), '  NEW  ', {
+            const badge = padText(this.add.text(x + w - uv(22), y + uv(14), ' NEW ', {
                 fontSize: fs(10), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
-                color: SYSTEM.TEXT_GOLD, backgroundColor: '#05070d',
-                padding: { left: 6, right: 6, top: 1, bottom: 1 },
+                color: '#ffe8ad', backgroundColor: '#1a1106',
+                padding: { left: 6, right: 6, top: 2, bottom: 2 },
             }).setOrigin(1, 0).setDepth(3), 2, 2, 6, 6);
             visuals.push(badge);
         }
         if (choice.level > 0) {
-            const badge = padText(this.add.text(x + w - uv(14), y + uv(8), `  LV.${choice.level}  `, {
-                fontSize: fs(10), fontFamily: UI_FONT_MONO, color: theme.typeColor,
-                backgroundColor: '#05070d',
-                padding: { left: 6, right: 6, top: 1, bottom: 1 },
+            const badge = padText(this.add.text(x + w - uv(22), y + uv(14), ` LV.${choice.level} `, {
+                fontSize: fs(10), fontFamily: UI_FONT_MONO, fontStyle: 'bold', color: theme.typeColor,
+                backgroundColor: '#0c081a',
+                padding: { left: 6, right: 6, top: 2, bottom: 2 },
             }).setOrigin(1, 0).setDepth(3), 2, 2, 6, 6);
             visuals.push(badge);
         }
 
         const dense = h < uv(104);
-        const textX = x + Math.min(uv(112), w * 0.27);
-        const textW = Math.max(1, x + w - uv(42) - textX);
+        const textX = iconX + slotSize / 2 + uv(14);
+        const textW = Math.max(1, x + w - uv(46) - textX);
         const typeLabel = choice.type === 'weapon' ? t('skillLabel') : t('passiveLabel');
 
-        const typeText = padText(this.add.text(textX, y + h * (dense ? 0.08 : 0.14), `[ ${typeLabel} ]`, {
+        const typeText = padText(this.add.text(textX, y + h * (dense ? 0.1 : 0.15), `[ ${typeLabel} ]`, {
             fontSize: fs(dense ? 10 : 12), fontFamily: UI_FONT_MONO,
             fontStyle: 'bold', color: theme.typeColor, letterSpacing: 0,
         }).setOrigin(0, 0).setDepth(3), 2, 2);
         fitText(typeText, textW, 0, 0.68);
 
-        const nameText = padText(this.add.text(textX, y + h * (dense ? 0.34 : 0.36), choice.name, {
+        const nameText = padText(this.add.text(textX, y + h * (dense ? 0.35 : 0.37), choice.name, {
             fontSize: fs(dense ? 15 : 18), fontFamily: UI_FONT_KR, fontStyle: 'bold',
-            color: SYSTEM.TEXT_BRIGHT, stroke: '#02040a', strokeThickness: 2,
+            color: '#f5efff', stroke: '#04030a', strokeThickness: 2,
         }).setOrigin(0, 0).setDepth(3), 3, 3);
         fitText(nameText, textW, Math.max(1, h * 0.27), 0.6);
 
-        const descY = y + h * (dense ? 0.66 : 0.63);
+        const descY = y + h * (dense ? 0.65 : 0.63);
         const descText = padText(this.add.text(textX, descY, choice.description, {
-            fontSize: fs(dense ? 10 : 13), fontFamily: UI_FONT_KR, color: SYSTEM.TEXT_CYAN_DIM,
+            fontSize: fs(dense ? 10 : 13), fontFamily: UI_FONT_KR, color: '#d8ccee',
             wordWrap: { width: textW, useAdvancedWrap: true }, lineSpacing: 4,
         }).setOrigin(0, 0).setDepth(3), 2, 4);
-        fitText(descText, textW, Math.max(1, y + h - uv(9) - descY), 0.58);
+        fitText(descText, textW, Math.max(1, y + h - uv(12) - descY), 0.58);
         descText.setVisible(h >= 72);
 
-        const chevron = padText(this.add.text(x + w - uv(18), y + h / 2, '›', {
+        const chevron = padText(this.add.text(x + w - uv(20), y + h / 2, '›', {
             fontSize: fs(dense ? 22 : 28), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: theme.typeColor,
         }).setOrigin(0.5).setDepth(3), 2, 2);
