@@ -74,4 +74,25 @@ assert.ok(![1, 3, 4, 7].includes(ui.ICONS['skill-shock-overload']), 'shock overl
 assert.ok(![1, 3, 10].includes(ui.ICONS['skill-engineer-nail']), 'engineer nail must not reuse ammo/rifle/turret');
 assert.equal(ui.ICONS['skill-engineer-turret'], ui.EQUIPMENT['equipment-turret'], 'engineer turret must use turret icon');
 assert.equal(ui.ICONS['skill-engineer-wire'], ui.EQUIPMENT['equipment-wire'], 'engineer wire must use wire icon');
+{
+  // error_logs 7074-7077: a broken source image made drawImage throw on iOS.
+  const brokenCache = new Map();
+  let source = { width: 0, height: 0, complete: true, naturalWidth: 0 };
+  const brokenScene = { textures: {
+    exists: key => brokenCache.has(key),
+    get: () => ({ getSourceImage: () => source }),
+    addCanvas: (key, canvas) => brokenCache.set(key, canvas)
+  } };
+  const before = canvases.length;
+  const blankKey = ui.texture(brokenScene, 'panel', 120, 40);
+  assert.ok(blankKey.endsWith(':blank'), 'broken source must not be baked under the real key');
+  assert.equal(brokenCache.get(blankKey).calls.length, 0, 'broken source must never reach drawImage');
+  assert.equal(brokenCache.get(blankKey).width, 240);
+  assert.equal(ui.texture(brokenScene, 'panel', 120, 40), blankKey, 'blank surface is reused while the source is broken');
+  assert.equal(canvases.length, before + 1);
+  source = { width: 2172, height: 724, complete: true, naturalWidth: 2172 };
+  const realKey = ui.texture(brokenScene, 'panel', 120, 40);
+  assert.ok(!realKey.endsWith(':blank'), 'real surface is baked once the source recovers');
+  assert.ok(brokenCache.get(realKey).calls.length > 0);
+}
 console.log('UI surfaces verified: responsive corner sizes, complete coverage, 2x rendering, texture reuse, shop icons, and inventory coverage');

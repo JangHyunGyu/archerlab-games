@@ -107,7 +107,8 @@
         "node solo-leveling/tests/combat-motion.test.cjs",
         "node solo-leveling/tests/combat-vfx-coverage.test.cjs",
         "node solo-leveling/tests/ranking-recovery.test.cjs",
-        "node --test solo-leveling/tests/ranking-table.test.cjs"
+        "node --test solo-leveling/tests/ranking-table.test.cjs",
+        "node solo-leveling/tests/warmup-restart.test.cjs"
       ]
     },
     {

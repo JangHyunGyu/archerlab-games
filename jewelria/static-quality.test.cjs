@@ -21,7 +21,14 @@ assert.match(main, /if \(document\.hidden\) pauseGame\(\{ playSound: false \}\)/
 assert.match(main, /window\.addEventListener\('pagehide', \(\) => pauseGame/);
 assert.match(main, /if \((?:state\?\.status|\(\(state === null \|\| state === void 0 \? void 0 : state\.status\)\)) === 'paused'\)/);
 assert.match(main, /input\.setEnabled\(!resolving\)/);
-assert.match(serviceWorker, /jewelria-20261103-japanese-ui-v1/);
+assert.match(serviceWorker, /jewelria-20261128-audio-cache-v1/);
+// error_logs 7080-7082: a stale cache-first audio.js lacked suspend(); keep the import versioned.
+assert.match(main, /from '\.\/audio\.js\?v=20261128-audio-cache-v1'/);
+const audioSource = read('assets/js/audio.js');
+for (const method of ['suspend', 'resume']) {
+  assert.match(main, new RegExp(`audio\\.${method}\\(\\)`));
+  assert.match(audioSource, new RegExp(`\\n  ${method}\\(\\) \\{`), `AudioManager must define ${method}()`);
+}
 assert.match(serviceWorker, /CORE_ASSETS\.map/);
 assert.doesNotMatch(serviceWorker, /CORE_ASSETS\.flatMap/);
 const coreBlock = serviceWorker.match(/const CORE_ASSETS = \[([\s\S]*?)\];/)?.[1] || '';

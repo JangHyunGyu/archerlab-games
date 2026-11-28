@@ -45,7 +45,7 @@ export class MenuScene extends Phaser.Scene {
             if (this._resizeRefreshTimer) this._resizeRefreshTimer.remove(false);
             this._resizeRefreshTimer = this.time.delayedCall(80, () => {
                 this._resizeRefreshTimer = null;
-                this.scene.restart();
+                this._restartMenuScene();
             });
         };
         this.events.on('game-resize', this._onMenuResize, this);
@@ -863,6 +863,24 @@ export class MenuScene extends Phaser.Scene {
             }
         }
         this._portraitSwapListeners = [];
+    }
+
+    // Phaser's loader reset on restart does not abort in-flight requests, so a
+    // restart during an idle warmup batch would request the same keys again and
+    // add each texture twice. Let the current batch finish first.
+    _restartMenuScene() {
+        if (this._idleWarmupActive && this.load && this.load.isLoading()) {
+            if (this._restartAfterWarmup) return;
+            this._restartAfterWarmup = true;
+            this._idleWarmupStopped = true;
+            this.load.once('complete', () => {
+                this._restartAfterWarmup = false;
+                if (this._startingGame || !this.sys || !this.sys.isActive()) return;
+                this.scene.restart();
+            });
+            return;
+        }
+        this.scene.restart();
     }
 
     _enqueueIdleAssets(assets, prepend = false) {
@@ -2074,7 +2092,7 @@ export class MenuScene extends Phaser.Scene {
             itemHit.on('pointerover', () => { drawItem(true); itemText.setColor('#ffffff'); });
             itemHit.on('pointerout', () => { drawItem(false); itemText.setColor(active ? '#ffe8ad' : '#dcd2f2'); });
             itemHit.on('pointerdown', () => {
-                if (lang.code !== LANG) { setLang(lang.code); this.scene.restart(); }
+                if (lang.code !== LANG) { setLang(lang.code); this._restartMenuScene(); }
                 else closeDropdown();
             });
             items.push(itemG, itemHit, itemText);

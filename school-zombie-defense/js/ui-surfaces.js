@@ -120,6 +120,19 @@
     if (scene.textures.exists(key)) return key;
     const source = scene.textures.get(surface.key).getSourceImage();
     const scale = 2;
+    // A decoded-but-broken image (failed or blocked load) makes drawImage throw.
+    // Keep the UI usable with a blank surface under a separate key so the real
+    // key is still baked once the source image becomes usable.
+    if (!source || !source.width || !source.height || (source.complete === true && source.naturalWidth === 0)) {
+      const blankKey = `${key}:blank`;
+      if (!scene.textures.exists(blankKey)) {
+        const blank = document.createElement("canvas");
+        blank.width = w * scale;
+        blank.height = h * scale;
+        scene.textures.addCanvas(blankKey, blank);
+      }
+      return blankKey;
+    }
     const canvas = document.createElement("canvas");
     canvas.width = w * scale;
     canvas.height = h * scale;

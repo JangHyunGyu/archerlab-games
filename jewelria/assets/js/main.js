@@ -9,7 +9,7 @@ import {
   saveNickname,
   updateBestScore
 } from './storage.js';
-import { AudioManager } from './audio.js';
+import { AudioManager } from './audio.js?v=20261128-audio-cache-v1';
 import { UI, delay } from './ui.js?v=20260913-crafted-ui-v1&locale=20261103-ja-v1';
 import { trackEvent } from './ga.js';
 import { checkBrowserSupport } from './browser-check.js';
